@@ -52,15 +52,25 @@ export async function runCli(argv: string[]): Promise<number> {
 
   program
     .command("install")
-    .description("서버를 launchd 에 등록한다 — 로그인 시 켜지고 죽으면 다시 살아난다")
+    .description("서버를 launchd 에 등록하고(로그인 시 자동 실행) 에이전트 스킬을 설치한다")
+    .option("--no-launchd", "launchd 등록은 건너뛴다")
+    .option("--no-skill", "스킬 설치는 건너뛴다")
     .action(
-      run(async (ctx) => {
-        const { install } = await import("./launchd.ts");
-        await install(ctx.paths);
-        output(
-          ctx,
-          { installed: ctx.paths.launchAgent },
-          () => `등록했습니다: ${ctx.paths.launchAgent}`,
+      run(async (ctx, o: { launchd: boolean; skill: boolean }) => {
+        const done: Record<string, string> = {};
+        if (o.launchd) {
+          const { install } = await import("./launchd.ts");
+          await install(ctx.paths);
+          done.launchd = ctx.paths.launchAgent;
+        }
+        if (o.skill) {
+          const { installSkill } = await import("./skill.ts");
+          done.skill = await installSkill();
+        }
+        output(ctx, done, () =>
+          Object.entries(done)
+            .map(([what, path]) => `설치했습니다 (${what}): ${path}`)
+            .join("\n"),
         );
       }),
     );
