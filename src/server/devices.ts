@@ -78,7 +78,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
     }
   };
 
-  /** 켜기·끄기는 이 세션이 점유한 디바이스만 (P1) */
+  /** 켜기·끄기는 이 세션이 점유한 디바이스만 (P1). 사람은 점유 없이, 남이 쓰는 중인 것만 빼고 */
   const heldTargets = (refs: string[], session: SessionInfo): Device[] => {
     const held = new Set(server.leases.heldBy(session.key));
     const devices =
@@ -88,6 +88,11 @@ export function registerDeviceMethods(server: CorgiServer): void {
         "NOT_HELD",
         "점유한 디바이스가 없습니다 — corgi use 로 점유하고 켜세요",
       );
+    // 사람(웹 UI 등)이 직접 켜고 끄는 건 점유가 아니다 — 다른 세션이 쓰는 중인 것만 막는다
+    if (session.human) {
+      for (const device of devices) guardOthers(device, session);
+      return devices;
+    }
     const notHeld = devices.filter((d) => !held.has(d.id));
     if (notHeld.length > 0) {
       throw new HandlerError(

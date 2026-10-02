@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import type { DeviceView, StatusResult } from "../shared/api.ts";
 import { call } from "./api.ts";
 import { Dialog, holderText, PlatformBadge, SlimBadge } from "./ui.tsx";
@@ -21,6 +21,26 @@ export function DevicesTab({
   const [renaming, setRenaming] = useState<DeviceView | null>(null);
   const [deleting, setDeleting] = useState<DeviceView | null>(null);
 
+  // 열린 메뉴(⋯)는 다른 곳을 누르거나 Esc 를 누르면 닫는다
+  useEffect(() => {
+    const closeAll = (except?: Element | null) => {
+      for (const menu of document.querySelectorAll<HTMLDetailsElement>("details.menu[open]")) {
+        if (menu !== except) menu.open = false;
+      }
+    };
+    const onPointer = (event: PointerEvent) =>
+      closeAll((event.target as Element | null)?.closest("details.menu"));
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeAll();
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
   const run = async (device: DeviceView, label: string, fn: () => Promise<unknown>) => {
     setBusy((s) => new Set(s).add(device.id));
     await act(`${device.name} ${label}`, fn);
@@ -31,18 +51,10 @@ export function DevicesTab({
     });
   };
 
-  // 사람이 켜고 끌 때도 점유를 거친다 — 다른 세션이 쓰는 중이면 서버가 막는다
-  const boot = (d: DeviceView) =>
-    run(d, "켜기", async () => {
-      await call("lease.acquire", { devices: [d.id] });
-      await call("device.up", { devices: [d.id] });
-    });
+  // 사람이 켜고 끄는 건 점유가 아니다 — 다른 세션이 쓰는 중이면 서버가 막는다
+  const boot = (d: DeviceView) => run(d, "켜기", () => call("device.up", { devices: [d.id] }));
   const shutdown = (d: DeviceView) =>
-    run(d, "끄기", async () => {
-      await call("lease.acquire", { devices: [d.id] });
-      await call("device.down", { devices: [d.id] });
-      await call("lease.release", { devices: [d.id] });
-    });
+    run(d, "끄기", () => call("device.down", { devices: [d.id] }));
 
   if (devices.length === 0) {
     return (

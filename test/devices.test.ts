@@ -20,13 +20,13 @@ async function start() {
   cleanups.push(() => listener.stop(), env.cleanup);
   /** 결과 또는 오류(code·message)를 그대로 돌려준다 — 테스트에서 둘 다 본다 */
   const as =
-    (key: string) =>
+    (key: string, human = false) =>
     // biome-ignore lint/suspicious/noExplicitAny: 테스트 편의 — 결과와 오류를 같은 값으로 받는다
     (method: string, params: unknown = {}): Promise<any> =>
-      call(env.paths.socket, method, params, session(key))
+      call(env.paths.socket, method, params, session(key, { human }))
         .then((r) => r.result)
         .catch((e: unknown) => e);
-  return { server, driver, env, A: as("A"), B: as("B") };
+  return { server, driver, env, A: as("A"), B: as("B"), H: as("web", true) };
 }
 
 const android360 = { source: "Small_360" };
@@ -175,5 +175,25 @@ describe("원본 목록과 복제", () => {
   test("없는 원본은 NOT_FOUND", async () => {
     const { A } = await start();
     expect(await A("device.create", { source: "nope" })).toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("사람(웹 UI)의 켜기·끄기", () => {
+  test("점유 없이 켜고 끈다 — 점유 기록이 남지 않는다", async () => {
+    const { H, server, driver } = await start();
+    const device = (await H("device.create", android360)) as DeviceView;
+    const up: { devices: DeviceView[] } = await H("device.up", { devices: [device.id] });
+    expect(up.devices[0]).toMatchObject({ booted: true, mine: false });
+    expect(up.devices[0]?.holder).toBeUndefined();
+    expect(server.leases.heldBy("web")).toEqual([]);
+    await H("device.down", { devices: [device.id] });
+    expect(driver.booted.has(device.id)).toBe(false);
+  });
+
+  test("에이전트가 쓰는 중인 디바이스는 사람도 켜고 끌 수 없다", async () => {
+    const { A, H } = await start();
+    const device = (await A("device.create", android360)) as DeviceView;
+    await A("lease.acquire", { devices: [device.id] });
+    expect(await H("device.up", { devices: [device.id] })).toMatchObject({ code: "BUSY" });
   });
 });
