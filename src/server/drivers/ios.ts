@@ -122,7 +122,7 @@ export class IosDriver implements Driver {
           native: sim.udid,
           name: sim.name,
           spec,
-          detail: `${deviceType.name} · ${spec.widthPt * spec.scale}×${spec.heightPt * spec.scale}px @${spec.scale}x · ${runtime.name}`,
+          detail: `${deviceType.name === sim.name ? "" : `${deviceType.name} · `}${spec.widthPt * spec.scale}×${spec.heightPt * spec.scale}px @${spec.scale}x · ${runtime.name}`,
           booted: sim.state === "Booted",
         });
       }
