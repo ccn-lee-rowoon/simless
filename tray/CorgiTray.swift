@@ -27,14 +27,11 @@ final class TrayController: NSObject, NSMenuDelegate {
     super.init()
     if let button = statusItem.button {
       button.image = Self.icon()
-      button.imagePosition = .imageLeading
       button.toolTip = "Corgi"
     }
     menu.delegate = self
     statusItem.menu = menu
     refresh()
-    // 메뉴를 열지 않아도 켜진 개수가 맞도록 가끔 다시 읽는다
-    Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in self?.refresh() }
   }
 
   /// 앱 아이콘(웰시코기)을 메뉴바 크기로
@@ -54,7 +51,6 @@ final class TrayController: NSObject, NSMenuDelegate {
   func refresh(completion: (() -> Void)? = nil) {
     guard let token = token(), let url = URL(string: "http://127.0.0.1:\(port)/api/call") else {
       lastError = "서버 토큰이 없습니다 — 서버를 켜세요"
-      update()
       completion?()
       return
     }
@@ -76,7 +72,6 @@ final class TrayController: NSObject, NSMenuDelegate {
           self.serverVersion = nil
           self.lastError = error == nil ? "서버 응답을 읽지 못했습니다" : "서버가 꺼져 있습니다"
         }
-        self.update()
         completion?()
       }
     }.resume()
@@ -91,12 +86,6 @@ final class TrayController: NSObject, NSMenuDelegate {
       booted: (d["booted"] as? Bool) ?? false,
       holder: who
     )
-  }
-
-  /// 아이콘 옆 숫자 = 켜진 디바이스 수
-  private func update() {
-    let booted = devices.filter(\.booted).count
-    statusItem.button?.title = booted > 0 ? " \(booted)" : ""
   }
 
   // MARK: 메뉴
