@@ -80,14 +80,28 @@ export async function install(paths: Paths): Promise<void> {
   mkdirSync(dirname(paths.launchAgent), { recursive: true });
   mkdirSync(paths.logDir, { recursive: true });
   // 이미 등록돼 있으면 내렸다가 새 설정으로 다시 올린다 (업데이트 후 재시작 포함)
-  await run(["launchctl", "bootout", `${domain()}/${LAUNCH_LABEL}`]);
+  await bootout();
   writeFileSync(paths.launchAgent, plist(paths, selfCommand()));
-  const result = await run(["launchctl", "bootstrap", domain(), paths.launchAgent]);
+  // bootout 직후에는 "Bootstrap failed: 5: Input/output error" 가 날 수 있어 몇 번 다시 해 본다
+  let result = await run(["launchctl", "bootstrap", domain(), paths.launchAgent]);
+  for (let i = 0; i < 10 && result.code !== 0; i++) {
+    await Bun.sleep(300);
+    result = await run(["launchctl", "bootstrap", domain(), paths.launchAgent]);
+  }
   if (result.code !== 0) throw new Error(`launchctl bootstrap 실패: ${result.stderr.trim()}`);
 }
 
-export async function uninstall(paths: Paths): Promise<void> {
+/** 내리고, 정말 내려갈 때까지 기다린다 — bootout 은 바로 끝나지 않는다 */
+async function bootout(): Promise<void> {
   await run(["launchctl", "bootout", `${domain()}/${LAUNCH_LABEL}`]);
+  for (let i = 0; i < 25; i++) {
+    if ((await run(["launchctl", "print", `${domain()}/${LAUNCH_LABEL}`])).code !== 0) return;
+    await Bun.sleep(200);
+  }
+}
+
+export async function uninstall(paths: Paths): Promise<void> {
+  await bootout();
   rmSync(paths.launchAgent, { force: true });
 }
 
