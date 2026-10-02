@@ -65,5 +65,9 @@ export function devicesTable(devices: DeviceView[]): string {
       d.enabled ? "" : "사용 안 함",
       d.mine ? "나" : d.holder ? formatHolder(d.holder) : "",
     ]);
-  return table(["ID", "크기", "이름", "상태", "슬림", "", "점유"], rows);
+  // 슬림 실패 이유는 표에 넣기엔 길어 아래에 따로 적는다
+  const notes = devices
+    .filter((d) => d.slim === "failed" && d.slimError)
+    .map((d) => `슬림 실패 ${d.id}: ${d.slimError?.split("\n")[0]}`);
+  return [table(["ID", "크기", "이름", "상태", "슬림", "", "점유"], rows), ...notes].join("\n");
 }

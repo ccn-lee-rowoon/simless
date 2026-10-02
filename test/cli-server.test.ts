@@ -55,3 +55,21 @@ describe("CLI ↔ 서버", () => {
     expect(stderr).toContain("corgi serve");
   });
 });
+
+describe("표 출력", () => {
+  test("슬림이 실패한 디바이스는 이유를 표 아래에 적는다", async () => {
+    const { devicesTable } = await import("../src/cli/format.ts");
+    const device = {
+      ...androidDevice("cccc"),
+      slim: "failed" as const,
+      slimError: "avdslim 이 없습니다 — corgi doctor\n자세한 내용",
+      label: "Android 360dp",
+      layoutWidth: 360,
+      layoutHeight: 760,
+      booted: false,
+      mine: false,
+    };
+    expect(devicesTable([device])).toContain("슬림 실패 cccc: avdslim 이 없습니다 — corgi doctor");
+    expect(devicesTable([device])).not.toContain("자세한 내용");
+  });
+});
