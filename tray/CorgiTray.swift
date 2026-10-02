@@ -11,37 +11,45 @@ struct DeviceRow {
   let holder: String?
 }
 
-/// 웰시코기 얼굴 실루엣 — 바깥으로 벌어진 큰 귀, 아래로 좁아지는 주둥이, 뚫린 눈·코
+/// 웰시코기 얼굴 실루엣 — 끝이 둥근 큰 귀, 웃는 입, 뚫린 눈·코 (18×18 단위)
 func corgiTemplate(size: CGFloat) -> NSImage {
-  let image = NSImage(size: NSSize(width: size, height: size), flipped: true) { rect in
-    let s = rect.width / 18
-    func p(_ x: CGFloat, _ y: CGFloat) -> NSPoint { NSPoint(x: x * s, y: y * s) }
+  let (w, h) = (size, size)
+  let image = NSImage(size: NSSize(width: w, height: h), flipped: true) { r in
+    let s = r.height / 18
+    let ox = (r.width - 18 * s) / 2
+    func p(_ x: CGFloat, _ y: CGFloat) -> NSPoint { NSPoint(x: ox + x * s, y: y * s) }
     NSColor.black.setFill()
-    NSColor.black.setStroke()
-    func triangle(_ a: NSPoint, _ b: NSPoint, _ c: NSPoint, round: CGFloat) {
-      let path = NSBezierPath()
-      path.move(to: a); path.line(to: b); path.line(to: c); path.close()
-      path.lineJoinStyle = .round
-      path.lineWidth = round * s
-      path.fill(); path.stroke()
+    // 둥근 끝의 큰 귀
+    for (base1, tip, base2, c1, c2) in [
+      (p(3.6, 8.2), p(2.8, 1.2), p(8.2, 5.2), p(1.4, 4.0), p(4.6, 0.2)),
+      (p(14.4, 8.2), p(15.2, 1.2), p(9.8, 5.2), p(16.6, 4.0), p(13.4, 0.2)),
+    ] {
+      let ear = NSBezierPath()
+      ear.move(to: base1)
+      ear.curve(to: tip, controlPoint1: c1, controlPoint2: tip)
+      ear.curve(to: base2, controlPoint1: c2, controlPoint2: base2)
+      ear.close(); ear.fill()
     }
-    // 귀 — 머리보다 크고 바깥으로 벌어진, 끝이 둥근 세모
-    triangle(p(3.0, 8.2), p(2.3, 0.9), p(8.2, 5.6), round: 1.8)
-    triangle(p(15.0, 8.2), p(15.7, 0.9), p(9.8, 5.6), round: 1.8)
-    // 얼굴 — 볼은 넓고 아래로 갈수록 주둥이처럼 좁아진다 (고양이와 다른 점)
+    // 얼굴
     let face = NSBezierPath()
-    face.move(to: p(2.4, 10.4))
-    face.curve(to: p(9, 5.0), controlPoint1: p(2.4, 6.6), controlPoint2: p(5.6, 5.0))
-    face.curve(to: p(15.6, 10.4), controlPoint1: p(12.4, 5.0), controlPoint2: p(15.6, 6.6))
-    face.curve(to: p(9, 17.2), controlPoint1: p(15.6, 13.4), controlPoint2: p(12.0, 17.2))
-    face.curve(to: p(2.4, 10.4), controlPoint1: p(6.0, 17.2), controlPoint2: p(2.4, 13.4))
-    face.close()
-    face.fill()
-    // 눈·코는 뚫는다 — 템플릿이라 뚫린 곳이 메뉴바 색으로 보인다
+    face.move(to: p(2.6, 9.6))
+    face.curve(to: p(9, 4.6), controlPoint1: p(2.6, 6.2), controlPoint2: p(5.6, 4.6))
+    face.curve(to: p(15.4, 9.6), controlPoint1: p(12.4, 4.6), controlPoint2: p(15.4, 6.2))
+    face.curve(to: p(9, 15.4), controlPoint1: p(15.4, 12.8), controlPoint2: p(12.4, 15.4))
+    face.curve(to: p(2.6, 9.6), controlPoint1: p(5.6, 15.4), controlPoint2: p(2.6, 12.8))
+    face.close(); face.fill()
     NSGraphicsContext.current?.compositingOperation = .destinationOut
-    NSBezierPath(ovalIn: NSRect(x: 5.1 * s, y: 8.9 * s, width: 2.1 * s, height: 2.3 * s)).fill()
-    NSBezierPath(ovalIn: NSRect(x: 10.8 * s, y: 8.9 * s, width: 2.1 * s, height: 2.3 * s)).fill()
-    NSBezierPath(ovalIn: NSRect(x: 7.6 * s, y: 13.0 * s, width: 2.8 * s, height: 1.9 * s)).fill()
+    // 눈·코
+    NSBezierPath(ovalIn: NSRect(x: ox + 5.2 * s, y: 7.8 * s, width: 1.9 * s, height: 2.1 * s)).fill()
+    NSBezierPath(ovalIn: NSRect(x: ox + 10.9 * s, y: 7.8 * s, width: 1.9 * s, height: 2.1 * s)).fill()
+    NSBezierPath(ovalIn: NSRect(x: ox + 7.7 * s, y: 10.4 * s, width: 2.6 * s, height: 1.7 * s)).fill()
+    // 웃는 입 — 코 아래 W 자, 혀와 얼굴 사이를 가른다
+    let mouth = NSBezierPath()
+    mouth.move(to: p(5.9, 12.4))
+    mouth.curve(to: p(9, 12.6), controlPoint1: p(6.9, 13.9), controlPoint2: p(8.4, 13.9))
+    mouth.curve(to: p(12.1, 12.4), controlPoint1: p(9.6, 13.9), controlPoint2: p(11.1, 13.9))
+    mouth.lineWidth = 0.9 * s; mouth.lineCapStyle = .round
+    mouth.stroke()
     return true
   }
   image.isTemplate = true
