@@ -49,6 +49,8 @@ export interface Driver {
   shutdown(device: Device, state: RuntimeState): Promise<void>;
   slim(device: Device, progress: Progress): Promise<void>;
   unslim(device: Device, progress: Progress): Promise<void>;
+  /** 켠 직후 할 일 — Android 는 슬림화된 기기의 기기 안 정리를 다시 한다 */
+  afterBoot?(device: Device, state: RuntimeState, progress: Progress): Promise<void>;
   /** 켜져 있어야 알 수 있으면 undefined */
   checkSlim(device: Device, state: RuntimeState): Promise<SlimState | undefined>;
 }
