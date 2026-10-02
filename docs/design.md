@@ -189,30 +189,31 @@ corgi/
 - 슬림 확인 시점: 서버 시작(켜진 기기만), 디바이스 켤 때(항상). 풀림이면 다시 적용한다.
 - 생성·슬림화는 멱등 — 이미 맞으면 아무것도 안 한다.
 
-## 10. 앱 설치·실행·같은 화면 이동 (R8·R9·R10)
+## 10. 앱 설치·실행·같은 화면 이동 (R8·R9·R10) — argent 로
+
+Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi use --json`)에서 기기마다 **argent 에 넘길 ID**(`targetId` — UDID·시리얼)와 **크기 라벨**(`label` — 예: `Android 360dp`)을 받아, argent 로 기기마다 한다 (S6, 결정 기록).
+
+| 할 일 | argent | 비고 |
+| --- | --- | --- |
+| 앱 설치 | `reinstall-app` | Android APK·iOS 시뮬레이터용 .app |
+| 앱 실행 | `launch-app`, dev client 는 `open-url` | Android 는 Metro 에 붙으려면 `adb -s <시리얼> reverse tcp:8081 tcp:8081` 이 필요하다 — 스킬이 안내 |
+| 같은 화면 | `open-url <딥링크>`, 딥링크 없는 화면은 argent 흐름 재생 | |
+| 화면 확인 | `screenshot` | 크기 라벨을 붙여 보고 |
+
+- Metro 는 띄우지 않는다. 앱 쪽 세션이 띄운 것을 같이 쓴다 (S7).
+- 점유한 디바이스만 argent 로 다룬다 — 3단계 훅이 지킨다 (P1·P8).
+
+**나중에(L1~L3) 만들 때 참고** — 2단계에서 한 번 만들다 되돌린 내용이다.
 
 | 동작 | Android | iOS |
 | --- | --- | --- |
-| 설치 | `adb -s … install -r <apk>` (기기별 병렬) | `simctl install <udid> <.app>` |
-| 실행 | `adb reverse tcp:<metro> tcp:<metro>` → dev client 딥링크 `am start -a VIEW -d …` | `simctl openurl` (호스트 localhost 를 그대로 씀) |
-| 같은 화면 | `am start -a VIEW -d <딥링크>` | `simctl openurl <udid> <딥링크>` |
+| 설치 | `adb -s <시리얼> install -r <apk>` (기기별 병렬, 큰 APK 는 몇 분) | `simctl install <udid> <.app>` |
+| 실행 | `adb reverse tcp:<metro> tcp:<metro>` → dev client 주소 `am start -W -a android.intent.action.VIEW -d '<주소>' <패키지>`, 주소가 없으면 `monkey -p <패키지> -c android.intent.category.LAUNCHER 1` | `simctl openurl <udid> <주소>` (호스트 localhost 를 그대로 씀), 주소가 없으면 `simctl launch` |
+| 딥링크 | `am start -W -a android.intent.action.VIEW -d '<딥링크>' [<패키지>]` | `simctl openurl <udid> <딥링크>` |
 
-- 대상은 **이 세션이 점유했고 켜져 있고 사용 중인** 디바이스 전부.
-- Metro 는 띄우지 않는다. 포트에 응답이 없으면 경고만 한다(남의 Metro 보호, S7).
-- 딥링크 없는 화면의 argent 흐름 재생과 **스크린샷은 Corgi 가 하지 않는다** (S6). 스킬이 기기마다 argent 로 한다. 대신 `corgi list --json` 이 기기마다 **argent 에 넘길 ID**(UDID·시리얼)와 **크기 라벨**(예: `Android 360dp`)을 준다.
-
-앱별 설정 예 (`~/.config/corgi/apps/nova.json`):
-
-```jsonc
-{
-  "name": "nova",
-  "android": { "package": "com.ensapia.nova.alpha", "apk": "<xb3-client>/rn/android/app/build/outputs/apk/debug/app-debug.apk" },
-  "ios":     { "bundleId": "<미확인>", "app": "<빌드된 .app 경로>" },
-  "devClientUrl": "exp+novadeva://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081",
-  "deepLinkScheme": "novaa",
-  "metroPort": 8081
-}
-```
+- `adb shell` 은 인자를 이어 붙여 기기 셸에 넘기므로 주소의 `?`·`&` 가 해석되지 않게 작은따옴표로 감싼다.
+- 앱별 설정 `~/.config/corgi/apps/<이름>.json` (Q8): `android.package`·`android.apk`·`ios.bundleId`·`ios.app`·`devClientScheme`(→ `<스킴>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<metroPort>`)·`deepLinkScheme`(`/home` → `<스킴>://home`)·`metroPort`(기본 8081, 응답이 없으면 경고만).
+- NOVA 값(2026-10-02 확인): Android `com.ensapia.nova.alpha` · APK `<xb3-client>/rn/android/app/build/outputs/apk/debug/app-debug.apk` · iOS 번들 ID `com.ensapia.nova.alpha` · `.app` 은 DerivedData 의 `NOVADEVA.app` · dev client 스킴 `exp+novadeva` · 딥링크 스킴 `novaa`.
 
 ## 11. 통신 (요약 — 상세는 `docs/protocol.md`)
 
@@ -252,14 +253,12 @@ corgi/
 | `corgi who [<udid·시리얼·dev>]` | 누가 쓰는지 | R13 |
 | `corgi up` · `corgi down` | 점유한 디바이스 켜기·끄기 | R7 |
 | **`corgi use [<dev>…] [--wait]`** | **acquire + up 한 번에** — 주 흐름의 첫 단계 | R15 |
-| `corgi install-app --app nova [--apk] [--ios-app]` | 일괄 설치 | R8 |
-| `corgi launch --app nova` | 일괄 실행 (dev client 연결 포함) | R8 |
-| `corgi open <딥링크>` | 같은 화면 이동 | R9 |
 | `corgi update [--check] [--rollback]` | 새 버전 확인·업데이트·이전 버전으로 되돌리기 | R19 |
 | `corgi serve` · `corgi hook <에이전트> pre-tool-use` · `corgi mcp` | 서버·훅·MCP 진입점 (사람이 직접 쓰지 않음) | — |
 
 - 종료 코드: `0` 성공 · `1` 실패 · `2` 사용법 오류 · `3` 다른 세션이 사용 중 · `4` 서버에 연결 못 함
-- `up`·`install-app`·`launch`·`open` 은 점유가 있어야 한다. 없으면 실패하고 `corgi use` 를 안내한다.
+- `up`·`down` 은 점유가 있어야 한다. 없으면 실패하고 `corgi use` 를 안내한다.
+- 일괄 설치·실행·딥링크(`install-app`·`launch`·`open`)는 «나중에» (L1~L3, §10).
 
 ## 13. 훅 (P3~P9)
 
@@ -308,7 +307,7 @@ corgi/
 `integrations/skill/corgi/SKILL.md` → `~/.claude/skills/corgi` (S9). 2단계에서 쓴다. 스킬 형식을 읽는 다른 에이전트(Codex 등)는 `corgi install --agent <이름>` 으로 그 에이전트 위치에도 설치한다.
 
 - description 에 S3 의 반응 프롬프트, S4 의 비반응(기기 한 대·단순 스크린샷 → argent 스킬)을 넣는다.
-- 본문 순서(S5): `corgi status` → `corgi use [--wait]` (바쁘면 사용자에게 묻기, S7) → `corgi install-app`·`launch` → `corgi open <딥링크>` 또는 기기마다 argent 흐름 → `corgi list --json` 의 ID 로 기기마다 argent `screenshot` → 크기 라벨을 붙여 보고 → `corgi release` → 끌지 묻기(S8).
+- 본문 순서(S5): `corgi status` → `corgi use [--wait]` (바쁘면 사용자에게 묻기, S7) → `corgi list --json` 으로 기기별 `targetId`·`label` 받기 → 기기마다 argent: 앱 설치(`reinstall-app`)·실행(`launch-app`, Android 는 먼저 `adb reverse`)·같은 화면(`open-url` 또는 argent 흐름)·`screenshot` → 크기 라벨을 붙여 보고 → `corgi release` → 끌지 묻기(S8).
 - 설치·연결 문제는 `corgi doctor` 결과를 따른다 (S1·S2).
 - `corgi status --json` 에 `update` 가 있으면 사용자에게 알리기만 하고 **직접 업데이트하지 않는다** (R19).
 
@@ -320,13 +319,13 @@ corgi/
 | --- | --- | --- |
 | 0 ✅ | 저장소 뼈대 — `package.json`·`tsconfig`·Biome·`mise.toml`, `bin/corgi.ts`·`main.ts` 서브커맨드 틀, `scripts/build.ts`, 검사 통과. **컴파일한 바이너리에서 파일 포함·훅 시작 시간 확인** | `bun link` 와 `dist/corgi` 양쪽에서 `corgi --version` 이 돈다 |
 | 1 ✅ | 서버 + CLI 코어 — 레지스트리, Android·iOS 드라이버(생성·목록·이름·사용 안 함·삭제·켜기·끄기·슬림), 점유·대기·자동 해제, 소켓, launchd, `protocol.md`. **실제 디바이스로 확인**: iOS 생성+슬림 2분 22초, Android·iOS 동시 켜기 29초. 남은 확인은 §17 | CLI 로 크기별 디바이스를 만들고 점유해서 켠다 |
-| 2 | 앱 조작 + 스킬 — `install-app`·`launch`·`open`, `doctor`, 스킬 초안 | «코기로 확인해 줘» 로 주 흐름(R15)이 돈다 |
+| 2 | `doctor` + 스킬 — 설치·연결 점검(S1·S2), 스킬 초안(S3~S8 — 앱 설치·실행·화면 이동은 argent 로 안내) | «코기로 확인해 줘» 로 주 흐름(R15)이 돈다 |
 | 3 | 보호 — 훅, argent 규칙, 서버 꺼짐 처리, `corgi install` 완성 | 다른 세션이 남의 디바이스를 못 건드린다 |
 | 4 | 웹 UI (M1~M8) + HTTP API·SSE | 사람이 브라우저로 전부 관리한다 |
 | 5 | MCP 래퍼 | 에이전트가 사용법 없이 바로 쓴다 |
 | 6 (선택) | 메뉴바 아이콘 | 메뉴바에서 점유 상태를 본다 |
 | U | 업데이트 — `scripts/release.ts`, 확인·알림, `corgi update`·되돌리기 (§19). **리모트·첫 Release 가 생긴 뒤**, 4단계 이후 아무 때나 | 새 버전을 알림 받고 명령 한 번으로 올린다 |
-| 나중 | 스크린샷 모아 보기 (웹 UI 탭) | — |
+| 나중 | 스크린샷 모아 보기 (웹 UI 탭) · 일괄 설치·실행·딥링크 (L1~L3, 필요하면) | — |
 
 ## 17. 구현 전에 실측할 것
 

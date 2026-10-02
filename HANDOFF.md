@@ -92,7 +92,7 @@
 }
 ```
 
-- iOS 번들 ID 는 미확인 (alpha dev 앱 이름 `NOVADEVA`)
+- iOS 번들 ID `com.ensapia.nova.alpha`(2026-10-02 확인) · 시뮬레이터용 빌드 `~/Library/Developer/Xcode/DerivedData/NOVADEVA-*/Build/Products/Debug-iphonesimulator/NOVADEVA.app` · URL 스킴 `novaa`·`exp+novadeva`
 - Metro 는 도구가 띄우지 않는다. NOVA 쪽 세션이 띄운 Metro 를 같이 쓴다
 
 ## 새 세션 시작 프롬프트
