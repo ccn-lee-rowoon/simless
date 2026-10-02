@@ -1,0 +1,23 @@
+{
+  "name": "corgi",
+  "version": "0.0.0",
+  "description": "크기별 디바이스 레이아웃 확인 도구",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "corgi": "./bin/corgi.ts"
+  },
+  "scripts": {
+    "check": "biome check . && tsc --noEmit",
+    "format": "biome check --write .",
+    "build": "bun scripts/build.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/bun": "1.3.6",
+    "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "commander": "15.0.0"
+  }
+}
