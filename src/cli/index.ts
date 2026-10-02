@@ -87,6 +87,18 @@ export async function runCli(argv: string[]): Promise<number> {
       }),
     );
 
+  program
+    .command("ui")
+    .description("웹 UI 를 브라우저로 연다 (서버가 꺼져 있으면 켠다)")
+    .option("--print", "열지 않고 주소만 출력")
+    .action(
+      run(async (ctx, o: { print?: boolean }) => {
+        const { openUi } = await import("./ui.ts");
+        const url = await openUi(ctx, { open: !o.print });
+        output(ctx, { url }, () => (o.print ? url : `열었습니다: ${url.replace(/#.*/, "")}`));
+      }),
+    );
+
   registerStatus(program, run);
   registerLease(program, run);
   registerDevices(program, run);
