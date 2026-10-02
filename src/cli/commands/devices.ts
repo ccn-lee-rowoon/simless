@@ -65,7 +65,7 @@ export function registerDevices(program: Command, run: Run) {
             i.label,
             i.name,
             i.booted ? "켜짐" : "꺼짐",
-            i.managed ? `Corgi ${i.managed}` : i.created ? `생성됨 (${i.created})` : "",
+            i.managed ? `Corgi ${i.managed}` : i.created ? `만든 것 있음 (${i.created})` : "",
             i.detail,
             i.native,
           ];
@@ -74,11 +74,10 @@ export function registerDevices(program: Command, run: Run) {
           const problems = result.problems.map((p) => `주의(${p.platform}): ${p.message}`);
           const header = ["크기", "이름", "상태", "", "기기", "원본 ID"];
           return [
-            table(header, devices),
-            "",
-            "Android 대표 프로필 (Corgi 내장)",
-            table(header, profiles),
-            "",
+            ...(devices.length > 0 ? ["iOS 시뮬레이터 (이 Mac)", table(header, devices), ""] : []),
+            ...(profiles.length > 0
+              ? ["Android 대표 프로필 (Corgi 내장)", table(header, profiles), ""]
+              : []),
             "만들기: corgi create <이름 또는 원본 ID>",
             "직접 입력(Android): corgi create --width <dp> --height <dp> --density <dpi> [--image <이미지>]",
             ...problems,

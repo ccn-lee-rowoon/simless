@@ -32,7 +32,7 @@ async function start() {
 const android360 = { source: "Small_360" };
 
 describe("디바이스 명령", () => {
-  test("만들면 기본 이름·슬림 적용, 같은 크기는 다시 못 만든다 (M3·M4·R5)", async () => {
+  test("만들면 기본 이름·슬림 적용, 같은 크기도 다시 만들고 이름만 겹치지 않는다 (M3·M4·R5)", async () => {
     const { A } = await start();
     const device = (await A("device.create", android360)) as DeviceView;
     expect(device).toMatchObject({
@@ -42,7 +42,10 @@ describe("디바이스 명령", () => {
       enabled: true,
       source: { name: "Small 360", native: "Small_360" },
     });
-    expect(await A("device.create", android360)).toMatchObject({ code: "INVALID" });
+    expect(await A("device.create", android360)).toMatchObject({ name: "corgi Small 360 2" });
+    expect(await A("device.create", { ...android360, name: "corgi Small 360" })).toMatchObject({
+      code: "INVALID",
+    });
   });
 
   test("--no-slim 이면 슬림 미적용", async () => {

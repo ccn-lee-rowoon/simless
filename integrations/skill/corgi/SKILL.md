@@ -27,14 +27,13 @@ corgi --json status
 ```
 
 - 종료 코드 4(서버에 연결 못 함)이거나 이상하면 `corgi doctor` 를 실행하고 안내대로 고친다. 고칠 수 없으면 사용자에게 알린다.
-- 디바이스가 없거나 원하는 크기가 없으면 `corgi list --all` 로 **이 Mac 의 에뮬레이터·시뮬레이터(원본)** 를 보고, 어느 원본으로 만들지 **사용자에게 물은 뒤** 만든다. 원본과 같은 크기의 `corgi …` 복제본이 생기고 슬림화된다(앱은 설치되지 않음). iOS 는 슬림에 2~3분 걸린다.
+- 디바이스가 없거나 원하는 크기가 없으면 `corgi list --all` 로 만들 수 있는 목록을 보고, 무엇으로 만들지 **사용자에게 물은 뒤** 만든다. `corgi …` 디바이스가 생기고 슬림화된다(앱은 설치되지 않음). 같은 크기로 여러 대 만들어도 된다(이름만 겹치지 않으면 됨).
+  - **iOS**: 이 Mac 의 시뮬레이터를 원본으로 — 같은 기기 종류·런타임으로 만든다. 슬림에 2~3분 걸린다.
+  - **Android**: Corgi 내장 **대표 프로필** 또는 **직접 입력**.
   ```sh
-  corgi create Size_Small_360dp        # 원본 ID(AVD ID·UDID) 또는 이름
-  ```
-  Android 는 Corgi 내장 **대표 프로필**(`profile:small-phone` 등, `corgi list --all` 아래쪽)이나 **직접 입력**으로도 만든다:
-  ```sh
-  corgi create profile:medium-phone
-  corgi create --width 375 --height 812 --density 420
+  corgi create "iPhone 17"                                   # iOS — 원본 이름 또는 UDID
+  corgi create profile:medium-phone                          # Android 대표 프로필
+  corgi create --width 375 --height 812 --density 420        # Android 직접 입력
   ```
   iOS 에서 원하는 크기의 원본이 없으면 사용자에게 Xcode 에서 먼저 만들어 달라고 한다.
 
@@ -82,7 +81,7 @@ corgi release
 | 명령 | 하는 일 |
 | --- | --- |
 | `corgi --json status` | 서버·디바이스·점유 한눈에 |
-| `corgi list --all [--platform android\|ios]` | 이 Mac 의 전체 목록 — 복제 원본 (폭 순, «생성됨» 표시) |
+| `corgi list --all [--platform android\|ios]` | 만들 수 있는 목록 — iOS 시뮬레이터·Android 대표 프로필 (폭 순) |
 | `corgi create <원본>` / `create --width --height --density` | 원본(또는 대표 프로필)과 같은 크기로 복제 + 슬림화 / Android 직접 입력 |
 | `corgi --json use [<디바이스>...] [--wait --timeout 9m]` | 점유 + 켜기 |
 | `corgi --json list` | 만든 디바이스 — 기기별 `targetId`·`label`·켜짐·점유 |

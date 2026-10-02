@@ -241,14 +241,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
       );
     }
     const source = matches[0] as SourceDevice;
-    const existing = server.registry.list().find((d) => specKey(d.spec) === specKey(source.spec));
-    if (existing) {
-      throw new HandlerError(
-        "INVALID",
-        `같은 크기로 이미 만들었습니다: ${existing.id} ${existing.name}`,
-      );
-    }
-
+    // 같은 크기도 여러 대 만들 수 있다 — 막는 건 이름 중복뿐 (M3)
     let name = params.name ?? defaultName(source);
     if (server.registry.find(name)) {
       if (params.name) throw new HandlerError("INVALID", `이미 쓰는 이름입니다: ${name}`);

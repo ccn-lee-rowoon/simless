@@ -222,12 +222,7 @@ export function CreateDialog({
           <ul className="picker">
             {candidates.map((s) => (
               <li key={s.native}>
-                <button
-                  type="button"
-                  className="picker-row"
-                  disabled={s.created !== undefined}
-                  onClick={() => pick(s)}
-                >
+                <button type="button" className="picker-row" onClick={() => pick(s)}>
                   <span className="size">{s.label.replace(/^(Android|iOS) /, "")}</span>
                   <PlatformBadge platform={s.platform} />
                   <span className="picker-name">
@@ -235,11 +230,17 @@ export function CreateDialog({
                     {s.name}
                     <span className="subtle"> · {s.detail}</span>
                   </span>
-                  {s.created ? (
-                    <span className="badge badge-neutral">생성됨</span>
-                  ) : (
-                    <span className="picker-go">선택 →</span>
-                  )}
+                  <span className="picker-go">
+                    {s.created && (
+                      <span
+                        className="badge badge-neutral"
+                        title={`같은 크기로 만든 디바이스: ${s.created}`}
+                      >
+                        만든 것 있음
+                      </span>
+                    )}{" "}
+                    선택 →
+                  </span>
                 </button>
               </li>
             ))}

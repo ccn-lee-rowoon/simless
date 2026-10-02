@@ -73,7 +73,7 @@ export interface SourceEntry {
   booted: boolean;
   /** Corgi 가 만든 디바이스면 그 ID — 원본으로 쓰지 않는다 */
   managed?: string;
-  /** 같은 크기로 이미 만든 Corgi 디바이스 ID (M3) */
+  /** 같은 크기로 이미 만든 Corgi 디바이스 ID — 알려만 주고 막지 않는다 (M3) */
   created?: string;
 }
 

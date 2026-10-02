@@ -225,39 +225,15 @@ export class AndroidDriver implements Driver {
     );
   }
 
-  /** 이 Mac 의 AVD — 복제 원본 후보 (M1). 화면 크기(hw.lcd.*)가 없는 AVD 는 뺀다 */
+  /**
+   * Android 는 이 Mac 의 AVD 를 원본으로 쓰지 않는다 — 크기는 대표 프로필·직접 입력으로 정한다
+   * (requirements M1, «결정 기록»).
+   */
   async sources(): Promise<SourceDevice[]> {
-    if (!existsSync(this.avdHome)) return [];
-    const running = await this.running();
-    const sources: SourceDevice[] = [];
-    for (const file of readdirSync(this.avdHome).filter((f) => f.endsWith(".ini"))) {
-      const avdId = file.slice(0, -".ini".length);
-      const configPath = this.configPath(avdId);
-      if (!existsSync(configPath)) continue;
-      const config = readProps(configPath);
-      const widthPx = Number(config["hw.lcd.width"]);
-      const heightPx = Number(config["hw.lcd.height"]);
-      const density = Number(config["hw.lcd.density"]);
-      const systemImage = config["image.sysdir.1"];
-      if (!widthPx || !heightPx || !density || !systemImage) continue;
-      const target = systemImage.split("/")[1] ?? "";
-      sources.push({
-        platform: "android",
-        native: avdId,
-        name: config["avd.ini.displayname"] || avdId,
-        spec: { platform: "android", widthPx, heightPx, density, systemImage },
-        detail:
-          `${widthPx}×${heightPx}px · ${density}dpi · ${target} ${config["tag.id"] ?? ""}`.trim(),
-        booted: running.get(avdId)?.ready ?? false,
-      });
-    }
-    return sources;
+    return [];
   }
 
-  /**
-   * 원본 config.ini 의 하드웨어 설정만 복사해 새 AVD 를 쓴다. 사용자 데이터(userdata·스냅샷)는
-   * 복사하지 않아 같은 크기의 깨끗한 디바이스가 된다 (requirements «결정 기록»).
-   */
+  /** 대표 프로필·직접 입력의 크기와 이미지로 config.ini 를 새로 쓴다 */
   async create(
     input: { id: string; name: string; source: SourceDevice },
     progress: Progress,
@@ -270,27 +246,20 @@ export class AndroidDriver implements Driver {
     if (existsSync(avdDir)) throw new HandlerError("INVALID", `이미 있는 AVD: ${avdId}`);
     progress(`AVD 생성: ${input.name} ← ${source.name} (${source.detail})`);
 
-    const fromAvd = !source.native.startsWith("profile:") && !source.native.startsWith("custom:");
-    const config = fromAvd ? readProps(this.configPath(source.native)) : this.freshConfig(source);
-    // 원본을 가리키는 값만 바꾸고 나머지(hw.*·image.sysdir.1·tag.* 등)는 그대로 둔다
-    const copied: Record<string, string> = {
-      ...config,
+    const config: Record<string, string> = {
       AvdId: avdId,
       "avd.ini.displayname": input.name.replace(/[\r\n]/g, " "),
-      "avd.ini.encoding": config["avd.ini.encoding"] ?? "UTF-8",
+      "avd.ini.encoding": "UTF-8",
+      ...this.freshConfig(source),
     };
     mkdirSync(avdDir, { recursive: true });
     writeFileSync(
       join(avdDir, "config.ini"),
-      `${Object.entries(copied)
+      `${Object.entries(config)
         .map(([k, v]) => `${k}=${v}`)
         .join("\n")}\n`,
     );
-    const sourceIni = join(this.avdHome, `${source.native}.ini`);
-    const target =
-      (fromAvd && existsSync(sourceIni) ? readProps(sourceIni).target : undefined) ??
-      config.target ??
-      "";
+    const target = config.target ?? "";
     writeFileSync(
       join(this.avdHome, `${avdId}.ini`),
       `avd.ini.encoding=UTF-8\npath=${avdDir}\npath.rel=avd/${avdId}.avd\ntarget=${target}\n`,

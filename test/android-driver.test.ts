@@ -106,54 +106,31 @@ describe("AndroidDriver", () => {
     "tag.id": "google_apis_playstore",
   };
 
-  test("sources — 이 Mac 의 AVD 를 원본으로, 크기 설정이 없는 AVD 는 뺀다", async () => {
+  test("sources 는 비어 있다 — 이 Mac 의 AVD 가 있어도 원본으로 쓰지 않는다 (M1)", async () => {
     const { env } = sdkWithImages();
     sourceAvd(env.ANDROID_AVD_HOME, "Size_Small_360dp", small);
-    sourceAvd(env.ANDROID_AVD_HOME, "Studio_Skin", {
-      AvdId: "Studio_Skin",
-      "skin.name": "pixel_6",
-    });
-    const sources = await driver(env, { runner: fakeAdb().runner }).sources();
-    expect(sources).toHaveLength(1);
-    expect(sources[0]).toMatchObject({
-      native: "Size_Small_360dp",
-      name: "Small 360x760dp",
-      spec: { widthPx: 720, heightPx: 1520, density: 320 },
-      booted: false,
-    });
+    expect(await driver(env, { runner: fakeAdb().runner }).sources()).toEqual([]);
   });
 
-  test("create — 원본의 하드웨어 설정을 그대로, 사용자 데이터는 빼고 복사한다", async () => {
+  test("만든 AVD 는 이름을 바꿔도 ID 가 그대로이고, 지우면 사라진다 — 다른 AVD 는 그대로", async () => {
     const { env } = sdkWithImages();
     sourceAvd(env.ANDROID_AVD_HOME, "Size_Small_360dp", small);
     const d = driver(env, { runner: fakeAdb().runner });
-    const [source] = await d.sources();
-    if (!source) throw new Error("원본 없음");
+    const source = (await d.presetSources()).find((p) => p.native === "profile:small-phone");
+    if (!source) throw new Error("프로필 없음");
     const { native } = await d.create({ id: "ab12", name: "corgi Small", source }, () => {});
     expect(native).toBe("corgi_ab12");
-
     const dir = join(env.ANDROID_AVD_HOME, "corgi_ab12.avd");
-    const config = readFileSync(join(dir, "config.ini"), "utf8");
-    expect(config).toContain("AvdId=corgi_ab12");
-    expect(config).toContain("avd.ini.displayname=corgi Small");
-    expect(config).toContain("hw.lcd.width=720");
-    expect(config).toContain("hw.keyboard=yes");
-    expect(config).toContain(
-      "image.sysdir.1=system-images/android-36/google_apis_playstore/arm64-v8a/",
-    );
-    expect(existsSync(join(dir, "userdata-qemu.img"))).toBe(false);
-    expect(readFileSync(join(env.ANDROID_AVD_HOME, "corgi_ab12.ini"), "utf8")).toContain(
-      "target=android-36",
-    );
+    expect(readFileSync(join(dir, "config.ini"), "utf8")).toContain("AvdId=corgi_ab12");
 
     const device = { id: "ab12", native, name: "corgi Small", spec: source.spec } as Device;
     await d.rename(device, "작은 폰");
-    expect(readFileSync(join(dir, "config.ini"), "utf8")).toContain("avd.ini.displayname=작은 폰");
-    expect(readFileSync(join(dir, "config.ini"), "utf8")).toContain("AvdId=corgi_ab12");
+    const config = readFileSync(join(dir, "config.ini"), "utf8");
+    expect(config).toContain("avd.ini.displayname=작은 폰");
+    expect(config).toContain("AvdId=corgi_ab12");
 
     await d.remove(device);
     expect(existsSync(dir)).toBe(false);
-    // 원본은 그대로
     expect(
       existsSync(join(env.ANDROID_AVD_HOME, "Size_Small_360dp.avd", "userdata-qemu.img")),
     ).toBe(true);
