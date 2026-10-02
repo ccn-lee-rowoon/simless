@@ -29,7 +29,7 @@
 | 항목 | 선택 | 메모 |
 | --- | --- | --- |
 | 언어·런타임 | TypeScript · Bun | 개발·빌드용 Bun 버전은 `mise.toml` 로 고정 (현재 1.3.6). 받는 Mac 에는 Bun 이 필요 없다 |
-| 배포 | `bun build --compile` **단일 실행 파일** (`darwin-arm64`). 개발 중에는 `bun link` 로 `.ts` 를 바로 실행 | 약 60MB(압축 약 20MB), 시작 0.01초(실측). 새 바이너리의 첫 실행만 macOS 검사로 약 1초. 훅 경로는 `--bytecode` 로 더 줄일 수 있다 |
+| 배포 | `bun build --compile --minify --bytecode` **단일 실행 파일** (`darwin-arm64`, `bun run build` → `dist/corgi`). 개발 중에는 `bun link` 로 `.ts` 를 바로 실행 | 약 55MB. 훅 경로 시작 약 21ms(0단계 실측, `--bytecode` 없이 약 26ms). 새 바이너리의 첫 실행만 macOS 검사로 약 1초. **`--bytecode` 는 CJS 만 지원 → 최상위 `await` 를 쓰지 않는다** |
 | CLI 인자 | `commander` | 서브커맨드·`--help` 정리 |
 | 검증·타입 | `zod` | 소켓·HTTP 메시지 스키마를 한 곳에서 정의하고 타입도 뽑는다. MCP SDK 도 쓴다 |
 | MCP | `@modelcontextprotocol/sdk` (5단계) | stdio |
@@ -294,7 +294,7 @@ corgi/
 
 | 단계 | 내용 | 끝나면 |
 | --- | --- | --- |
-| 0 | 저장소 뼈대 — `package.json`·`tsconfig`·Biome·`mise.toml`, `bin/corgi.ts`·`main.ts` 서브커맨드 틀, `scripts/build.ts`, 검사 통과. **컴파일한 바이너리에서 파일 포함·훅 시작 시간 확인** | `bun link` 와 `dist/corgi` 양쪽에서 `corgi --version` 이 돈다 |
+| 0 ✅ | 저장소 뼈대 — `package.json`·`tsconfig`·Biome·`mise.toml`, `bin/corgi.ts`·`main.ts` 서브커맨드 틀, `scripts/build.ts`, 검사 통과. **컴파일한 바이너리에서 파일 포함·훅 시작 시간 확인** | `bun link` 와 `dist/corgi` 양쪽에서 `corgi --version` 이 돈다 |
 | 1 | 서버 + CLI 코어 — 레지스트리, Android·iOS 드라이버(생성·목록·이름·사용 안 함·삭제·켜기·끄기·슬림), 점유·대기·자동 해제, 소켓, launchd, `protocol.md` | CLI 로 크기별 디바이스를 만들고 점유해서 켠다 |
 | 2 | 앱 조작 + 스킬 — `install-app`·`launch`·`open`, `doctor`, 스킬 초안 | «코기로 확인해 줘» 로 주 흐름(R15)이 돈다 |
 | 3 | 보호 — 훅, argent 규칙, 서버 꺼짐 처리, `corgi install` 완성 | 다른 세션이 남의 디바이스를 못 건드린다 |
@@ -311,7 +311,7 @@ corgi/
 | `/clear`·`--resume` 시 세션 ID·`claude` PID 가 어떻게 바뀌는지 | §7 처리 방식 결정 | 1단계 |
 | avdslim 명령(설치 후) — 켜진 상태 필요 여부, 상태 조회, 해제 | §9 Android 슬림 | 1단계 |
 | simslim 0.8 → 0.11 변경점, 꺼진 기기의 슬림 상태 확인 방법 | M6 | 1단계 |
-| 컴파일한 바이너리에 웹 UI·파일이 잘 들어가는지, 훅 경로 시작 시간(0.05초 안쪽) | §2·§3·§13 | 0단계 |
+| ✅ 컴파일한 바이너리에 웹 UI·파일이 잘 들어가는지, 훅 경로 시작 시간 — **확인됨(0단계)**: `with { type: "file" }` 는 `/$bunfs/root/…` 경로로 들어가 `Bun.file` 로 읽히고, HTML import 는 TSX 까지 번들돼 `Bun.serve` 로 서빙된다(`--bytecode` 포함, 다른 폴더로 옮겨도 동작). 훅 경로 약 21ms | §2·§3·§13 | 0단계 |
 | launchd 로 띄운 서버가 `emulator`·`xcrun` 을 PATH·권한 문제 없이 실행하는지 | launchd 는 로그인 셸 환경을 안 받는다 | 1단계 |
 | MCP 프로세스가 세션 ID 를 받는지 | §7 | 5단계 |
 | argent 두 버전(homebrew 0.17.0 이 PATH 우선, mise 0.26.0) 정리 | 훅이 보는 argent 도구 인자가 버전마다 다를 수 있다 | 3단계 전 |

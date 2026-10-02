@@ -17,7 +17,7 @@
 
 ## 빌드·검사
 
-0단계(저장소 뼈대) 이후부터 적용한다.
+처음 한 번: `mise install` (Bun 1.3.6) → `bun install` → `bun link` (`corgi` 명령이 이 저장소를 가리키게 된다).
 
 ```sh
 bun install
