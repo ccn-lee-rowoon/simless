@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AndroidDriver, type AndroidDriverOptions } from "../src/server/drivers/android.ts";
-import type { RunResult } from "../src/server/exec.ts";
 import { Config } from "../src/shared/config.ts";
+import type { RunResult } from "../src/shared/exec.ts";
 import type { Device } from "../src/shared/model.ts";
 
 const dirs: string[] = [];

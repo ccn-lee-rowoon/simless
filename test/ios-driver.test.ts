@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { IosDriver } from "../src/server/drivers/ios.ts";
-import type { RunResult } from "../src/server/exec.ts";
 import { Config } from "../src/shared/config.ts";
+import type { RunResult } from "../src/shared/exec.ts";
 import type { Device } from "../src/shared/model.ts";
 
 const deviceTypes = [

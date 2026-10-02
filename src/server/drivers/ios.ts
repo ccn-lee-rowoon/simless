@@ -1,6 +1,6 @@
 import type { Config } from "../../shared/config.ts";
+import { run as defaultRun, type Runner, runOk, which } from "../../shared/exec.ts";
 import type { Device, DeviceSpec, SlimState } from "../../shared/model.ts";
-import { run as defaultRun, type Runner, runOk, which } from "../exec.ts";
 import { HandlerError } from "../socket.ts";
 import type { CatalogItem, CreateRequest, Driver, Progress, RuntimeState } from "./types.ts";
 
