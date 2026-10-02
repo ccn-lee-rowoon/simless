@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Xcode / Swift
+build/
+DerivedData/
+.build/
+.swiftpm/
+*.xcuserstate
+xcuserdata/
+
+# Node / Bun
+node_modules/
+dist/
+
+# 로컬 설정·비밀
+.env
+.env.*
+*.local.json
+
+# Claude Code 로컬 설정
+.claude/settings.local.json
