@@ -90,6 +90,7 @@ corgi/
 | `corgi install` | LaunchAgent(`~/Library/LaunchAgents/corgi.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`corgi`·Android SDK 경로를 절대 경로로** 적는다. 훅 명령도 절대 경로로 등록한다. `~/Applications/Corgi.app` 생성. 스킬·훅·argent 규칙 설치(각각 묻고, `--yes` 로 생략) |
 | `corgi uninstall` | 위를 되돌린다. 만든 디바이스는 지우지 않는다 |
 | `Corgi.app` | `Contents/MacOS/corgi`(실행 파일 링크) + `Info.plist`(`LSUIElement` — Dock 아이콘 없음) + 아이콘, ad-hoc 서명. **인자 없이 앱 번들 안에서 실행되면 앱 모드**: 서버가 꺼져 있으면 켜고 웹 UI 를 브라우저로 연 뒤 끝난다. 더블클릭·Spotlight·Launchpad 에서 연다. 6단계에서 같은 앱이 메뉴바 앱이 된다 |
+| 로그인 항목 이름 | macOS 로그인 항목(«앱 백그라운드 활동»)에는 실행 파일 서명자 이름이 보인다 — 개발 모드는 bun 의 «Jarred Sumner». `Corgi.app` 을 만들 때(3단계) plist 에 `AssociatedBundleIdentifiers` 로 앱을 연결해 «Corgi» 로 보이게 한다. 사용자가 이 항목을 끄면 launchd 가 서버를 띄우지 않으므로 `corgi doctor` 가 확인한다 |
 | 서버 자동 시작 (Q10) | CLI·MCP 는 소켓이 없으면 `launchctl kickstart` 로 켜고 몇 초 기다린다. 훅은 켜지 않는다 |
 | 업데이트 | `corgi update` — 확인·알림·교체·되돌리기는 §19. 클라이언트·서버 버전이 다르면 `hello` 에서 알려 준다 |
 
@@ -336,7 +337,7 @@ corgi/
 | ✅ avdslim — 1.0.15 설치·확인(2단계 전). 명령: `tune-avd <avd>`(호스트 설정, config.ini 를 다시 씀 — AvdId·크기·이름은 유지됨)·`on <serial>`·`off <serial>`·`profiles`. **상태 조회 명령이 없어** 슬림 확인은 «기기에 설치된 프로필 패키지 중 꺼진 비율 ≥ 50%» 로 한다(표준 프리셋이 Chrome·Play 스토어 등은 남겨 실측 52개 중 49개). 풀림 → 켤 때 재적용까지 실제로 확인 | §9 Android 슬림·M6 | 2단계 전 |
 | simslim 0.8 → 0.11 변경점. 0.8 에서 확인함: `on --preserve-boot-state` 로 꺼진 기기도 슬림화(잠시 켬), `verify` 는 켜진 기기만, `list --json` 의 `managedDisabled` 는 켜진 기기만 나온다 | M6 | 업데이트 시 |
 | ✅ 컴파일한 바이너리에 웹 UI·파일이 잘 들어가는지, 훅 경로 시작 시간 — **확인됨(0단계)**: `with { type: "file" }` 는 `/$bunfs/root/…` 경로로 들어가 `Bun.file` 로 읽히고, HTML import 는 TSX 까지 번들돼 `Bun.serve` 로 서빙된다(`--bytecode` 포함, 다른 폴더로 옮겨도 동작). 훅 경로 약 21ms | §2·§3·§13 | 0단계 |
-| launchd 로 띄운 서버가 `emulator`·`xcrun` 을 PATH·권한 문제 없이 실행하는지 — `corgi install` 을 실제로 등록해 확인해야 한다(사용자 확인 후) | launchd 는 로그인 셸 환경을 안 받는다 | 2단계 전 |
+| ✅ launchd 로 띄운 서버가 `emulator`·`xcrun` 을 PATH·권한 문제 없이 실행하는지 — **확인됨(2단계 전)**: `corgi install` 로 등록한 서버가 Android·iOS 를 만들고 함께 켰다(1분 16초, 슬림 없이). 등록하면 macOS 가 «백그라운드 항목 추가됨» 알림을 띄우고, 로그인 항목에 실행 파일 서명자 이름(개발 모드는 bun 의 «Jarred Sumner»)이 보인다 | launchd 는 로그인 셸 환경을 안 받는다 | 2단계 전 |
 | 에이전트별 MCP 서버의 부모가 에이전트 프로세스인지 (Claude Code 는 확인됨) | §7 | 5단계 |
 | argent 두 버전(homebrew 0.17.0 이 PATH 우선, mise 0.26.0) 정리 | 훅이 보는 argent 도구 인자가 버전마다 다를 수 있다 | 3단계 전 |
 | 다른 에이전트의 실행 직전 훅 지원 여부·설정 위치·입력 형식, 전역 규칙·스킬 위치 | §13 어댑터·P2·S9 | 3단계 전 |
