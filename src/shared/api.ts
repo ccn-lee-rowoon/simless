@@ -43,20 +43,27 @@ export interface BusyData {
   holders: (HolderView & { deviceId: string })[];
 }
 
-export interface CatalogEntry {
+/** 이 Mac 의 에뮬레이터·시뮬레이터 하나 — «전체 목록» 의 한 줄이자 복제 원본 (M1·M9) */
+export interface SourceEntry {
   platform: "android" | "ios";
+  /** AVD ID 또는 UDID */
+  native: string;
+  name: string;
   spec: Device["spec"];
+  /** 예: `Android 360dp` */
   label: string;
   layoutWidth: number;
-  suggestedName: string;
+  /** 보조 표시 — 해상도·밀도·런타임 (M2) */
   detail: string;
-  preset: boolean;
-  /** 이미 만든 디바이스 ID (M3) */
+  booted: boolean;
+  /** Corgi 가 만든 디바이스면 그 ID — 원본으로 쓰지 않는다 */
+  managed?: string;
+  /** 같은 크기로 이미 만든 Corgi 디바이스 ID (M3) */
   created?: string;
 }
 
-export interface CatalogResult {
-  items: CatalogEntry[];
+export interface SourceListResult {
+  items: SourceEntry[];
   /** 플랫폼별로 빠진 도구·오류 */
   problems: { platform: "android" | "ios"; message: string }[];
 }

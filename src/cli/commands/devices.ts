@@ -1,6 +1,6 @@
 import { createInterface } from "node:readline/promises";
 import type { Command } from "commander";
-import type { CatalogResult, DeviceOpResult, DeviceView } from "../../shared/api.ts";
+import type { DeviceOpResult, DeviceView, SourceListResult } from "../../shared/api.ts";
 import { ExitCode } from "../../shared/exit-codes.ts";
 import { CliError, type Context, output, type Run, request } from "../context.ts";
 import { devicesTable, table } from "../format.ts";
@@ -13,15 +13,6 @@ function showProgress(event: string, data: unknown): void {
 
 function call<T>(ctx: Context, method: string, params: unknown): Promise<T> {
   return request<T>(ctx, method, params, showProgress);
-}
-
-function number(name: string) {
-  return (value: string) => {
-    const n = Number(value);
-    if (!Number.isFinite(n) || n <= 0)
-      throw new CliError(`${name} 은(는) 양수여야 합니다: ${value}`, ExitCode.usage);
-    return n;
-  };
 }
 
 /** 여러 대 작업 결과 — 하나라도 실패하면 종료 코드 1 */
@@ -55,99 +46,56 @@ async function confirm(question: string): Promise<boolean> {
 
 export function registerDevices(program: Command, run: Run) {
   program
-    .command("catalog")
-    .description("만들 수 있는 목록 — 폭 순, 이미 만든 것은 «생성됨» (M1~M3)")
-    .option("--platform <platform>", "android 또는 ios")
-    .option("--all", "iOS 기기 종류를 프리셋 밖까지 모두 보기")
+    .command("list")
+    .description(
+      "만든 디바이스 — 켜짐·슬림·점유·argent ID (M5). --all 이면 이 Mac 의 전체 목록 (M9)",
+    )
+    .option("--all", "이 Mac 의 모든 에뮬레이터·시뮬레이터 — 복제 원본 (M1)")
+    .option("--platform <platform>", "android 또는 ios (--all 과 함께)")
     .action(
-      run(async (ctx, options: { platform?: "android" | "ios"; all?: boolean }) => {
-        const result = await call<CatalogResult>(ctx, "catalog.list", {
-          platform: options.platform,
-        });
-        const items = options.all
-          ? result.items
-          : result.items.filter((i) => i.preset || i.created);
-        output(ctx, { ...result, items }, () => {
-          const rows = items.map((i) => [
+      run(async (ctx, o: { all?: boolean; platform?: "android" | "ios" }) => {
+        if (!o.all) {
+          const devices = await call<DeviceView[]>(ctx, "device.list", {});
+          output(ctx, devices, () => devicesTable(devices));
+          return;
+        }
+        const result = await call<SourceListResult>(ctx, "source.list", { platform: o.platform });
+        output(ctx, result, () => {
+          const rows = result.items.map((i) => [
             i.label,
-            i.suggestedName,
+            i.name,
+            i.booted ? "켜짐" : "꺼짐",
+            i.managed ? `Corgi ${i.managed}` : i.created ? `생성됨 (${i.created})` : "",
             i.detail,
-            i.created ? `생성됨 (${i.created})` : "",
+            i.native,
           ]);
           const problems = result.problems.map((p) => `주의(${p.platform}): ${p.message}`);
-          const hint = options.all ? [] : ["", "iOS 기기 종류 전체: corgi catalog --all"];
-          return [table(["크기", "이름 제안", "해상도", ""], rows), ...hint, ...problems].join(
-            "\n",
-          );
+          return [
+            table(["크기", "이름", "상태", "", "기기", "원본 ID"], rows),
+            "",
+            "복제해서 만들기: corgi create <이름 또는 원본 ID>",
+            ...problems,
+          ].join("\n");
         });
-      }),
-    );
-
-  const create = program
-    .command("create")
-    .description("디바이스를 만든다 — 기본으로 슬림화까지 (R1~R5, M4)");
-  create
-    .command("android")
-    .description("Android 에뮬레이터 — 폭(dp)으로")
-    .requiredOption("--width <dp>", "폭 (dp)", number("--width"))
-    .option("--height <dp>", "높이 (dp, 기본: 프리셋 또는 폭 × 2.1)", number("--height"))
-    .option("--density <dpi>", "밀도 (기본 320)", number("--density"))
-    .option("--image <이미지>", "시스템 이미지 (예: android-36)")
-    .option("--name <이름>", "표시 이름")
-    .option("--no-slim", "슬림화하지 않는다")
-    .action(
-      run(
-        async (
-          ctx,
-          o: {
-            width: number;
-            height?: number;
-            density?: number;
-            image?: string;
-            name?: string;
-            slim: boolean;
-          },
-        ) => {
-          const device = await call<DeviceView>(ctx, "device.create", {
-            request: {
-              platform: "android",
-              widthDp: o.width,
-              heightDp: o.height,
-              density: o.density,
-              systemImage: o.image,
-            },
-            name: o.name,
-            slim: o.slim,
-          });
-          output(ctx, device, () => devicesTable([device]));
-        },
-      ),
-    );
-  create
-    .command("ios")
-    .description("iOS 시뮬레이터 — 기기 종류로 (크기는 기기 종류가 정한다)")
-    .requiredOption("--type <기기 종류>", '예: "iPhone 17" — corgi catalog --platform ios')
-    .option("--runtime <버전>", "예: 26.5 (기본: 지원하는 가장 새 런타임)")
-    .option("--name <이름>", "표시 이름")
-    .option("--no-slim", "슬림화하지 않는다")
-    .action(
-      run(async (ctx, o: { type: string; runtime?: string; name?: string; slim: boolean }) => {
-        const device = await call<DeviceView>(ctx, "device.create", {
-          request: { platform: "ios", deviceType: o.type, runtime: o.runtime },
-          name: o.name,
-          slim: o.slim,
-        });
-        output(ctx, device, () => devicesTable([device]));
       }),
     );
 
   program
-    .command("list")
-    .description("만든 디바이스 — 켜짐·슬림·점유·argent ID (M5)")
+    .command("create")
+    .description(
+      "이 Mac 의 디바이스를 원본으로 같은 크기의 `corgi …` 복제본을 만들고 슬림화한다 — 앱은 설치하지 않는다 (R1·R5·M1·M4)",
+    )
+    .argument("<원본>", "원본 이름 또는 원본 ID(AVD ID·UDID) — corgi list --all")
+    .option("--name <이름>", "표시 이름 (기본: corgi <원본 이름>)")
+    .option("--no-slim", "슬림화하지 않는다")
     .action(
-      run(async (ctx) => {
-        const devices = await call<DeviceView[]>(ctx, "device.list", {});
-        output(ctx, devices, () => devicesTable(devices));
+      run(async (ctx, source: string, o: { name?: string; slim: boolean }) => {
+        const device = await call<DeviceView>(ctx, "device.create", {
+          source,
+          name: o.name,
+          slim: o.slim,
+        });
+        output(ctx, device, () => devicesTable([device]));
       }),
     );
 

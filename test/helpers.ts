@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Driver, RuntimeState } from "../src/server/drivers/types.ts";
+import type { Driver, RuntimeState, SourceDevice } from "../src/server/drivers/types.ts";
 import { Config } from "../src/shared/config.ts";
 import type { Device } from "../src/shared/model.ts";
 import { resolvePaths } from "../src/shared/paths.ts";
@@ -41,11 +41,33 @@ export function androidDevice(id: string, name = `Android ${id}`): Device {
   };
 }
 
-/** 아무것도 실제로 켜지 않는 드라이버 — 켜짐 상태만 기억한다 */
+/** 가짜 원본 — 폭(dp)만 다른 Android AVD */
+export function fakeSource(native: string, widthDp: number, name = native): SourceDevice {
+  return {
+    platform: "android",
+    native,
+    name,
+    spec: {
+      platform: "android",
+      widthPx: widthDp * 2,
+      heightPx: 1520,
+      density: 320,
+      systemImage: "x",
+    },
+    detail: `${widthDp * 2}×1520px · 320dpi`,
+    booted: false,
+  };
+}
+
+/** 아무것도 실제로 켜지 않는 드라이버 — 켜짐 상태만 기억한다. list 를 바꾸면 원본 목록이 바뀐다 */
 export function fakeDriver(
   platform: "android" | "ios" = "android",
-): Driver & { booted: Set<string> } {
+): Driver & { booted: Set<string>; list: SourceDevice[] } {
   const booted = new Set<string>();
+  const sources: SourceDevice[] = [
+    fakeSource("Small_360", 360, "Small 360"),
+    fakeSource("Large_412", 412, "Large 412"),
+  ];
   const state = (d: Device): RuntimeState =>
     booted.has(d.id)
       ? { booted: true, targetId: `emulator-${5554 + booted.size * 2}` }
@@ -53,15 +75,9 @@ export function fakeDriver(
   return {
     platform,
     booted,
+    list: sources,
     missingTools: async () => [],
-    catalog: async () => [],
-    resolveSpec: async (request) => ({
-      platform: "android",
-      widthPx: request.platform === "android" ? request.widthDp * 2 : 720,
-      heightPx: 1520,
-      density: 320,
-      systemImage: "x",
-    }),
+    sources: async () => sources,
     create: async ({ id }) => ({ native: `corgi_${id}` }),
     rename: async () => {},
     remove: async () => {},

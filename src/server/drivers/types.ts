@@ -7,39 +7,29 @@ export interface RuntimeState {
   targetId?: string;
 }
 
-/** 만들 수 있는 항목 하나 (M1~M3) */
-export interface CatalogItem {
+/** 이 Mac 의 디바이스 하나 — 복제 원본 후보 (M1) */
+export interface SourceDevice {
   platform: Platform;
+  /** AVD ID 또는 UDID */
+  native: string;
+  name: string;
   spec: DeviceSpec;
-  /** 기본 이름 제안 (M4) */
-  suggestedName: string;
   /** 보조 표시 — 해상도·밀도·런타임 (M2) */
   detail: string;
-  /** 설정의 프리셋에 있는 항목 */
-  preset: boolean;
+  booted: boolean;
 }
 
 export type Progress = (message: string) => void;
-
-/** CLI 가 주는 생성 조건 — 드라이버가 실제 spec 으로 바꾼다 */
-export type CreateRequest =
-  | {
-      platform: "android";
-      widthDp: number;
-      heightDp?: number;
-      density?: number;
-      systemImage?: string;
-    }
-  | { platform: "ios"; deviceType: string; runtime?: string };
 
 export interface Driver {
   readonly platform: Platform;
   /** 필요한 도구 중 없는 것 — 비어 있으면 쓸 수 있다 */
   missingTools(): Promise<string[]>;
-  catalog(): Promise<CatalogItem[]>;
-  resolveSpec(request: CreateRequest): Promise<DeviceSpec>;
+  /** 이 Mac 의 디바이스 전부 — Corgi 가 만든 것도 포함 (서버가 가린다) */
+  sources(): Promise<SourceDevice[]>;
+  /** 원본과 같은 크기로 앱 없이 새로 만든다 (requirements «결정 기록») */
   create(
-    input: { id: string; name: string; spec: DeviceSpec },
+    input: { id: string; name: string; source: SourceDevice },
     progress: Progress,
   ): Promise<{ native: string }>;
   rename(device: Device, name: string): Promise<void>;

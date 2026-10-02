@@ -29,17 +29,18 @@ async function start() {
   return { server, driver, env, A: as("A"), B: as("B") };
 }
 
-const android360 = { request: { platform: "android", widthDp: 360 } };
+const android360 = { source: "Small_360" };
 
 describe("디바이스 명령", () => {
   test("만들면 기본 이름·슬림 적용, 같은 크기는 다시 못 만든다 (M3·M4·R5)", async () => {
     const { A } = await start();
     const device = (await A("device.create", android360)) as DeviceView;
     expect(device).toMatchObject({
-      name: "Android 360dp",
+      name: "corgi Small 360",
       slim: "applied",
       label: "Android 360dp",
       enabled: true,
+      source: { name: "Small 360", native: "Small_360" },
     });
     expect(await A("device.create", android360)).toMatchObject({ code: "INVALID" });
   });
@@ -94,9 +95,7 @@ describe("디바이스 명령", () => {
   test("사용 안 함은 «전부» 점유에서 빠진다 (R6)", async () => {
     const { A } = await start();
     const a = (await A("device.create", android360)) as DeviceView;
-    const b = (await A("device.create", {
-      request: { platform: "android", widthDp: 412 },
-    })) as DeviceView;
+    const b = (await A("device.create", { source: "Large 412" })) as DeviceView;
     await A("device.setEnabled", { device: b.id, enabled: false });
     expect(await A("lease.acquire", {})).toEqual({ status: "granted", deviceIds: [a.id] });
   });
@@ -121,5 +120,60 @@ describe("슬림 재적용", () => {
     await A("lease.acquire", { devices: [device.id] });
     const up: { devices: DeviceView[] } = await A("device.up");
     expect(up.devices[0]?.slim).toBe("applied");
+  });
+});
+
+describe("원본 목록과 복제", () => {
+  test("전체 목록 — 폭 순, 같은 크기로 만든 원본은 «생성됨», Corgi 가 만든 것은 managed (M3·M9)", async () => {
+    const { A, driver } = await start();
+    const made = (await A("device.create", { source: "Small_360" })) as DeviceView;
+    driver.list.push({
+      ...driver.list[0],
+      native: made.native,
+      name: made.name,
+    } as (typeof driver.list)[0]);
+    const { items } = await A("source.list");
+    expect(
+      items.map((i: { native: string; created?: string; managed?: string }) => [
+        i.native,
+        i.created,
+        i.managed,
+      ]),
+    ).toEqual([
+      [made.native, undefined, made.id], // 같은 폭이면 이름 순 — "corgi Small 360" 이 먼저
+      ["Small_360", made.id, undefined],
+      ["Large_412", undefined, undefined],
+    ]);
+  });
+
+  test("Corgi 가 만든 디바이스는 원본으로 쓸 수 없다 (L4 는 나중에)", async () => {
+    const { A, driver } = await start();
+    const made = (await A("device.create", { source: "Small_360" })) as DeviceView;
+    driver.list.push({
+      ...driver.list[1],
+      native: made.native,
+      name: "corgi copy",
+    } as (typeof driver.list)[0]);
+    expect(await A("device.create", { source: made.native })).toMatchObject({ code: "INVALID" });
+  });
+
+  test("이름이 같은 원본이 여럿이면 원본 ID 로 고르게 한다", async () => {
+    const { A, driver } = await start();
+    driver.list.push({
+      ...driver.list[1],
+      native: "Large_412_b",
+      name: "Small 360",
+    } as (typeof driver.list)[0]);
+    const error = await A("device.create", { source: "small 360" });
+    expect(error).toMatchObject({ code: "INVALID" });
+    expect(error.message).toContain("Large_412_b");
+    expect(await A("device.create", { source: "Large_412_b" })).toMatchObject({
+      name: "corgi Small 360",
+    });
+  });
+
+  test("없는 원본은 NOT_FOUND", async () => {
+    const { A } = await start();
+    expect(await A("device.create", { source: "nope" })).toMatchObject({ code: "NOT_FOUND" });
   });
 });

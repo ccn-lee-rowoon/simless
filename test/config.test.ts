@@ -5,8 +5,7 @@ describe("Config", () => {
   test("빈 설정은 기본값으로 채워진다", () => {
     const config = Config.parse({});
     expect(config.idleReleaseMinutes).toBe(30);
-    expect(config.android.presets.map((p) => p.widthDp)).toEqual([320, 360, 412, 600]);
-    expect(config.ios.presets).toContain("iPhone 17");
+    expect(config.android.ramMb).toBe(2048);
     expect(config.session.extraShells).toEqual([]);
   });
 

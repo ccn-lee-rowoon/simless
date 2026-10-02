@@ -43,6 +43,8 @@ export const Device = z.object({
   enabled: z.boolean(),
   slim: SlimState,
   slimError: z.string().optional(),
+  /** 복제한 원본 — 표시용, 원본이 지워져도 상관없다 (M1) */
+  source: z.object({ name: z.string(), native: z.string() }).optional(),
   createdAt: z.string(),
 });
 export type Device = z.infer<typeof Device>;

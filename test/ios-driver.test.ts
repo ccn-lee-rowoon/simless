@@ -84,39 +84,77 @@ const device: Device = {
 };
 
 describe("IosDriver", () => {
-  test("catalog — iPhone·iPad 만, 기기 종류마다 가장 새 런타임으로, 폭은 pt", async () => {
-    const { runner } = fakeRunner();
-    const items = await new IosDriver(config, runner, () => "/bin/simslim").catalog();
-    expect(items).toHaveLength(1); // 워치·지원 런타임 없는 기기는 빠진다
-    expect(items[0]).toMatchObject({
-      suggestedName: "iPhone 17 402pt",
-      preset: true,
-      spec: { runtimeId: "rt.26-5", widthPt: 402, heightPt: 874, scale: 3 },
+  test("sources — 이 Mac 의 iPhone·iPad 시뮬레이터, 폭은 기기 종류 프로필의 pt", async () => {
+    const devices = {
+      "rt.26-5": [
+        {
+          udid: "U-17",
+          name: "iPhone 17",
+          state: "Booted",
+          isAvailable: true,
+          deviceTypeIdentifier: "dt.iphone-17",
+        },
+        {
+          udid: "U-W",
+          name: "Watch",
+          state: "Shutdown",
+          isAvailable: true,
+          deviceTypeIdentifier: "dt.watch",
+        },
+        {
+          udid: "U-X",
+          name: "Broken",
+          state: "Shutdown",
+          isAvailable: false,
+          deviceTypeIdentifier: "dt.iphone-17",
+        },
+      ],
+      "rt.gone": [
+        {
+          udid: "U-G",
+          name: "Old",
+          state: "Shutdown",
+          isAvailable: true,
+          deviceTypeIdentifier: "dt.iphone-17",
+        },
+      ],
+    };
+    const { runner } = fakeRunner({
+      "xcrun simctl list -j devices": { stdout: JSON.stringify({ devices }) },
+    });
+    const sources = await new IosDriver(config, runner, () => "/bin/simslim").sources();
+    expect(sources).toHaveLength(1); // 워치·쓸 수 없는 것·없는 런타임은 빠진다
+    expect(sources[0]).toMatchObject({
+      native: "U-17",
+      name: "iPhone 17",
+      booted: true,
+      spec: {
+        deviceTypeId: "dt.iphone-17",
+        runtimeId: "rt.26-5",
+        widthPt: 402,
+        heightPt: 874,
+        scale: 3,
+      },
     });
   });
 
-  test("resolveSpec — 이름으로 찾고, 런타임은 버전으로 고를 수 있다", async () => {
-    const { runner } = fakeRunner();
-    const driver = new IosDriver(config, runner, () => undefined);
-    expect(
-      await driver.resolveSpec({ platform: "ios", deviceType: "iphone 17", runtime: "26.0" }),
-    ).toMatchObject({
-      runtimeId: "rt.26-0",
-    });
-    const missing = await driver
-      .resolveSpec({ platform: "ios", deviceType: "iPhone 99" })
-      .catch((e) => e);
-    expect(missing).toMatchObject({ code: "NOT_FOUND" });
-  });
-
-  test("create — simctl create 가 준 UDID 가 native", async () => {
+  test("create — 원본과 같은 기기 종류·런타임으로 새로 만든다 (clone 아님), UDID 가 native", async () => {
     const { runner, calls } = fakeRunner({ "xcrun simctl create": { stdout: "NEW-UDID\n" } });
+    const source = {
+      platform: "ios" as const,
+      native: "U-17",
+      name: "iPhone 17",
+      spec: device.spec,
+      detail: "",
+      booted: true,
+    };
     const result = await new IosDriver(config, runner).create(
-      { name: "작은 폰", spec: device.spec },
+      { name: "corgi iPhone 17", source },
       () => {},
     );
     expect(result.native).toBe("NEW-UDID");
-    expect(calls).toContain("xcrun simctl create 작은 폰 dt.iphone-17 rt.26-5");
+    expect(calls).toContain("xcrun simctl create corgi iPhone 17 dt.iphone-17 rt.26-5");
+    expect(calls.some((c) => c.includes("clone"))).toBe(false);
   });
 
   test("boot — 여러 대를 요청해도 한 대씩 순서대로 켠다", async () => {

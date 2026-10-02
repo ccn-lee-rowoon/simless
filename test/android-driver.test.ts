@@ -82,62 +82,81 @@ function driver(
 }
 
 describe("AndroidDriver", () => {
-  test("시스템 이미지는 4KB 페이지를 16KB 보다, API 높은 것을 먼저", () => {
-    const { env } = sdkWithImages();
-    expect(
-      driver(env)
-        .systemImages()
-        .map((i) => i.sysdir),
-    ).toEqual([
-      "system-images/android-36/google_apis_playstore/arm64-v8a/",
-      "system-images/android-37.1/google_apis_playstore_ps16k/arm64-v8a/",
-    ]);
-  });
+  /** 이 Mac 에 있는 원본 AVD 처럼 — 크기·이미지 설정과 사용자 데이터가 있다 */
+  function sourceAvd(avdHome: string, id: string, config: Record<string, string>) {
+    const dir = join(avdHome, `${id}.avd`);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "config.ini"),
+      `${Object.entries(config)
+        .map(([k, v]) => `${k}=${v}`)
+        .join("\n")}\n`,
+    );
+    writeFileSync(join(dir, "userdata-qemu.img"), "앱·로그인 데이터");
+    writeFileSync(join(avdHome, `${id}.ini`), `path=${dir}\ntarget=android-36\n`);
+  }
+  const small = {
+    AvdId: "Size_Small_360dp",
+    "avd.ini.displayname": "Small 360x760dp",
+    "hw.lcd.width": "720",
+    "hw.lcd.height": "1520",
+    "hw.lcd.density": "320",
+    "hw.keyboard": "yes",
+    "image.sysdir.1": "system-images/android-36/google_apis_playstore/arm64-v8a/",
+    "tag.id": "google_apis_playstore",
+  };
 
-  test("catalog — 설정의 폭 프리셋을 기본 이미지로, 밀도 320 이면 px = dp × 2", async () => {
+  test("sources — 이 Mac 의 AVD 를 원본으로, 크기 설정이 없는 AVD 는 뺀다", async () => {
     const { env } = sdkWithImages();
-    const items = await driver(env).catalog();
-    expect(items.map((i) => i.suggestedName)).toEqual([
-      "Android 320dp",
-      "Android 360dp",
-      "Android 412dp",
-      "Android 600dp",
-    ]);
-    expect(items[1]?.spec).toMatchObject({ widthPx: 720, heightPx: 1520, density: 320 });
-  });
-
-  test("resolveSpec — 프리셋에 없는 폭은 높이 = 폭 × 2.1", async () => {
-    const { env } = sdkWithImages();
-    expect(await driver(env).resolveSpec({ platform: "android", widthDp: 375 })).toMatchObject({
-      widthPx: 750,
-      heightPx: 1576,
-      density: 320,
+    sourceAvd(env.ANDROID_AVD_HOME, "Size_Small_360dp", small);
+    sourceAvd(env.ANDROID_AVD_HOME, "Studio_Skin", {
+      AvdId: "Studio_Skin",
+      "skin.name": "pixel_6",
+    });
+    const sources = await driver(env, { runner: fakeAdb().runner }).sources();
+    expect(sources).toHaveLength(1);
+    expect(sources[0]).toMatchObject({
+      native: "Size_Small_360dp",
+      name: "Small 360x760dp",
+      spec: { widthPx: 720, heightPx: 1520, density: 320 },
+      booted: false,
     });
   });
 
-  test("create — AVD 파일 두 개를 쓰고, 이름을 바꾸면 표시 이름만 바뀐다", async () => {
+  test("create — 원본의 하드웨어 설정을 그대로, 사용자 데이터는 빼고 복사한다", async () => {
     const { env } = sdkWithImages();
-    const d = driver(env);
-    const spec = await d.resolveSpec({ platform: "android", widthDp: 360 });
-    const { native } = await d.create({ id: "ab12", name: "작은 폰", spec }, () => {});
+    sourceAvd(env.ANDROID_AVD_HOME, "Size_Small_360dp", small);
+    const d = driver(env, { runner: fakeAdb().runner });
+    const [source] = await d.sources();
+    if (!source) throw new Error("원본 없음");
+    const { native } = await d.create({ id: "ab12", name: "corgi Small", source }, () => {});
     expect(native).toBe("corgi_ab12");
-    const configPath = join(env.ANDROID_AVD_HOME, "corgi_ab12.avd", "config.ini");
-    const config = readFileSync(configPath, "utf8");
+
+    const dir = join(env.ANDROID_AVD_HOME, "corgi_ab12.avd");
+    const config = readFileSync(join(dir, "config.ini"), "utf8");
     expect(config).toContain("AvdId=corgi_ab12");
-    expect(config).toContain("avd.ini.displayname=작은 폰");
+    expect(config).toContain("avd.ini.displayname=corgi Small");
     expect(config).toContain("hw.lcd.width=720");
+    expect(config).toContain("hw.keyboard=yes");
     expect(config).toContain(
       "image.sysdir.1=system-images/android-36/google_apis_playstore/arm64-v8a/",
     );
-    expect(existsSync(join(env.ANDROID_AVD_HOME, "corgi_ab12.ini"))).toBe(true);
+    expect(existsSync(join(dir, "userdata-qemu.img"))).toBe(false);
+    expect(readFileSync(join(env.ANDROID_AVD_HOME, "corgi_ab12.ini"), "utf8")).toContain(
+      "target=android-36",
+    );
 
-    const device = { id: "ab12", native, name: "작은 폰", spec } as Device;
-    await d.rename(device, "Small");
-    expect(readFileSync(configPath, "utf8")).toContain("avd.ini.displayname=Small");
-    expect(readFileSync(configPath, "utf8")).toContain("AvdId=corgi_ab12");
+    const device = { id: "ab12", native, name: "corgi Small", spec: source.spec } as Device;
+    await d.rename(device, "작은 폰");
+    expect(readFileSync(join(dir, "config.ini"), "utf8")).toContain("avd.ini.displayname=작은 폰");
+    expect(readFileSync(join(dir, "config.ini"), "utf8")).toContain("AvdId=corgi_ab12");
 
     await d.remove(device);
-    expect(existsSync(join(env.ANDROID_AVD_HOME, "corgi_ab12.avd"))).toBe(false);
+    expect(existsSync(dir)).toBe(false);
+    // 원본은 그대로
+    expect(
+      existsSync(join(env.ANDROID_AVD_HOME, "Size_Small_360dp.avd", "userdata-qemu.img")),
+    ).toBe(true);
   });
 
   test("boot — 빈 포트로 켜고 sys.boot_completed 까지 기다린다, 시리얼은 emulator-<포트>", async () => {

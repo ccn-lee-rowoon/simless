@@ -27,11 +27,11 @@ corgi --json status
 ```
 
 - 종료 코드 4(서버에 연결 못 함)이거나 이상하면 `corgi doctor` 를 실행하고 안내대로 고친다. 고칠 수 없으면 사용자에게 알린다.
-- 디바이스가 없거나 원하는 크기가 없으면 `corgi catalog` 로 목록을 보고 **사용자에게 물은 뒤** 만든다 — iOS 는 만들기+슬림에 2~3분 걸린다.
+- 디바이스가 없거나 원하는 크기가 없으면 `corgi list --all` 로 **이 Mac 의 에뮬레이터·시뮬레이터(원본)** 를 보고, 어느 원본으로 만들지 **사용자에게 물은 뒤** 만든다. 원본과 같은 크기의 `corgi …` 복제본이 생기고 슬림화된다(앱은 설치되지 않음). iOS 는 슬림에 2~3분 걸린다.
   ```sh
-  corgi create android --width 360
-  corgi create ios --type "iPhone 17"
+  corgi create Size_Small_360dp        # 원본 ID(AVD ID·UDID) 또는 이름
   ```
+  원하는 크기의 원본이 이 Mac 에 없으면 사용자에게 Xcode·Android Studio 에서 먼저 만들어 달라고 한다.
 
 ### 2. 점유하고 켜기
 
@@ -77,10 +77,10 @@ corgi release
 | 명령 | 하는 일 |
 | --- | --- |
 | `corgi --json status` | 서버·디바이스·점유 한눈에 |
-| `corgi catalog [--platform android\|ios] [--all]` | 만들 수 있는 목록 (폭 순, «생성됨» 표시) |
-| `corgi create android --width <dp>` / `create ios --type "<기기 종류>"` | 만들기 + 슬림화 |
+| `corgi list --all [--platform android\|ios]` | 이 Mac 의 전체 목록 — 복제 원본 (폭 순, «생성됨» 표시) |
+| `corgi create <원본>` | 원본과 같은 크기로 복제 + 슬림화 |
 | `corgi --json use [<디바이스>...] [--wait --timeout 9m]` | 점유 + 켜기 |
-| `corgi --json list` | 기기별 `targetId`·`label`·켜짐·점유 |
+| `corgi --json list` | 만든 디바이스 — 기기별 `targetId`·`label`·켜짐·점유 |
 | `corgi who [<udid·시리얼>]` | 누가 쓰는 중인지 |
 | `corgi down` / `corgi release` | 끄기 / 점유 풀기 |
 | `corgi doctor` | 설치·연결 점검과 고치는 방법 |

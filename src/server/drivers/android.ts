@@ -12,25 +12,13 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Config } from "../../shared/config.ts";
 import { run as defaultRun, type Runner, runOk, which } from "../../shared/exec.ts";
-import type { Device, DeviceSpec, SlimState } from "../../shared/model.ts";
+import type { Device, SlimState } from "../../shared/model.ts";
 import { androidSdk } from "../../shared/tools.ts";
 import { HandlerError } from "../socket.ts";
-import type { CatalogItem, CreateRequest, Driver, Progress, RuntimeState } from "./types.ts";
+import type { Driver, Progress, RuntimeState, SourceDevice } from "./types.ts";
 
-// Android 에뮬레이터 — AVD 파일을 직접 쓰고(avdmanager 불필요, HANDOFF 실측),
+// Android 에뮬레이터 — 원본 AVD 의 하드웨어 설정을 복사해 AVD 파일을 직접 쓰고(avdmanager 불필요),
 // emulator·adb 로 켜고 끄며, avdslim 으로 슬림화한다 (docs/design.md §9).
-
-export interface SystemImage {
-  /** config.ini 의 image.sysdir.1 값 — 예: system-images/android-36/google_apis_playstore/arm64-v8a/ */
-  sysdir: string;
-  /** 예: android-36 */
-  target: string;
-  tag: string;
-  abi: string;
-  api: number;
-  /** 16KB 페이지 이미지 — avdslim 이 권하지 않는다 */
-  pageSize16k: boolean;
-}
 
 export interface EmulatorProcess {
   exited: Promise<number | null>;
@@ -118,155 +106,87 @@ export class AndroidDriver implements Driver {
     const missing: string[] = [];
     if (!existsSync(this.adb)) missing.push(`adb (${this.adb})`);
     if (!existsSync(this.emulator)) missing.push(`emulator (${this.emulator})`);
-    if (this.systemImages().length === 0) missing.push("Android 시스템 이미지");
     if (!this.avdslimPath()) missing.push("avdslim");
     return missing;
   }
 
-  /** 설치된 시스템 이미지 — 4KB 페이지 우선, API 높은 순 */
-  systemImages(): SystemImage[] {
-    const root = join(this.sdk, "system-images");
-    if (!existsSync(root)) return [];
-    const images: SystemImage[] = [];
-    for (const target of readdirSync(root)) {
-      for (const tag of readdirSync(join(root, target), { withFileTypes: true }).filter((d) =>
-        d.isDirectory(),
-      )) {
-        for (const abi of readdirSync(join(root, target, tag.name), { withFileTypes: true })) {
-          const props = join(root, target, tag.name, abi.name, "source.properties");
-          if (!abi.isDirectory() || !existsSync(props)) continue;
-          const p = readProps(props);
-          images.push({
-            sysdir: `system-images/${target}/${tag.name}/${abi.name}/`,
-            target,
-            tag: tag.name,
-            abi: abi.name,
-            api:
-              Number.parseFloat(target.replace(/^android-/, "")) ||
-              Number(p["AndroidVersion.ApiLevel"] ?? 0),
-            pageSize16k: tag.name.includes("16k"),
-          });
-        }
-      }
-    }
-    const hostAbi = process.arch === "arm64" ? "arm64-v8a" : "x86_64";
-    return images
-      .filter((i) => i.abi === hostAbi)
-      .sort((a, b) => Number(a.pageSize16k) - Number(b.pageSize16k) || b.api - a.api);
-  }
-
-  private image(wanted?: string): SystemImage {
-    const images = this.systemImages();
-    const query = wanted ?? this.config.android.systemImage;
-    const image = query ? images.find((i) => i.sysdir.includes(query)) : images[0];
-    if (!image) {
-      throw new HandlerError(
-        query ? "NOT_FOUND" : "TOOL_MISSING",
-        query
-          ? `없는 시스템 이미지: ${query}`
-          : `Android 시스템 이미지가 없습니다 (${this.sdk}/system-images)`,
-      );
-    }
-    return image;
-  }
-
-  private specFor(
-    widthDp: number,
-    heightDp: number,
-    density: number,
-    image: SystemImage,
-  ): DeviceSpec {
-    return {
-      platform: "android",
-      widthPx: Math.round((widthDp * density) / 160),
-      heightPx: Math.round((heightDp * density) / 160),
-      density,
-      systemImage: image.sysdir,
-    };
-  }
-
-  async catalog(): Promise<CatalogItem[]> {
-    const image = this.image();
-    return this.config.android.presets.map((preset) => {
-      const spec = this.specFor(preset.widthDp, preset.heightDp, preset.density, image);
-      return {
-        platform: "android",
-        spec,
-        suggestedName: `Android ${preset.widthDp}dp`,
-        detail:
-          spec.platform === "android"
-            ? `${spec.widthPx}×${spec.heightPx}px · ${spec.density}dpi · ${image.target} ${image.tag}`
-            : "",
-        preset: true,
-      };
-    });
-  }
-
-  async resolveSpec(request: CreateRequest): Promise<DeviceSpec> {
-    if (request.platform !== "android")
-      throw new HandlerError("INVALID", "Android 요청이 아닙니다");
-    const preset = this.config.android.presets.find((p) => p.widthDp === request.widthDp);
-    const density = request.density ?? preset?.density ?? 320;
-    const heightDp = request.heightDp ?? preset?.heightDp ?? Math.round(request.widthDp * 2.1);
-    return this.specFor(request.widthDp, heightDp, density, this.image(request.systemImage));
-  }
-
-  private avdId(device: { id: string }): string {
-    return `corgi_${device.id}`;
+  /** `<ID>.ini` 의 path= 가 가리키는 AVD 폴더 (Android Studio 가 만든 것은 다른 곳일 수도 있다) */
+  private avdDir(avdId: string): string {
+    const ini = join(this.avdHome, `${avdId}.ini`);
+    const path = existsSync(ini) ? readProps(ini).path : undefined;
+    return path && existsSync(path) ? path : join(this.avdHome, `${avdId}.avd`);
   }
 
   private configPath(avdId: string): string {
-    return join(this.avdHome, `${avdId}.avd`, "config.ini");
+    return join(this.avdDir(avdId), "config.ini");
   }
 
+  /** 이 Mac 의 AVD — 복제 원본 후보 (M1). 화면 크기(hw.lcd.*)가 없는 AVD 는 뺀다 */
+  async sources(): Promise<SourceDevice[]> {
+    if (!existsSync(this.avdHome)) return [];
+    const running = await this.running();
+    const sources: SourceDevice[] = [];
+    for (const file of readdirSync(this.avdHome).filter((f) => f.endsWith(".ini"))) {
+      const avdId = file.slice(0, -".ini".length);
+      const configPath = this.configPath(avdId);
+      if (!existsSync(configPath)) continue;
+      const config = readProps(configPath);
+      const widthPx = Number(config["hw.lcd.width"]);
+      const heightPx = Number(config["hw.lcd.height"]);
+      const density = Number(config["hw.lcd.density"]);
+      const systemImage = config["image.sysdir.1"];
+      if (!widthPx || !heightPx || !density || !systemImage) continue;
+      const target = systemImage.split("/")[1] ?? "";
+      sources.push({
+        platform: "android",
+        native: avdId,
+        name: config["avd.ini.displayname"] || avdId,
+        spec: { platform: "android", widthPx, heightPx, density, systemImage },
+        detail:
+          `${widthPx}×${heightPx}px · ${density}dpi · ${target} ${config["tag.id"] ?? ""}`.trim(),
+        booted: running.get(avdId)?.ready ?? false,
+      });
+    }
+    return sources;
+  }
+
+  /**
+   * 원본 config.ini 의 하드웨어 설정만 복사해 새 AVD 를 쓴다. 사용자 데이터(userdata·스냅샷)는
+   * 복사하지 않아 같은 크기의 깨끗한 디바이스가 된다 (requirements «결정 기록»).
+   */
   async create(
-    input: { id: string; name: string; spec: DeviceSpec },
+    input: { id: string; name: string; source: SourceDevice },
     progress: Progress,
   ): Promise<{ native: string }> {
-    const { spec } = input;
-    if (spec.platform !== "android") throw new HandlerError("INVALID", "Android spec 이 아닙니다");
-    const image =
-      this.systemImages().find((i) => i.sysdir === spec.systemImage) ??
-      this.image(spec.systemImage);
-    const avdId = this.avdId(input);
+    const { source } = input;
+    if (source.spec.platform !== "android")
+      throw new HandlerError("INVALID", "Android 원본이 아닙니다");
+    const avdId = `corgi_${input.id}`;
     const avdDir = join(this.avdHome, `${avdId}.avd`);
     if (existsSync(avdDir)) throw new HandlerError("INVALID", `이미 있는 AVD: ${avdId}`);
-    progress(`AVD 생성: ${avdId} (${spec.widthPx}×${spec.heightPx}px · ${spec.density}dpi)`);
+    progress(`AVD 생성: ${input.name} ← ${source.name} (${source.detail})`);
 
-    mkdirSync(avdDir, { recursive: true });
-    const lines = {
+    const config = readProps(this.configPath(source.native));
+    // 원본을 가리키는 값만 바꾸고 나머지(hw.*·image.sysdir.1·tag.* 등)는 그대로 둔다
+    const copied: Record<string, string> = {
+      ...config,
       AvdId: avdId,
       "avd.ini.displayname": input.name.replace(/[\r\n]/g, " "),
-      "avd.ini.encoding": "UTF-8",
-      "PlayStore.enabled": String(image.tag.includes("playstore")),
-      "abi.type": image.abi,
-      "hw.cpu.arch": image.abi === "arm64-v8a" ? "arm64" : image.abi,
-      "hw.cpu.ncore": "2",
-      "hw.ramSize": String(this.config.android.ramMb),
-      "hw.lcd.width": String(spec.widthPx),
-      "hw.lcd.height": String(spec.heightPx),
-      "hw.lcd.density": String(spec.density),
-      "hw.keyboard": "yes",
-      "hw.gpu.enabled": "yes",
-      "hw.gpu.mode": "auto",
-      "hw.mainKeys": "no",
-      "hw.initialOrientation": "portrait",
-      "disk.dataPartition.size": "6G",
-      "skin.dynamic": "yes",
-      showDeviceFrame: "no",
-      "image.sysdir.1": image.sysdir,
-      "tag.id": image.tag,
-      target: image.target,
+      "avd.ini.encoding": config["avd.ini.encoding"] ?? "UTF-8",
     };
+    mkdirSync(avdDir, { recursive: true });
     writeFileSync(
       join(avdDir, "config.ini"),
-      `${Object.entries(lines)
+      `${Object.entries(copied)
         .map(([k, v]) => `${k}=${v}`)
         .join("\n")}\n`,
     );
+    const sourceIni = join(this.avdHome, `${source.native}.ini`);
+    const target =
+      (existsSync(sourceIni) ? readProps(sourceIni).target : undefined) ?? config.target ?? "";
     writeFileSync(
       join(this.avdHome, `${avdId}.ini`),
-      `avd.ini.encoding=UTF-8\npath=${avdDir}\npath.rel=avd/${avdId}.avd\ntarget=${image.target}\n`,
+      `avd.ini.encoding=UTF-8\npath=${avdDir}\npath.rel=avd/${avdId}.avd\ntarget=${target}\n`,
     );
     return { native: avdId };
   }
