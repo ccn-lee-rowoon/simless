@@ -1,4 +1,5 @@
-import type { SessionInfo } from "../shared/protocol.ts";
+import { z } from "zod";
+import { type SessionInfo, SessionInfo as SessionInfoSchema } from "../shared/protocol.ts";
 
 // 점유·대기 (R13·R14·R17, docs/design.md §8). 시간·저장은 밖에서 주입받는 순수 로직이다.
 
@@ -239,3 +240,18 @@ export class LeaseManager {
     this.options.onChange?.(this.snapshot());
   }
 }
+
+const SessionRecordSchema = SessionInfoSchema.extend({ lastUsedAt: z.number() });
+
+/** leases.json 형식 — 서버를 다시 켜도 점유·대기열을 복원한다 */
+export const LeaseStateSchema = z.object({
+  sessions: z.array(SessionRecordSchema),
+  leases: z.array(
+    z.object({ deviceId: z.string(), sessionKey: z.string(), acquiredAt: z.number() }),
+  ),
+  queue: z.array(
+    z.object({ sessionKey: z.string(), deviceIds: z.array(z.string()), enqueuedAt: z.number() }),
+  ),
+});
+
+export const EMPTY_LEASE_STATE: LeaseState = { sessions: [], leases: [], queue: [] };

@@ -1,0 +1,288 @@
+import { z } from "zod";
+import type {
+  AcquireResult,
+  BusyData,
+  DeviceView,
+  HolderView,
+  StatusResult,
+} from "../shared/api.ts";
+import type { Config } from "../shared/config.ts";
+import { type Device, layoutHeight, layoutWidth, sizeLabel } from "../shared/model.ts";
+import type { Paths } from "../shared/paths.ts";
+import { isAlive as defaultIsAlive } from "../shared/proc.ts";
+import type { Request, SessionInfo } from "../shared/protocol.ts";
+import { VERSION } from "../shared/version.ts";
+import type { Driver, RuntimeState } from "./drivers/types.ts";
+import { EMPTY_LEASE_STATE, type Holder, LeaseManager, LeaseStateSchema } from "./leases.ts";
+import { Registry } from "./registry.ts";
+import { type Connection, type Handler, HandlerError } from "./socket.ts";
+import { readJson, writeJson } from "./store.ts";
+
+export interface ServerDeps {
+  paths: Paths;
+  config: Config;
+  drivers: Driver[];
+  now?: () => number;
+  isAlive?: (pid: number, startedAt: number | undefined) => boolean;
+}
+
+type Method = (params: unknown, session: SessionInfo, connection: Connection) => Promise<unknown>;
+
+const AcquireParams = z.object({
+  /** 비우면 사용 중인(enabled) 디바이스 전부 */
+  devices: z.array(z.string()).default([]),
+  wait: z.boolean().default(false),
+  /** 기다리기의 이번 호출 최대 시간 — 지나면 «아직 대기 중» 으로 돌려준다 */
+  timeoutMs: z.number().int().positive().max(3_600_000).default(600_000),
+});
+const ReleaseParams = z.object({ devices: z.array(z.string()).optional() });
+const WhoParams = z.object({ target: z.string().optional() });
+
+function parse<T extends z.ZodType>(schema: T, params: unknown): z.infer<T> {
+  const parsed = schema.safeParse(params ?? {});
+  if (!parsed.success) throw new HandlerError("INVALID", z.prettifyError(parsed.error));
+  return parsed.data;
+}
+
+export class CorgiServer {
+  readonly registry: Registry;
+  readonly leases: LeaseManager;
+  private readonly waiters = new Map<string, Set<() => void>>();
+  private readonly isAlive: NonNullable<ServerDeps["isAlive"]>;
+  private readonly methods: Record<string, Method>;
+
+  constructor(private readonly deps: ServerDeps) {
+    this.isAlive = deps.isAlive ?? ((pid, startedAt) => defaultIsAlive(pid, startedAt));
+    this.registry = new Registry(deps.paths.registry);
+    this.leases = new LeaseManager(
+      readJson(deps.paths.leases, LeaseStateSchema, EMPTY_LEASE_STATE),
+      {
+        idleMs: deps.config.idleReleaseMinutes * 60_000,
+        now: deps.now,
+        onChange: (state) => writeJson(deps.paths.leases, state),
+        onGranted: (key) => this.wake(key),
+      },
+    );
+    this.methods = {
+      status: (_p, session) => this.status(session),
+      "lease.acquire": (p, session, connection) =>
+        this.acquire(parse(AcquireParams, p), session, connection),
+      "lease.release": (p, session) => this.release(parse(ReleaseParams, p), session),
+      "lease.who": (p) => this.who(parse(WhoParams, p)),
+    };
+  }
+
+  /** 다른 모듈(드라이버 명령 등)이 메서드를 붙인다 */
+  addMethod(name: string, method: Method): void {
+    this.methods[name] = method;
+  }
+
+  readonly handle: Handler = async (request: Request, connection: Connection) => {
+    const method = this.methods[request.method];
+    if (!method) throw new HandlerError("INVALID", `모르는 메서드: ${request.method}`);
+    // 요청이 곧 «사용» 이다 — 마지막 사용 시각 갱신 (R17)
+    this.leases.touch(request.session);
+    return method(request.params, request.session, connection);
+  };
+
+  /** 2초마다 — 끝난 세션의 점유를 풀고, 오래 안 쓴 점유 중 누가 기다리는 것을 푼다 */
+  tick(): void {
+    for (const session of this.leases.snapshot().sessions) {
+      if (
+        !session.human &&
+        session.pid !== undefined &&
+        !this.isAlive(session.pid, session.pidStartedAt)
+      ) {
+        this.leases.endSession(session.key);
+      }
+    }
+    this.leases.sweepIdle();
+  }
+
+  driver(platform: Device["spec"]["platform"]): Driver {
+    const driver = this.deps.drivers.find((d) => d.platform === platform);
+    if (!driver) throw new HandlerError("TOOL_MISSING", `${platform} 드라이버가 없습니다`);
+    return driver;
+  }
+
+  /** ID·이름으로 디바이스를 찾는다. 하나라도 없으면 NOT_FOUND */
+  resolve(refs: string[]): Device[] {
+    return refs.map((ref) => {
+      const device = this.registry.find(ref);
+      if (!device) throw new HandlerError("NOT_FOUND", `없는 디바이스: ${ref}`);
+      return device;
+    });
+  }
+
+  async runtimeStates(devices: Device[]): Promise<Map<string, RuntimeState>> {
+    const result = new Map<string, RuntimeState>();
+    for (const driver of this.deps.drivers) {
+      const mine = devices.filter((d) => d.spec.platform === driver.platform);
+      if (mine.length === 0) continue;
+      const states = await driver.states(mine).catch(() => new Map<string, RuntimeState>());
+      for (const [id, state] of states) result.set(id, state);
+    }
+    return result;
+  }
+
+  holderView(holder: Holder | undefined): HolderView | undefined {
+    if (!holder) return undefined;
+    const { session } = holder;
+    return {
+      sessionKey: session.key,
+      agent: session.agent,
+      cwd: session.cwd,
+      human: session.human,
+      since: holder.since,
+      reason: holder.reason,
+    };
+  }
+
+  async deviceViews(session: SessionInfo, devices = this.registry.list()): Promise<DeviceView[]> {
+    const states = await this.runtimeStates(devices);
+    const leases = new Map(this.leases.snapshot().leases.map((l) => [l.deviceId, l]));
+    return devices.map((device) => {
+      const state = states.get(device.id);
+      const lease = leases.get(device.id);
+      const holderSession = lease ? this.leases.session(lease.sessionKey) : undefined;
+      return {
+        ...device,
+        label: sizeLabel(device.spec),
+        layoutWidth: layoutWidth(device.spec),
+        layoutHeight: layoutHeight(device.spec),
+        booted: state?.booted ?? false,
+        targetId: state?.booted ? state.targetId : undefined,
+        holder:
+          lease && holderSession
+            ? this.holderView({
+                deviceId: device.id,
+                session: holderSession,
+                since: lease.acquiredAt,
+                reason: "held",
+              })
+            : undefined,
+        mine: lease?.sessionKey === session.key,
+      };
+    });
+  }
+
+  private async status(session: SessionInfo): Promise<StatusResult> {
+    const snapshot = this.leases.snapshot();
+    return {
+      serverVersion: VERSION,
+      session,
+      held: this.leases.heldBy(session.key),
+      queuePosition: this.leases.queuePosition(session.key),
+      devices: await this.deviceViews(session),
+      queue: snapshot.queue.map((e) => ({
+        sessionKey: e.sessionKey,
+        agent: this.leases.session(e.sessionKey)?.agent ?? "unknown",
+        deviceIds: e.deviceIds,
+        enqueuedAt: e.enqueuedAt,
+      })),
+    };
+  }
+
+  private holdersData(holders: Holder[]): BusyData["holders"] {
+    return holders.flatMap((h) => {
+      const view = this.holderView(h);
+      return view ? [{ ...view, deviceId: h.deviceId }] : [];
+    });
+  }
+
+  private async acquire(
+    params: z.infer<typeof AcquireParams>,
+    session: SessionInfo,
+    connection: Connection,
+  ): Promise<AcquireResult> {
+    const devices =
+      params.devices.length > 0
+        ? this.resolve(params.devices)
+        : this.registry.list().filter((d) => d.enabled);
+    if (devices.length === 0) throw new HandlerError("NOT_FOUND", "점유할 디바이스가 없습니다");
+    const ids = devices.map((d) => d.id);
+
+    const result = this.leases.acquire(session, ids, { wait: params.wait });
+    if (result.status === "granted") return result;
+    if (result.status === "busy") {
+      const data: BusyData = { holders: this.holdersData(result.holders) };
+      throw new HandlerError("BUSY", "다른 세션이 사용 중입니다", data);
+    }
+
+    connection.emit("queued", {
+      position: result.position,
+      holders: this.holdersData(result.holders),
+    });
+    await this.waitForGrant(session.key, params.timeoutMs, connection);
+
+    const held = new Set(this.leases.heldBy(session.key));
+    if (ids.every((id) => held.has(id))) return { status: "granted", deviceIds: ids };
+    const again = this.leases.acquire(session, ids, { wait: true });
+    if (again.status === "granted") return again;
+    if (again.status === "busy") throw new HandlerError("BUSY", "다른 세션이 사용 중입니다");
+    return { status: "queued", position: again.position, holders: this.holdersData(again.holders) };
+  }
+
+  private waitForGrant(
+    sessionKey: string,
+    timeoutMs: number,
+    connection: Connection,
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        this.waiters.get(sessionKey)?.delete(done);
+        resolve();
+      };
+      const timer = setTimeout(done, timeoutMs);
+      if (!this.waiters.has(sessionKey)) this.waiters.set(sessionKey, new Set());
+      this.waiters.get(sessionKey)?.add(done);
+      // 클라이언트가 끊어도 대기열 항목은 남는다 — 이 호출만 끝낸다
+      connection.onClose(done);
+    });
+  }
+
+  private wake(sessionKey: string): void {
+    for (const done of [...(this.waiters.get(sessionKey) ?? [])]) done();
+  }
+
+  private async release(params: z.infer<typeof ReleaseParams>, session: SessionInfo) {
+    const ids = params.devices ? this.resolve(params.devices).map((d) => d.id) : undefined;
+    return { released: this.leases.release(session.key, ids) };
+  }
+
+  private async who(params: z.infer<typeof WhoParams>) {
+    const snapshot = this.leases.snapshot();
+    let devices = this.registry.list();
+    if (params.target) {
+      const target = params.target;
+      const states = await this.runtimeStates(devices);
+      devices = devices.filter(
+        (d) =>
+          d.id === target ||
+          d.name === target ||
+          d.native === target ||
+          states.get(d.id)?.targetId === target,
+      );
+      if (devices.length === 0)
+        throw new HandlerError("NOT_FOUND", `Corgi 가 관리하는 디바이스가 아닙니다: ${target}`);
+    }
+    return devices.map((device) => {
+      const lease = snapshot.leases.find((l) => l.deviceId === device.id);
+      const session = lease ? this.leases.session(lease.sessionKey) : undefined;
+      return {
+        deviceId: device.id,
+        name: device.name,
+        holder:
+          lease && session
+            ? this.holderView({
+                deviceId: device.id,
+                session,
+                since: lease.acquiredAt,
+                reason: "held",
+              })
+            : undefined,
+      };
+    });
+  }
+}
