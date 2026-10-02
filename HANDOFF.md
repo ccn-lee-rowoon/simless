@@ -17,7 +17,7 @@
 - 요구사항 정리 **완료**. 설계 전에 정할 것은 없다 (남은 Q 는 만들면서 정해도 됨)
 - 설계안 v0.2 작성(`docs/design.md`)
 - **0단계(저장소 뼈대) 완료** — `bun link` 로 `corgi` 등록됨(`~/.bun/bin/corgi` → 이 저장소). 다음은 1단계(서버 + CLI 코어), 세션 구분은 에이전트 무관(프로세스 트리) — 에이전트별 실측 항목은 `docs/design.md` §17
-- **1단계(서버 + CLI 코어) 완료** — `corgi serve`·`install`·`status`·`catalog`·`create`·`list`·`use`·`up`·`down`·`acquire`·`release`·`who` 등. 실제 Android·iOS 디바이스로 만들기·켜기·점유를 확인하고 시험 디바이스는 지웠다. 남은 확인(launchd 실제 등록, avdslim 설치, 에이전트별 프로세스 트리)은 `docs/design.md` §17
+- **1단계(서버 + CLI 코어) 완료** — `corgi serve`·`install`·`status`·`catalog`·`create`·`list`·`use`·`up`·`down`·`acquire`·`release`·`who` 등. 실제 Android·iOS 디바이스로 만들기·켜기·점유를 확인하고 시험 디바이스는 지웠다. 남은 확인(launchd 실제 등록, 에이전트별 프로세스 트리)은 `docs/design.md` §17
 - 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI(메뉴바는 나중에 선택), 단일 실행 파일 배포(개발은 `bun link`), `Corgi.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
 - 범용 도구 → NOVA 레포(xb3-client)와 분리해 별도 프로젝트로 만든다
 
@@ -29,7 +29,7 @@
 - 시스템 이미지: `android-37.1/google_apis_playstore_ps16k/arm64-v8a`, `android-36/google_apis_playstore`
 - iOS 런타임: 18.6 · 26.0 · 26.2 · 26.5
 - 설치됨: simslim **0.8.0**(최신 0.11.0) · scrcpy 4.1 · Bun · argent 0.26.0 · simfleet 0.1.1(안 쓰기로 함)
-- **avdslim 미설치** — `brew tap kdbhalala/avdslim …` 후 `brew trust kdbhalala/avdslim` 가 필요(비공식 tap 이라 brew 가 거부)
+- **avdslim 1.0.15 설치됨** (2026-10-02) — `brew install kdbhalala/avdslim/avdslim` 가 `brew trust` 없이 설치됐다(전에는 비공식 tap 이라 거부한다고 봤음 — brew 버전에 따라 다를 수 있어 `corgi doctor` 는 둘 다 안내)
 - baguette 미설치 (iOS 화면 스트리밍용, 지금 범위 밖)
 
 **AVD 직접 생성** (`avdmanager` 없이 동작 확인)
@@ -71,7 +71,7 @@
 | `simfleet serve` | 실행 중 (127.0.0.1:8790) | `pkill -f "simfleet serve"`, 필요 없으면 `bun remove -g simfleet` |
 | simfleet 상태 | `~/Library/Application Support/nova-size-check Sim Fleet` | 삭제 |
 | scrcpy 4.1 | brew 설치 | 필요 없으면 `brew uninstall scrcpy` |
-| brew tap | `kdbhalala/avdslim` tap 만 추가됨(trust·설치 안 함) | avdslim 쓸 거면 유지 |
+| brew tap · avdslim | `kdbhalala/avdslim` tap + avdslim 1.0.15 설치됨 | Corgi 가 쓰므로 유지 |
 | 기존 `Pixel_6a` AVD·기존 iOS 시뮬레이터 | 건드리지 않음 | — |
 | NOVA alpha APK | 위 3대 AVD 에 설치됨 | AVD 삭제 시 함께 사라짐 |
 

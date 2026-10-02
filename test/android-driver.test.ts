@@ -193,3 +193,45 @@ describe("AndroidDriver", () => {
     expect(error).toMatchObject({ code: "TOOL_MISSING" });
   });
 });
+
+describe("AndroidDriver 슬림 확인", () => {
+  const profiles = `📦 Media:\n   • app.a\n   • app.b\n   • app.c\n   • app.d\n🔒 GUARANTEED FUNCTIONAL (Never Disabled):\n   • core.x\n`;
+
+  function runnerWith(installed: string[], disabled: string[]) {
+    return async (command: string[]): Promise<RunResult> => {
+      const line = command.join(" ");
+      if (line === "/bin/avdslim profiles") return { code: 0, stdout: profiles, stderr: "" };
+      const list = line.endsWith("packages -d")
+        ? disabled
+        : line.endsWith("packages")
+          ? installed
+          : [];
+      return { code: 0, stdout: list.map((p) => `package:${p}\r`).join("\n"), stderr: "" };
+    };
+  }
+
+  async function check(installed: string[], disabled: string[], booted = true) {
+    const { env } = sdkWithImages();
+    const d = driver(env, {
+      runner: runnerWith(installed, disabled),
+      avdslimPath: () => "/bin/avdslim",
+    });
+    return d.checkSlim(
+      { id: "x" } as Device,
+      booted ? { booted, targetId: "emulator-5554" } : { booted },
+    );
+  }
+
+  test("설치된 프로필 패키지의 절반 이상이 꺼져 있으면 applied", async () => {
+    expect(await check(["app.a", "app.b", "app.c", "core.x"], ["app.a", "app.b"])).toBe("applied");
+  });
+
+  test("절반 미만이면 drifted (풀림)", async () => {
+    expect(await check(["app.a", "app.b", "app.c"], ["app.a"])).toBe("drifted");
+  });
+
+  test("핵심 목록(GUARANTEED 아래)은 세지 않고, 꺼져 있으면 알 수 없다", async () => {
+    expect(await check(["core.x"], [])).toBeUndefined();
+    expect(await check(["app.a"], ["app.a"], false)).toBeUndefined();
+  });
+});

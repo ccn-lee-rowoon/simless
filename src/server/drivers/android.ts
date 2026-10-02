@@ -439,8 +439,56 @@ export class AndroidDriver implements Driver {
     await runOk(this.runner, [avdslim, "off", state.targetId], { timeoutMs: 5 * 60_000 });
   }
 
-  /** avdslim 에 상태 조회 명령이 없다 — 판단 방법은 avdslim 설치 후 정한다 (docs/design.md §17) */
-  async checkSlim(): Promise<SlimState | undefined> {
-    return undefined;
+  private profilePackages?: Set<string>;
+
+  /** avdslim 이 끄는 패키지 목록 — `avdslim profiles` 의 «•» 줄 (끄지 않는 핵심 목록 앞까지) */
+  private async slimPackages(): Promise<Set<string>> {
+    if (this.profilePackages) return this.profilePackages;
+    const text = await runOk(this.runner, [this.avdslim(), "profiles"]);
+    const listed = text.split("GUARANTEED")[0] ?? "";
+    this.profilePackages = new Set(
+      listed
+        .split("\n")
+        .map((line) => /^\s*•\s*(\S+)/.exec(line)?.[1])
+        .filter((pkg): pkg is string => pkg !== undefined),
+    );
+    return this.profilePackages;
+  }
+
+  private async packages(serial: string, disabledOnly: boolean): Promise<Set<string>> {
+    const args = [
+      this.adb,
+      "-s",
+      serial,
+      "shell",
+      "pm",
+      "list",
+      "packages",
+      ...(disabledOnly ? ["-d"] : []),
+    ];
+    const text = await runOk(this.runner, args);
+    return new Set(
+      text
+        .split("\n")
+        .map((line) => line.trim().replace(/^package:/, ""))
+        .filter(Boolean),
+    );
+  }
+
+  /**
+   * avdslim 에는 상태 조회 명령이 없다. 기기에 설치된 프로필 패키지 중 꺼진 비율로 본다 —
+   * 표준 프리셋도 Chrome·Play 스토어 등 일부는 남기므로(실측 52개 중 49개) 절반 이상이면 적용됨.
+   */
+  async checkSlim(_device: Device, state: RuntimeState): Promise<SlimState | undefined> {
+    if (!state.booted || !state.targetId || !this.avdslimPath()) return undefined;
+    const [profile, installed, disabled] = await Promise.all([
+      this.slimPackages(),
+      this.packages(state.targetId, false),
+      this.packages(state.targetId, true),
+    ]);
+    const relevant = [...profile].filter((pkg) => installed.has(pkg));
+    if (relevant.length === 0) return undefined;
+    const off = relevant.filter((pkg) => disabled.has(pkg)).length;
+    return off / relevant.length >= 0.5 ? "applied" : "drifted";
   }
 }
