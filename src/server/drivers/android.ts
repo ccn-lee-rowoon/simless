@@ -13,6 +13,7 @@ import { join } from "node:path";
 import type { Config } from "../../shared/config.ts";
 import { run as defaultRun, type Runner, runOk, which } from "../../shared/exec.ts";
 import type { Device, DeviceSpec, SlimState } from "../../shared/model.ts";
+import { androidSdk } from "../../shared/tools.ts";
 import { HandlerError } from "../socket.ts";
 import type { CatalogItem, CreateRequest, Driver, Progress, RuntimeState } from "./types.ts";
 
@@ -98,13 +99,7 @@ export class AndroidDriver implements Driver {
   }
 
   get sdk(): string {
-    const home = this.env.HOME ?? homedir();
-    return (
-      this.config.android.sdkPath ??
-      this.env.ANDROID_HOME ??
-      this.env.ANDROID_SDK_ROOT ??
-      join(home, "Library", "Android", "sdk")
-    );
+    return androidSdk(this.config, this.env);
   }
 
   get avdHome(): string {
