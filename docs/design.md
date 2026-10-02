@@ -85,12 +85,12 @@ corgi/
 
 | 명령 | 하는 일 |
 | --- | --- |
-| (배포) | `dist/corgi` 하나를 `~/.local/bin/corgi` 에 둔다. 혼자 쓸 땐 저장소에서 `bun link`. 동료와는 **프라이빗 GitHub Release** 에 올리고, 설치 스크립트가 `gh release download`(또는 `curl`)로 받아 배치 → `corgi install` 까지 한다. 브라우저로 받으면 격리 속성 때문에 실행이 막히므로 스크립트로 받는다 |
+| (배포) | `dist/corgi` 를 `~/.local/share/corgi/versions/<버전>/corgi` 에 두고 `~/.local/bin/corgi` 를 그 파일로 링크한다(§19). 혼자 쓸 땐 저장소에서 `bun link`. 동료와는 **프라이빗 GitHub Release** 에 올리고, 설치 스크립트가 `gh release download`(또는 `curl`)로 받아 배치 → `corgi install` 까지 한다. 브라우저로 받으면 격리 속성 때문에 실행이 막히므로 스크립트로 받는다 |
 | `corgi install` | LaunchAgent(`~/Library/LaunchAgents/corgi.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`corgi`·Android SDK 경로를 절대 경로로** 적는다. 훅 명령도 절대 경로로 등록한다. `~/Applications/Corgi.app` 생성. 스킬·훅·argent 규칙 설치(각각 묻고, `--yes` 로 생략) |
 | `corgi uninstall` | 위를 되돌린다. 만든 디바이스는 지우지 않는다 |
 | `Corgi.app` | `Contents/MacOS/corgi`(실행 파일 링크) + `Info.plist`(`LSUIElement` — Dock 아이콘 없음) + 아이콘, ad-hoc 서명. **인자 없이 앱 번들 안에서 실행되면 앱 모드**: 서버가 꺼져 있으면 켜고 웹 UI 를 브라우저로 연 뒤 끝난다. 더블클릭·Spotlight·Launchpad 에서 연다. 6단계에서 같은 앱이 메뉴바 앱이 된다 |
 | 서버 자동 시작 (Q10) | CLI·MCP 는 소켓이 없으면 `launchctl kickstart` 로 켜고 몇 초 기다린다. 훅은 켜지 않는다 |
-| 업데이트 | 실행 파일 교체 뒤 `corgi install` → 서버 재시작·`Corgi.app` 갱신. 클라이언트·서버 버전이 다르면 `hello` 에서 알려 준다 |
+| 업데이트 | `corgi update` — 확인·알림·교체·되돌리기는 §19. 클라이언트·서버 버전이 다르면 `hello` 에서 알려 준다 |
 
 ## 5. 런타임 파일 위치
 
@@ -101,7 +101,9 @@ corgi/
 | `…/Corgi/managed-index.json` | 관리 디바이스 식별자(UDID·AVD ID·마지막 시리얼). **서버가 꺼졌을 때 훅이 읽는다** | 서버 쓰기 / 훅 읽기 |
 | `…/Corgi/corgi.sock` | 소켓 (권한 0600) | 서버 |
 | `…/Corgi/web-token` | 웹 UI 요청 토큰 (0600) | 서버 |
+| `…/Corgi/update.json` | 마지막 확인 시각·최신 버전·알림 보낸 버전 | 서버 |
 | `~/Library/Logs/Corgi/` | 서버 로그 | 서버 |
+| `~/.local/share/corgi/versions/<버전>/corgi` · `~/.local/bin/corgi`(링크) | 설치된 버전들과 지금 쓰는 버전 (§19) | `corgi update` |
 | `~/.config/corgi/config.json` | 사용자 설정 — 크기 프리셋, 자동 해제 시간(기본 30분), HTTP 포트, 시스템 이미지, simslim 프로필 경로 | 사람·서버 |
 | `~/.config/corgi/apps/<name>.json` | 앱별 설정 (Q8) | 사람 |
 | `~/.android/avd/corgi_<id>.avd` · `.ini` | Android 디바이스 본체 | 서버 |
@@ -251,6 +253,7 @@ corgi/
 | `corgi install-app --app nova [--apk] [--ios-app]` | 일괄 설치 | R8 |
 | `corgi launch --app nova` | 일괄 실행 (dev client 연결 포함) | R8 |
 | `corgi open <딥링크>` | 같은 화면 이동 | R9 |
+| `corgi update [--check] [--rollback]` | 새 버전 확인·업데이트·이전 버전으로 되돌리기 | R19 |
 | `corgi serve` · `corgi hook <에이전트> pre-tool-use` · `corgi mcp` | 서버·훅·MCP 진입점 (사람이 직접 쓰지 않음) | — |
 
 - 종료 코드: `0` 성공 · `1` 실패 · `2` 사용법 오류 · `3` 다른 세션이 사용 중 · `4` 서버에 연결 못 함
@@ -305,6 +308,7 @@ corgi/
 - description 에 S3 의 반응 프롬프트, S4 의 비반응(기기 한 대·단순 스크린샷 → argent 스킬)을 넣는다.
 - 본문 순서(S5): `corgi status` → `corgi use [--wait]` (바쁘면 사용자에게 묻기, S7) → `corgi install-app`·`launch` → `corgi open <딥링크>` 또는 기기마다 argent 흐름 → `corgi list --json` 의 ID 로 기기마다 argent `screenshot` → 크기 라벨을 붙여 보고 → `corgi release` → 끌지 묻기(S8).
 - 설치·연결 문제는 `corgi doctor` 결과를 따른다 (S1·S2).
+- `corgi status --json` 에 `update` 가 있으면 사용자에게 알리기만 하고 **직접 업데이트하지 않는다** (R19).
 
 ## 16. 단계
 
@@ -319,6 +323,7 @@ corgi/
 | 4 | 웹 UI (M1~M8) + HTTP API·SSE | 사람이 브라우저로 전부 관리한다 |
 | 5 | MCP 래퍼 | 에이전트가 사용법 없이 바로 쓴다 |
 | 6 (선택) | 메뉴바 아이콘 | 메뉴바에서 점유 상태를 본다 |
+| U | 업데이트 — `scripts/release.ts`, 확인·알림, `corgi update`·되돌리기 (§19). **리모트·첫 Release 가 생긴 뒤**, 4단계 이후 아무 때나 | 새 버전을 알림 받고 명령 한 번으로 올린다 |
 | 나중 | 스크린샷 모아 보기 (웹 UI 탭) | — |
 
 ## 17. 구현 전에 실측할 것
@@ -345,6 +350,32 @@ corgi/
 | Q9 묶어서 켜기 | `use`·`up` 은 플랫폼 구분 없이 지정한 것 전부. `--platform android` 로 좁힐 수 있게 |
 | Q16 훅 없는 에이전트 | 규칙 + CLI 의 BUSY 응답으로 보호. 훅을 지원하면 어댑터를 붙인다(§13) |
 
+## 19. 업데이트 (R19)
+
+**확인**
+- 서버가 **시작할 때와 하루 한 번** 프라이빗 GitHub Release 의 최신 버전을 본다. 인증은 이미 로그인된 `gh` 를 그대로 쓴다(`gh api repos/<owner>/corgi/releases/latest`). `gh` 가 없거나 로그인 안 돼 있으면 조용히 넘어가고 `corgi doctor` 에서만 알려 준다.
+- 버전은 semver(`package.json` `version`) 로 비교한다. 개발 모드(`bun link` 로 소스 실행)에서는 확인하지 않는다.
+
+**알림** — 사람과 에이전트를 나눈다
+
+| 받는 쪽 | 방식 |
+| --- | --- |
+| 사람 | 새 버전마다 **macOS 알림 한 번**(`update.json` 에 보낸 버전 기록). 웹 UI 상단 배너 + «업데이트» 버튼. 메뉴바가 생기면 아이콘 표시 |
+| 터미널 CLI | 하루 한 번 stderr 에 한 줄 — «corgi 0.3.0 이 있습니다 — `corgi update`». `--json` 출력에는 섞지 않는다 |
+| 에이전트 | `corgi status --json`·MCP 응답의 `update: {current, latest}` 필드. 스킬은 «알리기만, 직접 업데이트하지 않음» (§15) |
+
+**교체 — `corgi update`**
+1. Release 에서 `corgi-darwin-arm64.tar.gz` 와 `SHA256SUMS` 를 받아 **체크섬을 검증**한다.
+2. `~/.local/share/corgi/versions/<버전>/corgi` 에 풀고 `~/.local/bin/corgi` 링크를 바꾼다 — Claude Code 와 같은 방식(이 Mac 의 `~/.local/share/claude/versions/` 확인).
+3. 서버 재시작 + `Corgi.app` 갱신(`corgi install` 과 같은 경로). 점유·대기열은 파일에 있어 유지되고, 부팅·설치가 진행 중이면 끝난 뒤 재시작한다.
+4. `corgi update --rollback` — 이전 버전으로 링크를 되돌린다. 버전 폴더는 최근 3개만 남긴다.
+
+- 자동 업데이트는 기본 꺼짐. `config.json` 의 `autoUpdate: true` 면 점유가 하나도 없을 때만 알아서 교체한다.
+
+**배포 쪽 — `scripts/release.ts`** (리모트가 생긴 뒤): 버전 올리기 → `bun run build` → 압축·체크섬 → `gh release create`. 나중에 GitHub Actions 로 옮길 수 있다.
+
+**1단계부터 지킬 것**: 버전은 semver 로 관리하고, 소켓 `hello` 에서 클라이언트·서버 버전을 비교해 다르면 알려 준다(업데이트 후 서버가 아직 옛 버전인 경우를 잡는다).
+
 ## 설계 결정 기록
 
 > 구조 수준의 결정(웹 UI · TS · 단일 실행 파일 · `Corgi.app` · 메뉴바 방식)은 `requirements.md` «결정 기록» 에 있다. 여기에는 구현 수준의 결정만 둔다.
@@ -358,3 +389,4 @@ corgi/
 | **`main.ts` 에서 서브커맨드별 동적 import** | 훅은 Bash 호출마다 돈다. 서버·웹 코드를 불러오지 않아야 빠르다 | 진입점에서 전부 import |
 | **패키지 하나** (모노레포 아님) | 결과물이 실행 파일 하나다. 경계는 폴더와 import 규칙(§3)으로 지킨다 | workspaces 로 shared·server·cli·web 분리 (설정만 늘어남) |
 | **공용 호스트 아래에서는 터미널 탭(셸) 단위로 세션을 나눈다** (§7) | IDE·터미널 앱·tmux 는 여러 사람·에이전트 작업이 한 프로세스 아래 모인다. 호스트를 세션으로 보면 서로 다른 작업이 한 세션이 된다 | 호스트 프로세스를 세션으로 (전부 한 세션), 바로 위 셸을 세션으로 (에이전트가 명령마다 새 셸을 띄우면 매번 다른 세션) |
+| **업데이트 확인에 `gh` 인증을 그대로 쓴다** (§19) | 저장소가 프라이빗이라 인증이 필요한데, 토큰을 따로 받아 저장하면 관리할 비밀이 생긴다. 개발자 Mac 에는 `gh` 가 이미 로그인돼 있다 | Corgi 전용 토큰 저장 (비밀 관리 부담), 공개 저장소 (프라이빗 요구와 충돌) |
