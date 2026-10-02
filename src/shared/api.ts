@@ -59,6 +59,8 @@ export interface BusyData {
 /** 이 Mac 의 에뮬레이터·시뮬레이터 하나 — «전체 목록» 의 한 줄이자 복제 원본 (M1·M9) */
 export interface SourceEntry {
   platform: "android" | "ios";
+  /** device = 이 Mac 의 디바이스, profile = Corgi 내장 대표 프로필(Android) */
+  kind: "device" | "profile";
   /** AVD ID 또는 UDID */
   native: string;
   name: string;
@@ -79,6 +81,8 @@ export interface SourceListResult {
   items: SourceEntry[];
   /** 플랫폼별로 빠진 도구·오류 */
   problems: { platform: "android" | "ios"; message: string }[];
+  /** 대표 프로필·직접 입력에 쓸 Android 시스템 이미지 */
+  androidImages: { sysdir: string; label: string; recommended: boolean }[];
 }
 
 export interface DeviceOpResult {

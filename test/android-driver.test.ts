@@ -263,3 +263,54 @@ describe("parseFootprint", () => {
     expect(parseFootprint("nothing")).toBeUndefined();
   });
 });
+
+describe("AndroidDriver 대표 프로필·직접 입력", () => {
+  test("대표 프로필은 기본 이미지(4KB 페이지·API 높은 순)로, 폭별로 나온다", async () => {
+    const { env } = sdkWithImages();
+    const presets = await driver(env).presetSources();
+    expect(presets.map((p) => p.native)).toContain("profile:medium-phone");
+    expect(
+      presets.every(
+        (p) => p.spec.platform === "android" && p.spec.systemImage.includes("android-36/"),
+      ),
+    ).toBe(true);
+    const small = presets.find((p) => p.native === "profile:small-phone");
+    expect(small?.spec).toMatchObject({ widthPx: 720, heightPx: 1280, density: 320 });
+  });
+
+  test("직접 입력은 dp·밀도에서 px 를 계산하고, 이미지를 고를 수 있다", async () => {
+    const { env } = sdkWithImages();
+    const source = await driver(env).customSource({
+      widthDp: 375,
+      heightDp: 812,
+      density: 420,
+      systemImage: "android-37.1",
+    });
+    expect(source).toMatchObject({
+      native: "custom:375x812@420",
+      spec: {
+        widthPx: 984,
+        heightPx: 2132,
+        density: 420,
+        systemImage: expect.stringContaining("android-37.1"),
+      },
+    });
+  });
+
+  test("프로필로 만들면 원본 없이 새 config.ini 를 쓴다", async () => {
+    const { env } = sdkWithImages();
+    const d = driver(env, { runner: fakeAdb().runner });
+    const source = (await d.presetSources()).find((p) => p.native === "profile:tablet-7");
+    if (!source) throw new Error("프로필 없음");
+    await d.create({ id: "tb01", name: "corgi 7 inch Tablet", source }, () => {});
+    const config = readFileSync(join(env.ANDROID_AVD_HOME, "corgi_tb01.avd", "config.ini"), "utf8");
+    expect(config).toContain("hw.lcd.width=1200");
+    expect(config).toContain("hw.lcd.density=320");
+    expect(config).toContain(
+      "image.sysdir.1=system-images/android-36/google_apis_playstore/arm64-v8a/",
+    );
+    expect(readFileSync(join(env.ANDROID_AVD_HOME, "corgi_tb01.ini"), "utf8")).toContain(
+      "target=android-36",
+    );
+  });
+});

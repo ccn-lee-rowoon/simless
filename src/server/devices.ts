@@ -8,12 +8,26 @@ import { type Connection, HandlerError } from "./socket.ts";
 
 // 디바이스 만들기·관리·켜기 (R1~R7, M1~M8). 메서드를 CorgiServer 에 붙인다.
 
-const CreateParams = z.object({
-  /** 원본 — AVD ID·UDID 또는 이름 */
-  source: z.string().min(1),
-  name: z.string().min(1).optional(),
-  slim: z.boolean().default(true),
-});
+const CreateParams = z
+  .object({
+    /** 원본 — AVD ID·UDID·대표 프로필 ID(`profile:…`) 또는 이름 */
+    source: z.string().min(1).optional(),
+    /** 직접 입력 — Android 만 */
+    custom: z
+      .object({
+        widthDp: z.number().positive(),
+        heightDp: z.number().positive(),
+        density: z.number().int().positive(),
+        systemImage: z.string().optional(),
+      })
+      .optional(),
+    name: z.string().min(1).optional(),
+    slim: z.boolean().default(true),
+  })
+  .refine(
+    (p) => (p.source === undefined) !== (p.custom === undefined),
+    "source 와 custom 중 하나만 주세요",
+  );
 const DeviceRef = z.object({ device: z.string() });
 const RenameParams = DeviceRef.extend({ name: z.string().min(1) });
 const EnableParams = DeviceRef.extend({ enabled: z.boolean() });
@@ -144,6 +158,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
   /** 이 Mac 의 디바이스 — 플랫폼별로 모은다. 도구가 없거나 실패한 플랫폼은 problems 로 */
   const allSources = async (platform?: "android" | "ios") => {
     const sources: SourceDevice[] = [];
+    const presets: SourceDevice[] = [];
     const problems: SourceListResult["problems"] = [];
     for (const name of ["android", "ios"] as const) {
       if (platform && platform !== name) continue;
@@ -152,22 +167,27 @@ export function registerDeviceMethods(server: CorgiServer): void {
         for (const tool of await driver.missingTools())
           problems.push({ platform: name, message: `${tool} 없음` });
         sources.push(...(await driver.sources()));
+        presets.push(...((await driver.presetSources?.()) ?? []));
       } catch (error) {
         problems.push({ platform: name, message: message(error) });
       }
     }
-    return { sources, problems };
+    return { sources, presets, problems };
   };
 
   server.addMethod("source.list", async (p): Promise<SourceListResult> => {
     const { platform } = parse(SourceParams, p);
-    const { sources, problems } = await allSources(platform);
+    const { sources, presets, problems } = await allSources(platform);
     const devices = server.registry.list();
     const created = new Map(devices.map((d) => [specKey(d.spec), d.id]));
-    const items: SourceEntry[] = sources.map((source) => {
+    const items: SourceEntry[] = [
+      ...sources.map((s) => ({ s, kind: "device" as const })),
+      ...presets.map((s) => ({ s, kind: "profile" as const })),
+    ].map(({ s: source, kind }) => {
       const managed = server.registry.findByNative(source.native)?.id;
       return {
         ...source,
+        kind,
         label: sizeLabel(source.spec),
         layoutWidth: layoutWidth(source.spec),
         managed,
@@ -180,25 +200,37 @@ export function registerDeviceMethods(server: CorgiServer): void {
         a.layoutWidth - b.layoutWidth ||
         a.name.localeCompare(b.name),
     );
-    return { items, problems };
+    const androidImages =
+      platform === "ios" ? [] : (server.driverOrUndefined("android")?.images?.() ?? []);
+    return { items, problems, androidImages };
   });
 
   server.addMethod("device.list", (_p, session) => server.deviceViews(session));
 
   server.addMethod("device.create", async (p, session, connection) => {
     const params = parse(CreateParams, p);
-    const { sources } = await allSources();
+    const { sources, presets } = await allSources();
     // 원본은 Corgi 가 만든 것이 아닌 이 Mac 의 디바이스 (슬림된 것을 원본으로 쓰는 건 나중에 — L4)
-    const candidates = sources.filter((s) => !server.registry.findByNative(s.native));
-    const wanted = params.source.toLowerCase();
+    const candidates = [...sources, ...presets].filter(
+      (s) => !server.registry.findByNative(s.native),
+    );
+    const wanted = (params.source ?? "").toLowerCase();
     const exact = candidates.filter((s) => s.native.toLowerCase() === wanted);
     const byName = candidates.filter((s) => s.name.toLowerCase() === wanted);
     const matches = exact.length > 0 ? exact : byName;
-    if (server.registry.findByNative(params.source) || server.registry.find(params.source)) {
+    if (
+      params.source &&
+      (server.registry.findByNative(params.source) || server.registry.find(params.source))
+    ) {
       throw new HandlerError(
         "INVALID",
         "Corgi 가 만든 디바이스는 원본으로 쓸 수 없습니다 — corgi list --all 에서 원본을 고르세요",
       );
+    }
+    if (params.custom) {
+      const android = server.driver("android");
+      if (!android.customSource) throw new HandlerError("INVALID", "직접 입력은 Android 만 됩니다");
+      matches.splice(0, matches.length, await android.customSource(params.custom));
     }
     if (matches.length === 0)
       throw new HandlerError("NOT_FOUND", `없는 원본: ${params.source} — corgi list --all`);

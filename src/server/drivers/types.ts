@@ -22,12 +22,33 @@ export interface SourceDevice {
 
 export type Progress = (message: string) => void;
 
+export interface CustomRequest {
+  widthDp: number;
+  heightDp: number;
+  density: number;
+  /** 비우면 기본 이미지 (4KB 페이지·API 높은 순) */
+  systemImage?: string;
+}
+
+export interface SystemImageInfo {
+  /** config.ini 의 image.sysdir.1 — 예: system-images/android-36/google_apis_playstore/arm64-v8a/ */
+  sysdir: string;
+  label: string;
+  recommended: boolean;
+}
+
 export interface Driver {
   readonly platform: Platform;
   /** 필요한 도구 중 없는 것 — 비어 있으면 쓸 수 있다 */
   missingTools(): Promise<string[]>;
   /** 이 Mac 의 디바이스 전부 — Corgi 가 만든 것도 포함 (서버가 가린다) */
   sources(): Promise<SourceDevice[]>;
+  /** 내장 대표 프로필 — Android 만 (requirements M1) */
+  presetSources?(): Promise<SourceDevice[]>;
+  /** 직접 입력한 크기를 원본처럼 — Android 만 */
+  customSource?(request: CustomRequest): Promise<SourceDevice>;
+  /** 프로필·직접 입력에 쓸 시스템 이미지 — Android 만 */
+  images?(): SystemImageInfo[];
   /** 원본과 같은 크기로 앱 없이 새로 만든다 (requirements «결정 기록») */
   create(
     input: { id: string; name: string; source: SourceDevice },

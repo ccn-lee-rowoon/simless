@@ -16,7 +16,15 @@ import { run as defaultRun, type Runner, runOk, which } from "../../shared/exec.
 import type { Device, SlimState } from "../../shared/model.ts";
 import { androidSdk } from "../../shared/tools.ts";
 import { HandlerError } from "../socket.ts";
-import type { Driver, Progress, RuntimeState, SourceDevice } from "./types.ts";
+import { ANDROID_PROFILES } from "./android-profiles.ts";
+import type {
+  CustomRequest,
+  Driver,
+  Progress,
+  RuntimeState,
+  SourceDevice,
+  SystemImageInfo,
+} from "./types.ts";
 
 // Android 에뮬레이터 — 원본 AVD 의 하드웨어 설정을 복사해 AVD 파일을 직접 쓰고(avdmanager 불필요),
 // emulator·adb 로 켜고 끄며, avdslim 으로 슬림화한다 (docs/design.md §9).
@@ -128,6 +136,95 @@ export class AndroidDriver implements Driver {
     return join(this.avdDir(avdId), "config.ini");
   }
 
+  /** 설치된 시스템 이미지 — 이 Mac 의 CPU 용만, 4KB 페이지 우선·API 높은 순 (avdslim 권장) */
+  private systemImages() {
+    const root = join(this.sdk, "system-images");
+    if (!existsSync(root)) return [];
+    const hostAbi = process.arch === "arm64" ? "arm64-v8a" : "x86_64";
+    const images: {
+      sysdir: string;
+      target: string;
+      tag: string;
+      abi: string;
+      api: number;
+      page16k: boolean;
+    }[] = [];
+    for (const target of readdirSync(root)) {
+      for (const tag of readdirSync(join(root, target))) {
+        if (!existsSync(join(root, target, tag, hostAbi, "source.properties"))) continue;
+        images.push({
+          sysdir: `system-images/${target}/${tag}/${hostAbi}/`,
+          target,
+          tag,
+          abi: hostAbi,
+          api: Number.parseFloat(target.replace(/^android-/, "")) || 0,
+          page16k: tag.includes("16k"),
+        });
+      }
+    }
+    return images.sort((a, b) => Number(a.page16k) - Number(b.page16k) || b.api - a.api);
+  }
+
+  images(): SystemImageInfo[] {
+    return this.systemImages().map((image, i) => ({
+      sysdir: image.sysdir,
+      label: `${image.target} ${image.tag}${image.page16k ? " (16KB 페이지)" : ""}`,
+      recommended: i === 0,
+    }));
+  }
+
+  private image(wanted?: string) {
+    const images = this.systemImages();
+    const image = wanted
+      ? images.find((i) => i.sysdir === wanted || i.sysdir.includes(wanted))
+      : images[0];
+    if (!image) {
+      throw new HandlerError(
+        wanted ? "NOT_FOUND" : "TOOL_MISSING",
+        wanted
+          ? `없는 시스템 이미지: ${wanted}`
+          : `Android 시스템 이미지가 없습니다 (${this.sdk}/system-images)`,
+      );
+    }
+    return image;
+  }
+
+  private sized(
+    native: string,
+    name: string,
+    size: { widthPx: number; heightPx: number; density: number },
+    sysdir?: string,
+  ): SourceDevice {
+    const image = this.image(sysdir);
+    return {
+      platform: "android",
+      native,
+      name,
+      spec: { platform: "android", ...size, systemImage: image.sysdir },
+      detail: `${size.widthPx}×${size.heightPx}px · ${size.density}dpi · ${image.target} ${image.tag}`,
+      booted: false,
+    };
+  }
+
+  /** 내장 대표 프로필 — 기본 이미지로 (requirements M1) */
+  async presetSources(): Promise<SourceDevice[]> {
+    if (this.systemImages().length === 0) return [];
+    return ANDROID_PROFILES.map((p) => this.sized(`profile:${p.id}`, p.name, p));
+  }
+
+  async customSource(request: CustomRequest): Promise<SourceDevice> {
+    return this.sized(
+      `custom:${request.widthDp}x${request.heightDp}@${request.density}`,
+      `Android ${request.widthDp}dp`,
+      {
+        widthPx: Math.round((request.widthDp * request.density) / 160),
+        heightPx: Math.round((request.heightDp * request.density) / 160),
+        density: request.density,
+      },
+      request.systemImage,
+    );
+  }
+
   /** 이 Mac 의 AVD — 복제 원본 후보 (M1). 화면 크기(hw.lcd.*)가 없는 AVD 는 뺀다 */
   async sources(): Promise<SourceDevice[]> {
     if (!existsSync(this.avdHome)) return [];
@@ -173,7 +270,8 @@ export class AndroidDriver implements Driver {
     if (existsSync(avdDir)) throw new HandlerError("INVALID", `이미 있는 AVD: ${avdId}`);
     progress(`AVD 생성: ${input.name} ← ${source.name} (${source.detail})`);
 
-    const config = readProps(this.configPath(source.native));
+    const fromAvd = !source.native.startsWith("profile:") && !source.native.startsWith("custom:");
+    const config = fromAvd ? readProps(this.configPath(source.native)) : this.freshConfig(source);
     // 원본을 가리키는 값만 바꾸고 나머지(hw.*·image.sysdir.1·tag.* 등)는 그대로 둔다
     const copied: Record<string, string> = {
       ...config,
@@ -190,12 +288,42 @@ export class AndroidDriver implements Driver {
     );
     const sourceIni = join(this.avdHome, `${source.native}.ini`);
     const target =
-      (existsSync(sourceIni) ? readProps(sourceIni).target : undefined) ?? config.target ?? "";
+      (fromAvd && existsSync(sourceIni) ? readProps(sourceIni).target : undefined) ??
+      config.target ??
+      "";
     writeFileSync(
       join(this.avdHome, `${avdId}.ini`),
       `avd.ini.encoding=UTF-8\npath=${avdDir}\npath.rel=avd/${avdId}.avd\ntarget=${target}\n`,
     );
     return { native: avdId };
+  }
+
+  /** 프로필·직접 입력용 config.ini — 크기와 이미지만 정하고 나머지는 흔한 기본값 */
+  private freshConfig(source: SourceDevice): Record<string, string> {
+    const { spec } = source;
+    if (spec.platform !== "android") throw new HandlerError("INVALID", "Android 원본이 아닙니다");
+    const image = this.image(spec.systemImage);
+    return {
+      "PlayStore.enabled": String(image.tag.includes("playstore")),
+      "abi.type": image.abi,
+      "hw.cpu.arch": image.abi === "arm64-v8a" ? "arm64" : image.abi,
+      "hw.cpu.ncore": "2",
+      "hw.ramSize": String(this.config.android.ramMb),
+      "hw.lcd.width": String(spec.widthPx),
+      "hw.lcd.height": String(spec.heightPx),
+      "hw.lcd.density": String(spec.density),
+      "hw.keyboard": "yes",
+      "hw.gpu.enabled": "yes",
+      "hw.gpu.mode": "auto",
+      "hw.mainKeys": "no",
+      "hw.initialOrientation": "portrait",
+      "disk.dataPartition.size": "6G",
+      "skin.dynamic": "yes",
+      showDeviceFrame: "no",
+      "image.sysdir.1": image.sysdir,
+      "tag.id": image.tag,
+      target: image.target,
+    };
   }
 
   async rename(device: Device, name: string): Promise<void> {

@@ -209,3 +209,21 @@ describe("슬림 수치", () => {
     expect(view?.slimStats).toMatchObject({ disabled: 49, total: 52, unit: "패키지" });
   });
 });
+
+describe("직접 입력", () => {
+  test("Android 크기를 직접 넣어 만든다 — 원본과 직접 입력은 함께 못 준다", async () => {
+    const { A } = await start();
+    const device = (await A("device.create", {
+      custom: { widthDp: 375, heightDp: 812, density: 320 },
+    })) as DeviceView;
+    expect(device).toMatchObject({ name: "corgi Android 375dp", label: "Android 375dp" });
+    expect(
+      await A("device.create", {
+        source: "Small_360",
+        custom: { widthDp: 1, heightDp: 1, density: 160 },
+      }),
+    ).toMatchObject({
+      code: "INVALID",
+    });
+  });
+});

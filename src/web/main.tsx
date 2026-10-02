@@ -138,7 +138,10 @@ function App() {
           className={tab === "sources" ? "tab tab-active" : "tab"}
           onClick={() => setTab("sources")}
         >
-          전체 목록 <span className="count">{sources?.items.length ?? "…"}</span>
+          전체 목록{" "}
+          <span className="count">
+            {sources?.items.filter((i) => i.kind === "device").length ?? "…"}
+          </span>
         </button>
       </nav>
 

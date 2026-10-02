@@ -78,6 +78,13 @@ export function fakeDriver(
     list: sources,
     missingTools: async () => [],
     sources: async () => sources,
+    customSource: async (r) => ({
+      ...fakeSource(
+        `custom:${r.widthDp}x${r.heightDp}@${r.density}`,
+        r.widthDp,
+        `Android ${r.widthDp}dp`,
+      ),
+    }),
     create: async ({ id }) => ({ native: `corgi_${id}` }),
     rename: async () => {},
     remove: async () => {},

@@ -134,6 +134,10 @@ export class CorgiServer {
     this.leases.sweepIdle();
   }
 
+  driverOrUndefined(platform: Device["spec"]["platform"]): Driver | undefined {
+    return this.deps.drivers.find((d) => d.platform === platform);
+  }
+
   driver(platform: Device["spec"]["platform"]): Driver {
     const driver = this.deps.drivers.find((d) => d.platform === platform);
     if (!driver) throw new HandlerError("TOOL_MISSING", `${platform} 드라이버가 없습니다`);

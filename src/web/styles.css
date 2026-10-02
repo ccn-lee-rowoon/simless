@@ -711,3 +711,22 @@ p {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.field select {
+  font: inherit;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.picker-name .badge {
+  margin-right: 6px;
+}

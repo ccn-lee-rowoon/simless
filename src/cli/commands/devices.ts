@@ -61,19 +61,26 @@ export function registerDevices(program: Command, run: Run) {
         }
         const result = await call<SourceListResult>(ctx, "source.list", { platform: o.platform });
         output(ctx, result, () => {
-          const rows = result.items.map((i) => [
+          const row = (i: SourceListResult["items"][number]) => [
             i.label,
             i.name,
             i.booted ? "켜짐" : "꺼짐",
             i.managed ? `Corgi ${i.managed}` : i.created ? `생성됨 (${i.created})` : "",
             i.detail,
             i.native,
-          ]);
+          ];
+          const devices = result.items.filter((i) => i.kind === "device").map(row);
+          const profiles = result.items.filter((i) => i.kind === "profile").map(row);
           const problems = result.problems.map((p) => `주의(${p.platform}): ${p.message}`);
+          const header = ["크기", "이름", "상태", "", "기기", "원본 ID"];
           return [
-            table(["크기", "이름", "상태", "", "기기", "원본 ID"], rows),
+            table(header, devices),
             "",
-            "복제해서 만들기: corgi create <이름 또는 원본 ID>",
+            "Android 대표 프로필 (Corgi 내장)",
+            table(header, profiles),
+            "",
+            "만들기: corgi create <이름 또는 원본 ID>",
+            "직접 입력(Android): corgi create --width <dp> --height <dp> --density <dpi> [--image <이미지>]",
             ...problems,
           ].join("\n");
         });
@@ -85,18 +92,61 @@ export function registerDevices(program: Command, run: Run) {
     .description(
       "이 Mac 의 디바이스를 원본으로 같은 크기의 `corgi …` 복제본을 만들고 슬림화한다 — 앱은 설치하지 않는다 (R1·R5·M1·M4)",
     )
-    .argument("<원본>", "원본 이름 또는 원본 ID(AVD ID·UDID) — corgi list --all")
+    .argument("[원본]", "원본 이름 또는 원본 ID(AVD ID·UDID·profile:…) — corgi list --all")
+    .option("--width <dp>", "직접 입력(Android) — 폭 dp")
+    .option("--height <dp>", "직접 입력(Android) — 높이 dp")
+    .option("--density <dpi>", "직접 입력(Android) — 밀도 (예: 320, 420)")
+    .option("--image <이미지>", "직접 입력(Android) — 시스템 이미지 (기본: 권장 이미지)")
     .option("--name <이름>", "표시 이름 (기본: corgi <원본 이름>)")
     .option("--no-slim", "슬림화하지 않는다")
     .action(
-      run(async (ctx, source: string, o: { name?: string; slim: boolean }) => {
-        const device = await call<DeviceView>(ctx, "device.create", {
-          source,
-          name: o.name,
-          slim: o.slim,
-        });
-        output(ctx, device, () => devicesTable([device]));
-      }),
+      run(
+        async (
+          ctx,
+          source: string | undefined,
+          o: {
+            width?: string;
+            height?: string;
+            density?: string;
+            image?: string;
+            name?: string;
+            slim: boolean;
+          },
+        ) => {
+          const custom = o.width || o.height || o.density;
+          if (custom && source)
+            throw new CliError(
+              "원본과 직접 입력(--width 등)은 함께 줄 수 없습니다",
+              ExitCode.usage,
+            );
+          if (!custom && !source)
+            throw new CliError(
+              "원본을 주거나 --width·--height·--density 로 직접 입력하세요",
+              ExitCode.usage,
+            );
+          const numbers = [o.width, o.height, o.density].map(Number);
+          if (custom && numbers.some((n) => !Number.isFinite(n) || n <= 0)) {
+            throw new CliError(
+              "직접 입력은 --width·--height·--density 를 모두 양수로 주세요",
+              ExitCode.usage,
+            );
+          }
+          const device = await call<DeviceView>(ctx, "device.create", {
+            source,
+            custom: custom
+              ? {
+                  widthDp: numbers[0],
+                  heightDp: numbers[1],
+                  density: numbers[2],
+                  systemImage: o.image,
+                }
+              : undefined,
+            name: o.name,
+            slim: o.slim,
+          });
+          output(ctx, device, () => devicesTable([device]));
+        },
+      ),
     );
 
   program

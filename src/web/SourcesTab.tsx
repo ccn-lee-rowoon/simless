@@ -39,42 +39,44 @@ export function SourcesTab({
           </tr>
         </thead>
         <tbody>
-          {result.items.map((s) => (
-            <tr key={s.native} className={s.managed ? "row-corgi" : ""}>
-              <td>
-                <div className="size">{s.label.replace(/^(Android|iOS) /, "")}</div>
-                <PlatformBadge platform={s.platform} />
-              </td>
-              <td>
-                <div className="name">{s.name}</div>
-                <div className="subtle mono">{s.native}</div>
-              </td>
-              <td className="subtle">{s.detail}</td>
-              <td>
-                {s.booted ? (
-                  <span className="state-on">켜짐</span>
-                ) : (
-                  <span className="subtle">꺼짐</span>
-                )}
-              </td>
-              <td className="actions">
-                {s.managed ? (
-                  <span className="badge badge-info">Corgi {s.managed}</span>
-                ) : s.created ? (
-                  <span
-                    className="badge badge-neutral"
-                    title={`같은 크기로 이미 만든 디바이스: ${s.created}`}
-                  >
-                    생성됨
-                  </span>
-                ) : (
-                  <button type="button" className="button" onClick={() => onCreate(s)}>
-                    복제
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
+          {result.items
+            .filter((s) => s.kind === "device")
+            .map((s) => (
+              <tr key={s.native} className={s.managed ? "row-corgi" : ""}>
+                <td>
+                  <div className="size">{s.label.replace(/^(Android|iOS) /, "")}</div>
+                  <PlatformBadge platform={s.platform} />
+                </td>
+                <td>
+                  <div className="name">{s.name}</div>
+                  <div className="subtle mono">{s.native}</div>
+                </td>
+                <td className="subtle">{s.detail}</td>
+                <td>
+                  {s.booted ? (
+                    <span className="state-on">켜짐</span>
+                  ) : (
+                    <span className="subtle">꺼짐</span>
+                  )}
+                </td>
+                <td className="actions">
+                  {s.managed ? (
+                    <span className="badge badge-info">Corgi {s.managed}</span>
+                  ) : s.created ? (
+                    <span
+                      className="badge badge-neutral"
+                      title={`같은 크기로 이미 만든 디바이스: ${s.created}`}
+                    >
+                      생성됨
+                    </span>
+                  ) : (
+                    <button type="button" className="button" onClick={() => onCreate(s)}>
+                      복제
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
     </>

@@ -31,7 +31,12 @@ corgi --json status
   ```sh
   corgi create Size_Small_360dp        # 원본 ID(AVD ID·UDID) 또는 이름
   ```
-  원하는 크기의 원본이 이 Mac 에 없으면 사용자에게 Xcode·Android Studio 에서 먼저 만들어 달라고 한다.
+  Android 는 Corgi 내장 **대표 프로필**(`profile:small-phone` 등, `corgi list --all` 아래쪽)이나 **직접 입력**으로도 만든다:
+  ```sh
+  corgi create profile:medium-phone
+  corgi create --width 375 --height 812 --density 420
+  ```
+  iOS 에서 원하는 크기의 원본이 없으면 사용자에게 Xcode 에서 먼저 만들어 달라고 한다.
 
 ### 2. 점유하고 켜기
 
@@ -78,7 +83,7 @@ corgi release
 | --- | --- |
 | `corgi --json status` | 서버·디바이스·점유 한눈에 |
 | `corgi list --all [--platform android\|ios]` | 이 Mac 의 전체 목록 — 복제 원본 (폭 순, «생성됨» 표시) |
-| `corgi create <원본>` | 원본과 같은 크기로 복제 + 슬림화 |
+| `corgi create <원본>` / `create --width --height --density` | 원본(또는 대표 프로필)과 같은 크기로 복제 + 슬림화 / Android 직접 입력 |
 | `corgi --json use [<디바이스>...] [--wait --timeout 9m]` | 점유 + 켜기 |
 | `corgi --json list` | 만든 디바이스 — 기기별 `targetId`·`label`·켜짐·점유 |
 | `corgi who [<udid·시리얼>]` | 누가 쓰는 중인지 |
