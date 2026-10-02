@@ -12,6 +12,7 @@ import type { Paths } from "../shared/paths.ts";
 import { isAlive as defaultIsAlive } from "../shared/proc.ts";
 import type { Request, SessionInfo } from "../shared/protocol.ts";
 import { VERSION } from "../shared/version.ts";
+import { registerDeviceMethods } from "./devices.ts";
 import type { Driver, RuntimeState } from "./drivers/types.ts";
 import { EMPTY_LEASE_STATE, type Holder, LeaseManager, LeaseStateSchema } from "./leases.ts";
 import { Registry } from "./registry.ts";
@@ -70,6 +71,7 @@ export class CorgiServer {
       "lease.release": (p, session) => this.release(parse(ReleaseParams, p), session),
       "lease.who": (p) => this.who(parse(WhoParams, p)),
     };
+    registerDeviceMethods(this);
   }
 
   /** 다른 모듈(드라이버 명령 등)이 메서드를 붙인다 */
@@ -140,6 +142,7 @@ export class CorgiServer {
 
   async deviceViews(session: SessionInfo, devices = this.registry.list()): Promise<DeviceView[]> {
     const states = await this.runtimeStates(devices);
+    this.writeManagedIndex(states);
     const leases = new Map(this.leases.snapshot().leases.map((l) => [l.deviceId, l]));
     return devices.map((device) => {
       const state = states.get(device.id);
@@ -164,6 +167,23 @@ export class CorgiServer {
         mine: lease?.sessionKey === session.key,
       };
     });
+  }
+
+  private lastIndex = "";
+
+  /** 서버가 꺼졌을 때 훅이 «관리 디바이스인지» 판단하는 파일 (P9, docs/design.md §5) */
+  writeManagedIndex(states: Map<string, RuntimeState>): void {
+    const devices = this.registry.list().map((d) => ({
+      id: d.id,
+      name: d.name,
+      platform: d.spec.platform,
+      native: d.native,
+      targetId: states.get(d.id)?.targetId,
+    }));
+    const text = JSON.stringify(devices);
+    if (text === this.lastIndex) return;
+    this.lastIndex = text;
+    writeJson(this.deps.paths.managedIndex, { updatedAt: new Date().toISOString(), devices });
   }
 
   private async status(session: SessionInfo): Promise<StatusResult> {

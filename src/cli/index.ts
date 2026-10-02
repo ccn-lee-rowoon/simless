@@ -1,6 +1,7 @@
 import { Command, CommanderError } from "commander";
 import { ExitCode } from "../shared/exit-codes.ts";
 import { VERSION } from "../shared/version.ts";
+import { registerDevices } from "./commands/devices.ts";
 import { registerLease } from "./commands/lease.ts";
 import { registerStatus } from "./commands/status.ts";
 import { CliError, makeContext, type Run } from "./context.ts";
@@ -51,6 +52,7 @@ export async function runCli(argv: string[]): Promise<number> {
 
   registerStatus(program, run);
   registerLease(program, run);
+  registerDevices(program, run);
 
   try {
     await program.parseAsync(argv, { from: "user" });

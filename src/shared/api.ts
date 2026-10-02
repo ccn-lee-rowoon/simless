@@ -42,3 +42,28 @@ export type AcquireResult =
 export interface BusyData {
   holders: (HolderView & { deviceId: string })[];
 }
+
+export interface CatalogEntry {
+  platform: "android" | "ios";
+  spec: Device["spec"];
+  label: string;
+  layoutWidth: number;
+  suggestedName: string;
+  detail: string;
+  preset: boolean;
+  /** 이미 만든 디바이스 ID (M3) */
+  created?: string;
+}
+
+export interface CatalogResult {
+  items: CatalogEntry[];
+  /** 플랫폼별로 빠진 도구·오류 */
+  problems: { platform: "android" | "ios"; message: string }[];
+}
+
+export interface DeviceOpResult {
+  id: string;
+  name: string;
+  ok: boolean;
+  error?: string;
+}
