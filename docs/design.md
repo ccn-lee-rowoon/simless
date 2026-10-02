@@ -7,10 +7,10 @@
 ## 1. 한눈에 보기
 
 ```
- 에이전트 세션 A ── corgi <명령> ──┐
- 에이전트 세션 B ── corgi mcp ─────┤ Unix 소켓 (JSON Lines) — 상태를 바꾸는 요청은 여기로만
- Claude Code 훅 ── corgi hook ─────┤
-                                   ▼
+ 에이전트 A (Claude·Codex…) ── corgi <명령> ──────────┐
+ 에이전트 B ───────────────── corgi mcp ─────────────┤ Unix 소켓 (JSON Lines) — 상태를 바꾸는 요청은 여기로만
+ 에이전트의 실행 전 훅 ───── corgi hook <에이전트> ──┤
+                                                     ▼
                   corgi serve  (launchd 가 띄우고, 죽으면 다시 살림)
                   ├─ 디바이스 레지스트리 (만든 것만)
                   ├─ 점유·대기 관리
@@ -126,21 +126,34 @@ corgi/
 - 이름 변경 시 Android `avd.ini.displayname`, iOS `simctl rename` 도 같이 바꿔 에뮬레이터 창·Simulator 창에서도 알아보게 한다.
 - iOS 폭(pt) = `/Library/Developer/CoreSimulator/Profiles/DeviceTypes/<종류>.simdevicetype/Contents/Resources/profile.plist` 의 `mainScreenWidth ÷ mainScreenScale` (확인: iPhone 17 → 1206 ÷ 3 = 402pt). M2 의 «폭 맨 앞» 에 쓴다.
 
-**Session** — `id`, `agent`(`claude`·`codex`·`human`), `pid`·`pidStartedAt`, `cwd`(표시용), `lastUsedAt`
+**Session** — `id`(§7 세션 키), `agent`(표시용 — `claude-code`·`codex`·`gemini`·…·`human`·`unknown`), `pid`·`pidStartedAt`, `agentSessionId`(어댑터가 주면), `cwd`(표시용), `lastUsedAt`
 
 **Lease** — `deviceId → sessionId, acquiredAt` · **대기열** — `[{sessionId, deviceIds, enqueuedAt}]` (FIFO)
 
-## 7. 세션 구분
+## 7. 세션 구분 (R13·R18)
 
-| 창구 | 세션 ID | 프로세스(종료 감지용) |
+세션 = **명령을 실행한 에이전트 프로세스**. 에이전트가 세션 ID 를 주는지와 상관없이 프로세스 트리를 거슬러 올라가 찾는다. CLI·MCP 서버·훅은 모두 에이전트가 띄운 자식이라 같은 방법으로 같은 세션이 나온다 — 에이전트 종류에 묶이지 않는다.
+
+**찾는 순서** (`corgi` 프로세스의 부모부터 위로)
+
+| 순서 | 조건 | 세션 |
 | --- | --- | --- |
-| CLI | `--session` > `CLAUDE_CODE_SESSION_ID` > `CORGI_SESSION_ID` > 없으면 `human` | 부모 프로세스를 따라 올라가 처음 만나는 `claude` (확인: Bash 의 부모가 `claude`) |
-| 훅 | 입력 JSON 의 `session_id` | 훅의 부모 체인에서 같은 방식 |
-| MCP | **미확인** — 5단계에서 확인. 못 받으면 MCP 프로세스의 부모 `claude` PID 로 같은 세션을 찾는다 | MCP 의 부모 |
-| 웹 UI | 항상 `human` | — |
+| 1 | `--session <값>` 또는 `CORGI_SESSION_ID` 가 있음 | 그 값 (스크립트·특수한 에이전트용). 프로세스 기준 해제가 필요하면 `CORGI_SESSION_PID` 도 준다 |
+| 2 | 셸·래퍼(`zsh`·`bash`·`sh`·`fish`·`env`·`timeout`·`sandbox-exec` 등)를 건너뛰고 처음 만난 프로세스가 **공용 호스트가 아님** | 그 프로세스 = 에이전트 (`claude`·`codex`·`gemini`·`node …` 등) |
+| 3 | 처음 만난 셸 아닌 프로세스가 **공용 호스트**(`login`·`tmux`·`screen`·터미널 앱·IDE 의 Helper — `Terminal`·`iTerm2`·`Ghostty`·`Code Helper`·`Cursor Helper`·`Orca Helper` …) | 호스트 바로 아래 셸 = 터미널 탭 하나. 에이전트 표시 변수가 있으면 에이전트, 없으면 `human` |
 
-- `human` 세션은 프로세스 기준 해제를 하지 않고 30분 규칙만 적용한다.
-- 같은 `claude` PID 에서 **새 세션 ID** 가 오면(`/clear` 등) 이전 세션은 끝난 것으로 보고 점유를 푼다 — 새 세션은 자기가 점유했다는 걸 모르기 때문. (실측 필요, §17)
+- 세션 키 = `pid` + 프로세스 시작 시각 (PID 재사용 구분). 셸·래퍼·호스트 목록은 설정으로 늘릴 수 있다.
+- 실측(이 Mac): `corgi ← zsh ← claude ← zsh ← zsh ← login ← Orca Helper` → 2번, 세션은 `claude`. argent MCP 서버(`argent mcp`)의 부모도 `claude` 였다.
+
+**에이전트 종류** — 표시용, 판정에는 쓰지 않는다: `AI_AGENT` 환경 변수(확인: `claude-code_2-1-287_agent`) → 에이전트별 표시 변수(`CLAUDECODE` 등) → 프로세스 이름·명령줄 → `unknown`.
+
+**에이전트 어댑터** — 있으면 더 정확해지는 보조 정보. 없어도 위 방식만으로 동작한다.
+- 보조 세션 ID: Claude Code 는 CLI 에 `CLAUDE_CODE_SESSION_ID`, 훅 입력에 `session_id` 를 준다. 기록해 두고, **같은 프로세스에서 값이 바뀌면**(`/clear` 등) 새 세션으로 보고 이전 점유를 푼다 — 새 대화는 자기가 점유했다는 걸 모르기 때문.
+- 실행 직전 훅: §13.
+
+**사람·웹 UI** — `human` 세션은 프로세스 기준 해제를 하지 않고 30분 규칙만 적용한다. 웹 UI 는 항상 `human`.
+
+**한계** — 여러 대화가 프로세스 하나를 같이 쓰는 에이전트(IDE 안 에이전트 등)는 대화가 아니라 프로세스·터미널 단위로 구분된다. 필요하면 1번으로 보완한다.
 
 ## 8. 점유·대기 (R13·R14·R17)
 
@@ -238,17 +251,22 @@ corgi/
 | `corgi install-app --app nova [--apk] [--ios-app]` | 일괄 설치 | R8 |
 | `corgi launch --app nova` | 일괄 실행 (dev client 연결 포함) | R8 |
 | `corgi open <딥링크>` | 같은 화면 이동 | R9 |
-| `corgi serve` · `corgi hook pre-tool-use` · `corgi mcp` | 서버·훅·MCP 진입점 (사람이 직접 쓰지 않음) | — |
+| `corgi serve` · `corgi hook <에이전트> pre-tool-use` · `corgi mcp` | 서버·훅·MCP 진입점 (사람이 직접 쓰지 않음) | — |
 
 - 종료 코드: `0` 성공 · `1` 실패 · `2` 사용법 오류 · `3` 다른 세션이 사용 중 · `4` 서버에 연결 못 함
 - `up`·`install-app`·`launch`·`open` 은 점유가 있어야 한다. 없으면 실패하고 `corgi use` 를 안내한다.
 
 ## 13. 훅 (P3~P9)
 
-**등록**: `~/.claude/settings.json` 의 PreToolUse, matcher `Bash|mcp__argent__.*`, 명령 `corgi hook pre-tool-use`.
+**에이전트 어댑터**: 실행 직전 훅은 에이전트마다 지원 여부·설정 위치·입력 형식이 다르다. `corgi hook <에이전트> <이벤트>` 로 나누고, 어댑터는 입력을 공통 형식 `{tool, input, agentSessionId?}` 로 바꾼 뒤 같은 판정을 쓴다.
+
+| 에이전트 | 상태 |
+| --- | --- |
+| Claude Code | **먼저 만든다** — `~/.claude/settings.json` PreToolUse, matcher `Bash|mcp__argent__.*`, 명령 `corgi hook claude pre-tool-use` |
+| Codex · Gemini CLI · Cursor · OpenCode · Copilot CLI | 훅 지원·입력 형식을 조사해 어댑터를 붙인다(§17). 훅이 없으면 규칙 + CLI 의 BUSY 응답으로만 보호된다(Q16) |
 
 **흐름**
-1. stdin JSON 에서 `tool_name`·`tool_input`·`session_id` 를 읽는다.
+1. 어댑터가 stdin 입력을 공통 형식으로 바꾼다. 세션은 §7 방식(훅 프로세스의 부모 체인)으로 찾고, 입력에 세션 ID 가 있으면 보조로 쓴다.
 2. **빠른 통과**: Bash 명령에 `adb`·`simctl`·`emulator`·`simslim`·`avdslim` 이 없고, argent 도구에 기기 인자가 없으면 바로 통과한다(소켓 안 엶). `main.ts` 는 이 경로에서 서버·웹 코드를 불러오지 않는다.
 3. 대상 디바이스를 뽑아 서버에 `hook.check` → 허용/차단 + 사유. 허용이면 서버가 같은 요청으로 `lastUsedAt` 을 갱신한다.
 4. **서버가 꺼져 있으면** `managed-index.json` 으로 관리 디바이스인지만 본다. 맞으면(또는 시리얼을 판정 못 하면) 차단하고 «`corgi status` 로 서버를 켜세요» 를 알려 준다 (P9).
@@ -266,7 +284,7 @@ corgi/
 | `simctl … booted` | 켜진 관리 iOS 전부 |
 | `adb devices`·`emulator -list-avds`·`simctl list` 등 목록 조회 | 없음 → 통과 (P6) |
 
-**argent 규칙에 붙일 문구 (P2)** — `integrations/rules/argent-corgi.md`, `corgi install` 이 전역 규칙 끝에 붙인다.
+**argent 규칙에 붙일 문구 (P2)** — `integrations/rules/argent-corgi.md`. `corgi install` 이 에이전트별 전역 규칙 위치(Claude Code `~/.claude/rules/argent.md`, 다른 에이전트는 조사)에 붙인다.
 
 > Corgi 가 관리하는 레이아웃 체크용 디바이스(`corgi list` 에 있는 것, AVD 는 `corgi_` 로 시작)는 `corgi use` 로 점유한 뒤에만 조작한다. 켜기·끄기는 argent `boot-device` 가 아니라 `corgi up`·`corgi down` 으로 한다.
 
@@ -282,7 +300,7 @@ corgi/
 
 ## 15. 스킬 (S1~S9)
 
-`integrations/skill/corgi/SKILL.md` → `~/.claude/skills/corgi` (S9). 2단계에서 쓴다.
+`integrations/skill/corgi/SKILL.md` → `~/.claude/skills/corgi` (S9). 2단계에서 쓴다. 스킬 형식을 읽는 다른 에이전트(Codex 등)는 `corgi install --agent <이름>` 으로 그 에이전트 위치에도 설치한다.
 
 - description 에 S3 의 반응 프롬프트, S4 의 비반응(기기 한 대·단순 스크린샷 → argent 스킬)을 넣는다.
 - 본문 순서(S5): `corgi status` → `corgi use [--wait]` (바쁘면 사용자에게 묻기, S7) → `corgi install-app`·`launch` → `corgi open <딥링크>` 또는 기기마다 argent 흐름 → `corgi list --json` 의 ID 로 기기마다 argent `screenshot` → 크기 라벨을 붙여 보고 → `corgi release` → 끌지 묻기(S8).
@@ -307,14 +325,15 @@ corgi/
 
 | 항목 | 왜 | 언제 |
 | --- | --- | --- |
-| CLI 의 `CLAUDE_CODE_SESSION_ID` 와 훅 입력 `session_id` 가 같은 값인지 | 다르면 훅이 점유자를 못 알아본다 | 1단계 전 |
-| `/clear`·`--resume` 시 세션 ID·`claude` PID 가 어떻게 바뀌는지 | §7 처리 방식 결정 | 1단계 |
+| 에이전트별 프로세스 트리 — codex·gemini·cursor-agent·opencode·copilot 이 명령·MCP 를 자식 프로세스로 실행하는지, `AI_AGENT` 같은 표시 변수를 주는지 (각 에이전트에 `ps` 를 실행시켜 확인 — 그 에이전트 사용량이 든다) | §7 판정표·호스트 목록 | 1단계 |
+| Claude 어댑터 — CLI 의 `CLAUDE_CODE_SESSION_ID` 와 훅 입력 `session_id` 가 같은 값인지, `/clear`·`--resume` 시 어떻게 바뀌는지 | §7 보조 세션 ID | 1단계 |
 | avdslim 명령(설치 후) — 켜진 상태 필요 여부, 상태 조회, 해제 | §9 Android 슬림 | 1단계 |
 | simslim 0.8 → 0.11 변경점, 꺼진 기기의 슬림 상태 확인 방법 | M6 | 1단계 |
 | ✅ 컴파일한 바이너리에 웹 UI·파일이 잘 들어가는지, 훅 경로 시작 시간 — **확인됨(0단계)**: `with { type: "file" }` 는 `/$bunfs/root/…` 경로로 들어가 `Bun.file` 로 읽히고, HTML import 는 TSX 까지 번들돼 `Bun.serve` 로 서빙된다(`--bytecode` 포함, 다른 폴더로 옮겨도 동작). 훅 경로 약 21ms | §2·§3·§13 | 0단계 |
 | launchd 로 띄운 서버가 `emulator`·`xcrun` 을 PATH·권한 문제 없이 실행하는지 | launchd 는 로그인 셸 환경을 안 받는다 | 1단계 |
-| MCP 프로세스가 세션 ID 를 받는지 | §7 | 5단계 |
+| 에이전트별 MCP 서버의 부모가 에이전트 프로세스인지 (Claude Code 는 확인됨) | §7 | 5단계 |
 | argent 두 버전(homebrew 0.17.0 이 PATH 우선, mise 0.26.0) 정리 | 훅이 보는 argent 도구 인자가 버전마다 다를 수 있다 | 3단계 전 |
+| 다른 에이전트의 실행 직전 훅 지원 여부·설정 위치·입력 형식, 전역 규칙·스킬 위치 | §13 어댑터·P2·S9 | 3단계 전 |
 
 ## 18. 미결정 질문(Q)에 대한 설계 쪽 제안
 
@@ -324,7 +343,7 @@ corgi/
 | Q2 Android | 폭 프리셋 320·360·411·600dp, 높이는 폭 × 2.1, 밀도 420(600 은 320·태블릿) — 1단계에서 실제로 켜 보고 조정 |
 | Q7 기존 디바이스 | 넣지 않는다 — 관리 대상은 Corgi 가 만든 것만(M5). 나중에 «가져오기» 로 |
 | Q9 묶어서 켜기 | `use`·`up` 은 플랫폼 구분 없이 지정한 것 전부. `--platform android` 로 좁힐 수 있게 |
-| Q16 Codex 등 | 규칙만. 훅이 없는 에이전트는 CLI 의 BUSY 응답으로만 보호된다 |
+| Q16 훅 없는 에이전트 | 규칙 + CLI 의 BUSY 응답으로 보호. 훅을 지원하면 어댑터를 붙인다(§13) |
 
 ## 설계 결정 기록
 
@@ -338,3 +357,4 @@ corgi/
 | **Android 시리얼은 `-port` 로 서버가 정한다** | 시리얼이 켤 때마다 바뀌는 문제를 대부분 없앤다. 밖에서 켠 경우만 역조회 | 매번 `adb devices` + 역조회 (느리고 훅에서 부담) |
 | **`main.ts` 에서 서브커맨드별 동적 import** | 훅은 Bash 호출마다 돈다. 서버·웹 코드를 불러오지 않아야 빠르다 | 진입점에서 전부 import |
 | **패키지 하나** (모노레포 아님) | 결과물이 실행 파일 하나다. 경계는 폴더와 import 규칙(§3)으로 지킨다 | workspaces 로 shared·server·cli·web 분리 (설정만 늘어남) |
+| **공용 호스트 아래에서는 터미널 탭(셸) 단위로 세션을 나눈다** (§7) | IDE·터미널 앱·tmux 는 여러 사람·에이전트 작업이 한 프로세스 아래 모인다. 호스트를 세션으로 보면 서로 다른 작업이 한 세션이 된다 | 호스트 프로세스를 세션으로 (전부 한 세션), 바로 위 셸을 세션으로 (에이전트가 명령마다 새 셸을 띄우면 매번 다른 세션) |
