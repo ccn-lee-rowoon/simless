@@ -3,3 +3,9 @@ declare module "*.md" {
   const path: string;
   export default path;
 }
+
+// 웹 UI 에서 import 한 이미지 — 번들러가 주는 주소
+declare module "*.svg" {
+  const url: string;
+  export default url;
+}

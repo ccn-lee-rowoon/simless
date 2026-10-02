@@ -12,6 +12,8 @@ export interface Paths {
   registry: string;
   leases: string;
   managedIndex: string;
+  /** 웹 UI 요청 토큰 (0600) — corgi ui 가 읽어 브라우저에 넘긴다 */
+  webToken: string;
   config: string;
   appsDir: string;
   /** launchd 사용자 에이전트 — 로그인 시 서버를 띄우고 죽으면 다시 살린다 */
@@ -31,6 +33,7 @@ export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
     registry: join(stateDir, "registry.json"),
     leases: join(stateDir, "leases.json"),
     managedIndex: join(stateDir, "managed-index.json"),
+    webToken: join(stateDir, "web-token"),
     config: join(configDir, "config.json"),
     appsDir: join(configDir, "apps"),
     launchAgent: join(home, "Library", "LaunchAgents", `${LAUNCH_LABEL}.plist`),

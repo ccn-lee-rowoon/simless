@@ -38,6 +38,12 @@ const AcquireParams = z.object({
 });
 const ReleaseParams = z.object({ devices: z.array(z.string()).optional() });
 const WhoParams = z.object({ target: z.string().optional() });
+const ForceParams = z.object({ device: z.string() });
+
+/** 화면 갱신 알림이 필요 없는 메서드 */
+const READ_ONLY = new Set(["status", "device.list", "source.list", "lease.who"]);
+
+export type ServerEvent = { type: "changed" } | { type: "progress"; message: string };
 
 function parse<T extends z.ZodType>(schema: T, params: unknown): z.infer<T> {
   const parsed = schema.safeParse(params ?? {});
@@ -60,7 +66,10 @@ export class CorgiServer {
       {
         idleMs: deps.config.idleReleaseMinutes * 60_000,
         now: deps.now,
-        onChange: (state) => writeJson(deps.paths.leases, state),
+        onChange: (state) => {
+          writeJson(deps.paths.leases, state);
+          this.notify();
+        },
         onGranted: (key) => this.wake(key),
       },
     );
@@ -70,6 +79,7 @@ export class CorgiServer {
         this.acquire(parse(AcquireParams, p), session, connection),
       "lease.release": (p, session) => this.release(parse(ReleaseParams, p), session),
       "lease.who": (p) => this.who(parse(WhoParams, p)),
+      "lease.forceRelease": (p, session) => this.forceRelease(parse(ForceParams, p), session),
     };
     registerDeviceMethods(this);
   }
@@ -82,10 +92,32 @@ export class CorgiServer {
   readonly handle: Handler = async (request: Request, connection: Connection) => {
     const method = this.methods[request.method];
     if (!method) throw new HandlerError("INVALID", `모르는 메서드: ${request.method}`);
-    // 요청이 곧 «사용» 이다 — 마지막 사용 시각 갱신 (R17)
-    this.leases.touch(request.session);
-    return method(request.params, request.session, connection);
+    // 요청이 곧 «사용» 이다 — 마지막 사용 시각 갱신 (R17). 웹 UI(사람)는 점유 기록을 남기지 않는다
+    if (!request.session.human || this.leases.session(request.session.key))
+      this.leases.touch(request.session);
+    try {
+      return await method(request.params, request.session, connection);
+    } finally {
+      // 읽기만 하는 메서드가 아니면 화면(웹 UI·메뉴바)에 바뀌었다고 알린다
+      if (!READ_ONLY.has(request.method)) this.notify();
+    }
   };
+
+  private readonly listeners = new Set<(event: ServerEvent) => void>();
+
+  /** 웹 UI·메뉴바가 SSE 로 받는 변화 알림 */
+  subscribe(listener: (event: ServerEvent) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  publish(event: ServerEvent): void {
+    for (const listener of this.listeners) listener(event);
+  }
+
+  notify(): void {
+    this.publish({ type: "changed" });
+  }
 
   /** 2초마다 — 끝난 세션의 점유를 풀고, 오래 안 쓴 점유 중 누가 기다리는 것을 푼다 */
   tick(): void {
@@ -269,6 +301,19 @@ export class CorgiServer {
   private async release(params: z.infer<typeof ReleaseParams>, session: SessionInfo) {
     const ids = params.devices ? this.resolve(params.devices).map((d) => d.id) : undefined;
     return { released: this.leases.release(session.key, ids) };
+  }
+
+  /** 강제 해제 — 사람(웹 UI·CLI --force)만 (docs/design.md §8) */
+  private async forceRelease(params: z.infer<typeof ForceParams>, session: SessionInfo) {
+    if (!session.human)
+      throw new HandlerError(
+        "INVALID",
+        "강제 해제는 사람만 할 수 있습니다 — 에이전트는 기다리거나 사용자에게 물으세요",
+      );
+    const [device] = this.resolve([params.device]);
+    const holder = device ? this.leases.holderOf(device.id) : undefined;
+    if (!device || !holder) return { released: [] };
+    return { released: this.leases.release(holder.key, [device.id]) };
   }
 
   private async who(params: z.infer<typeof WhoParams>) {

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Corgi">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D8F0DF"/>
+      <stop offset="1" stop-color="#AEDDBE"/>
+    </linearGradient>
+    <radialGradient id="fur" cx="0.5" cy="0.42" r="0.62">
+      <stop offset="0" stop-color="#F2B566"/>
+      <stop offset="1" stop-color="#DE9545"/>
+    </radialGradient>
+  </defs>
+  <!-- 바탕: macOS 아이콘처럼 둥근 사각형 -->
+  <rect x="64" y="64" width="896" height="896" rx="208" fill="url(#bg)"/>
+
+  <!-- 얼굴 전체를 살짝 갸웃 -->
+  <g transform="rotate(-8 512 560)">
+    <!-- 귀: 크고 끝이 둥근, 복슬복슬한 강아지 귀 (오른쪽은 바깥으로 살짝 기울어짐) -->
+    <path d="M318 500 C 250 420 228 270 270 188 C 296 138 352 140 392 188 C 440 246 470 330 470 400 Z" fill="#E39A47"/>
+    <path d="M706 500 C 790 452 850 330 836 236 C 828 180 780 160 728 196 C 664 240 610 320 590 400 Z" fill="#E39A47"/>
+    <path d="M338 452 C 296 390 286 290 312 234 C 330 204 362 212 384 244 C 416 290 436 340 438 392 Z" fill="#F6D3BC"/>
+    <path d="M690 452 C 748 418 792 338 790 270 C 788 234 760 226 728 248 C 682 282 640 336 622 392 Z" fill="#F6D3BC"/>
+    <!-- 귓속 털 -->
+    <path d="M352 420 Q 340 360 352 300 M 372 412 Q 372 360 380 318" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" opacity="0.85"/>
+    <path d="M674 420 Q 708 368 736 314 M 652 410 Q 676 368 700 334" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" opacity="0.85"/>
+
+    <!-- 머리: 넓고 볼록한 볼, 볼 옆은 털이 삐죽 -->
+    <path d="M512 330
+             C 650 330 742 392 770 500
+             C 784 540 812 560 800 590
+             C 812 620 790 640 786 664
+             C 770 740 670 808 512 808
+             C 354 808 254 740 238 664
+             C 234 640 212 620 224 590
+             C 212 560 240 540 254 500
+             C 282 392 374 330 512 330 Z" fill="url(#fur)"/>
+
+    <!-- 흰 줄: 이마 가운데서 오른쪽으로 살짝 치우쳐 내려와 주둥이·턱으로 -->
+    <path d="M494 336 C 512 326 548 330 560 344
+             C 568 400 572 460 560 520
+             C 640 548 700 600 708 666
+             C 712 740 620 800 512 802
+             C 404 800 316 744 318 670
+             C 322 604 384 552 470 524
+             C 478 470 482 400 494 336 Z" fill="#FFFDF8"/>
+
+    <!-- 눈: 크고 둥글게 -->
+    <circle cx="410" cy="548" r="44" fill="#1E120C"/>
+    <circle cx="622" cy="548" r="44" fill="#1E120C"/>
+    <circle cx="424" cy="532" r="15" fill="#FFFFFF"/>
+    <circle cx="636" cy="532" r="15" fill="#FFFFFF"/>
+    <circle cx="398" cy="566" r="6" fill="#FFFFFF" opacity="0.7"/>
+    <circle cx="610" cy="566" r="6" fill="#FFFFFF" opacity="0.7"/>
+
+    <!-- 코 -->
+    <path d="M462 622 C 462 596 562 596 562 622 C 562 652 534 670 512 670 C 490 670 462 652 462 622 Z" fill="#1E120C"/>
+    <ellipse cx="496" cy="612" rx="16" ry="9" fill="#FFFFFF" opacity="0.45"/>
+
+    <!-- 혀를 내민 웃는 입 -->
+    <path d="M512 670 L512 692" stroke="#1E120C" stroke-width="12" stroke-linecap="round"/>
+    <path d="M430 690 Q 470 724 512 696 Q 554 724 594 690 Q 580 742 512 744 Q 444 742 430 690 Z" fill="#6E2A20"/>
+    <path d="M470 708 Q 512 722 554 708 Q 566 778 512 790 Q 458 778 470 708 Z" fill="#F2728A"/>
+    <path d="M512 724 L512 770" stroke="#D9506A" stroke-width="7" stroke-linecap="round"/>
+    <path d="M422 684 Q 470 728 512 696 Q 554 728 602 684" fill="none" stroke="#1E120C" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- 볼 -->
+    <ellipse cx="338" cy="640" rx="34" ry="20" fill="#F4A08C" opacity="0.5"/>
+    <ellipse cx="690" cy="640" rx="34" ry="20" fill="#F4A08C" opacity="0.5"/>
+  </g>
+</svg>
