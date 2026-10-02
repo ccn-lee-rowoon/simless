@@ -71,9 +71,9 @@
 | 메서드 | params | result | 비고 |
 | --- | --- | --- | --- |
 | `status` | `{}` | `StatusResult` — 이 세션, 점유·대기 순번, `DeviceView[]`, 대기열 | |
-| `catalog.list` | `{ platform? }` | `{ items: CatalogEntry[], problems }` | 폭 순. 이미 만든 항목은 `created` 에 디바이스 ID (M1~M3) |
+| `source.list` | `{ platform? }` | `{ items: SourceEntry[], problems }` | 이 Mac 의 전체 목록(복제 원본). 폭 순. Corgi 것은 `managed`, 같은 크기로 이미 만든 원본은 `created` 에 디바이스 ID (M1~M3·M9) |
 | `device.list` | `{}` | `DeviceView[]` | 켜짐·argent ID(`targetId`)·점유자 포함 (M5) |
-| `device.create` | `{ request, name?, slim = true }` | `DeviceView` | `request` = `{ platform: "android", widthDp, heightDp?, density?, systemImage? }` 또는 `{ platform: "ios", deviceType, runtime? }`. 진행 알림 있음 |
+| `device.create` | `{ source, name?, slim = true }` | `DeviceView` | `source` = 원본 ID(AVD ID·UDID) 또는 이름. 원본과 같은 크기로 앱 없이 만든다. 같은 크기는 `INVALID`, 같은 이름의 원본이 여럿이면 `INVALID`(후보 ID 표시). 진행 알림 있음 |
 | `device.rename` | `{ device, name }` | `DeviceView` | 다른 세션이 쓰는 중이면 `BUSY` |
 | `device.setEnabled` | `{ device, enabled }` | `DeviceView` | R6 |
 | `device.delete` | `{ device }` | `{ deleted }` | 켜져 있으면 끄고 지운다. 다른 세션이 쓰는 중이면 `BUSY` (M8) |

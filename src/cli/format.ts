@@ -53,7 +53,7 @@ export function formatHolder(holder: HolderView & { deviceId?: string }): string
 
 export function devicesTable(devices: DeviceView[]): string {
   if (devices.length === 0)
-    return "만든 디바이스가 없습니다 — corgi catalog 로 만들 수 있는 목록을 보세요";
+    return "만든 디바이스가 없습니다 — corgi list --all 에서 원본을 골라 corgi create <원본>";
   const rows = [...devices]
     .sort((a, b) => a.spec.platform.localeCompare(b.spec.platform) || a.layoutWidth - b.layoutWidth)
     .map((d) => [
