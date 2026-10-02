@@ -1,3 +1,4 @@
+import type { SlimStats } from "../../shared/api.ts";
 import type { Device, DeviceSpec, Platform, SlimState } from "../../shared/model.ts";
 
 /** 켜짐 여부 — 저장하지 않고 매번 드라이버에게 묻는다 */
@@ -41,6 +42,8 @@ export interface Driver {
   unslim(device: Device, progress: Progress): Promise<void>;
   /** 켠 직후 할 일 — Android 는 슬림화된 기기의 기기 안 정리를 다시 한다 */
   afterBoot?(device: Device, state: RuntimeState, progress: Progress): Promise<void>;
+  /** 켜진 디바이스가 얼마나 슬림화됐는지 — 화면 표시용, 느릴 수 있어 서버가 뒤에서 읽어 둔다 */
+  slimStats(devices: Device[], states: Map<string, RuntimeState>): Promise<Map<string, SlimStats>>;
   /** 켜져 있어야 알 수 있으면 undefined */
   checkSlim(device: Device, state: RuntimeState): Promise<SlimState | undefined>;
 }

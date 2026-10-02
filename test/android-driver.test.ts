@@ -254,3 +254,12 @@ describe("AndroidDriver 슬림 확인", () => {
     expect(await check(["app.a"], ["app.a"], false)).toBeUndefined();
   });
 });
+
+describe("parseFootprint", () => {
+  test("avdslim measure 의 Activity Monitor 메모리를 바이트로", async () => {
+    const { parseFootprint } = await import("../src/server/drivers/android.ts");
+    const text = "🖥️  HOST (macOS) Footprint:\n   Activity Monitor Memory (Footprint): 7583 MB\n";
+    expect(parseFootprint(text)).toBe(7583 * 1024 * 1024);
+    expect(parseFootprint("nothing")).toBeUndefined();
+  });
+});

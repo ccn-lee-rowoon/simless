@@ -4,6 +4,7 @@ import type {
   BusyData,
   DeviceView,
   HolderView,
+  SlimStats,
   StatusResult,
 } from "../shared/api.ts";
 import type { Config } from "../shared/config.ts";
@@ -172,9 +173,48 @@ export class CorgiServer {
     };
   }
 
+  private readonly slimStatsCache = new Map<string, SlimStats>();
+  private slimStatsAt = 0;
+  private slimStatsBooted = "";
+  private slimStatsRefreshing = false;
+
+  /**
+   * 슬림 수치는 읽는 데 몇 초 걸린다(simslim list 등) — 목록은 기다리지 않고 지난 값을 붙이고,
+   * 15초가 지났으면 뒤에서 다시 읽은 뒤 화면에 바뀌었다고 알린다.
+   */
+  private refreshSlimStats(states: Map<string, RuntimeState>): void {
+    const devices = this.registry.list().filter((d) => states.get(d.id)?.booted);
+    // 켜진 디바이스가 바뀌면 시간과 상관없이 다시 읽는다
+    const booted = devices.map((d) => d.id).join(",");
+    if (this.slimStatsRefreshing) return;
+    if (booted === this.slimStatsBooted && Date.now() - this.slimStatsAt < 15_000) return;
+    this.slimStatsRefreshing = true;
+    Promise.all(
+      this.deps.drivers.map((driver) =>
+        driver
+          .slimStats(
+            devices.filter((d) => d.spec.platform === driver.platform),
+            states,
+          )
+          .catch(() => new Map<string, SlimStats>()),
+      ),
+    )
+      .then((maps) => {
+        this.slimStatsCache.clear();
+        for (const map of maps) for (const [id, stats] of map) this.slimStatsCache.set(id, stats);
+        this.slimStatsAt = Date.now();
+        this.slimStatsBooted = booted;
+        if (devices.length > 0) this.notify();
+      })
+      .finally(() => {
+        this.slimStatsRefreshing = false;
+      });
+  }
+
   async deviceViews(session: SessionInfo, devices = this.registry.list()): Promise<DeviceView[]> {
     const states = await this.runtimeStates(devices);
     this.writeManagedIndex(states);
+    this.refreshSlimStats(states);
     const leases = new Map(this.leases.snapshot().leases.map((l) => [l.deviceId, l]));
     return devices.map((device) => {
       const state = states.get(device.id);
@@ -196,6 +236,7 @@ export class CorgiServer {
                 reason: "held",
               })
             : undefined,
+        slimStats: state?.booted ? this.slimStatsCache.get(device.id) : undefined,
         mine: lease?.sessionKey === session.key,
       };
     });

@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef } from "react";
-import type { HolderView } from "../shared/api.ts";
+import type { HolderView, SlimStats } from "../shared/api.ts";
 
 export function Badge({
   tone = "neutral",
@@ -80,5 +80,28 @@ export function Dialog({
       </header>
       {open && children}
     </dialog>
+  );
+}
+
+export function gigabytes(bytes: number): string {
+  return `${(bytes / 1024 ** 3).toFixed(1)}GB`;
+}
+
+/** 얼마나 슬림화됐는지 — 꺼진 항목 수와 지금 메모리 (켜진 디바이스만) */
+export function SlimStatsText({ stats }: { stats: SlimStats }) {
+  const memory = stats.memoryBytes ? ` · ${gigabytes(stats.memoryBytes)}` : "";
+  const title = [
+    `꺼진 ${stats.unit} ${stats.disabled}/${stats.total}`,
+    stats.memoryBytes
+      ? `메모리 ${gigabytes(stats.memoryBytes)}${stats.unit === "패키지" ? " (Activity Monitor 기준)" : ""}`
+      : "",
+    stats.processes ? `프로세스 ${stats.processes}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <div className="subtle stat" title={title}>
+      {stats.unit} {stats.disabled}/{stats.total} 꺼짐{memory}
+    </div>
   );
 }

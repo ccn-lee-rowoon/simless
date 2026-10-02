@@ -13,6 +13,18 @@ export interface HolderView {
   reason: "held" | "queued";
 }
 
+/** 얼마나 슬림화됐는지 — 켜진 디바이스만 (M6) */
+export interface SlimStats {
+  /** 꺼진 항목 수 / 대상 수 — iOS 는 launchd 데몬, Android 는 avdslim 프로필 패키지 */
+  disabled: number;
+  total: number;
+  unit: "데몬" | "패키지";
+  /** 지금 쓰는 메모리 — iOS 는 시뮬레이터 프로세스 합, Android 는 에뮬레이터의 Activity Monitor 메모리 */
+  memoryBytes?: number;
+  processes?: number;
+  measuredAt: number;
+}
+
 export interface DeviceView extends Device {
   /** 예: `Android 360dp` */
   label: string;
@@ -22,6 +34,7 @@ export interface DeviceView extends Device {
   /** argent·adb 에 넘길 ID — 켜져 있을 때만 */
   targetId?: string;
   holder?: HolderView;
+  slimStats?: SlimStats;
   /** 이 세션이 점유 중 */
   mine: boolean;
 }

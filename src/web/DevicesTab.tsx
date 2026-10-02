@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import type { DeviceView, StatusResult } from "../shared/api.ts";
 import { call } from "./api.ts";
-import { Dialog, holderText, PlatformBadge, SlimBadge } from "./ui.tsx";
+import { Dialog, holderText, PlatformBadge, SlimBadge, SlimStatsText } from "./ui.tsx";
 
 type Act = (label: string, fn: () => Promise<unknown>) => Promise<void>;
 
@@ -115,6 +115,7 @@ export function DevicesTab({
                 </td>
                 <td>
                   <SlimBadge state={d.slim} error={d.slimError} />
+                  {d.slimStats && <SlimStatsText stats={d.slimStats} />}
                 </td>
                 <td>
                   {d.holder ? (

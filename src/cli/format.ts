@@ -61,7 +61,9 @@ export function devicesTable(devices: DeviceView[]): string {
       d.label,
       d.name,
       d.booted ? `켜짐 ${d.targetId ?? ""}`.trim() : "꺼짐",
-      d.slim,
+      d.slimStats
+        ? `${d.slim} ${d.slimStats.disabled}/${d.slimStats.total}${d.slimStats.memoryBytes ? ` ${(d.slimStats.memoryBytes / 1024 ** 3).toFixed(1)}GB` : ""}`
+        : d.slim,
       d.enabled ? "" : "사용 안 함",
       d.mine ? "나" : d.holder ? formatHolder(d.holder) : "",
     ]);

@@ -704,3 +704,10 @@ p {
     animation: none;
   }
 }
+
+.stat {
+  margin-top: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}

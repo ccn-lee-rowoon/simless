@@ -197,3 +197,15 @@ describe("사람(웹 UI)의 켜기·끄기", () => {
     expect(await H("device.up", { devices: [device.id] })).toMatchObject({ code: "BUSY" });
   });
 });
+
+describe("슬림 수치", () => {
+  test("켜진 디바이스에는 뒤에서 읽어 둔 슬림 수치가 붙는다", async () => {
+    const { H } = await start();
+    const device = (await H("device.create", android360)) as DeviceView;
+    await H("device.up", { devices: [device.id] });
+    await H("device.list"); // 첫 목록이 뒤에서 읽기를 시작한다
+    await Bun.sleep(20);
+    const [view] = (await H("device.list")) as DeviceView[];
+    expect(view?.slimStats).toMatchObject({ disabled: 49, total: 52, unit: "패키지" });
+  });
+});

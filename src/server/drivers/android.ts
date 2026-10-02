@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import type { SlimStats } from "../../shared/api.ts";
 import type { Config } from "../../shared/config.ts";
 import { run as defaultRun, type Runner, runOk, which } from "../../shared/exec.ts";
 import type { Device, SlimState } from "../../shared/model.ts";
@@ -65,6 +66,12 @@ function readProps(path: string): Record<string, string> {
     if (eq > 0) props[line.slice(0, eq).trim()] = line.slice(eq + 1).trim();
   }
   return props;
+}
+
+/** `avdslim measure` 의 «Activity Monitor Memory (Footprint): 7583 MB» → 바이트 */
+export function parseFootprint(text: string): number | undefined {
+  const mb = /Footprint\):\s*([\d,.]+)\s*MB/.exec(text)?.[1];
+  return mb ? Number(mb.replace(/,/g, "")) * 1024 * 1024 : undefined;
 }
 
 export class AndroidDriver implements Driver {
@@ -394,16 +401,49 @@ export class AndroidDriver implements Driver {
    * avdslim 에는 상태 조회 명령이 없다. 기기에 설치된 프로필 패키지 중 꺼진 비율로 본다 —
    * 표준 프리셋도 Chrome·Play 스토어 등 일부는 남기므로(실측 52개 중 49개) 절반 이상이면 적용됨.
    */
-  async checkSlim(_device: Device, state: RuntimeState): Promise<SlimState | undefined> {
-    if (!state.booted || !state.targetId || !this.avdslimPath()) return undefined;
+  /** 설치된 avdslim 프로필 패키지 중 꺼진 수 — 기기에 프로필 패키지가 없으면 undefined */
+  private async slimCounts(serial: string): Promise<{ off: number; relevant: number } | undefined> {
     const [profile, installed, disabled] = await Promise.all([
       this.slimPackages(),
-      this.packages(state.targetId, false),
-      this.packages(state.targetId, true),
+      this.packages(serial, false),
+      this.packages(serial, true),
     ]);
     const relevant = [...profile].filter((pkg) => installed.has(pkg));
     if (relevant.length === 0) return undefined;
-    const off = relevant.filter((pkg) => disabled.has(pkg)).length;
-    return off / relevant.length >= 0.5 ? "applied" : "drifted";
+    return { off: relevant.filter((pkg) => disabled.has(pkg)).length, relevant: relevant.length };
+  }
+
+  async checkSlim(_device: Device, state: RuntimeState): Promise<SlimState | undefined> {
+    if (!state.booted || !state.targetId || !this.avdslimPath()) return undefined;
+    const counts = await this.slimCounts(state.targetId);
+    if (!counts) return undefined;
+    return counts.off / counts.relevant >= 0.5 ? "applied" : "drifted";
+  }
+
+  async slimStats(
+    devices: Device[],
+    states: Map<string, RuntimeState>,
+  ): Promise<Map<string, SlimStats>> {
+    const stats = new Map<string, SlimStats>();
+    if (!this.avdslimPath()) return stats;
+    await Promise.all(
+      devices.map(async (device) => {
+        const serial = states.get(device.id)?.targetId;
+        if (!serial) return;
+        const [counts, measure] = await Promise.all([
+          this.slimCounts(serial).catch(() => undefined),
+          this.runner([this.avdslim(), "measure", serial], { timeoutMs: 30_000 }),
+        ]);
+        if (!counts) return;
+        stats.set(device.id, {
+          disabled: counts.off,
+          total: counts.relevant,
+          unit: "패키지",
+          memoryBytes: parseFootprint(measure.stdout),
+          measuredAt: Date.now(),
+        });
+      }),
+    );
+    return stats;
   }
 }

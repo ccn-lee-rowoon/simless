@@ -1,3 +1,4 @@
+import type { SlimStats } from "../../shared/api.ts";
 import type { Config } from "../../shared/config.ts";
 import { run as defaultRun, type Runner, runOk, which } from "../../shared/exec.ts";
 import type { Device, DeviceSpec, SlimState } from "../../shared/model.ts";
@@ -226,6 +227,38 @@ export class IosDriver implements Driver {
   }
 
   /** simslim verify 는 켜진 기기만 볼 수 있다 */
+  async slimStats(
+    devices: Device[],
+    states: Map<string, RuntimeState>,
+  ): Promise<Map<string, SlimStats>> {
+    const stats = new Map<string, SlimStats>();
+    const booted = devices.filter((d) => states.get(d.id)?.booted);
+    if (booted.length === 0 || !this.simslimPath()) return stats;
+    const result = await this.runner([this.simslim(), "list", "--json", "--booted"], {
+      timeoutMs: 30_000,
+    });
+    if (result.code !== 0) return stats;
+    const rows = JSON.parse(result.stdout) as {
+      udid: string;
+      managedDisabled?: number;
+      managedTotal?: number;
+      memory?: { bytes?: number; processes?: number };
+    }[];
+    for (const device of booted) {
+      const row = rows.find((r) => r.udid === device.native);
+      if (!row || row.managedTotal === undefined) continue;
+      stats.set(device.id, {
+        disabled: row.managedDisabled ?? 0,
+        total: row.managedTotal,
+        unit: "데몬",
+        memoryBytes: row.memory?.bytes,
+        processes: row.memory?.processes,
+        measuredAt: Date.now(),
+      });
+    }
+    return stats;
+  }
+
   async checkSlim(device: Device, state: RuntimeState): Promise<SlimState | undefined> {
     if (!state.booted || !this.simslimPath()) return undefined;
     const result = await this.runner([

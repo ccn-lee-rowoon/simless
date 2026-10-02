@@ -92,5 +92,14 @@ export function fakeDriver(
     slim: async () => {},
     unslim: async () => {},
     checkSlim: async () => "applied",
+    slimStats: async (devices) =>
+      new Map(
+        devices
+          .filter((d) => booted.has(d.id))
+          .map((d) => [
+            d.id,
+            { disabled: 49, total: 52, unit: "패키지" as const, memoryBytes: 1.5e9, measuredAt: 0 },
+          ]),
+      ),
   };
 }
