@@ -5,10 +5,27 @@ import { ApiError, call, subscribe, token } from "./api.ts";
 import { CreateDialog } from "./CreateDialog.tsx";
 import corgiIcon from "./corgi.svg";
 import { DevicesTab } from "./DevicesTab.tsx";
-import { SourcesTab } from "./SourcesTab.tsx";
 import type { LogLine } from "./types.ts";
 
-type Tab = "devices" | "sources";
+/** 메인 목록의 플랫폼 탭 */
+type Tab = "all" | "android" | "ios";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "android", label: "Android" },
+  { id: "ios", label: "iOS" },
+];
+
+const TAB_KEY = "corgi-tab";
+
+function savedTab(): Tab {
+  try {
+    const saved = localStorage.getItem(TAB_KEY);
+    return saved === "android" || saved === "ios" ? saved : "all";
+  } catch {
+    return "all";
+  }
+}
 
 export interface Notice {
   id: number;
@@ -20,7 +37,15 @@ let noticeId = 0;
 let logId = 0;
 
 function App() {
-  const [tab, setTab] = useState<Tab>("devices");
+  const [tab, setTabState] = useState<Tab>(savedTab);
+  const setTab = (next: Tab) => {
+    setTabState(next);
+    try {
+      localStorage.setItem(TAB_KEY, next);
+    } catch {
+      // 저장 못 해도 화면은 그대로 쓴다
+    }
+  };
   const [status, setStatus] = useState<StatusResult | null>(null);
   const [sources, setSources] = useState<SourceListResult | null>(null);
   const [online, setOnline] = useState(true);
@@ -52,12 +77,8 @@ function App() {
   useEffect(() => {
     if (!token) return;
     refreshStatus();
-    refreshSources();
     const unsubscribe = subscribe({
-      changed: () => {
-        refreshStatus();
-        refreshSources();
-      },
+      changed: refreshStatus,
       progress: (message) => setLog((list) => [...list.slice(-7), { id: ++logId, text: message }]),
       connection: setOnline,
     });
@@ -67,7 +88,12 @@ function App() {
       unsubscribe();
       clearInterval(timer);
     };
-  }, [refreshStatus, refreshSources]);
+  }, [refreshStatus]);
+
+  // 원본 목록(이 Mac 의 디바이스·대표 프로필)은 생성(+) 화면을 열 때 읽는다
+  useEffect(() => {
+    if (createFrom !== null) refreshSources();
+  }, [createFrom, refreshSources]);
 
   /** 버튼 동작 공통 — 실패하면 알림, 다른 세션이 쓰는 중이면 누가 쓰는지 */
   const act = useCallback(
@@ -125,41 +151,32 @@ function App() {
         </div>
       </header>
 
-      <nav className="tabs" aria-label="디바이스 목록">
-        <button
-          type="button"
-          className={tab === "devices" ? "tab tab-active" : "tab"}
-          onClick={() => setTab("devices")}
-        >
-          생성됨 <span className="count">{devices.length}</span>
-        </button>
-        <button
-          type="button"
-          className={tab === "sources" ? "tab tab-active" : "tab"}
-          onClick={() => setTab("sources")}
-        >
-          전체 목록{" "}
-          <span className="count">
-            {sources?.items.filter((i) => i.kind === "device").length ?? "…"}
-          </span>
-        </button>
+      <nav className="tabs" aria-label="플랫폼">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={tab === t.id ? "tab tab-active" : "tab"}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}{" "}
+            <span className="count">
+              {t.id === "all"
+                ? devices.length
+                : devices.filter((d) => d.spec.platform === t.id).length}
+            </span>
+          </button>
+        ))}
       </nav>
 
       <main className="content">
-        {tab === "devices" ? (
-          <DevicesTab
-            devices={devices}
-            queue={status?.queue ?? []}
-            act={act}
-            onCreate={() => setCreateFrom("pick")}
-          />
-        ) : (
-          <SourcesTab
-            result={sources}
-            onCreate={(source) => setCreateFrom(source)}
-            onRefresh={refreshSources}
-          />
-        )}
+        <DevicesTab
+          devices={tab === "all" ? devices : devices.filter((d) => d.spec.platform === tab)}
+          platform={tab}
+          queue={status?.queue ?? []}
+          act={act}
+          onCreate={() => setCreateFrom("pick")}
+        />
       </main>
 
       {log.length > 0 && (
@@ -187,10 +204,8 @@ function App() {
         onClose={() => setCreateFrom(null)}
         onCreated={(name) => {
           setCreateFrom(null);
-          setTab("devices");
           notify("info", `만들었습니다: ${name}`);
           refreshStatus();
-          refreshSources();
         }}
         onError={(message) => notify("error", message)}
       />

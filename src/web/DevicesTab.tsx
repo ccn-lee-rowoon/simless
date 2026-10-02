@@ -5,14 +5,16 @@ import { Dialog, holderText, PlatformBadge, SlimBadge, SlimStatsText } from "./u
 
 type Act = (label: string, fn: () => Promise<unknown>) => Promise<void>;
 
-/** «생성됨» 탭 — Corgi 가 만든 디바이스 (M5~M8) */
+/** 메인 목록 — Corgi 가 만든 디바이스, 플랫폼 탭으로 거른다 (M5~M9) */
 export function DevicesTab({
   devices,
+  platform,
   queue,
   act,
   onCreate,
 }: {
   devices: DeviceView[];
+  platform: "all" | "android" | "ios";
   queue: StatusResult["queue"];
   act: Act;
   onCreate: () => void;
@@ -59,7 +61,10 @@ export function DevicesTab({
   if (devices.length === 0) {
     return (
       <div className="empty">
-        <p>아직 만든 디바이스가 없습니다.</p>
+        <p>
+          아직 만든 {platform === "android" ? "Android " : platform === "ios" ? "iOS " : ""}
+          디바이스가 없습니다.
+        </p>
         <p className="subtle">
           이 Mac 의 에뮬레이터·시뮬레이터를 원본으로 골라 같은 크기로 복제하고 슬림화합니다.
         </p>
