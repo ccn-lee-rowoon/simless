@@ -27,20 +27,24 @@ export type Handler = (request: Request, connection: Connection) => Promise<unkn
 
 interface ConnState {
   buffer: string;
-  pending: string[];
+  decoder: TextDecoder;
+  /** 아직 못 쓴 바이트 — write 는 쓴 바이트 수를 돌려준다 */
+  pending: Uint8Array[];
   ending: boolean;
   closed: boolean;
   closeListeners: (() => void)[];
   started: boolean;
 }
 
+const encoder = new TextEncoder();
+
 function flush(socket: Socket<ConnState>): void {
   const state = socket.data;
   while (state.pending.length > 0) {
-    const chunk = state.pending[0] ?? "";
+    const chunk = state.pending[0] ?? new Uint8Array();
     const written = socket.write(chunk);
-    if (written < chunk.length) {
-      state.pending[0] = chunk.slice(written);
+    if (written < chunk.byteLength) {
+      state.pending[0] = chunk.subarray(Math.max(written, 0));
       return; // drain 에서 이어 쓴다
     }
     state.pending.shift();
@@ -50,7 +54,7 @@ function flush(socket: Socket<ConnState>): void {
 
 function send(socket: Socket<ConnState>, message: unknown, end = false): void {
   if (socket.data.closed) return;
-  socket.data.pending.push(`${JSON.stringify(message)}\n`);
+  socket.data.pending.push(encoder.encode(`${JSON.stringify(message)}\n`));
   socket.data.ending ||= end;
   flush(socket);
 }
@@ -86,6 +90,7 @@ export async function listen(path: string, version: string, handle: Handler) {
       open(socket) {
         socket.data = {
           buffer: "",
+          decoder: new TextDecoder(),
           pending: [],
           ending: false,
           closed: false,
@@ -96,7 +101,7 @@ export async function listen(path: string, version: string, handle: Handler) {
       data(socket, chunk) {
         const state = socket.data;
         if (state.started) return; // 연결 하나에 요청 하나
-        state.buffer += chunk.toString();
+        state.buffer += state.decoder.decode(chunk, { stream: true });
         const nl = state.buffer.indexOf("\n");
         if (nl < 0) return;
         state.started = true;

@@ -44,6 +44,8 @@ export function call<T>(
 
   return new Promise((resolve, reject) => {
     let buffer = "";
+    // 조각마다 따로 바꾸면 조각 경계에 걸린 한글 등 여러 바이트 글자가 깨진다
+    const decoder = new TextDecoder();
     let settled = false;
     const settle = (fn: () => void) => {
       if (!settled) {
@@ -59,7 +61,7 @@ export function call<T>(
           socket.write(`${JSON.stringify(request)}\n`);
         },
         data(socket, chunk) {
-          buffer += chunk.toString();
+          buffer += decoder.decode(chunk, { stream: true });
           for (let nl = buffer.indexOf("\n"); nl >= 0; nl = buffer.indexOf("\n")) {
             const line = buffer.slice(0, nl);
             buffer = buffer.slice(nl + 1);

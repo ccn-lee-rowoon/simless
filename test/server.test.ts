@@ -122,3 +122,14 @@ describe("소켓 서버", () => {
     await expect(listen(env.paths.socket, VERSION, handle)).rejects.toThrow("이미 실행 중");
   });
 });
+
+describe("큰 응답", () => {
+  test("여러 조각으로 나뉘어도 한글이 깨지지 않는다", async () => {
+    const env = tempEnv();
+    const text = "가나다라마바사".repeat(50_000); // 약 1MB — 여러 조각으로 온다
+    const listener = await listen(env.paths.socket, VERSION, async () => ({ text }));
+    cleanups.push(() => listener.stop(), env.cleanup);
+    const { result } = await call<{ text: string }>(env.paths.socket, "big", {}, session("A"));
+    expect(result.text).toBe(text);
+  });
+});
