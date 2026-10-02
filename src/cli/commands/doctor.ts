@@ -8,6 +8,7 @@ import { ExitCode } from "../../shared/exit-codes.ts";
 import { LAUNCH_LABEL } from "../../shared/paths.ts";
 import { androidSdk, INSTALL_HINTS } from "../../shared/tools.ts";
 import { VERSION } from "../../shared/version.ts";
+import { isAppInstalled } from "../app-bundle.ts";
 import { CliError, type Context, output, type Run } from "../context.ts";
 import { isInstalled } from "../launchd.ts";
 import { skillStatus } from "../skill.ts";
@@ -24,7 +25,7 @@ export interface Check {
   /** 고치는 방법 — 사람이 실행할 명령 */
   fix?: string;
   /** corgi doctor --fix 가 고칠 수 있는 것 */
-  autofix?: "launchd" | "skill";
+  autofix?: "launchd" | "skill" | "app";
 }
 
 const MARK: Record<Status, string> = { ok: "✓", warn: "!", fail: "✗" };
@@ -222,6 +223,18 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
     autofix: skill === "current" ? undefined : "skill",
   });
 
+  const app = isAppInstalled(ctx.paths);
+  add({
+    group: "에이전트 연동",
+    name: "Corgi.app",
+    status: app ? "ok" : "warn",
+    detail: app
+      ? ctx.paths.appBundle
+      : "없음 — 더블클릭·Spotlight 로 웹 UI 를 열 수 없다 (corgi ui 는 된다)",
+    fix: app ? undefined : "corgi install",
+    autofix: app ? undefined : "app",
+  });
+
   return checks;
 }
 
@@ -240,7 +253,7 @@ function render(checks: Check[]): string {
   const warns = checks.filter((c) => c.status === "warn").length;
   lines.push("", fails + warns === 0 ? "모두 정상입니다." : `문제 ${fails}개 · 주의 ${warns}개`);
   if (checks.some((c) => c.autofix))
-    lines.push("corgi doctor --fix 로 고칠 수 있는 항목이 있습니다 (launchd 등록·스킬 설치).");
+    lines.push("corgi doctor --fix 로 고칠 수 있는 항목이 있습니다 (launchd 등록·스킬·Corgi.app).");
   return lines.join("\n");
 }
 
@@ -248,7 +261,7 @@ export function registerDoctor(program: Command, run: Run) {
   program
     .command("doctor")
     .description("설치·연결을 점검하고 고치는 방법을 알려 준다 (S1·S2)")
-    .option("--fix", "corgi install 로 고칠 수 있는 것(launchd 등록·스킬 설치)은 고친다")
+    .option("--fix", "corgi install 로 고칠 수 있는 것(launchd 등록·스킬·Corgi.app)은 고친다")
     .action(
       run(async (ctx: Context, o: { fix?: boolean }) => {
         let checks = await runChecks(ctx);
@@ -256,6 +269,7 @@ export function registerDoctor(program: Command, run: Run) {
           const needs = new Set(checks.flatMap((c) => (c.autofix ? [c.autofix] : [])));
           if (needs.has("launchd")) await (await import("../launchd.ts")).install(ctx.paths);
           if (needs.has("skill")) await (await import("../skill.ts")).installSkill();
+          if (needs.has("app")) await (await import("../app-bundle.ts")).installApp(ctx.paths);
           if (needs.size > 0) checks = await runChecks(ctx);
         }
         output(ctx, checks, () => render(checks));

@@ -2,6 +2,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 export const LAUNCH_LABEL = "corgi.server";
+/** Corgi.app 의 번들 ID — launchd 등록과 묶어 로그인 항목에 «Corgi» 로 보이게 한다 */
+export const APP_BUNDLE_ID = "local.corgi.app";
 
 /** 서버·CLI 가 쓰는 파일 위치 (docs/design.md §5). 테스트는 환경 변수로 바꾼다. */
 export interface Paths {
@@ -18,6 +20,8 @@ export interface Paths {
   appsDir: string;
   /** launchd 사용자 에이전트 — 로그인 시 서버를 띄우고 죽으면 다시 살린다 */
   launchAgent: string;
+  /** 사람이 여는 앱 — corgi install 이 그 Mac 에서 만든다 */
+  appBundle: string;
 }
 
 export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
@@ -37,5 +41,6 @@ export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
     config: join(configDir, "config.json"),
     appsDir: join(configDir, "apps"),
     launchAgent: join(home, "Library", "LaunchAgents", `${LAUNCH_LABEL}.plist`),
+    appBundle: join(home, "Applications", "Corgi.app"),
   };
 }

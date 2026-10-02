@@ -9,3 +9,9 @@ declare module "*.svg" {
   const url: string;
   export default url;
 }
+
+// 바이너리에 넣는 앱 아이콘
+declare module "*.icns" {
+  const path: string;
+  export default path;
+}

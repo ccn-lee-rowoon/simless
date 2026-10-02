@@ -53,11 +53,14 @@ export async function runCli(argv: string[]): Promise<number> {
 
   program
     .command("install")
-    .description("서버를 launchd 에 등록하고(로그인 시 자동 실행) 에이전트 스킬을 설치한다")
+    .description(
+      "서버를 launchd 에 등록하고(로그인 시 자동 실행), 에이전트 스킬을 설치하고, Corgi.app 을 만든다",
+    )
     .option("--no-launchd", "launchd 등록은 건너뛴다")
     .option("--no-skill", "스킬 설치는 건너뛴다")
+    .option("--no-app", "Corgi.app 만들기는 건너뛴다")
     .action(
-      run(async (ctx, o: { launchd: boolean; skill: boolean }) => {
+      run(async (ctx, o: { launchd: boolean; skill: boolean; app: boolean }) => {
         const done: Record<string, string> = {};
         if (o.launchd) {
           const { install } = await import("./launchd.ts");
@@ -67,6 +70,10 @@ export async function runCli(argv: string[]): Promise<number> {
         if (o.skill) {
           const { installSkill } = await import("./skill.ts");
           done.skill = await installSkill();
+        }
+        if (o.app) {
+          const { installApp } = await import("./app-bundle.ts");
+          done.app = await installApp(ctx.paths);
         }
         output(ctx, done, () =>
           Object.entries(done)
@@ -78,11 +85,12 @@ export async function runCli(argv: string[]): Promise<number> {
 
   program
     .command("uninstall")
-    .description("launchd 등록을 지운다 — 만든 디바이스는 지우지 않는다")
+    .description("launchd 등록과 Corgi.app 을 지운다 — 만든 디바이스·스킬은 지우지 않는다")
     .action(
       run(async (ctx) => {
         const { uninstall } = await import("./launchd.ts");
         await uninstall(ctx.paths);
+        await (await import("./app-bundle.ts")).uninstallApp(ctx.paths);
         output(ctx, { uninstalled: ctx.paths.launchAgent }, () => "등록을 지웠습니다");
       }),
     );

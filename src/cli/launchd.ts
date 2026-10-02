@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { run } from "../shared/exec.ts";
-import { LAUNCH_LABEL, type Paths } from "../shared/paths.ts";
+import { APP_BUNDLE_ID, LAUNCH_LABEL, type Paths } from "../shared/paths.ts";
 
 // 서버를 launchd 사용자 에이전트로 등록한다 — 로그인 시 켜지고, 죽으면 다시 살아난다 (docs/design.md §4).
 
@@ -55,6 +55,10 @@ ${args}
   <dict>
 ${envXml}
   </dict>
+  <key>AssociatedBundleIdentifiers</key>
+  <array>
+    <string>${APP_BUNDLE_ID}</string>
+  </array>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
