@@ -1,0 +1,95 @@
+# Corgi 소켓 프로토콜 (v1)
+
+> CLI·훅·(나중의) MCP 가 상주 서버(`corgi serve`)에 요청하는 형식이다. 타입의 정본은 코드다 — 메시지 `src/shared/protocol.ts`, 결과 `src/shared/api.ts`, 매개변수 검증 `src/server/app.ts`·`src/server/devices.ts`.
+
+## 연결
+
+- **Unix 도메인 소켓**: `~/Library/Application Support/Corgi/corgi.sock` (권한 0600, `CORGI_SOCKET` 으로 바꿀 수 있음).
+- **연결 하나에 요청 하나.** 클라이언트가 요청 한 줄을 보내고, 서버는 진행 알림(0개 이상) 뒤에 응답 한 줄을 보내고 연결을 닫는다.
+- 한 줄에 JSON 하나(UTF-8, `\n` 으로 끝). 큰 응답은 여러 조각으로 오므로 스트리밍 디코더로 이어 붙인다.
+- 서버가 없으면 클라이언트는 `SERVER_DOWN`(CLI 종료 코드 4)으로 끝낸다. CLI 는 launchd 에 등록돼 있으면 먼저 서버를 켜고 한 번 더 보낸다.
+
+## 메시지
+
+**요청**
+
+```json
+{
+  "v": 1,
+  "id": "1f0c…",
+  "clientVersion": "0.1.0",
+  "method": "lease.acquire",
+  "session": {
+    "key": "p46194-1790914992",
+    "pid": 46194,
+    "pidStartedAt": 1790914992,
+    "agent": "claude-code",
+    "agentSessionId": "8e92…",
+    "cwd": "/Users/me/Projects/app",
+    "human": false
+  },
+  "params": { "devices": ["Small"], "wait": true }
+}
+```
+
+- `session` 은 클라이언트가 프로세스 트리에서 찾는다 (`docs/design.md` §7). 서버는 이 값으로 점유자를 구분하고, 요청이 올 때마다 그 세션의 마지막 사용 시각을 갱신한다(R17).
+- 버전 확인: 요청마다 `clientVersion` 을, 응답마다 `serverVersion` 을 싣는다. 다르면 CLI 가 «서버를 다시 시작하세요» 를 한 번 알린다. (설계안의 별도 `hello` 대신 이 방식으로 했다.)
+
+**진행 알림** — 응답 전에 여러 번 올 수 있다
+
+```json
+{ "id": "1f0c…", "event": "progress", "data": { "message": "부팅: Android 360dp (emulator-5554)" } }
+{ "id": "1f0c…", "event": "queued", "data": { "position": 1, "holders": [ … ] } }
+```
+
+**응답**
+
+```json
+{ "id": "1f0c…", "serverVersion": "0.1.0", "ok": true, "result": { … } }
+{ "id": "1f0c…", "serverVersion": "0.1.0", "ok": false, "error": { "code": "BUSY", "message": "다른 세션이 사용 중입니다", "data": { "holders": [ … ] } } }
+```
+
+## 오류 코드
+
+| 코드 | 뜻 | CLI 종료 코드 |
+| --- | --- | --- |
+| `BUSY` | 다른 세션이 사용 중(또는 같은 디바이스를 먼저 기다리는 중). `data.holders` 에 누가·언제부터 | 3 |
+| `NOT_HELD` | 이 세션이 점유하지 않은 디바이스를 켜거나 끄려 함 | 1 |
+| `NOT_FOUND` | 없는 디바이스·기기 종류·런타임·이미지 | 1 |
+| `INVALID` | 잘못된 매개변수, 이미 만든 크기(M3), 이미 쓰는 이름 | 2 |
+| `TOOL_MISSING` | avdslim·simslim·SDK 등 필요한 도구가 없음 | 1 |
+| `FAILED` | 그 밖의 실패 (외부 명령 오류 등) | 1 |
+| (클라이언트) `SERVER_DOWN` | 서버에 연결 못 함 | 4 |
+| (클라이언트) `QUEUED` | 기다리기 시간이 지남 — 순번은 남아 있음 | 3 |
+
+`holders` 항목: `{ deviceId, sessionKey, agent, cwd, human, since, reason: "held" | "queued" }` (`since` 는 ms).
+
+## 메서드
+
+디바이스는 ID 나 이름으로 가리킨다. `devices` 를 비우면 메서드마다 정한 기본값을 쓴다.
+
+| 메서드 | params | result | 비고 |
+| --- | --- | --- | --- |
+| `status` | `{}` | `StatusResult` — 이 세션, 점유·대기 순번, `DeviceView[]`, 대기열 | |
+| `catalog.list` | `{ platform? }` | `{ items: CatalogEntry[], problems }` | 폭 순. 이미 만든 항목은 `created` 에 디바이스 ID (M1~M3) |
+| `device.list` | `{}` | `DeviceView[]` | 켜짐·argent ID(`targetId`)·점유자 포함 (M5) |
+| `device.create` | `{ request, name?, slim = true }` | `DeviceView` | `request` = `{ platform: "android", widthDp, heightDp?, density?, systemImage? }` 또는 `{ platform: "ios", deviceType, runtime? }`. 진행 알림 있음 |
+| `device.rename` | `{ device, name }` | `DeviceView` | 다른 세션이 쓰는 중이면 `BUSY` |
+| `device.setEnabled` | `{ device, enabled }` | `DeviceView` | R6 |
+| `device.delete` | `{ device }` | `{ deleted }` | 켜져 있으면 끄고 지운다. 다른 세션이 쓰는 중이면 `BUSY` (M8) |
+| `device.slim` | `{ devices = 전부, mode = "on" \| "off" \| "check" }` | `{ results, devices }` | on·off 는 다른 세션이 쓰는 중이면 `BUSY` |
+| `device.up` | `{ devices = 이 세션의 점유 전부 }` | `{ results, devices }` | 점유가 있어야 함(`NOT_HELD`). 켠 뒤 슬림을 확인하고 풀렸으면 다시 적용 (M6) |
+| `device.down` | 같음 | `{ results, devices }` | |
+| `lease.acquire` | `{ devices = 사용 중 전부, wait = false, timeoutMs = 600000 }` | `{ status: "granted", deviceIds }` 또는 `{ status: "queued", position, holders }` | 전부 아니면 전무. 바쁘면 `BUSY`, `wait` 면 `queued` 알림 후 차례가 오거나 시간이 지날 때까지 기다린다 |
+| `lease.release` | `{ devices? }` | `{ released }` | 안 주면 이 세션의 점유·대기 전부 |
+| `lease.who` | `{ target? }` | `[{ deviceId, name, holder? }]` | `target` 은 ID·이름·AVD ID·UDID·시리얼 |
+
+- 여러 대 작업(`slim`·`up`·`down`)은 하나가 실패해도 나머지를 계속하고 `results: [{ id, name, ok, error? }]` 로 대마다 알려 준다.
+- 같은 디바이스에 대한 작업은 서버가 한 번에 하나씩 처리한다.
+
+## 기다리기 동작
+
+- 대기 항목은 **세션**에 붙는다. 연결이 끊기거나 `timeoutMs` 가 지나도 대기열에 남고, 같은 세션이 다시 `wait` 로 요청하면 순번을 이어 간다.
+- 차례가 오면 서버가 그 세션에 점유를 준다 — 기다리던 연결이 있으면 바로 `granted` 로 끝난다.
+- 대기는 디바이스마다 먼저 온 순서다. 같은 디바이스를 먼저 기다리는 세션이 있으면 비어 있어도 새치기하지 못한다.
+- `lease.release`(디바이스 지정 없이) 또는 세션 프로세스 종료로 대기에서 빠진다.

@@ -2,6 +2,8 @@
 
 크기별 디바이스 레이아웃 확인 도구 — TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 로컬 MCP + 스킬. 단일 실행 파일로 배포하고, 개발 중에는 `bun link` 로 쓴다.
 
+**기술 스택**: TypeScript 7 · Bun 1.3.6(`mise.toml`) · commander · zod 4 · `bun:ffi`(libproc) · Biome · `bun test`. 배포는 `bun build --compile` 단일 실행 파일. 자세한 표는 `docs/design.md` §2, 소켓 메시지는 `docs/protocol.md`.
+
 ## 먼저 읽을 것
 
 1. `HANDOFF.md` — 배경, 실측한 사실, 머신 상태
@@ -25,6 +27,10 @@ bun run check   # biome check + tsc --noEmit
 bun test
 bun run build   # dist/corgi 단일 실행 파일 — 진입점·파일 포함을 바꿨을 때
 ```
+
+**테스트에서 주의할 것**
+- 같은 프로세스 안의 소켓 서버를 부르는 promise 에 `expect(…).rejects` 를 쓰면 Bun 1.3.6 에서 오동작한다(응답 전에 연결이 끊긴 것처럼 보임). `.catch((e) => e)` 로 받아서 검사한다.
+- 실제 디바이스를 다루는 확인은 `CORGI_STATE_DIR`·`CORGI_SOCKET` 등을 임시 경로로 바꿔 서버를 띄우고 한다. 만든 시험 디바이스는 끝나면 `corgi delete --yes` 로 지운다.
 
 ## 커밋 규칙
 

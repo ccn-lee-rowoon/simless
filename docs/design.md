@@ -31,7 +31,8 @@
 | 언어·런타임 | TypeScript · Bun | 개발·빌드용 Bun 버전은 `mise.toml` 로 고정 (현재 1.3.6). 받는 Mac 에는 Bun 이 필요 없다 |
 | 배포 | `bun build --compile --minify --bytecode` **단일 실행 파일** (`darwin-arm64`, `bun run build` → `dist/corgi`). 개발 중에는 `bun link` 로 `.ts` 를 바로 실행 | 약 55MB. 훅 경로 시작 약 21ms(0단계 실측, `--bytecode` 없이 약 26ms). 새 바이너리의 첫 실행만 macOS 검사로 약 1초. **`--bytecode` 는 CJS 만 지원 → 최상위 `await` 를 쓰지 않는다** |
 | CLI 인자 | `commander` | 서브커맨드·`--help` 정리 |
-| 검증·타입 | `zod` | 소켓·HTTP 메시지 스키마를 한 곳에서 정의하고 타입도 뽑는다. MCP SDK 도 쓴다 |
+| 검증·타입 | `zod` 4 | 설정·소켓 메시지·저장 파일 스키마를 한 곳에서 정의하고 타입도 뽑는다. MCP SDK 도 쓴다 |
+| 프로세스 정보 | `bun:ffi` 로 macOS libproc(`proc_pidinfo`·`proc_pidpath`) 호출 | 세션 찾기(§7)·종료 감지. `ps` 는 한 번에 20~80ms, FFI 는 약 3ms(실측) — 훅이 Bash 마다 돌기 때문 |
 | MCP | `@modelcontextprotocol/sdk` (5단계) | stdio |
 | 웹 UI | React + Bun 내장 번들러(HTML import) | Vite 없이 `Bun.serve` 가 서빙 |
 | 테스트 | `bun test` | |
@@ -216,7 +217,7 @@ corgi/
 
 **Unix 소켓** — CLI·MCP·훅
 
-- 한 줄에 JSON 하나(JSON Lines). 처음에 `hello` 로 버전을 맞춘다.
+- 한 줄에 JSON 하나(JSON Lines), 연결 하나에 요청 하나. 요청마다 `clientVersion`, 응답마다 `serverVersion` 을 실어 버전을 맞춘다(별도 `hello` 대신).
 - 요청 `{"v":1,"id":"r1","method":"lease.acquire","session":{…},"params":{…}}`
 - 응답 `{"id":"r1","ok":true,"result":{…}}` / `{"id":"r1","ok":false,"error":{"code":"BUSY","message":"…","holder":{…}}}`
 - 긴 작업(부팅·설치)은 응답 전에 `{"id":"r1","event":"progress","data":{…}}` 를 여러 번 보낸다.
@@ -317,7 +318,7 @@ corgi/
 | 단계 | 내용 | 끝나면 |
 | --- | --- | --- |
 | 0 ✅ | 저장소 뼈대 — `package.json`·`tsconfig`·Biome·`mise.toml`, `bin/corgi.ts`·`main.ts` 서브커맨드 틀, `scripts/build.ts`, 검사 통과. **컴파일한 바이너리에서 파일 포함·훅 시작 시간 확인** | `bun link` 와 `dist/corgi` 양쪽에서 `corgi --version` 이 돈다 |
-| 1 | 서버 + CLI 코어 — 레지스트리, Android·iOS 드라이버(생성·목록·이름·사용 안 함·삭제·켜기·끄기·슬림), 점유·대기·자동 해제, 소켓, launchd, `protocol.md` | CLI 로 크기별 디바이스를 만들고 점유해서 켠다 |
+| 1 ✅ | 서버 + CLI 코어 — 레지스트리, Android·iOS 드라이버(생성·목록·이름·사용 안 함·삭제·켜기·끄기·슬림), 점유·대기·자동 해제, 소켓, launchd, `protocol.md`. **실제 디바이스로 확인**: iOS 생성+슬림 2분 22초, Android·iOS 동시 켜기 29초. 남은 확인은 §17 | CLI 로 크기별 디바이스를 만들고 점유해서 켠다 |
 | 2 | 앱 조작 + 스킬 — `install-app`·`launch`·`open`, `doctor`, 스킬 초안 | «코기로 확인해 줘» 로 주 흐름(R15)이 돈다 |
 | 3 | 보호 — 훅, argent 규칙, 서버 꺼짐 처리, `corgi install` 완성 | 다른 세션이 남의 디바이스를 못 건드린다 |
 | 4 | 웹 UI (M1~M8) + HTTP API·SSE | 사람이 브라우저로 전부 관리한다 |
@@ -332,10 +333,10 @@ corgi/
 | --- | --- | --- |
 | 에이전트별 프로세스 트리 — codex·gemini·cursor-agent·opencode·copilot 이 명령·MCP 를 자식 프로세스로 실행하는지, `AI_AGENT` 같은 표시 변수를 주는지 (각 에이전트에 `ps` 를 실행시켜 확인 — 그 에이전트 사용량이 든다) | §7 판정표·호스트 목록 | 1단계 |
 | Claude 어댑터 — CLI 의 `CLAUDE_CODE_SESSION_ID` 와 훅 입력 `session_id` 가 같은 값인지, `/clear`·`--resume` 시 어떻게 바뀌는지 | §7 보조 세션 ID | 1단계 |
-| avdslim 명령(설치 후) — 켜진 상태 필요 여부, 상태 조회, 해제 | §9 Android 슬림 | 1단계 |
-| simslim 0.8 → 0.11 변경점, 꺼진 기기의 슬림 상태 확인 방법 | M6 | 1단계 |
+| avdslim — 명령은 tap 의 README·소스로 확인함(`tune-avd <avd>`·`on <serial>`·`off <serial>`, **상태 조회 명령 없음**). 남은 것: 설치(`brew trust` 필요) 후 실제 동작과 슬림 확인 방법(예: `pm list packages -d` 를 `avdslim profiles` 와 비교) | §9 Android 슬림·M6 | 2단계 전 |
+| simslim 0.8 → 0.11 변경점. 0.8 에서 확인함: `on --preserve-boot-state` 로 꺼진 기기도 슬림화(잠시 켬), `verify` 는 켜진 기기만, `list --json` 의 `managedDisabled` 는 켜진 기기만 나온다 | M6 | 업데이트 시 |
 | ✅ 컴파일한 바이너리에 웹 UI·파일이 잘 들어가는지, 훅 경로 시작 시간 — **확인됨(0단계)**: `with { type: "file" }` 는 `/$bunfs/root/…` 경로로 들어가 `Bun.file` 로 읽히고, HTML import 는 TSX 까지 번들돼 `Bun.serve` 로 서빙된다(`--bytecode` 포함, 다른 폴더로 옮겨도 동작). 훅 경로 약 21ms | §2·§3·§13 | 0단계 |
-| launchd 로 띄운 서버가 `emulator`·`xcrun` 을 PATH·권한 문제 없이 실행하는지 | launchd 는 로그인 셸 환경을 안 받는다 | 1단계 |
+| launchd 로 띄운 서버가 `emulator`·`xcrun` 을 PATH·권한 문제 없이 실행하는지 — `corgi install` 을 실제로 등록해 확인해야 한다(사용자 확인 후) | launchd 는 로그인 셸 환경을 안 받는다 | 2단계 전 |
 | 에이전트별 MCP 서버의 부모가 에이전트 프로세스인지 (Claude Code 는 확인됨) | §7 | 5단계 |
 | argent 두 버전(homebrew 0.17.0 이 PATH 우선, mise 0.26.0) 정리 | 훅이 보는 argent 도구 인자가 버전마다 다를 수 있다 | 3단계 전 |
 | 다른 에이전트의 실행 직전 훅 지원 여부·설정 위치·입력 형식, 전역 규칙·스킬 위치 | §13 어댑터·P2·S9 | 3단계 전 |
@@ -374,7 +375,7 @@ corgi/
 
 **배포 쪽 — `scripts/release.ts`** (리모트가 생긴 뒤): 버전 올리기 → `bun run build` → 압축·체크섬 → `gh release create`. 나중에 GitHub Actions 로 옮길 수 있다.
 
-**1단계부터 지킬 것**: 버전은 semver 로 관리하고, 소켓 `hello` 에서 클라이언트·서버 버전을 비교해 다르면 알려 준다(업데이트 후 서버가 아직 옛 버전인 경우를 잡는다).
+**1단계부터 지킬 것**: 버전은 semver 로 관리하고, 요청·응답에 실린 클라이언트·서버 버전을 비교해 다르면 알려 준다(업데이트 후 서버가 아직 옛 버전인 경우를 잡는다) — 1단계에서 구현함.
 
 ## 설계 결정 기록
 
