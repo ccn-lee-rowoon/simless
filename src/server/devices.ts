@@ -111,6 +111,9 @@ export function registerDeviceMethods(server: CorgiServer): void {
     return devices;
   };
 
+  /** 작업 중에 바뀐 값(슬림 상태 등)을 반영한 최신 레지스트리 항목 */
+  const fresh = (devices: Device[]): Device[] => devices.map((d) => server.registry.get(d.id) ?? d);
+
   const applySlim = async (device: Device, progress: Progress): Promise<Device> => {
     server.registry.update(device.id, { slim: "applying", slimError: undefined });
     try {
@@ -274,10 +277,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
     });
     return {
       results,
-      devices: await server.deviceViews(
-        session,
-        devices.map((d) => server.registry.get(d.id) ?? d),
-      ),
+      devices: await server.deviceViews(session, fresh(devices)),
     };
   });
 
@@ -297,7 +297,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
       }
       progress(`켜짐: ${device.name}${state.targetId ? ` (${state.targetId})` : ""}`);
     });
-    return { results, devices: await server.deviceViews(session, devices) };
+    return { results, devices: await server.deviceViews(session, fresh(devices)) };
   });
 
   server.addMethod("device.down", async (p, session, connection) => {
@@ -312,7 +312,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
         await driver.shutdown(device, state);
       }
     });
-    return { results, devices: await server.deviceViews(session, devices) };
+    return { results, devices: await server.deviceViews(session, fresh(devices)) };
   });
 }
 

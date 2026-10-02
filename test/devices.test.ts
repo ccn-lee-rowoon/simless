@@ -110,3 +110,16 @@ describe("디바이스 명령", () => {
     expect(index.devices[0]).toMatchObject({ id: device.id, native: `corgi_${device.id}` });
   });
 });
+
+describe("슬림 재적용", () => {
+  test("켤 때 풀린 것을 찾으면 다시 적용하고, 결과에는 바뀐 상태가 나온다 (M6)", async () => {
+    const { A, server, driver } = await start();
+    const device = (await A("device.create", android360)) as DeviceView;
+    server.registry.update(device.id, { slim: "drifted" });
+    let checks = 0;
+    driver.checkSlim = async () => (checks++ === 0 ? "drifted" : "applied");
+    await A("lease.acquire", { devices: [device.id] });
+    const up: { devices: DeviceView[] } = await A("device.up");
+    expect(up.devices[0]?.slim).toBe("applied");
+  });
+});
