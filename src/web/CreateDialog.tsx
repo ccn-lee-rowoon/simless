@@ -184,10 +184,7 @@ export function CreateDialog({
         </form>
       ) : !picked ? (
         <div className="dialog-body">
-          <p className="subtle">
-            원본을 고르세요. 같은 크기로 복제하고 슬림화합니다 — 크기는 원본과 같고, 앱은 설치하지
-            않습니다.
-          </p>
+          <p className="subtle">만들 디바이스를 고르세요. 만든 뒤 슬림화합니다.</p>
           <div className="filters">
             {(["all", "android", "ios"] as const).map((f) => (
               <button

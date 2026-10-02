@@ -66,7 +66,7 @@ export function DevicesTab({
           디바이스가 없습니다.
         </p>
         <p className="subtle">
-          이 Mac 의 에뮬레이터·시뮬레이터를 원본으로 골라 같은 크기로 복제하고 슬림화합니다.
+          «+ 생성» 에서 iOS 시뮬레이터나 Android 프로필을 골라 만들 수 있습니다.
         </p>
         <button type="button" className="button button-primary" onClick={onCreate}>
           + 생성
