@@ -106,7 +106,7 @@ corgi/
 | `…/Corgi/update.json` | 마지막 확인 시각·최신 버전·알림 보낸 버전 | 서버 |
 | `~/Library/Logs/Corgi/` | 서버 로그 | 서버 |
 | `~/.local/share/corgi/versions/<버전>/corgi` · `~/.local/bin/corgi`(링크) | 설치된 버전들과 지금 쓰는 버전 (§19) | `corgi update` |
-| `~/.config/corgi/config.json` | 사용자 설정 — 크기 프리셋, 자동 해제 시간(기본 30분), HTTP 포트, 시스템 이미지, simslim 프로필 경로 | 사람·서버 |
+| `~/.config/corgi/config.json` | 사용자 설정 — 자동 해제 시간(기본 30분), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로 | 사람·서버 |
 | `~/.config/corgi/apps/<name>.json` | 앱별 설정 (Q8) | 사람 |
 | `~/.android/avd/corgi_<id>.avd` · `.ini` | Android 디바이스 본체 | 서버 |
 | CoreSimulator 기본 device set | iOS 디바이스 본체 | 서버(simctl) |
@@ -124,6 +124,7 @@ corgi/
 | `spec` | Android `widthDp·heightDp·density` (px 은 계산) · iOS `deviceType·runtime` + 프로필에서 읽은 `widthPt·heightPt·scale` |
 | `enabled` | 사용 안 함이면 `false` — 일괄 동작에서 빠진다 (R6) |
 | `slim` | `none`·`applying`·`applied`·`drifted`(풀림)·`failed` (M6) |
+| `source` | 복제한 원본 — `{ name, native }` (표시용, 원본이 지워져도 상관없다) |
 
 실행 중 값(켜짐 여부, Android 시리얼)은 저장하지 않고 서버가 들고 있다.
 
@@ -176,7 +177,7 @@ corgi/
 
 | 단계 | Android | iOS |
 | --- | --- | --- |
-| 생성 | `corgi_<id>.ini` + `.avd/config.ini` 직접 작성 (확인됨). `hw.lcd.width = widthDp × density ÷ 160` | `simctl create <이름> <종류> <런타임>` → UDID |
+| 생성 (원본 복제) | 원본 AVD 의 `config.ini` 에서 하드웨어 설정(`hw.*`·`image.sysdir.1`·`tag.*`·`abi.type` 등)만 복사해 `corgi_<id>.ini` + `.avd/config.ini` 를 쓴다. 사용자 데이터(`userdata*`·스냅샷)는 복사하지 않는다 → 같은 크기의 깨끗한 디바이스. 원본에 `hw.lcd.width/height/density` 가 없으면 원본 목록에서 뺀다 | 원본과 같은 기기 종류·런타임으로 `simctl create <이름> <종류> <런타임>` → UDID. `simctl clone` 은 원본의 앱·데이터가 따라오고 원본이 꺼져 있어야 해 쓰지 않는다 |
 | 슬림화 (R5) | `avdslim` — **명령 미확인**(미설치) | `simslim on <udid> --profile <공용 프로필>` |
 | 슬림 확인 (M6) | `avdslim` 상태 조회 (미확인) | `simslim verify <udid> --profile` — 켜진 기기만 가능 |
 | 켜기 | `emulator -avd corgi_<id> -port <빈 포트> -no-snapshot-save` 를 서버와 분리(detached)해 실행. `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
@@ -223,7 +224,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 - 요청 `{"v":1,"id":"r1","method":"lease.acquire","session":{…},"params":{…}}`
 - 응답 `{"id":"r1","ok":true,"result":{…}}` / `{"id":"r1","ok":false,"error":{"code":"BUSY","message":"…","holder":{…}}}`
 - 긴 작업(부팅·설치)은 응답 전에 `{"id":"r1","event":"progress","data":{…}}` 를 여러 번 보낸다.
-- 메서드: `status` · `catalog.list` · `device.create|list|rename|setEnabled|slim|unslim|delete|up|down` · `lease.acquire|release|who` · `app.install|launch` · `nav.open` · `hook.check`
+- 메서드: `status` · `source.list` · `device.create|list|rename|setEnabled|slim|delete|up|down` · `lease.acquire|release|who` · `hook.check`
 - 오류 코드: `BUSY` · `NOT_HELD` · `NOT_FOUND` · `INVALID` · `TOOL_MISSING`(avdslim 등 없음) · `FAILED` · (클라이언트 쪽) `SERVER_DOWN`
 
 **HTTP** — 웹 UI·메뉴바
@@ -242,9 +243,8 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | `corgi doctor [--fix]` | 서버·launchd·Android SDK·시스템 이미지·avdslim·Xcode·simslim·argent(여러 버전)·스킬 점검과 고치는 방법. `--fix` 는 launchd·스킬만 고친다. 훅 점검은 3단계 | S1·S2 |
 | `corgi install [--no-launchd] [--no-skill]` · `uninstall` | launchd 등록 + 스킬 설치 (§4) | S1 |
 | `corgi ui` | 웹 UI 를 브라우저로 연다 | R11 |
-| `corgi catalog [--platform]` | 만들 수 있는 목록 — 폭 먼저, «생성됨» 표시 | M1~M3 |
-| `corgi create android --width 360 [--height --density] [--name]` | 생성 + 슬림화(끄려면 `--no-slim`) | R1~R3·R5·M4 |
-| `corgi create ios --type "iPhone 17" [--runtime] [--name]` | 〃 | 〃 |
+| `corgi list --all [--platform]` | **전체 목록** — 이 Mac 의 모든 에뮬레이터·시뮬레이터(원본). 폭 먼저, Corgi 것·«생성됨» 표시 | M1~M3·M9 |
+| `corgi create <원본> [--name] [--no-slim]` | 원본(이름·UDID·AVD ID)과 같은 크기로 `corgi …` 복제본을 만들고 슬림화 | R1~R3·R5·M4 |
 | `corgi list` | 만든 디바이스 — 켜짐·슬림·점유 세션·사용 안 함·argent ID | M5 |
 | `corgi rename <dev> <name>` · `enable` · `disable` · `delete` | 관리 | M7·M8·R6 |
 | `corgi slim [<dev>…] [--off] [--check]` | 슬림 적용·해제·확인 | M6·M7 |
@@ -294,8 +294,8 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 
 ## 14. 웹 UI (M1~M8)
 
-- **메인 화면**: 디바이스 목록 — 한 줄에 `폭 · 이름 · 켜짐 · 슬림 상태 · 사용 중인 세션 · 사용 안 함`. 위에 «모두 켜기·끄기», «디바이스 추가». SSE 로 점유·상태 변화가 바로 반영된다.
-- **디바이스 추가** (M1~M4): Android/iOS 탭. 폭 기준으로 정렬된 목록, 보조로 해상도·밀도, «생성됨» 은 비활성. 고르면 이름 기본값 제안 → 생성 + 슬림화 진행 표시.
+- **메인 화면 — 두 탭** (M9): «생성됨»(Corgi 가 만든 것 — 한 줄에 `폭 · 이름 · 켜짐 · 슬림 상태 · 사용 중인 세션 · 사용 안 함`, 위에 «모두 켜기·끄기») · «전체 목록»(이 Mac 의 모든 에뮬레이터·시뮬레이터 — 폭 · 이름 · 플랫폼 · 켜짐, Corgi 것은 표시). 둘 다 SSE 로 바로 반영된다.
+- **생성(+)** (M1~M4): 이 Mac 의 원본 목록(Android/iOS, 폭 순, 보조로 해상도·밀도·런타임)이 나오고 «생성됨» 은 비활성. 하나 고르면 이름 기본값 `corgi <원본 이름>` 제안 → 복제 + 슬림화 진행 표시. 앱은 설치하지 않는다.
 - **행 메뉴** (M7·M8): 이름 변경 · 사용 안 함 · 슬림 해제/다시 적용 · 점유 강제 해제 · 삭제(확인 창, 다른 세션이 쓰는 중이면 막고 누가 쓰는지 표시, 켜져 있으면 끄고 지움).
 - **설정**: 자동 해제 시간, Android 시스템 이미지·RAM, simslim 프로필.
 - 나중에 **스크린샷 모아 보기**(R10)를 같은 화면에 탭으로 붙인다.
@@ -345,9 +345,6 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 
 | Q | 제안 |
 | --- | --- |
-| Q1 iOS 크기 | iPhone SE(3세대) 375pt · iPhone 17 402pt · iPhone 17 Pro Max · iPad mini — `catalog` 에서 고르게 하고 기본 묶음만 제안 |
-| Q2 Android | 폭 프리셋 320·360·411·600dp, 높이는 폭 × 2.1, 밀도 420(600 은 320·태블릿) — 1단계에서 실제로 켜 보고 조정 |
-| Q7 기존 디바이스 | 넣지 않는다 — 관리 대상은 Corgi 가 만든 것만(M5). 나중에 «가져오기» 로 |
 | Q9 묶어서 켜기 | `use`·`up` 은 플랫폼 구분 없이 지정한 것 전부. `--platform android` 로 좁힐 수 있게 |
 | Q16 훅 없는 에이전트 | 규칙 + CLI 의 BUSY 응답으로 보호. 훅을 지원하면 어댑터를 붙인다(§13) |
 
@@ -391,3 +388,4 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | **패키지 하나** (모노레포 아님) | 결과물이 실행 파일 하나다. 경계는 폴더와 import 규칙(§3)으로 지킨다 | workspaces 로 shared·server·cli·web 분리 (설정만 늘어남) |
 | **공용 호스트 아래에서는 터미널 탭(셸) 단위로 세션을 나눈다** (§7) | IDE·터미널 앱·tmux 는 여러 사람·에이전트 작업이 한 프로세스 아래 모인다. 호스트를 세션으로 보면 서로 다른 작업이 한 세션이 된다 | 호스트 프로세스를 세션으로 (전부 한 세션), 바로 위 셸을 세션으로 (에이전트가 명령마다 새 셸을 띄우면 매번 다른 세션) |
 | **업데이트 확인에 `gh` 인증을 그대로 쓴다** (§19) | 저장소가 프라이빗이라 인증이 필요한데, 토큰을 따로 받아 저장하면 관리할 비밀이 생긴다. 개발자 Mac 에는 `gh` 가 이미 로그인돼 있다 | Corgi 전용 토큰 저장 (비밀 관리 부담), 공개 저장소 (프라이빗 요구와 충돌) |
+| **원본 목록은 서버가 그때그때 읽는다** (M1·M9) | 원본은 Corgi 가 관리하지 않는다(Q7). Xcode·Android Studio 에서 바뀌어도 바로 맞도록 저장하지 않는다. Corgi 가 만든 것(`corgi_` AVD·레지스트리의 UDID)은 «전체 목록» 에 표시만 하고 원본 후보에서는 뺀다 | 원본도 레지스트리에 등록 (관리 대상이 아닌데 상태를 맞춰야 함) |
