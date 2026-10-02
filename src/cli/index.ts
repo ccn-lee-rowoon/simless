@@ -73,7 +73,9 @@ export async function runCli(argv: string[]): Promise<number> {
         }
         if (o.app) {
           const { installApp } = await import("./app-bundle.ts");
-          done.app = await installApp(ctx.paths);
+          const app = await installApp(ctx.paths, ctx.config);
+          done.app = app.menubar ? `${app.path} (메뉴바 앱)` : app.path;
+          if (app.warning) console.error(app.warning);
         }
         output(ctx, done, () =>
           Object.entries(done)

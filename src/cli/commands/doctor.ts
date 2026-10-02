@@ -269,7 +269,8 @@ export function registerDoctor(program: Command, run: Run) {
           const needs = new Set(checks.flatMap((c) => (c.autofix ? [c.autofix] : [])));
           if (needs.has("launchd")) await (await import("../launchd.ts")).install(ctx.paths);
           if (needs.has("skill")) await (await import("../skill.ts")).installSkill();
-          if (needs.has("app")) await (await import("../app-bundle.ts")).installApp(ctx.paths);
+          if (needs.has("app"))
+            await (await import("../app-bundle.ts")).installApp(ctx.paths, ctx.config);
           if (needs.size > 0) checks = await runChecks(ctx);
         }
         output(ctx, checks, () => render(checks));

@@ -15,3 +15,9 @@ declare module "*.icns" {
   const path: string;
   export default path;
 }
+
+// 메뉴바 앱 소스 — 설치 때 그 Mac 에서 컴파일한다
+declare module "*.swift" {
+  const path: string;
+  export default path;
+}
