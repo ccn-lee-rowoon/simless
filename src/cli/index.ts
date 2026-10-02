@@ -4,7 +4,7 @@ import { VERSION } from "../shared/version.ts";
 import { registerDevices } from "./commands/devices.ts";
 import { registerLease } from "./commands/lease.ts";
 import { registerStatus } from "./commands/status.ts";
-import { CliError, makeContext, type Run } from "./context.ts";
+import { CliError, makeContext, output, type Run } from "./context.ts";
 
 export async function runCli(argv: string[]): Promise<number> {
   let exitCode: number = ExitCode.ok;
@@ -49,6 +49,32 @@ export async function runCli(argv: string[]): Promise<number> {
       await serve();
       await new Promise(() => {}); // 신호를 받을 때까지 계속 돈다
     });
+
+  program
+    .command("install")
+    .description("서버를 launchd 에 등록한다 — 로그인 시 켜지고 죽으면 다시 살아난다")
+    .action(
+      run(async (ctx) => {
+        const { install } = await import("./launchd.ts");
+        await install(ctx.paths);
+        output(
+          ctx,
+          { installed: ctx.paths.launchAgent },
+          () => `등록했습니다: ${ctx.paths.launchAgent}`,
+        );
+      }),
+    );
+
+  program
+    .command("uninstall")
+    .description("launchd 등록을 지운다 — 만든 디바이스는 지우지 않는다")
+    .action(
+      run(async (ctx) => {
+        const { uninstall } = await import("./launchd.ts");
+        await uninstall(ctx.paths);
+        output(ctx, { uninstalled: ctx.paths.launchAgent }, () => "등록을 지웠습니다");
+      }),
+    );
 
   registerStatus(program, run);
   registerLease(program, run);

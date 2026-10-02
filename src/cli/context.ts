@@ -7,6 +7,7 @@ import type { SessionInfo } from "../shared/protocol.ts";
 import { detectSession } from "../shared/session.ts";
 import { VERSION } from "../shared/version.ts";
 import { formatHolder } from "./format.ts";
+import { kickstart } from "./launchd.ts";
 
 /** 메시지와 종료 코드를 가진 CLI 오류 — runCli 가 출력하고 끝낸다 */
 export class CliError extends Error {
@@ -53,8 +54,11 @@ export async function request<T>(
   onEvent?: (event: string, data: unknown) => void,
 ): Promise<T> {
   try {
-    const { result, serverVersion } = await call<T>(ctx.paths.socket, method, params, ctx.session, {
-      onEvent,
+    const send = () => call<T>(ctx.paths.socket, method, params, ctx.session, { onEvent });
+    // 서버가 꺼져 있으면 launchd 로 켜고 한 번 더 보낸다 (Q10)
+    const { result, serverVersion } = await send().catch(async (error: unknown) => {
+      if (error instanceof ServerDownError && (await kickstart(ctx.paths))) return send();
+      throw error;
     });
     if (serverVersion !== VERSION && !warnedVersion) {
       warnedVersion = true;
@@ -66,7 +70,7 @@ export async function request<T>(
   } catch (error) {
     if (error instanceof ServerDownError) {
       throw new CliError(
-        `${error.message}\n  서버 켜기: corgi serve`,
+        `${error.message}\n  서버 등록(로그인 시 자동 실행): corgi install · 한 번만 띄우기: corgi serve`,
         ExitCode.serverDown,
         "SERVER_DOWN",
       );
