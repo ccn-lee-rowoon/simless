@@ -123,7 +123,12 @@ export function DevicesTab({
                 </td>
                 <td>
                   <SlimBadge state={d.slim} error={d.slimError} />
-                  {d.slimStats && <SlimStatsText stats={d.slimStats} />}
+                  {d.slimStats && (
+                    <SlimStatsText
+                      stats={d.slimStats}
+                      baselineBytes={d.slimBaseline?.memoryBytes}
+                    />
+                  )}
                 </td>
                 <td>
                   {d.holder ? (

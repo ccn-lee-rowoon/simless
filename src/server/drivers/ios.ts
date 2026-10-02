@@ -39,6 +39,17 @@ interface ScreenProfile {
 const SLIM_TIMEOUT_MS = 15 * 60_000;
 const BOOT_TIMEOUT_MS = 10 * 60_000;
 
+const UNITS: Record<string, number> = { KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3 };
+
+export function parseSimslimMeasure(text: string): { memoryBytes?: number; processes?: number } {
+  const processes = /(\d+)\s+processes/.exec(text)?.[1];
+  const memory = /([\d.]+)\s*(KB|MB|GB)\s+memory/.exec(text);
+  return {
+    processes: processes ? Number(processes) : undefined,
+    memoryBytes: memory?.[1] && memory[2] ? Number(memory[1]) * (UNITS[memory[2]] ?? 1) : undefined,
+  };
+}
+
 export class IosDriver implements Driver {
   readonly platform = "ios" as const;
   private readonly profiles = new Map<string, ScreenProfile>();
@@ -227,6 +238,14 @@ export class IosDriver implements Driver {
   }
 
   /** simslim verify 는 켜진 기기만 볼 수 있다 */
+  /** `simslim measure` — «UDID: 89 processes, 1.51 GB memory footprint (phys_footprint)» */
+  async measure(device: Device): Promise<{ memoryBytes?: number; processes?: number }> {
+    const out = await runOk(this.runner, [this.simslim(), "measure", device.native], {
+      timeoutMs: 60_000,
+    });
+    return parseSimslimMeasure(out);
+  }
+
   async slimStats(
     devices: Device[],
     states: Map<string, RuntimeState>,

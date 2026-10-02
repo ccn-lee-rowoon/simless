@@ -20,7 +20,8 @@ export function tempEnv() {
   return {
     env,
     paths: resolvePaths(env),
-    config: Config.parse({}),
+    // 슬림 전 기준값을 잴 때 기다리지 않는다
+    config: Config.parse({ slimBaselineSettleSeconds: 0 }),
     cleanup: () => rmSync(dir, { recursive: true, force: true }),
   };
 }
@@ -99,6 +100,7 @@ export function fakeDriver(
     slim: async () => {},
     unslim: async () => {},
     checkSlim: async () => "applied",
+    measure: async () => ({ memoryBytes: 7.8 * 1024 ** 3, processes: 167 }),
     slimStats: async (devices) =>
       new Map(
         devices

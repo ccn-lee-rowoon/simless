@@ -517,6 +517,15 @@ export class AndroidDriver implements Driver {
     return counts.off / counts.relevant >= 0.5 ? "applied" : "drifted";
   }
 
+  /** `avdslim measure` 의 Activity Monitor 메모리 — 슬림 후 수치와 같은 기준 */
+  async measure(_device: Device, state: RuntimeState): Promise<{ memoryBytes?: number }> {
+    if (!state.targetId) throw new HandlerError("INVALID", "꺼져 있어 잴 수 없습니다");
+    const out = await runOk(this.runner, [this.avdslim(), "measure", state.targetId], {
+      timeoutMs: 60_000,
+    });
+    return { memoryBytes: parseFootprint(out) };
+  }
+
   async slimStats(
     devices: Device[],
     states: Map<string, RuntimeState>,

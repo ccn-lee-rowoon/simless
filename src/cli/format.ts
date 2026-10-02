@@ -1,4 +1,4 @@
-import type { DeviceView, HolderView } from "../shared/api.ts";
+import { type DeviceView, type HolderView, memoryChange } from "../shared/api.ts";
 
 /** 한글 등 넓은 글자는 터미널에서 두 칸을 쓴다 */
 function displayWidth(text: string): number {
@@ -62,7 +62,10 @@ export function devicesTable(devices: DeviceView[]): string {
       d.name,
       d.booted ? `켜짐 ${d.targetId ?? ""}`.trim() : "꺼짐",
       d.slimStats
-        ? `${d.slim} ${d.slimStats.disabled}/${d.slimStats.total}${d.slimStats.memoryBytes ? ` ${(d.slimStats.memoryBytes / 1024 ** 3).toFixed(1)}GB` : ""}`
+        ? `${d.slim} ${d.slimStats.disabled}/${d.slimStats.total} ${
+            memoryChange(d.slimBaseline?.memoryBytes, d.slimStats.memoryBytes) ??
+            (d.slimStats.memoryBytes ? `${(d.slimStats.memoryBytes / 1024 ** 3).toFixed(1)}GB` : "")
+          }`.trim()
         : d.slim,
       d.enabled ? "" : "사용 안 함",
       d.mine ? "나" : d.holder ? formatHolder(d.holder) : "",

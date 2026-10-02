@@ -230,3 +230,30 @@ describe("직접 입력", () => {
     });
   });
 });
+
+describe("슬림 전 기준값", () => {
+  test("만들 때 슬림 전에 켜서 재고, 끄고, 슬림한다", async () => {
+    const { A, driver } = await start();
+    const device = (await A("device.create", android360)) as DeviceView;
+    expect(device.slimBaseline).toMatchObject({ memoryBytes: 7.8 * 1024 ** 3, processes: 167 });
+    expect(device.slim).toBe("applied");
+    expect(driver.booted.has(device.id)).toBe(false); // 재고 나서 껐다
+  });
+
+  test("baseline: false 면 재지 않는다", async () => {
+    const { A } = await start();
+    const device = (await A("device.create", { ...android360, baseline: false })) as DeviceView;
+    expect(device.slimBaseline).toBeUndefined();
+  });
+
+  test("재다 실패해도 만들기는 이어 간다", async () => {
+    const { A, driver } = await start();
+    driver.measure = async () => {
+      throw new Error("측정 실패");
+    };
+    const device = (await A("device.create", android360)) as DeviceView;
+    expect(device).toMatchObject({ slim: "applied" });
+    expect(device.slimBaseline).toBeUndefined();
+    expect(driver.booted.has(device.id)).toBe(false);
+  });
+});

@@ -6,6 +6,8 @@ export const Config = z.object({
   /** 마지막 사용 후 이 시간이 지나고 기다리는 세션이 있으면 점유를 푼다 (R17) */
   idleReleaseMinutes: z.number().positive().default(30),
   httpPort: z.number().int().positive().default(8791),
+  /** 슬림 전 기준값을 잴 때 켜고 나서 기다리는 시간 — 백그라운드 서비스가 다 뜰 때까지 */
+  slimBaselineSettleSeconds: z.number().nonnegative().default(45),
   android: z
     .object({
       /** 비우면 ANDROID_HOME → ANDROID_SDK_ROOT → ~/Library/Android/sdk */

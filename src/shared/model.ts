@@ -43,6 +43,14 @@ export const Device = z.object({
   enabled: z.boolean(),
   slim: SlimState,
   slimError: z.string().optional(),
+  /** 슬림하기 전에 잰 기준값 — 슬림 후 메모리와 비교한다 (M6) */
+  slimBaseline: z
+    .object({
+      memoryBytes: z.number().optional(),
+      processes: z.number().optional(),
+      measuredAt: z.string(),
+    })
+    .optional(),
   /** 복제한 원본 — 표시용, 원본이 지워져도 상관없다 (M1) */
   source: z.object({ name: z.string(), native: z.string() }).optional(),
   createdAt: z.string(),

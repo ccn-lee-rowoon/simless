@@ -31,6 +31,7 @@ export function CreateDialog({
   const [query, setQuery] = useState("");
   const [name, setName] = useState("");
   const [slim, setSlim] = useState(true);
+  const [baseline, setBaseline] = useState(true);
   const [creating, setCreating] = useState(false);
   const [logStart, setLogStart] = useState(0);
 
@@ -40,6 +41,7 @@ export function CreateDialog({
     setCustom(false);
     setName(initial ? `corgi ${initial.name}` : "");
     setSlim(true);
+    setBaseline(true);
     setQuery("");
     setCreating(false);
   }, [open, initial]);
@@ -76,6 +78,7 @@ export function CreateDialog({
           : undefined,
         name: name.trim() || undefined,
         slim,
+        baseline: slim && baseline,
       });
       onCreated(device.name);
     } catch (error) {
@@ -165,6 +168,15 @@ export function CreateDialog({
               onChange={(e) => setSlim(e.target.checked)}
             />
             만든 뒤 슬림화 (UI 확인용 — 기본)
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={slim && baseline}
+              disabled={creating || !slim}
+              onChange={(e) => setBaseline(e.target.checked)}
+            />
+            슬림 전후 비교 — 슬림하기 전에 한 번 켜서 메모리를 재 둔다 (1~2분 더 걸림)
           </label>
           {creating && <Progress log={log} logStart={logStart} />}
           <footer className="dialog-footer">
@@ -271,6 +283,15 @@ export function CreateDialog({
             />
             만든 뒤 슬림화 (UI 확인용 — 기본)
             {picked.platform === "ios" ? " · iOS 는 2~3분 걸립니다" : ""}
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={slim && baseline}
+              disabled={creating || !slim}
+              onChange={(e) => setBaseline(e.target.checked)}
+            />
+            슬림 전후 비교 — 슬림하기 전에 한 번 켜서 메모리를 재 둔다 (1~2분 더 걸림)
           </label>
           {creating && <Progress log={log} logStart={logStart} />}
           <footer className="dialog-footer">

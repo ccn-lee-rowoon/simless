@@ -3,7 +3,7 @@ import type { DeviceOpResult, DeviceView, SourceEntry, SourceListResult } from "
 import { type Device, type DeviceSpec, layoutWidth, sizeLabel } from "../shared/model.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
 import type { CorgiServer } from "./app.ts";
-import type { Progress, SourceDevice } from "./drivers/types.ts";
+import type { Progress, RuntimeState, SourceDevice } from "./drivers/types.ts";
 import { type Connection, HandlerError } from "./socket.ts";
 
 // 디바이스 만들기·관리·켜기 (R1~R7, M1~M8). 메서드를 CorgiServer 에 붙인다.
@@ -23,6 +23,8 @@ const CreateParams = z
       .optional(),
     name: z.string().min(1).optional(),
     slim: z.boolean().default(true),
+    /** 슬림하기 전에 한 번 켜서 기준 메모리를 잰다 — 슬림 후와 비교한다 (1~2분 더 걸림) */
+    baseline: z.boolean().default(true),
   })
   .refine(
     (p) => (p.source === undefined) !== (p.custom === undefined),
@@ -128,6 +130,38 @@ export function registerDeviceMethods(server: CorgiServer): void {
     } catch (error) {
       return server.registry.update(device.id, { slim: "failed", slimError: message(error) });
     }
+  };
+
+  /** 슬림 전 기준값 — 켜고, 안정될 때까지 기다리고, 재고, 끈다. 실패해도 만들기는 이어 간다 */
+  const measureBaseline = async (device: Device, progress: Progress): Promise<Device> => {
+    const driver = server.driver(device.spec.platform);
+    let state: RuntimeState | undefined;
+    try {
+      progress(`슬림 전 기준값 측정 — 켜는 중: ${device.name}`);
+      state = await driver.boot(device, progress);
+      const settle = server.config.slimBaselineSettleSeconds;
+      if (settle > 0) {
+        progress(`백그라운드 서비스가 다 뜰 때까지 ${settle}초 기다립니다`);
+        await Bun.sleep(settle * 1000);
+      }
+      const measured = await driver.measure(device, state);
+      const gb = measured.memoryBytes
+        ? `${(measured.memoryBytes / 1024 ** 3).toFixed(1)}GB`
+        : "알 수 없음";
+      progress(
+        `기준값: 메모리 ${gb}${measured.processes ? ` · 프로세스 ${measured.processes}` : ""}`,
+      );
+      device = server.registry.update(device.id, {
+        slimBaseline: { ...measured, measuredAt: new Date().toISOString() },
+      });
+    } catch (error) {
+      progress(`기준값 측정 실패 — 건너뜁니다: ${message(error).split("\n")[0]}`);
+    }
+    if (state?.booted) {
+      progress(`끄는 중: ${device.name}`);
+      await driver.shutdown(device, state).catch(() => {});
+    }
+    return device;
   };
 
   const view = async (session: SessionInfo, device: Device): Promise<DeviceView> => {
@@ -266,6 +300,8 @@ export function registerDeviceMethods(server: CorgiServer): void {
       createdAt: new Date().toISOString(),
     };
     server.registry.add(device);
+    if (params.slim && params.baseline)
+      device = await withLock(id, () => measureBaseline(device, progress));
     if (params.slim) device = await withLock(id, () => applySlim(device, progress));
     return view(session, device);
   });

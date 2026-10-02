@@ -98,6 +98,7 @@ export function registerDevices(program: Command, run: Run) {
     .option("--image <이미지>", "직접 입력(Android) — 시스템 이미지 (기본: 권장 이미지)")
     .option("--name <이름>", "표시 이름 (기본: corgi <원본 이름>)")
     .option("--no-slim", "슬림화하지 않는다")
+    .option("--no-baseline", "슬림 전 기준값(메모리)을 재지 않는다 — 1~2분 빨라진다")
     .action(
       run(
         async (
@@ -110,6 +111,7 @@ export function registerDevices(program: Command, run: Run) {
             image?: string;
             name?: string;
             slim: boolean;
+            baseline: boolean;
           },
         ) => {
           const custom = o.width || o.height || o.density;
@@ -142,6 +144,7 @@ export function registerDevices(program: Command, run: Run) {
               : undefined,
             name: o.name,
             slim: o.slim,
+            baseline: o.baseline,
           });
           output(ctx, device, () => devicesTable([device]));
         },

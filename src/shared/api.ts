@@ -91,3 +91,11 @@ export interface DeviceOpResult {
   ok: boolean;
   error?: string;
 }
+
+/** 슬림 전후 메모리 비교 — «7.8GB → 1.6GB (−79%)». 둘 중 하나라도 없으면 undefined */
+export function memoryChange(before?: number, after?: number): string | undefined {
+  if (!before || !after) return undefined;
+  const gb = (bytes: number) => `${(bytes / 1024 ** 3).toFixed(1)}GB`;
+  const percent = Math.round(((after - before) / before) * 100);
+  return `${gb(before)} → ${gb(after)} (${percent <= 0 ? "−" : "+"}${Math.abs(percent)}%)`;
+}

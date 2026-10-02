@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef } from "react";
-import type { HolderView, SlimStats } from "../shared/api.ts";
+import { type HolderView, memoryChange, type SlimStats } from "../shared/api.ts";
 
 export function Badge({
   tone = "neutral",
@@ -88,8 +88,20 @@ export function gigabytes(bytes: number): string {
 }
 
 /** 얼마나 슬림화됐는지 — 꺼진 항목 수와 지금 메모리 (켜진 디바이스만) */
-export function SlimStatsText({ stats }: { stats: SlimStats }) {
-  const memory = stats.memoryBytes ? ` · ${gigabytes(stats.memoryBytes)}` : "";
+export function SlimStatsText({
+  stats,
+  baselineBytes,
+}: {
+  stats: SlimStats;
+  baselineBytes?: number;
+}) {
+  // 슬림 전 기준값이 있으면 «7.8GB → 1.6GB (−79%)», 없으면 지금 값만
+  const change = memoryChange(baselineBytes, stats.memoryBytes);
+  const memory = change
+    ? ` · ${change}`
+    : stats.memoryBytes
+      ? ` · ${gigabytes(stats.memoryBytes)}`
+      : "";
   const title = [
     `꺼진 ${stats.unit} ${stats.disabled}/${stats.total}`,
     stats.memoryBytes

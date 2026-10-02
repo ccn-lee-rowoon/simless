@@ -134,6 +134,10 @@ export class CorgiServer {
     this.leases.sweepIdle();
   }
 
+  get config(): Config {
+    return this.deps.config;
+  }
+
   driverOrUndefined(platform: Device["spec"]["platform"]): Driver | undefined {
     return this.deps.drivers.find((d) => d.platform === platform);
   }
