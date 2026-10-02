@@ -11,6 +11,43 @@ struct DeviceRow {
   let holder: String?
 }
 
+/// 웰시코기 얼굴 실루엣 — 바깥으로 벌어진 큰 귀, 아래로 좁아지는 주둥이, 뚫린 눈·코
+func corgiTemplate(size: CGFloat) -> NSImage {
+  let image = NSImage(size: NSSize(width: size, height: size), flipped: true) { rect in
+    let s = rect.width / 18
+    func p(_ x: CGFloat, _ y: CGFloat) -> NSPoint { NSPoint(x: x * s, y: y * s) }
+    NSColor.black.setFill()
+    NSColor.black.setStroke()
+    func triangle(_ a: NSPoint, _ b: NSPoint, _ c: NSPoint, round: CGFloat) {
+      let path = NSBezierPath()
+      path.move(to: a); path.line(to: b); path.line(to: c); path.close()
+      path.lineJoinStyle = .round
+      path.lineWidth = round * s
+      path.fill(); path.stroke()
+    }
+    // 귀 — 머리보다 크고 바깥으로 벌어진, 끝이 둥근 세모
+    triangle(p(3.0, 8.2), p(2.3, 0.9), p(8.2, 5.6), round: 1.8)
+    triangle(p(15.0, 8.2), p(15.7, 0.9), p(9.8, 5.6), round: 1.8)
+    // 얼굴 — 볼은 넓고 아래로 갈수록 주둥이처럼 좁아진다 (고양이와 다른 점)
+    let face = NSBezierPath()
+    face.move(to: p(2.4, 10.4))
+    face.curve(to: p(9, 5.0), controlPoint1: p(2.4, 6.6), controlPoint2: p(5.6, 5.0))
+    face.curve(to: p(15.6, 10.4), controlPoint1: p(12.4, 5.0), controlPoint2: p(15.6, 6.6))
+    face.curve(to: p(9, 17.2), controlPoint1: p(15.6, 13.4), controlPoint2: p(12.0, 17.2))
+    face.curve(to: p(2.4, 10.4), controlPoint1: p(6.0, 17.2), controlPoint2: p(2.4, 13.4))
+    face.close()
+    face.fill()
+    // 눈·코는 뚫는다 — 템플릿이라 뚫린 곳이 메뉴바 색으로 보인다
+    NSGraphicsContext.current?.compositingOperation = .destinationOut
+    NSBezierPath(ovalIn: NSRect(x: 5.1 * s, y: 8.9 * s, width: 2.1 * s, height: 2.3 * s)).fill()
+    NSBezierPath(ovalIn: NSRect(x: 10.8 * s, y: 8.9 * s, width: 2.1 * s, height: 2.3 * s)).fill()
+    NSBezierPath(ovalIn: NSRect(x: 7.6 * s, y: 13.0 * s, width: 2.8 * s, height: 1.9 * s)).fill()
+    return true
+  }
+  image.isTemplate = true
+  return image
+}
+
 final class TrayController: NSObject, NSMenuDelegate {
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let menu = NSMenu()
@@ -34,12 +71,9 @@ final class TrayController: NSObject, NSMenuDelegate {
     refresh()
   }
 
-  /// 앱 아이콘(웰시코기)을 메뉴바 크기로
-  private static func icon() -> NSImage? {
-    guard let path = Bundle.main.path(forResource: "Corgi", ofType: "icns"),
-          let image = NSImage(contentsOfFile: path) else { return nil }
-    image.size = NSSize(width: 18, height: 18)
-    return image
+  /// 메뉴바 아이콘 — 다른 메뉴바 아이콘처럼 단색(템플릿). macOS 가 메뉴바 색에 맞춰 칠한다
+  private static func icon() -> NSImage {
+    corgiTemplate(size: 18)
   }
 
   private func token() -> String? {
