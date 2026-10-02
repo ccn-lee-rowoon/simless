@@ -1,4 +1,4 @@
-# 인계 — 크기별 디바이스 레이아웃 확인 도구
+# 인계 — Corgi (크기별 디바이스 레이아웃 확인 도구)
 
 > 2026-10-01~02, xb3-client(NOVA) 세션에서 정리한 내용. 이 폴더에서 새 세션을 시작할 때 **이 파일과 `requirements.md` 를 먼저 읽는다.**
 
@@ -90,7 +90,7 @@
 
 ## 새 세션 시작 프롬프트
 
-이 폴더(또는 옮긴 새 프로젝트 폴더)에서:
+`~/Projects/ccn-lee-rowoon/corgi` 에서:
 
 ```
 HANDOFF.md 와 requirements.md(맨 아래 «결정 기록» 포함)를 먼저 읽어줘. reference-design-draft.md 는 확정 아닌 참고용이야.
