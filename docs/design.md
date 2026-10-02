@@ -178,6 +178,7 @@ corgi/
 | 단계 | Android | iOS |
 | --- | --- | --- |
 | 생성 (원본 복제) | 원본 AVD 의 `config.ini` 에서 하드웨어 설정(`hw.*`·`image.sysdir.1`·`tag.*`·`abi.type` 등)만 복사해 `corgi_<id>.ini` + `.avd/config.ini` 를 쓴다. 사용자 데이터(`userdata*`·스냅샷)는 복사하지 않는다 → 같은 크기의 깨끗한 디바이스. 원본에 `hw.lcd.width/height/density` 가 없으면 원본 목록에서 뺀다 | 원본과 같은 기기 종류·런타임으로 `simctl create <이름> <종류> <런타임>` → UDID. `simctl clone` 은 원본의 앱·데이터가 따라오고 원본이 꺼져 있어야 해 쓰지 않는다 |
+| 생성 (대표 프로필·직접 입력, Android 만) | 크기(`hw.lcd.width/height/density`)와 시스템 이미지(기본: 설치된 것 중 4KB 페이지·API 높은 순)로 `config.ini` 를 새로 쓴다. 대표 프로필은 Android Studio 의 기기 정의를 본떠 코드에 넣어 둔다(`src/server/drivers/android-profiles.ts`) | (iOS 는 기기 종류가 크기를 정해 해당 없음) |
 | 슬림화 (R5) | `avdslim` — **명령 미확인**(미설치) | `simslim on <udid> --profile <공용 프로필>` |
 | 슬림 확인 (M6) | `avdslim` 상태 조회 (미확인) | `simslim verify <udid> --profile` — 켜진 기기만 가능 |
 | 켜기 | `emulator -avd corgi_<id> -port <빈 포트> -no-snapshot-save` 를 서버와 분리(detached)해 실행. `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
