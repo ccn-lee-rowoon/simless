@@ -6,7 +6,7 @@ export async function main(argv: string[]): Promise<number> {
 
   if (command === "hook") {
     const { runHook } = await import("./hook/index.ts");
-    return runHook(rest[0], Bun.stdin);
+    return runHook(rest[0], rest[1], Bun.stdin);
   }
 
   const { runCli } = await import("./cli/index.ts");
