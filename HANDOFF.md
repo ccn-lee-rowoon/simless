@@ -18,6 +18,7 @@
 - 설계안 v0.2 작성(`docs/design.md`)
 - **0단계(저장소 뼈대) 완료** — `bun link` 로 `corgi` 등록됨(`~/.bun/bin/corgi` → 이 저장소). 다음은 1단계(서버 + CLI 코어), 세션 구분은 에이전트 무관(프로세스 트리) — 에이전트별 실측 항목은 `docs/design.md` §17
 - **1단계(서버 + CLI 코어) 완료** — `corgi serve`·`install`·`status`·`catalog`·`create`·`list`·`use`·`up`·`down`·`acquire`·`release`·`who` 등. 실제 Android·iOS 디바이스로 만들기·켜기·점유를 확인하고 시험 디바이스는 지웠다. 남은 확인(에이전트별 프로세스 트리)은 `docs/design.md` §17
+- **2단계(doctor + 스킬) 완료** — 앱 설치·실행·딥링크는 argent 로 하기로 하고 Corgi 일괄 기능은 «나중에»(L1~L3). 스킬은 `~/.claude/skills/corgi` 에 설치됨. 남은 확인: NOVA 로 «코기로 확인해 줘» 처음부터 끝까지
 - 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI(메뉴바는 나중에 선택), 단일 실행 파일 배포(개발은 `bun link`), `Corgi.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
 - 범용 도구 → NOVA 레포(xb3-client)와 분리해 별도 프로젝트로 만든다
 
@@ -74,6 +75,8 @@
 | brew tap · avdslim | `kdbhalala/avdslim` tap + avdslim 1.0.15 설치됨 | Corgi 가 쓰므로 유지 |
 | Corgi launchd 등록 | `~/Library/LaunchAgents/corgi.server.plist` (개발 모드: bun + 이 저장소의 `bin/corgi.ts`) | Corgi 를 쓰는 동안 유지. 지우려면 `corgi uninstall` |
 | `corgi` 명령 | `~/.bun/bin/corgi` → 이 저장소 (`bun link`) | 유지 |
+| Corgi 스킬 | `~/.claude/skills/corgi/SKILL.md` (`corgi install` 이 씀) | 유지. 스킬을 고치면 `corgi install --no-launchd` 로 다시 설치 |
+| avdslim | brew 1.0.15 | 유지 |
 | 기존 `Pixel_6a` AVD·기존 iOS 시뮬레이터 | 건드리지 않음 | — |
 | NOVA alpha APK | 위 3대 AVD 에 설치됨 | AVD 삭제 시 함께 사라짐 |
 

@@ -239,8 +239,8 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | 명령 | 하는 일 | 요구사항 |
 | --- | --- | --- |
 | `corgi status` | 서버 연결, 디바이스, 점유·대기 한눈에 | S2·R13 |
-| `corgi doctor [--fix]` | Android SDK·Xcode·avdslim·simslim·서버·훅·스킬 점검과 고치는 방법 | S1·S2 |
-| `corgi install` · `uninstall` | §4 | S1 |
+| `corgi doctor [--fix]` | 서버·launchd·Android SDK·시스템 이미지·avdslim·Xcode·simslim·argent(여러 버전)·스킬 점검과 고치는 방법. `--fix` 는 launchd·스킬만 고친다. 훅 점검은 3단계 | S1·S2 |
+| `corgi install [--no-launchd] [--no-skill]` · `uninstall` | launchd 등록 + 스킬 설치 (§4) | S1 |
 | `corgi ui` | 웹 UI 를 브라우저로 연다 | R11 |
 | `corgi catalog [--platform]` | 만들 수 있는 목록 — 폭 먼저, «생성됨» 표시 | M1~M3 |
 | `corgi create android --width 360 [--height --density] [--name]` | 생성 + 슬림화(끄려면 `--no-slim`) | R1~R3·R5·M4 |
@@ -319,7 +319,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | --- | --- | --- |
 | 0 ✅ | 저장소 뼈대 — `package.json`·`tsconfig`·Biome·`mise.toml`, `bin/corgi.ts`·`main.ts` 서브커맨드 틀, `scripts/build.ts`, 검사 통과. **컴파일한 바이너리에서 파일 포함·훅 시작 시간 확인** | `bun link` 와 `dist/corgi` 양쪽에서 `corgi --version` 이 돈다 |
 | 1 ✅ | 서버 + CLI 코어 — 레지스트리, Android·iOS 드라이버(생성·목록·이름·사용 안 함·삭제·켜기·끄기·슬림), 점유·대기·자동 해제, 소켓, launchd, `protocol.md`. **실제 디바이스로 확인**: iOS 생성+슬림 2분 22초, Android·iOS 동시 켜기 29초. 남은 확인은 §17 | CLI 로 크기별 디바이스를 만들고 점유해서 켠다 |
-| 2 | `doctor` + 스킬 — 설치·연결 점검(S1·S2), 스킬 초안(S3~S8 — 앱 설치·실행·화면 이동은 argent 로 안내) | «코기로 확인해 줘» 로 주 흐름(R15)이 돈다 |
+| 2 ✅ | `doctor` + 스킬 — 설치·연결 점검(S1·S2), 스킬(S3~S8 — 앱 설치·실행·화면 이동은 argent 로 안내), `corgi install` 이 스킬도 설치. **남은 확인**: 실제 앱(NOVA)으로 «코기로 확인해 줘» 흐름을 처음부터 끝까지 돌려 보기 | «코기로 확인해 줘» 로 주 흐름(R15)이 돈다 |
 | 3 | 보호 — 훅, argent 규칙, 서버 꺼짐 처리, `corgi install` 완성 | 다른 세션이 남의 디바이스를 못 건드린다 |
 | 4 | 웹 UI (M1~M8) + HTTP API·SSE | 사람이 브라우저로 전부 관리한다 |
 | 5 | MCP 래퍼 | 에이전트가 사용법 없이 바로 쓴다 |
