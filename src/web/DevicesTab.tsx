@@ -111,9 +111,12 @@ export function DevicesTab({
                 </td>
                 <td>
                   {d.booted ? (
-                    <span className="state-on">
-                      켜짐 <span className="subtle mono">{d.targetId}</span>
-                    </span>
+                    <div>
+                      <span className="state-on">켜짐</span>
+                      <div className="subtle mono target" title={d.targetId}>
+                        {d.targetId}
+                      </div>
+                    </div>
                   ) : (
                     <span className="subtle">꺼짐</span>
                   )}

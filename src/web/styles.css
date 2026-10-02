@@ -730,3 +730,16 @@ p {
 .picker-name .badge {
   margin-right: 6px;
 }
+
+/* argent ID — 길면(iOS UDID) 앞부분만, 전체는 마우스를 올리면 보인다 */
+.target {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.holder,
+.table td > .subtle {
+  white-space: nowrap;
+}
