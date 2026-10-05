@@ -1,4 +1,4 @@
-/* simless 화면 — 단정한 개발 도구 (M12). 라이트는 그래파이트 + 파랑, 다크는 잉크 + 민트. */
+/* simless 화면 — 단정한 개발 도구 (M12). 강조색은 #2951DA 하나 — 라이트는 그래파이트, 다크는 잉크 바탕. */
 
 :root {
   color-scheme: light;
@@ -9,9 +9,9 @@
   --border-soft: #eef0f3;
   --text: #15171c;
   --muted: #586070;
-  --accent: #2563eb;
-  --accent-text: #1d4ed8;
-  --accent-soft: #eaf1fe;
+  --accent: #2951da;
+  --accent-text: #2148c8;
+  --accent-soft: #e8edfc;
   --on-accent: #ffffff;
   --chip: #f0f2f5;
   --chip-text: #2b303a;
@@ -41,10 +41,11 @@
     --border-soft: #20252c;
     --text: #e7e9ed;
     --muted: #9aa3af;
-    --accent: #3dd6a3;
-    --accent-text: #5eeac0;
-    --accent-soft: #12352b;
-    --on-accent: #0e1014;
+    --accent: #2951da;
+    /* 어두운 바탕에서 읽히게 글자만 같은 계열의 밝은 색 */
+    --accent-text: #8aa4f5;
+    --accent-soft: #172347;
+    --on-accent: #ffffff;
     --chip: #232830;
     --chip-text: #d0d4da;
     --track: #1c2027;
