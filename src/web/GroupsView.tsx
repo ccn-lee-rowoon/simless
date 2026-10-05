@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { DeviceView, StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
@@ -25,7 +25,6 @@ export function GroupsView({ status, act }: { status: StatusResult; act: Act }) 
       {status.groups.length === 0 ? (
         <div className="empty">
           <p>{t("web.groups.empty")}</p>
-          <p className="sub">{t("web.groups.emptyHint")}</p>
         </div>
       ) : (
         <div className="group-list">
@@ -143,6 +142,7 @@ function GroupDialog({
   const [description, setDescription] = useState("");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
+  const [platform, setPlatform] = useState<"all" | "android" | "ios">("all");
   // 열 때 고른 것 — 고를 때마다 순서가 바뀌면 헷갈려서 정렬은 이걸로만 한다
   const [openedWith, setOpenedWith] = useState<Set<string>>(new Set());
 
@@ -153,21 +153,24 @@ function GroupDialog({
     setPicked(new Set(group === "new" ? [] : group.deviceIds));
     setOpenedWith(new Set(group === "new" ? [] : group.deviceIds));
     setQuery("");
+    setPlatform("all");
   }, [group]);
 
   // 고른 것·켜진 것·Corgi 가 만든 것을 위로
   const sorted = useMemo(() => {
     const q = query.trim().toLowerCase();
     return devices
+      .filter((d) => platform === "all" || d.platform === platform)
       .filter((d) => q === "" || `${d.name} ${d.memo ?? ""}`.toLowerCase().includes(q))
       .sort(
         (a, b) =>
+          a.platform.localeCompare(b.platform) ||
           Number(openedWith.has(b.id)) - Number(openedWith.has(a.id)) ||
           Number(b.createdByCorgi || b.booted) - Number(a.createdByCorgi || a.booted) ||
           a.platform.localeCompare(b.platform) ||
           a.layoutWidth - b.layoutWidth,
       );
-  }, [devices, query, openedWith]);
+  }, [devices, query, openedWith, platform]);
 
   return (
     <Dialog
@@ -202,36 +205,62 @@ function GroupDialog({
         </label>
         <div className="field">
           <span>{t("web.groups.devices", { count: picked.size })}</span>
-          <input
-            type="search"
-            className="search"
-            placeholder={t("web.search")}
-            aria-label={t("web.search")}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <ul className="check-list device-picker">
-            {sorted.map((d) => (
-              <li key={d.id}>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={picked.has(d.id)}
-                    onChange={(e) => {
-                      const next = new Set(picked);
-                      if (e.target.checked) next.add(d.id);
-                      else next.delete(d.id);
-                      setPicked(next);
-                    }}
-                  />
-                  <span className="mono picker-width">{widthText(d)}</span>
-                  <span className="strong">{d.name}</span>
-                  <span className="sub">
-                    {d.platform === "android" ? "Android" : "iOS"} · {osText(d)}
-                    {d.memo ? ` · ${d.memo}` : ""}
+          <div className="picker-toolbar">
+            <div className="segmented" role="tablist" aria-label={t("web.platform")}>
+              {(["all", "android", "ios"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  role="tab"
+                  aria-selected={platform === p}
+                  className={platform === p ? "segment segment-active" : "segment"}
+                  onClick={() => setPlatform(p)}
+                >
+                  {p === "all" ? "All" : p === "android" ? "Android" : "iOS"}{" "}
+                  <span className="mono count">
+                    {p === "all" ? devices.length : devices.filter((d) => d.platform === p).length}
                   </span>
-                </label>
-              </li>
+                </button>
+              ))}
+            </div>
+            <input
+              type="search"
+              className="search"
+              placeholder={t("web.search")}
+              aria-label={t("web.search")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          <ul className="check-list device-picker">
+            {sorted.map((d, i) => (
+              <Fragment key={d.id}>
+                {platform === "all" && d.platform !== sorted[i - 1]?.platform && (
+                  <li key={`h-${d.platform}`} className="picker-heading">
+                    {d.platform === "android" ? "Android" : "iOS"}
+                  </li>
+                )}
+                <li key={d.id}>
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      checked={picked.has(d.id)}
+                      onChange={(e) => {
+                        const next = new Set(picked);
+                        if (e.target.checked) next.add(d.id);
+                        else next.delete(d.id);
+                        setPicked(next);
+                      }}
+                    />
+                    <span className="mono picker-width">{widthText(d)}</span>
+                    <span className="strong">{d.name}</span>
+                    <span className="sub">
+                      {osText(d)}
+                      {d.memo ? ` · ${d.memo}` : ""}
+                    </span>
+                  </label>
+                </li>
+              </Fragment>
             ))}
           </ul>
         </div>

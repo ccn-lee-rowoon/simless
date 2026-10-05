@@ -247,18 +247,24 @@ export function DevicesView({
                 </MenuItem>
               </>
             )}
-            {d.createdByCorgi && (
-              <>
-                <MenuSeparator />
-                <MenuItem
-                  danger
-                  disabled={lockedByOther || d.default}
-                  title={d.default ? t("web.device.defaultCantDelete") : undefined}
-                  onClick={() => setDeleting(d)}
-                >
-                  {t("web.device.delete")}
-                </MenuItem>
-              </>
+            <MenuSeparator />
+            {d.createdByCorgi ? (
+              <MenuItem
+                danger
+                disabled={lockedByOther || d.default}
+                title={d.default ? t("web.device.defaultCantDelete") : undefined}
+                onClick={() => setDeleting(d)}
+              >
+                {t("web.device.delete")}
+              </MenuItem>
+            ) : (
+              <MenuItem
+                onClick={() =>
+                  run(d, t("web.device.unlist"), () => call("device.unlist", { device: d.id }))
+                }
+              >
+                {t("web.device.unlist")}
+              </MenuItem>
             )}
           </Menu>
         </td>

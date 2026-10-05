@@ -6,17 +6,35 @@ import { ApiError, call, subscribe, token } from "./api.ts";
 import { CreateDialog } from "./CreateDialog.tsx";
 import { DevicesView } from "./DevicesView.tsx";
 import { GroupsView } from "./GroupsView.tsx";
+import { SessionsView } from "./SessionsView.tsx";
 import { SettingsView } from "./SettingsView.tsx";
 import type { Act, LogLine } from "./types.ts";
 import { Logo, useMenuDismiss } from "./ui.tsx";
 
-type View = "devices" | "groups" | "settings";
+type View = "devices" | "groups" | "sessions";
+
+/** 설정은 새 창으로 연다 (M11) — 주소에 ?window=settings 면 설정만 그린다 */
+const SETTINGS_WINDOW = new URLSearchParams(location.search).get("window") === "settings";
+
+/** 설정 창 열기 — 앱(Corgi.app)이면 Swift 에 알려 별도 창, 브라우저면 새 창 */
+function openSettings(): void {
+  const bridge = (
+    window as unknown as {
+      webkit?: { messageHandlers?: { corgi?: { postMessage: (message: unknown) => void } } };
+    }
+  ).webkit?.messageHandlers?.corgi;
+  if (bridge) {
+    bridge.postMessage({ open: "settings" });
+    return;
+  }
+  window.open("/?window=settings", "corgi-settings", "width=760,height=720");
+}
 const VIEW_KEY = "corgi-view";
 
 function savedView(): View {
   try {
     const value = localStorage.getItem(VIEW_KEY);
-    return value === "groups" || value === "settings" ? value : "devices";
+    return value === "groups" || value === "sessions" ? value : "devices";
   } catch {
     return "devices";
   }
@@ -132,53 +150,95 @@ function App() {
     );
   }
 
-  const tabs: { id: View; label: string }[] = [
-    { id: "devices", label: t("web.nav.devices") },
-    { id: "groups", label: t("web.nav.groups") },
-    { id: "settings", label: t("web.nav.settings") },
+  if (SETTINGS_WINDOW) {
+    return (
+      <div className="settings-window">
+        <h1 className="page-title">{t("web.settings.title")}</h1>
+        {status ? (
+          <SettingsView status={status} act={act} onSaved={refreshStatus} />
+        ) : (
+          <p className="sub">{t("web.loading")}</p>
+        )}
+        <Notices notices={notices} />
+      </div>
+    );
+  }
+
+  const nav: { id: View; label: string; count?: number }[] = [
+    { id: "devices", label: t("web.nav.devices"), count: status?.devices.length },
+    { id: "groups", label: t("web.nav.groups"), count: status?.groups.length },
+    { id: "sessions", label: t("web.nav.sessions"), count: status?.sessions.length },
   ];
+  const title = nav.find((n) => n.id === view)?.label ?? "";
 
   return (
     <div className="app">
-      <header className="topbar">
+      <aside className="sidebar">
         <div className="brand">
           <Logo />
           <span>Corgi</span>
         </div>
-        <nav className="nav" aria-label={t("web.nav")}>
-          {tabs.map((tab) => (
+        <nav className="side-nav" aria-label={t("web.nav")}>
+          {nav.map((item) => (
             <button
-              key={tab.id}
+              key={item.id}
               type="button"
-              className={view === tab.id ? "nav-item nav-item-active" : "nav-item"}
-              aria-current={view === tab.id ? "page" : undefined}
-              onClick={() => setView(tab.id)}
+              className={view === item.id ? "side-item side-item-active" : "side-item"}
+              aria-current={view === item.id ? "page" : undefined}
+              onClick={() => setView(item.id)}
             >
-              {tab.label}
-              {tab.id === "groups" && status && status.groups.length > 0 && (
-                <span className="mono count">{status.groups.length}</span>
+              <span>{item.label}</span>
+              {item.count !== undefined && item.count > 0 && (
+                <span className="mono count">{item.count}</span>
               )}
             </button>
           ))}
         </nav>
         <span className="spacer" />
-        <span className="server-state">
+        <button type="button" className="side-item" onClick={openSettings}>
+          <span>{t("web.nav.settings")}</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path
+              d="M4.5 2.5h5v5M9.5 2.5L3 9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+        <div className="server-state">
           <span className={online ? "dot dot-on" : "dot dot-bad"} />
           {status && online
             ? t("web.server.connected", { version: status.serverVersion })
             : online
               ? t("web.loading")
               : t("web.server.offline")}
-        </span>
-        <button type="button" className="button button-primary" onClick={() => setCreating(true)}>
-          <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
-            <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          {t("web.create")}
-        </button>
-      </header>
+        </div>
+      </aside>
 
       <main className="content">
+        <header className="page-header">
+          <h1 className="page-title">{title}</h1>
+          <span className="spacer" />
+          {view === "devices" && (
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => setCreating(true)}
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
+                <path
+                  d="M7 2v10M2 7h10"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+              {t("web.create")}
+            </button>
+          )}
+        </header>
         {!status ? (
           <p className="sub">{t("web.loading")}</p>
         ) : view === "devices" ? (
@@ -186,7 +246,7 @@ function App() {
         ) : view === "groups" ? (
           <GroupsView status={status} act={act} />
         ) : (
-          <SettingsView status={status} act={act} onSaved={refreshStatus} />
+          <SessionsView status={status} act={act} />
         )}
       </main>
 
@@ -216,13 +276,7 @@ function App() {
         </section>
       )}
 
-      <div className="notices" aria-live="polite">
-        {notices.map((n) => (
-          <div key={n.id} className={`notice notice-${n.kind}`}>
-            {n.text}
-          </div>
-        ))}
-      </div>
+      <Notices notices={notices} />
 
       <CreateDialog
         open={creating}
@@ -234,8 +288,24 @@ function App() {
           notify("info", t("web.created", { name }));
           refreshStatus();
         }}
+        onAdded={(name) => {
+          notify("info", t("web.create.added", { name }));
+          refreshStatus();
+        }}
         onError={(message) => notify("error", message)}
       />
+    </div>
+  );
+}
+
+function Notices({ notices }: { notices: Notice[] }) {
+  return (
+    <div className="notices" aria-live="polite">
+      {notices.map((n) => (
+        <div key={n.id} className={`notice notice-${n.kind}`}>
+          {n.text}
+        </div>
+      ))}
     </div>
   );
 }
