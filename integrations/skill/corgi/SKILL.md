@@ -15,7 +15,7 @@ Corgi lets several agent sessions and people share this Mac's simulators and emu
 **Rules**
 - Touch a device with argent, adb or simctl **only after acquiring it**. Reads (screenshot, describe) count too.
 - Boot and shut down with **`corgi use` / `corgi down`**, not argent `boot-device`.
-- Never touch other sessions' devices or Metro. Don't start Metro; share the one the app's session runs.
+- Never touch other sessions' devices or Metro. **Run your own Metro on a free port** (step 3) — never reuse, stop or kill a Metro you didn't start, and never assume 8081 is yours.
 - Never run `corgi release --force` (people only).
 - Create or edit device groups **only when the user asks**. Don't change groups someone else made.
 - Decide on error **codes** (`--json` output), not on message text — messages follow the user's language setting.
@@ -59,26 +59,51 @@ corgi --json use <ID|name>...             # specific devices
 - `NO_DEFAULT`: no default device yet — ask the user which device to use (or to create one).
 - From `devices[]` remember each device's **`targetId`** (argent `udid`/`device_id` — iOS UDID, Android `emulator-<port>`) and **`label`** (e.g. `Android 360dp`, `iOS 402pt`). `corgi --json list` shows them again.
 
-### 3. Drive each device with argent
+### 3. Start your own Metro (React Native · Expo apps)
+
+Other sessions — often in other worktrees of the same repo — may run their own Metro at the same time. Use a port of your own so each session serves its own code to its own devices.
+
+```sh
+# first free port from 8081 up
+for p in $(seq 8081 8099); do lsof -nP -iTCP:$p -sTCP:LISTEN >/dev/null || { echo $p; break; }; done
+```
+
+Start Metro from **your** working directory on that port, in the background, and remember its PID:
+
+```sh
+npx expo start --port <port>            # Expo
+npx react-native start --port <port>    # bare React Native
+```
+
+If it fails because the port was just taken, pick the next free one. Point each device at your port:
+
+- **Android** — map the device's 8081 to your port; the app needs no rebuild. Do this per acquired device:
+  ```sh
+  adb -s <targetId> reverse tcp:8081 tcp:<port>
+  ```
+- **iOS simulator** — it shares the Mac's localhost, so the app has to ask for your port:
+  - Expo dev client: open `exp+<scheme>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<port>` with `open-url`.
+  - Bare React Native: the port is set at build time — build with `npx react-native run-ios --port <port>` (or `RCT_METRO_PORT=<port>`).
+- Android Expo dev client: after the `adb reverse`, open the same URL with `127.0.0.1%3A8081`.
+
+### 4. Drive each device with argent
 
 Pass `targetId` as argent's device argument, device by device, following the argent skills.
 
 1. **Install** (when needed) — `reinstall-app`
-2. **Launch** — `launch-app`. For an Expo dev client on Android, connect Metro first:
-   ```sh
-   adb -s <targetId> reverse tcp:8081 tcp:8081
-   ```
-   then open the dev client URL (e.g. `exp+<scheme>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081`) with `open-url`. iOS simulators use the Mac's localhost directly.
+2. **Launch** — `launch-app` (or the dev client URL above with `open-url`), after your Metro is up.
 3. **Same screen everywhere** — `open-url <deep link>` if there is one, otherwise replay an argent flow (`flow-execute`) per device. Don't reuse tap coordinates across sizes.
 4. **Screenshots** — `screenshot`, tagged with each device's `label`.
 
-### 4. Report
+### 5. Report
 
 Per `label`, say what broke (clipping, overlap, overflow, wrapping …) with screenshots. Mark sizes with no problems as fine.
 
-### 5. Clean up
+### 6. Clean up
 
 ```sh
+adb -s <targetId> reverse --remove tcp:8081   # each Android device you pointed at your Metro
+kill <your Metro PID>                          # only the Metro you started
 corgi release
 ```
 

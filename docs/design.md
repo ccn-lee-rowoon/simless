@@ -227,11 +227,11 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | 할 일 | argent | 비고 |
 | --- | --- | --- |
 | 앱 설치 | `reinstall-app` | Android APK·iOS 시뮬레이터용 .app |
-| 앱 실행 | `launch-app`, dev client 는 `open-url` | Android 는 Metro 에 붙으려면 `adb -s <시리얼> reverse tcp:8081 tcp:8081` 이 필요하다 — 스킬이 안내 |
+| 앱 실행 | `launch-app`, dev client 는 `open-url` | Android 는 `adb -s <시리얼> reverse tcp:8081 tcp:<내 Metro 포트>` 로 그 기기만 내 Metro 에 붙인다 — 스킬이 안내 (S11) |
 | 같은 화면 | `open-url <딥링크>`, 딥링크 없는 화면은 argent 흐름 재생 | |
 | 화면 확인 | `screenshot` | 크기 라벨을 붙여 보고 |
 
-- Metro 는 띄우지 않는다. 앱 쪽 세션이 띄운 것을 같이 쓴다 (S7).
+- Metro 는 **세션마다 따로** 띄운다 (S11) — 8081부터 비어 있는 포트에 자기 작업 폴더의 Metro 를 띄우고, 점유한 기기만 그 포트를 보게 한다. Android 는 기기마다 `adb reverse` 라 다시 빌드할 필요가 없고, iOS 시뮬레이터는 Mac 의 localhost 를 같이 쓰므로 dev client 주소(Expo)나 빌드 때 포트(`RCT_METRO_PORT`)로 정한다. 포트는 Corgi 가 나눠 주지 않고 스킬이 비어 있는 것을 고른다 — 필요해지면 점유 대상으로 넣는다. 남의 Metro 는 끄지 않는다 (S7).
 - 점유한 디바이스만 argent 로 다룬다 — 5단계 훅이 지킨다 (P1·P8).
 
 **나중에(L1~L3) 만들 때 참고** — 2단계에서 한 번 만들다 되돌린 내용이다.
