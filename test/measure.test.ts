@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { parseSimslimMeasure } from "../src/server/drivers/ios.ts";
 import { memoryChange } from "../src/shared/api.ts";
 
-describe("슬림 전후 비교", () => {
+describe("슬림 전후 비교 (M10)", () => {
   test("simslim measure 출력에서 프로세스 수와 메모리", () => {
     expect(
       parseSimslimMeasure("UDID: 89 processes, 1.51 GB memory footprint (phys_footprint)"),

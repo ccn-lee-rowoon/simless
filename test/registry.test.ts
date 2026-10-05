@@ -14,7 +14,7 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-describe("Registry", () => {
+describe("Registry — 디바이스 기억 (R4·R20)", () => {
   test("처음 본 기기에 ID 를 붙이고, 다시 열어도 같은 ID 다 (R4)", () => {
     const path = tempPath();
     const first = new Registry(path).adopt("ios", "UDID-1", false);
@@ -84,7 +84,7 @@ describe("Registry", () => {
   });
 });
 
-describe("Registry 그룹·기본 디바이스", () => {
+describe("Registry 그룹·기본 디바이스 (R21·R22)", () => {
   test("디바이스를 지우면 그룹 소속과 기본 지정도 지운다", () => {
     const path = tempPath();
     const registry = new Registry(path);

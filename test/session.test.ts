@@ -12,7 +12,7 @@ function table(rows: [number, number, string, string][]) {
 
 const base = { env: {}, cwd: "/work" };
 
-describe("detectSession", () => {
+describe("detectSession — 세션 = 에이전트 프로세스 (R18)", () => {
   test("Claude Code — 셸을 건너뛰고 claude 프로세스가 세션 (이 Mac 실측 모양)", () => {
     const read = table([
       [300, 200, "zsh", "/bin/zsh"],

@@ -23,7 +23,7 @@ function holders(leases: LM, ids: string[]) {
   return ids.map((id) => leases.holderOf(id)?.key);
 }
 
-describe("LeaseManager", () => {
+describe("LeaseManager — 점유·대기·자동 해제 (R13·R14·R17·R23)", () => {
   test("비어 있으면 전부 잡고, 같은 세션의 재요청은 통과", () => {
     const { leases } = setup();
     expect(leases.acquire(A, ["d1", "d2"], { wait: false }).status).toBe("granted");
@@ -177,7 +177,7 @@ describe("LeaseManager — 비어 있는 것만 (R23)", () => {
   });
 });
 
-describe("LeaseManager — 교착 막기", () => {
+describe("LeaseManager — 교착 막기 (R23)", () => {
   test("서로 상대가 쥔 것을 기다리게 되면 대기열에 넣지 않고 deadlock", () => {
     const { leases } = setup();
     leases.acquire(A, ["x"], { wait: false });

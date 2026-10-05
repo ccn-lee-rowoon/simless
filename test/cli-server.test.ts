@@ -33,7 +33,7 @@ async function corgi(args: string[], extraEnv: Record<string, string> = {}) {
   return { stdout, stderr, exitCode };
 }
 
-describe("CLI ↔ 서버", () => {
+describe("CLI ↔ 서버 (R13·R14)", () => {
   test("status --json", async () => {
     const { stdout, exitCode } = await corgi(["--json", "status"]);
     expect(exitCode).toBe(0);

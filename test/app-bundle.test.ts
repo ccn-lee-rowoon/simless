@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { infoPlist, launcherScript, menubarAgentPlist } from "../src/cli/app-bundle.ts";
 
-describe("Corgi.app", () => {
+describe("Corgi.app (R11)", () => {
   test("Info.plist — Dock 아이콘 없는 앱, 아이콘·번들 ID·실행 파일", async () => {
     const xml = infoPlist("corgi-menubar", { port: 8791, tokenPath: "/Users/me/web-token" });
     expect(xml).toContain("<key>LSUIElement</key>\n  <true/>");

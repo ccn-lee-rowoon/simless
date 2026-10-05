@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Config } from "../src/shared/config.ts";
 
-describe("Config", () => {
+describe("Config (M11)", () => {
   test("빈 설정은 기본값으로 채워진다", () => {
     const config = Config.parse({});
     expect(config.idleReleaseMinutes).toBe(30);

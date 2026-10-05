@@ -24,7 +24,7 @@ function start() {
   return { base, token, post, env };
 }
 
-describe("웹 UI HTTP", () => {
+describe("웹 UI HTTP (R11)", () => {
   test("토큰은 한 번 만들면 그대로 쓴다 (0600)", () => {
     const { env, token } = start();
     expect(ensureToken(env.paths.webToken)).toBe(token);

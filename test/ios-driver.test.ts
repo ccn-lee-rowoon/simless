@@ -85,7 +85,7 @@ const device: Device = {
   createdAt: "2026-10-02T00:00:00.000Z",
 };
 
-describe("IosDriver", () => {
+describe("IosDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
   test("list·sources — 이 Mac 의 iPhone·iPad 시뮬레이터, 폭은 기기 종류 프로필의 pt", async () => {
     const devices = {
       "rt.26-5": [

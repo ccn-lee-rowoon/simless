@@ -14,7 +14,7 @@ function home() {
   return { HOME: dir };
 }
 
-describe("에이전트 스킬", () => {
+describe("에이전트 스킬 (R16·S9)", () => {
   test("들어 있는 스킬은 corgi 스킬 문서다 (이름·트리거 포함)", async () => {
     const text = await bundledSkill();
     expect(text).toStartWith("---\nname: corgi\n");
@@ -31,5 +31,38 @@ describe("에이전트 스킬", () => {
     expect(await skillStatus(env)).toBe("outdated");
     await installSkill(env);
     expect(readFileSync(target, "utf8")).toBe(await bundledSkill());
+  });
+
+  // 스킬 문서가 요구사항을 담고 있는지 — 문서를 고치다 빠뜨리지 않게
+  test("모바일 앱 작업에 반응하고 웹 프로젝트의 반응형 확인은 맡지 않는다 (S3·S4)", async () => {
+    const description = /^description: (.*)$/m.exec(await bundledSkill())?.[1] ?? "";
+    expect(description).toContain("mobile app");
+    expect(description).toContain("Not for web projects");
+    expect(description).toContain("코기로 확인해 줘");
+  });
+
+  test("순서 — 용도 고르기 → 점유·켜기 → Metro → argent → 보고 → 정리 (S5·S6·S8)", async () => {
+    const headings = [...(await bundledSkill()).matchAll(/^### \d+\. (.*)$/gm)].map((m) => m[1]);
+    expect(headings).toEqual([
+      "Check and pick what to use",
+      "Acquire and boot",
+      "Start your own Metro (React Native · Expo apps)",
+      "Drive each device with argent",
+      "Report",
+      "Clean up",
+    ]);
+  });
+
+  test("남의 기기·Metro 를 건드리지 않고, 자기 Metro 는 비어 있는 포트에 (S7·S11)", async () => {
+    const text = await bundledSkill();
+    expect(text).toContain("Never touch other sessions' devices or Metro");
+    expect(text).toContain("adb -s <targetId> reverse tcp:8081 tcp:<port>");
+    expect(text).toContain("kill <your Metro PID>");
+  });
+
+  test("그룹은 사용자가 요청할 때만 (S10)", async () => {
+    expect(await bundledSkill()).toContain(
+      "Create or edit device groups **only when the user asks**",
+    );
   });
 });

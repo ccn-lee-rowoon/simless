@@ -85,7 +85,7 @@ function driver(
   });
 }
 
-describe("AndroidDriver", () => {
+describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
   /** 이 Mac 에 있는 원본 AVD 처럼 — 크기·이미지 설정과 사용자 데이터가 있다 */
   function sourceAvd(avdHome: string, id: string, config: Record<string, string>) {
     const dir = join(avdHome, `${id}.avd`);
@@ -217,7 +217,7 @@ describe("AndroidDriver", () => {
   });
 });
 
-describe("AndroidDriver 슬림 확인", () => {
+describe("AndroidDriver 슬림 확인 (M6)", () => {
   const profiles = `📦 Media:\n   • app.a\n   • app.b\n   • app.c\n   • app.d\n🔒 GUARANTEED FUNCTIONAL (Never Disabled):\n   • core.x\n`;
 
   function runnerWith(installed: string[], disabled: string[]) {
@@ -268,7 +268,7 @@ describe("parseFootprint", () => {
   });
 });
 
-describe("AndroidDriver 기종 목록·만들기", () => {
+describe("AndroidDriver 기종 목록·만들기 (R1·R2·M1)", () => {
   test("catalog — 대표 프로필(폭 dp), 시스템 이미지(4KB 페이지·API 높은 순이 기본), 직접 입력 가능", async () => {
     const { env } = sdkWithImages();
     const catalog = await driver(env).catalog();
