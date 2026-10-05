@@ -123,8 +123,9 @@ export function DevicesView({
         <td className="name-cell">
           <div className="strong name-line">
             <PlatformIcon platform={d.platform} />
-            {d.name}
-            <SlimBadge device={d} />
+            <span>
+              {d.name} <SlimBadge device={d} />
+            </span>
           </div>
           <div className="sub name-sub">
             {osText(d)}

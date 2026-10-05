@@ -514,19 +514,22 @@ summary:focus-visible {
   font-weight: 600;
 }
 
+.platform-icon {
+  flex: none;
+}
+
 .name-line {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: 7px;
+}
+
+.name-line .platform-icon {
+  margin-top: 1px;
 }
 
 .name-sub {
   padding-left: 23px;
-}
-
-.platform-icon {
-  flex: none;
 }
 
 .platform-icon-android {
