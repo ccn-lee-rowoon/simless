@@ -78,4 +78,4 @@ bun run check && bun run test
 
 - `docs/development.md` — 무엇을 바꾸려면 어디를 고치나, 테스트 쓰는 법
 - `requirements.md` — 요구사항(ID)과 결정 기록 · `docs/design.md` — 설계 · `docs/protocol.md` — 메시지
-- `CLAUDE.md` — 작업·커밋 규칙 · `HANDOFF.md` — 진행 상태
+- `AGENTS.md` — 작업·커밋 규칙(모든 에이전트, `CLAUDE.md` 가 불러옴) · `HANDOFF.md` — 진행 상태

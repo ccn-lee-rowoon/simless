@@ -10,7 +10,7 @@
 | `reference-design-draft.md` | 요구사항 정리 **전** 첫 설계 초안 — **확정 아님, 참고용**. `requirements.md` 와 충돌하면 그쪽이 이긴다 |
 | `HANDOFF.md` | 이 파일 — 배경, 실측으로 확인한 사실, 지금 머신 상태, 시작 프롬프트 |
 | `docs/design.md` | 설계안 — 저장소 구조·기술 선택·점유·훅·CLI·단계 (**v0.3**) |
-| `CLAUDE.md` | 작업 규칙 — 읽는 순서, 문서 규칙, **커밋 규칙** |
+| `AGENTS.md` | 작업 규칙 정본 — 읽는 순서, 작업마다 확인할 것, 문서 규칙, **커밋 규칙** (`CLAUDE.md` 는 이것을 불러온다) |
 
 ## 진행 상태
 
@@ -25,6 +25,7 @@
 - **5단계(보호) 구현** — `simless hook claude pre-tool-use`(simless 목록 디바이스를 점유하지 않은 argent·adb·simctl 호출을 막음, 서버가 꺼지면 managed-index 로 막음), 규칙 `~/.claude/rules/simless.md`, `simless install`·`doctor` 연동. **설치는 보류**(사용자 결정 2026-10-05 — 다른 세션이 쓰는 iPhone 17 Pro 가 simless 목록·iOS 기본이라 그 세션이 막힐 수 있음). 이제 `simless install` 은 훅을 기본으로 넣지 않는다(`--hook` 일 때만)
 - **6단계(MCP) 완료** — `simless mcp`. 등록은 사용자 결정: 첫 실행 설정 창의 «MCP 도구» 또는 `simless install --mcp`
 - **첫 실행 설정 창(M14) 완료** (2026-10-05) — 앱을 처음 열면 «simless 시작하기» 창: 이 Mac 점검 → 에이전트 연결(스킬·보호·MCP 를 버튼으로) → 기본 디바이스. 서버 `setup.*`, 끝내면 `…/simless/setup.json`. 이 Mac 에서는 아직 «완료» 안 누름(창이 열려 있음)
+- **2026-10-05 이름 변경** — Corgi → **simless**(simulator + seamless, «Make simulator management seamless.»). 이 Mac 은 `simless install` 로 옮김: 예전 서버·메뉴바·앱 내림, 데이터 폴더 `~/Library/Application Support/simless`·`~/.config/simless`·`~/Library/Logs/simless` 로 이동, 스킬·규칙·훅·MCP 를 새 이름으로. 예전 상태 백업은 세션 스크래치패드에만 있었다. 저장소 폴더는 `…/corgi` 그대로
 - **2026-10-05 추가** — 점유 기록 SQLite(90일 보관), 스킬: 모바일 앱 작업에서만 반응·세션마다 자기 Metro(S11)·설치 범위(기본 전역, 프로젝트 선택 — `simless skill`)·업데이트 알림(대시보드 띠·메뉴바), 기본 디바이스가 없으면 만들어서 빌려주기(`--create`)
 - **다른 에이전트 조사(Q16) 끝** — `docs/agent-integrations.md`. 붙이는 순서 제안: Copilot CLI → Codex → Cursor → (업그레이드 뒤) OpenCode·Gemini
 - 남은 것: 다른 에이전트 훅 어댑터(조사 후), U단계(GitHub 리모트가 생긴 뒤), NOVA 로 주 흐름(R15) 확인

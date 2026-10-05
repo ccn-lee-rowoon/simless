@@ -87,7 +87,8 @@ simless/
 │                            agent-integrations.md(다른 에이전트 조사)
 ├── README.md                처음 보는 사람용 — 무엇을 하나·설치·쓰는 법
 ├── requirements.md · HANDOFF.md
-└── CLAUDE.md                작업 규칙 (커밋 규칙 포함)
+├── AGENTS.md                작업 규칙 정본 (커밋 규칙 포함) — 모든 에이전트
+└── CLAUDE.md                Claude Code 용 — AGENTS.md 를 불러온다
 ```
 
 **폴더 경계** — `test/architecture.test.ts` 가 지킨다.

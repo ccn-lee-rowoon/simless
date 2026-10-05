@@ -2,7 +2,7 @@
 
 simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 어디를 고치나» 를 바로 찾게 하는 문서다.
 요구사항은 `requirements.md`, 설계는 `docs/design.md`(저장소 구조는 §3), 메시지는 `docs/protocol.md`,
-작업·커밋 규칙은 `CLAUDE.md` 가 정본이다.
+작업·커밋 규칙은 `AGENTS.md` 가 정본이다(`CLAUDE.md` 는 그것을 불러온다).
 
 ## 1. 준비와 매일 쓰는 명령
 
