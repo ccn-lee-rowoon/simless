@@ -41,6 +41,8 @@ enum Strings {
       "selectAll": ("전체 선택", "Select All"),
       "reload": ("새로 고침", "Reload"),
       "view": ("보기", "View"),
+      "settings": ("설정…", "Settings…"),
+      "settingsTitle": ("Corgi 설정", "Corgi Settings"),
     ]
     guard let pair = table[key] else { return key }
     return lang == "ko" ? pair.0 : pair.1
@@ -69,7 +71,9 @@ func devicesTemplate(size: CGFloat) -> NSImage {
   return image
 }
 
-final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigationDelegate {
+final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigationDelegate,
+  WKScriptMessageHandler
+{
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let menu = NSMenu()
   private var devices: [DeviceRow] = []
@@ -77,6 +81,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
   private var lastError: String?
   private var window: NSWindow?
   private var webView: WKWebView?
+  private var settingsWindow: NSWindow?
   private var retries = 0
 
   private let info = Bundle.main.infoDictionary ?? [:]
@@ -177,6 +182,9 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     let dashboard = action(Strings.get("dashboard"), #selector(openDashboard))
     dashboard.keyEquivalent = "d"
     menu.addItem(dashboard)
+    let settings = action(Strings.get("settings"), #selector(openSettings))
+    settings.keyEquivalent = ","
+    menu.addItem(settings)
     menu.addItem(.separator())
     let quit = action(Strings.get("quitMenubar"), #selector(quit))
     quit.keyEquivalent = "q"
@@ -219,9 +227,50 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     if webView?.url == nil { load() }
   }
 
-  private func makeWindow() {
+  /// 웹 화면이 window.webkit.messageHandlers.corgi 로 «설정 창 열기» 를 알린다 (M11)
+  func userContentController(
+    _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
+  ) {
+    if let body = message.body as? [String: Any], body["open"] as? String == "settings" {
+      openSettings()
+    }
+  }
+
+  private func webConfiguration() -> WKWebViewConfiguration {
     let config = WKWebViewConfiguration()
-    let web = WKWebView(frame: .zero, configuration: config)
+    config.userContentController.add(self, name: "corgi")
+    return config
+  }
+
+  /// 설정 창 — 메인 창과 따로 (macOS 앱의 설정 창처럼)
+  @objc func openSettings() {
+    if settingsWindow == nil {
+      let web = WKWebView(frame: .zero, configuration: webConfiguration())
+      web.setValue(false, forKey: "drawsBackground")
+      let window = NSWindow(
+        contentRect: NSRect(x: 0, y: 0, width: 760, height: 720),
+        styleMask: [.titled, .closable, .resizable],
+        backing: .buffered, defer: false)
+      window.title = Strings.get("settingsTitle")
+      window.contentView = web
+      window.isReleasedWhenClosed = false
+      window.delegate = self
+      window.center()
+      window.setFrameAutosaveName("CorgiSettings")
+      if let token = token(),
+         let url = URL(string: "http://127.0.0.1:\(port)/?window=settings#token=\(token)") {
+        web.load(URLRequest(url: url))
+      }
+      settingsWindow = window
+    }
+    NSApp.setActivationPolicy(.regular)
+    installMainMenu()
+    settingsWindow?.makeKeyAndOrderFront(nil)
+    NSApp.activate(ignoringOtherApps: true)
+  }
+
+  private func makeWindow() {
+    let web = WKWebView(frame: .zero, configuration: webConfiguration())
     web.navigationDelegate = self
     web.setValue(false, forKey: "drawsBackground") // 불러오는 동안 흰 화면이 번쩍이지 않게
     let window = NSWindow(
@@ -273,8 +322,14 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
   }
 
   func windowWillClose(_ notification: Notification) {
-    // 창을 닫으면 메뉴바 앱으로 돌아간다 (Dock 아이콘 없음)
-    NSApp.setActivationPolicy(.accessory)
+    let closing = notification.object as? NSWindow
+    if closing === settingsWindow {
+      // 다음에 열 때 설정을 새로 읽도록 닫으면 버린다
+      settingsWindow = nil
+    }
+    // 창이 하나도 안 남으면 메뉴바 앱으로 돌아간다 (Dock 아이콘 없음)
+    let others = [window, settingsWindow].contains { $0 !== closing && $0?.isVisible == true }
+    if !others { NSApp.setActivationPolicy(.accessory) }
   }
 
   /// 앱 메뉴 — 창이 열린 동안 ⌘Q·⌘W·복사·붙여넣기가 동작하게 한다
@@ -284,6 +339,9 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
 
     let appItem = NSMenuItem()
     let appMenu = NSMenu()
+    appMenu.addItem(withTitle: Strings.get("settings"), action: #selector(openSettings), keyEquivalent: ",")
+      .target = self
+    appMenu.addItem(.separator())
     appMenu.addItem(withTitle: Strings.get("quitMenubar"), action: #selector(quit), keyEquivalent: "q")
       .target = self
     appItem.submenu = appMenu
