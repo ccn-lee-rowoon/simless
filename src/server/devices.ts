@@ -1,40 +1,43 @@
 import { z } from "zod";
-import type { DeviceOpResult, DeviceView, SourceEntry, SourceListResult } from "../shared/api.ts";
-import { type Device, type DeviceSpec, layoutWidth, sizeLabel } from "../shared/model.ts";
+import type { CatalogResult, DeviceOpResult, DeviceView, PlatformCatalog } from "../shared/api.ts";
+import type { Device, DeviceSpec, Platform } from "../shared/model.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
 import type { CorgiServer } from "./app.ts";
-import type { Progress, RuntimeState, SourceDevice } from "./drivers/types.ts";
+import type { Progress, RuntimeState } from "./drivers/types.ts";
 import { type Connection, HandlerError } from "./socket.ts";
 
 // 디바이스 만들기·관리·켜기 (R1~R7, M1~M8). 메서드를 CorgiServer 에 붙인다.
 
 const CreateParams = z
   .object({
-    /** 원본 — AVD ID·UDID·대표 프로필 ID(`profile:…`) 또는 이름 */
-    source: z.string().min(1).optional(),
+    /** 비우면 기종 이름으로 찾는다 — 두 플랫폼에 다 있으면 INVALID */
+    platform: z.enum(["android", "ios"]).optional(),
+    /** 기종 — iOS 기기 종류 ID·이름, Android 대표 프로필 ID·이름 */
+    model: z.string().min(1).optional(),
     /** 직접 입력 — Android 만 */
     custom: z
       .object({
         widthDp: z.number().positive(),
         heightDp: z.number().positive(),
         density: z.number().int().positive(),
-        systemImage: z.string().optional(),
       })
       .optional(),
+    /** OS — iOS 런타임, Android 시스템 이미지. 비우면 기본값 */
+    os: z.string().min(1).optional(),
     name: z.string().min(1).optional(),
     slim: z.boolean().default(true),
     /** 슬림하기 전에 한 번 켜서 기준 메모리를 잰다 — 슬림 후와 비교한다 (1~2분 더 걸림) */
     baseline: z.boolean().default(true),
   })
   .refine(
-    (p) => (p.source === undefined) !== (p.custom === undefined),
-    "source 와 custom 중 하나만 주세요",
+    (p) => (p.model === undefined) !== (p.custom === undefined),
+    "model 과 custom 중 하나만 주세요",
   );
 const DeviceRef = z.object({ device: z.string() });
 const RenameParams = DeviceRef.extend({ name: z.string().min(1) });
 const DevicesParams = z.object({ devices: z.array(z.string()).default([]) });
 const SlimParams = DevicesParams.extend({ mode: z.enum(["on", "off", "check"]).default("on") });
-const SourceParams = z.object({ platform: z.enum(["android", "ios"]).optional() });
+const CatalogParams = z.object({ platform: z.enum(["android", "ios"]).optional() });
 
 function parse<T extends z.ZodType>(schema: T, params: unknown): z.infer<T> {
   const parsed = schema.safeParse(params ?? {});
@@ -42,16 +45,9 @@ function parse<T extends z.ZodType>(schema: T, params: unknown): z.infer<T> {
   return parsed.data;
 }
 
-/** 같은 크기·이미지(또는 기기 종류·런타임)면 같은 항목 (M3) */
-export function specKey(spec: DeviceSpec): string {
-  return spec.platform === "android"
-    ? `android:${spec.widthPx}x${spec.heightPx}@${spec.density}:${spec.systemImage}`
-    : `ios:${spec.deviceTypeId}:${spec.runtimeId}`;
-}
-
-/** 기본 이름 — `corgi <원본 이름>` (M4) */
-function defaultName(source: SourceDevice): string {
-  return `corgi ${source.name}`;
+/** 기본 이름 — 슬림이면 `corgi <기종>`, 아니면 `<기종>` (R5·M4) */
+function defaultName(modelName: string, slim: boolean): string {
+  return slim ? `corgi ${modelName}` : modelName;
 }
 
 function message(error: unknown): string {
@@ -209,102 +205,70 @@ export function registerDeviceMethods(server: CorgiServer): void {
       ),
     );
 
-  /** 이 Mac 의 디바이스 — 플랫폼별로 모은다. 도구가 없거나 실패한 플랫폼은 problems 로 */
-  const allSources = async (platform?: "android" | "ios") => {
-    const sources: SourceDevice[] = [];
-    const presets: SourceDevice[] = [];
-    const problems: SourceListResult["problems"] = [];
+  server.addMethod("catalog", async (p): Promise<CatalogResult> => {
+    const { platform } = parse(CatalogParams, p);
+    const platforms: PlatformCatalog[] = [];
+    const problems: CatalogResult["problems"] = [];
     for (const name of ["android", "ios"] as const) {
       if (platform && platform !== name) continue;
+      const driver = server.driverOrUndefined(name);
+      if (!driver) continue;
       try {
-        const driver = server.driver(name);
         for (const tool of await driver.missingTools())
           problems.push({ platform: name, message: `${tool} 없음` });
-        sources.push(...(await driver.sources()));
-        presets.push(...((await driver.presetSources?.()) ?? []));
+        platforms.push(await driver.catalog());
       } catch (error) {
         problems.push({ platform: name, message: message(error) });
       }
     }
-    return { sources, presets, problems };
-  };
-
-  server.addMethod("source.list", async (p): Promise<SourceListResult> => {
-    const { platform } = parse(SourceParams, p);
-    const { sources, presets, problems } = await allSources(platform);
-    const devices = (await server.devices()).filter((d) => d.createdByCorgi);
-    const created = new Map(devices.map((d) => [specKey(d.spec), d.id]));
-    const items: SourceEntry[] = [
-      ...sources.map((s) => ({ s, kind: "device" as const })),
-      ...presets.map((s) => ({ s, kind: "profile" as const })),
-    ].map(({ s: source, kind }) => {
-      const managed = devices.find((d) => d.native === source.native)?.id;
-      return {
-        ...source,
-        kind,
-        label: sizeLabel(source.spec),
-        layoutWidth: layoutWidth(source.spec),
-        managed,
-        created: managed ? undefined : created.get(specKey(source.spec)),
-      };
-    });
-    items.sort(
-      (a, b) =>
-        a.platform.localeCompare(b.platform) ||
-        a.layoutWidth - b.layoutWidth ||
-        a.name.localeCompare(b.name),
-    );
-    const androidImages =
-      platform === "ios" ? [] : (server.driverOrUndefined("android")?.images?.() ?? []);
-    return { items, problems, androidImages };
+    return { platforms, problems };
   });
 
   server.addMethod("device.list", (_p, session) => server.deviceViews(session));
 
+  /** 기종 이름만 주면 두 플랫폼에서 찾는다 */
+  const resolveModel = async (params: z.infer<typeof CreateParams>) => {
+    const platforms = params.platform
+      ? [params.platform]
+      : params.custom
+        ? (["android"] as const)
+        : (["android", "ios"] as const);
+    const found: { platform: Platform; spec: DeviceSpec; modelName: string }[] = [];
+    let lastError: unknown;
+    for (const platform of platforms) {
+      const driver = server.driverOrUndefined(platform);
+      if (!driver) continue;
+      try {
+        const resolved = await driver.resolve({
+          model: params.model,
+          custom: params.custom,
+          os: params.os,
+        });
+        found.push({ platform, ...resolved });
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (found.length === 0) {
+      if (lastError instanceof HandlerError) throw lastError;
+      throw new HandlerError("NOT_FOUND", `없는 기종: ${params.model} — corgi catalog`);
+    }
+    if (found.length > 1) {
+      throw new HandlerError(
+        "INVALID",
+        `두 플랫폼에 같은 이름의 기종이 있습니다 — --platform 으로 고르세요: ${params.model}`,
+      );
+    }
+    return found[0] as (typeof found)[number];
+  };
+
   server.addMethod("device.create", async (p, session, connection) => {
     const params = parse(CreateParams, p);
-    const { sources, presets } = await allSources();
+    const { platform, spec, modelName } = await resolveModel(params);
     const all = await server.devices();
-    const corgiNatives = new Set(all.filter((d) => d.createdByCorgi).map((d) => d.native));
-    // 원본은 Corgi 가 만든 것이 아닌 이 Mac 의 디바이스 (슬림된 것을 원본으로 쓰는 건 나중에 — L4)
-    const candidates = [...sources, ...presets].filter((s) => !corgiNatives.has(s.native));
-    const wanted = (params.source ?? "").toLowerCase();
-    const exact = candidates.filter((s) => s.native.toLowerCase() === wanted);
-    const byName = candidates.filter((s) => s.name.toLowerCase() === wanted);
-    const matches = exact.length > 0 ? exact : byName;
-    const wantedLower = params.source?.toLowerCase();
-    if (
-      wantedLower &&
-      all.some(
-        (d) =>
-          d.createdByCorgi &&
-          (d.id === params.source ||
-            d.native === params.source ||
-            d.name.toLowerCase() === wantedLower),
-      )
-    ) {
-      throw new HandlerError(
-        "INVALID",
-        "Corgi 가 만든 디바이스는 원본으로 쓸 수 없습니다 — corgi list --all 에서 원본을 고르세요",
-      );
-    }
-    if (params.custom) {
-      const android = server.driver("android");
-      if (!android.customSource) throw new HandlerError("INVALID", "직접 입력은 Android 만 됩니다");
-      matches.splice(0, matches.length, await android.customSource(params.custom));
-    }
-    if (matches.length === 0)
-      throw new HandlerError("NOT_FOUND", `없는 원본: ${params.source} — corgi list --all`);
-    if (matches.length > 1) {
-      throw new HandlerError(
-        "INVALID",
-        `같은 이름의 원본이 여럿입니다 — ID 로 고르세요:\n${matches.map((m) => `  ${m.native}  ${m.detail}`).join("\n")}`,
-      );
-    }
-    const source = matches[0] as SourceDevice;
     // 같은 크기도 여러 대 만들 수 있다 — 막는 건 이름 중복뿐 (M3)
     const taken = new Set(all.map((d) => d.name.toLowerCase()));
-    let name = params.name ?? defaultName(source);
+    let name = params.name ?? defaultName(modelName, params.slim);
     if (taken.has(name.toLowerCase())) {
       if (params.name) throw new HandlerError("INVALID", `이미 쓰는 이름입니다: ${name}`);
       const base = name;
@@ -315,18 +279,17 @@ export function registerDeviceMethods(server: CorgiServer): void {
 
     const id = server.registry.newId();
     const progress = progressOf(connection);
-    const driver = server.driver(source.platform);
-    const { native } = await driver.create({ id, name, source }, progress);
+    const { native } = await server.driver(platform).create({ id, name, spec }, progress);
     const meta = server.registry.add({
       id,
-      platform: source.platform,
+      platform,
       native,
       createdByCorgi: true,
       slim: "none",
       createdAt: new Date().toISOString(),
     });
     server.invalidate();
-    let device: Device = { ...meta, name, spec: source.spec };
+    let device: Device = { ...meta, name, spec };
     if (params.slim && params.baseline)
       device = await withLock(id, () => measureBaseline(device, progress));
     if (params.slim) device = await withLock(id, () => applySlim(device, progress));

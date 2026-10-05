@@ -1,13 +1,9 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type {
-  Discovered,
-  Driver,
-  RuntimeState,
-  SourceDevice,
-} from "../src/server/drivers/types.ts";
+import type { Discovered, Driver, RuntimeState } from "../src/server/drivers/types.ts";
 import type { Registry } from "../src/server/registry.ts";
+import { HandlerError } from "../src/server/socket.ts";
 import { Config } from "../src/shared/config.ts";
 import type { Device } from "../src/shared/model.ts";
 import { resolvePaths } from "../src/shared/paths.ts";
@@ -58,34 +54,22 @@ export function androidDevice(id: string, name = `Android ${id}`): Device {
   };
 }
 
-/** 가짜 원본 — 폭(dp)만 다른 Android AVD */
-export function fakeSource(native: string, widthDp: number, name = native): SourceDevice {
-  return {
-    platform: "android",
-    native,
-    name,
-    spec: { ...ANDROID_SPEC, widthPx: widthDp * 2 },
-    detail: `${widthDp * 2}×1520px · 320dpi`,
-    booted: false,
-  };
-}
+/** 가짜 기종 — 폭(dp)만 다르다 */
+const FAKE_MODELS = [
+  { id: "small-360", name: "Small 360", widthDp: 360 },
+  { id: "large-412", name: "Large 412", widthDp: 412 },
+];
 
 export type FakeDriver = Driver & {
   booted: Set<string>;
   /** 이 Mac 에 있는 기기 — list() 가 돌려준다. 만들면 늘고 지우면 준다 */
   existing: Discovered[];
-  /** 생성 원본 목록 */
-  sourceList: SourceDevice[];
 };
 
 /** 아무것도 실제로 켜지 않는 드라이버 — 켜짐 상태만 기억한다 */
 export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver {
   const booted = new Set<string>();
   const existing: Discovered[] = [];
-  const sourceList: SourceDevice[] = [
-    fakeSource("Small_360", 360, "Small 360"),
-    fakeSource("Large_412", 412, "Large 412"),
-  ];
   const state = (d: Device): RuntimeState =>
     booted.has(d.id)
       ? { booted: true, targetId: `emulator-${5554 + booted.size * 2}` }
@@ -94,20 +78,39 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
     platform,
     booted,
     existing,
-    sourceList,
     missingTools: async () => [],
     list: async () => [...driver.existing],
-    sources: async () => driver.sourceList,
-    customSource: async (r) => ({
-      ...fakeSource(
-        `custom:${r.widthDp}x${r.heightDp}@${r.density}`,
-        r.widthDp,
-        `Android ${r.widthDp}dp`,
-      ),
+    catalog: async () => ({
+      platform,
+      models: FAKE_MODELS.map((m) => ({
+        id: m.id,
+        name: m.name,
+        form: "phone",
+        layoutWidth: m.widthDp,
+        layoutHeight: 760,
+        detail: `${m.widthDp * 2}×1520px · 320dpi`,
+      })),
+      os: [{ id: "image-36", name: "android-36", recommended: true }],
+      custom: true,
+      slimOff: [{ name: "Assistant & Search", count: 3 }],
+      slimKeeps: ["Core Android OS"],
     }),
-    create: async ({ id, name, source }) => {
+    resolve: async ({ model, custom }) => {
+      if (custom) {
+        return {
+          spec: { ...ANDROID_SPEC, widthPx: (custom.widthDp * custom.density) / 160 },
+          modelName: `Android ${custom.widthDp}dp`,
+        };
+      }
+      const found = FAKE_MODELS.find(
+        (m) => m.id === model || m.name.toLowerCase() === model?.toLowerCase(),
+      );
+      if (!found) throw new HandlerError("NOT_FOUND", `없는 프로필: ${model}`);
+      return { spec: { ...ANDROID_SPEC, widthPx: found.widthDp * 2 }, modelName: found.name };
+    },
+    create: async ({ id, name, spec }) => {
       const native = `corgi_${id}`;
-      driver.existing.push({ native, name, spec: source.spec });
+      driver.existing.push({ native, name, spec });
       return { native };
     },
     rename: async (device, name) => {

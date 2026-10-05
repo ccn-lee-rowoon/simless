@@ -56,33 +56,55 @@ export interface BusyData {
   holders: (HolderView & { deviceId: string })[];
 }
 
-/** 이 Mac 의 에뮬레이터·시뮬레이터 하나 — «전체 목록» 의 한 줄이자 복제 원본 (M1·M9) */
-export interface SourceEntry {
-  platform: "android" | "ios";
-  /** device = 이 Mac 의 디바이스, profile = Corgi 내장 대표 프로필(Android) */
-  kind: "device" | "profile";
-  /** AVD ID 또는 UDID */
-  native: string;
+/** 만들 수 있는 기종 하나 — iOS 기기 종류, Android 대표 프로필 (M1) */
+export interface CatalogModel {
+  /** iOS 기기 종류 ID(`com.apple.CoreSimulator.SimDeviceType.iPhone-17`), Android 프로필 ID(`medium-phone`) */
+  id: string;
   name: string;
-  spec: Device["spec"];
-  /** 예: `Android 360dp` */
-  label: string;
+  /** phone·tablet — 목록을 나눠 보여 준다 */
+  form: "phone" | "tablet";
+  /** RN 레이아웃이 받는 폭·높이 — Android dp, iOS pt (M2) */
   layoutWidth: number;
-  /** 보조 표시 — 해상도·밀도·런타임 (M2) */
+  layoutHeight: number;
+  /** 보조 표시 — 해상도·밀도 */
   detail: string;
-  booted: boolean;
-  /** Corgi 가 만든 디바이스면 그 ID — 원본으로 쓰지 않는다 */
-  managed?: string;
-  /** 같은 크기로 이미 만든 Corgi 디바이스 ID — 알려만 주고 막지 않는다 (M3) */
-  created?: string;
+  /** 이 기종을 만들 수 있는 OS ID — iOS 만 (런타임마다 지원 기종이 다르다). 없으면 전부 */
+  os?: string[];
 }
 
-export interface SourceListResult {
-  items: SourceEntry[];
+/** 고를 수 있는 OS 하나 — iOS 런타임, Android 시스템 이미지 */
+export interface CatalogOs {
+  id: string;
+  name: string;
+  /** 기본값 — iOS 최신, Android 4KB 페이지·API 높은 순 */
+  recommended: boolean;
+}
+
+/** 슬림화하면 꺼지는 것 한 묶음 (M4 ⓘ) — simslim·avdslim 이 알려 주는 그대로 */
+export interface SlimCategory {
+  name: string;
+  /** 꺼지면 안 되는 것 — iOS 는 simslim 의 «When disabled: …» 설명 */
+  detail?: string;
+  /** 꺼지는 항목 수 — Android 는 패키지 수 */
+  count?: number;
+}
+
+export interface PlatformCatalog {
+  platform: "android" | "ios";
+  models: CatalogModel[];
+  os: CatalogOs[];
+  /** 폭·높이·밀도를 직접 넣을 수 있다 — Android 만 */
+  custom: boolean;
+  /** 슬림화하면 꺼지는 것 (M4 ⓘ) */
+  slimOff: SlimCategory[];
+  /** 슬림화해도 남는 것 */
+  slimKeeps: string[];
+}
+
+export interface CatalogResult {
+  platforms: PlatformCatalog[];
   /** 플랫폼별로 빠진 도구·오류 */
   problems: { platform: "android" | "ios"; message: string }[];
-  /** 대표 프로필·직접 입력에 쓸 Android 시스템 이미지 */
-  androidImages: { sysdir: string; label: string; recommended: boolean }[];
 }
 
 export interface DeviceOpResult {

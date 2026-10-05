@@ -10,22 +10,14 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { SlimStats } from "../../shared/api.ts";
+import type { PlatformCatalog, SlimCategory, SlimStats } from "../../shared/api.ts";
 import type { Config } from "../../shared/config.ts";
 import { run as defaultRun, type Runner, runOk, which } from "../../shared/exec.ts";
-import type { Device, SlimState } from "../../shared/model.ts";
+import type { Device, DeviceSpec, SlimState } from "../../shared/model.ts";
 import { androidSdk } from "../../shared/tools.ts";
 import { HandlerError } from "../socket.ts";
 import { ANDROID_PROFILES } from "./android-profiles.ts";
-import type {
-  CustomRequest,
-  Discovered,
-  Driver,
-  Progress,
-  RuntimeState,
-  SourceDevice,
-  SystemImageInfo,
-} from "./types.ts";
+import type { Discovered, Driver, ModelRequest, Progress, RuntimeState } from "./types.ts";
 
 // Android 에뮬레이터 — 원본 AVD 의 하드웨어 설정을 복사해 AVD 파일을 직접 쓰고(avdmanager 불필요),
 // emulator·adb 로 켜고 끄며, avdslim 으로 슬림화한다 (docs/design.md §9).
@@ -75,6 +67,33 @@ function readProps(path: string): Record<string, string> {
     if (eq > 0) props[line.slice(0, eq).trim()] = line.slice(eq + 1).trim();
   }
   return props;
+}
+
+/**
+ * `avdslim profiles` 출력 — «📦 <묶음> (~… RAM):» 아래 «• <패키지>» 줄들, 공격적 모드(🔥)는 빼고,
+ * «✓ <끄지 않는 것>» 은 남는 것으로.
+ */
+export function parseAvdslimProfiles(text: string): { off: SlimCategory[]; keeps: string[] } {
+  const off: SlimCategory[] = [];
+  const keeps: string[] = [];
+  let current: { name: string; count: number } | undefined;
+  const flush = () => {
+    if (current) off.push({ name: current.name, count: current.count });
+    current = undefined;
+  };
+  for (const line of text.split("\n")) {
+    const head = /^\s*(\S+)\s+(.+?)(?:\s*\(~[^)]*\))?:\s*$/u.exec(line);
+    if (head?.[1] && head[2] && /📦|🔥|🔒|📋/u.test(head[1])) {
+      flush();
+      if (head[1].includes("📦")) current = { name: head[2].trim(), count: 0 };
+      continue;
+    }
+    if (current && /^\s*•\s*\S+/.test(line)) current.count += 1;
+    const keep = /^\s*✓\s*(.+)$/.exec(line);
+    if (keep?.[1]) keeps.push(keep[1].trim());
+  }
+  flush();
+  return { off, keeps };
 }
 
 /** `avdslim measure` 의 «Activity Monitor Memory (Footprint): 7583 MB» → 바이트 */
@@ -166,18 +185,11 @@ export class AndroidDriver implements Driver {
     return images.sort((a, b) => Number(a.page16k) - Number(b.page16k) || b.api - a.api);
   }
 
-  images(): SystemImageInfo[] {
-    return this.systemImages().map((image, i) => ({
-      sysdir: image.sysdir,
-      label: `${image.target} ${image.tag}${image.page16k ? " (16KB 페이지)" : ""}`,
-      recommended: i === 0,
-    }));
-  }
-
   private image(wanted?: string) {
     const images = this.systemImages();
-    const image = wanted
-      ? images.find((i) => i.sysdir === wanted || i.sysdir.includes(wanted))
+    const lower = wanted?.toLowerCase();
+    const image = lower
+      ? images.find((i) => i.sysdir === wanted || i.sysdir.toLowerCase().includes(lower))
       : images[0];
     if (!image) {
       throw new HandlerError(
@@ -190,40 +202,74 @@ export class AndroidDriver implements Driver {
     return image;
   }
 
-  private sized(
-    native: string,
-    name: string,
-    size: { widthPx: number; heightPx: number; density: number },
-    sysdir?: string,
-  ): SourceDevice {
-    const image = this.image(sysdir);
+  async catalog(): Promise<PlatformCatalog> {
+    const images = this.systemImages();
+    const slim = await this.slimCategories();
     return {
       platform: "android",
-      native,
-      name,
-      spec: { platform: "android", ...size, systemImage: image.sysdir },
-      detail: `${size.widthPx}×${size.heightPx}px · ${size.density}dpi · ${image.target} ${image.tag}`,
-      booted: false,
+      models: ANDROID_PROFILES.map((p) => ({
+        id: p.id,
+        name: p.name,
+        form: (p.widthPx * 160) / p.density >= 600 ? "tablet" : "phone",
+        layoutWidth: Math.round((p.widthPx * 160) / p.density),
+        layoutHeight: Math.round((p.heightPx * 160) / p.density),
+        detail: `${p.widthPx}×${p.heightPx}px · ${p.density}dpi`,
+      })),
+      os: images.map((image, i) => ({
+        id: image.sysdir,
+        name: `${image.target} ${image.tag}${image.page16k ? " (16KB 페이지)" : ""}`,
+        recommended: i === 0,
+      })),
+      custom: true,
+      slimOff: slim.off,
+      slimKeeps: slim.keeps,
     };
   }
 
-  /** 내장 대표 프로필 — 기본 이미지로 (requirements M1) */
-  async presetSources(): Promise<SourceDevice[]> {
-    if (this.systemImages().length === 0) return [];
-    return ANDROID_PROFILES.map((p) => this.sized(`profile:${p.id}`, p.name, p));
+  /** 대표 프로필(ID·이름) 또는 직접 입력 + 시스템 이미지 (requirements M1) */
+  async resolve(request: ModelRequest): Promise<{ spec: DeviceSpec; modelName: string }> {
+    const image = this.image(request.os);
+    if (request.custom) {
+      const { widthDp, heightDp, density } = request.custom;
+      return {
+        spec: {
+          platform: "android",
+          widthPx: Math.round((widthDp * density) / 160),
+          heightPx: Math.round((heightDp * density) / 160),
+          density,
+          systemImage: image.sysdir,
+        },
+        modelName: `Android ${widthDp}dp`,
+      };
+    }
+    const wanted = (request.model ?? "").toLowerCase();
+    const profile = ANDROID_PROFILES.find(
+      (p) => p.id === wanted || p.name.toLowerCase() === wanted,
+    );
+    if (!profile) throw new HandlerError("NOT_FOUND", `없는 프로필: ${request.model}`);
+    return {
+      spec: {
+        platform: "android",
+        widthPx: profile.widthPx,
+        heightPx: profile.heightPx,
+        density: profile.density,
+        systemImage: image.sysdir,
+      },
+      modelName: profile.name,
+    };
   }
 
-  async customSource(request: CustomRequest): Promise<SourceDevice> {
-    return this.sized(
-      `custom:${request.widthDp}x${request.heightDp}@${request.density}`,
-      `Android ${request.widthDp}dp`,
-      {
-        widthPx: Math.round((request.widthDp * request.density) / 160),
-        heightPx: Math.round((request.heightDp * request.density) / 160),
-        density: request.density,
-      },
-      request.systemImage,
-    );
+  private slimCache?: { off: SlimCategory[]; keeps: string[] };
+
+  /** `avdslim profiles` — 꺼지는 묶음(📦)과 끄지 않는 것(✓). 공격적 모드(🔥)는 쓰지 않아 뺀다 */
+  private async slimCategories(): Promise<{ off: SlimCategory[]; keeps: string[] }> {
+    if (this.slimCache) return this.slimCache;
+    const path = this.avdslimPath();
+    if (!path) return { off: [], keeps: [] };
+    const result = await this.runner([path, "profiles"]);
+    if (result.code !== 0) return { off: [], keeps: [] };
+    this.slimCache = parseAvdslimProfiles(result.stdout);
+    return this.slimCache;
   }
 
   /**
@@ -259,32 +305,23 @@ export class AndroidDriver implements Driver {
     return result;
   }
 
-  /**
-   * Android 는 이 Mac 의 AVD 를 원본으로 쓰지 않는다 — 크기는 대표 프로필·직접 입력으로 정한다
-   * (requirements M1, «결정 기록»).
-   */
-  async sources(): Promise<SourceDevice[]> {
-    return [];
-  }
-
   /** 대표 프로필·직접 입력의 크기와 이미지로 config.ini 를 새로 쓴다 */
   async create(
-    input: { id: string; name: string; source: SourceDevice },
+    input: { id: string; name: string; spec: DeviceSpec },
     progress: Progress,
   ): Promise<{ native: string }> {
-    const { source } = input;
-    if (source.spec.platform !== "android")
-      throw new HandlerError("INVALID", "Android 원본이 아닙니다");
+    const { spec } = input;
+    if (spec.platform !== "android") throw new HandlerError("INVALID", "Android 기종이 아닙니다");
     const avdId = `corgi_${input.id}`;
     const avdDir = join(this.avdHome, `${avdId}.avd`);
     if (existsSync(avdDir)) throw new HandlerError("INVALID", `이미 있는 AVD: ${avdId}`);
-    progress(`AVD 생성: ${input.name} ← ${source.name} (${source.detail})`);
+    progress(`AVD 생성: ${input.name} (${spec.widthPx}×${spec.heightPx}px · ${spec.density}dpi)`);
 
     const config: Record<string, string> = {
       AvdId: avdId,
       "avd.ini.displayname": input.name.replace(/[\r\n]/g, " "),
       "avd.ini.encoding": "UTF-8",
-      ...this.freshConfig(source),
+      ...this.freshConfig(spec),
     };
     mkdirSync(avdDir, { recursive: true });
     writeFileSync(
@@ -302,9 +339,8 @@ export class AndroidDriver implements Driver {
   }
 
   /** 프로필·직접 입력용 config.ini — 크기와 이미지만 정하고 나머지는 흔한 기본값 */
-  private freshConfig(source: SourceDevice): Record<string, string> {
-    const { spec } = source;
-    if (spec.platform !== "android") throw new HandlerError("INVALID", "Android 원본이 아닙니다");
+  private freshConfig(spec: DeviceSpec): Record<string, string> {
+    if (spec.platform !== "android") throw new HandlerError("INVALID", "Android 기종이 아닙니다");
     const image = this.image(spec.systemImage);
     return {
       "PlayStore.enabled": String(image.tag.includes("playstore")),

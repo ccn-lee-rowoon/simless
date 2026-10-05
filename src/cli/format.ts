@@ -1,4 +1,9 @@
-import { type DeviceView, type HolderView, memoryChange } from "../shared/api.ts";
+import {
+  type CatalogResult,
+  type DeviceView,
+  type HolderView,
+  memoryChange,
+} from "../shared/api.ts";
 
 /** 한글 등 넓은 글자는 터미널에서 두 칸을 쓴다 */
 function displayWidth(text: string): number {
@@ -53,7 +58,7 @@ export function formatHolder(holder: HolderView & { deviceId?: string }): string
 
 export function devicesTable(devices: DeviceView[]): string {
   if (devices.length === 0)
-    return "디바이스가 없습니다 — corgi list --all 에서 원본을 골라 corgi create <원본>";
+    return "디바이스가 없습니다 — corgi catalog 에서 기종을 골라 corgi create <기종>";
   const rows = [...devices]
     .sort((a, b) => a.spec.platform.localeCompare(b.spec.platform) || a.layoutWidth - b.layoutWidth)
     .map((d) => [
@@ -75,4 +80,39 @@ export function devicesTable(devices: DeviceView[]): string {
     .filter((d) => d.slim === "failed" && d.slimError)
     .map((d) => `슬림 실패 ${d.id}: ${d.slimError?.split("\n")[0]}`);
   return [table(["ID", "크기", "이름", "상태", "슬림", "만듦", "점유"], rows), ...notes].join("\n");
+}
+
+/** 만들 수 있는 기종·OS — 폭 순 (M1·M2) */
+export function catalogText(result: CatalogResult): string {
+  const lines: string[] = [];
+  for (const catalog of result.platforms) {
+    const unit = catalog.platform === "android" ? "dp" : "pt";
+    const title = catalog.platform === "android" ? "Android 대표 프로필" : "iOS 기기 종류";
+    const rows = [...catalog.models]
+      .sort((a, b) => a.layoutWidth - b.layoutWidth || a.name.localeCompare(b.name))
+      .map((m) => [`${m.layoutWidth}${unit}`, m.name, m.detail, m.id]);
+    lines.push(title, table(["폭", "기종", "해상도", "ID"], rows), "");
+    const os = catalog.os.map((o) => `  ${o.recommended ? "*" : " "} ${o.name}  (${o.id})`);
+    lines.push(
+      catalog.platform === "android" ? "시스템 이미지 (* 기본)" : "런타임 (* 기본)",
+      ...os,
+      "",
+    );
+    if (catalog.slimOff.length > 0) {
+      lines.push(
+        "슬림화하면 꺼지는 것",
+        ...catalog.slimOff.map(
+          (c) =>
+            `  - ${c.name}${c.count ? ` (${c.count})` : ""}${c.detail ? ` — ${c.detail}` : ""}`,
+        ),
+        "",
+      );
+    }
+  }
+  lines.push(
+    "만들기: corgi create <기종> [--os <OS>] [--no-slim]",
+    "직접 입력(Android): corgi create --width <dp> --height <dp> --density <dpi> [--os <이미지>]",
+    ...result.problems.map((p) => `주의(${p.platform}): ${p.message}`),
+  );
+  return lines.join("\n");
 }

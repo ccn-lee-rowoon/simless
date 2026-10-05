@@ -48,14 +48,14 @@ describe("웹 UI HTTP", () => {
     expect((await post({ method: "lease.who" })).status).toBe(403);
   });
 
-  test("원본 목록·만들기가 된다", async () => {
+  test("기종 목록·만들기가 된다", async () => {
     const { post } = start();
-    const sources = (await (await post({ method: "source.list" })).json()) as {
-      result: { items: unknown[] };
+    const catalog = (await (await post({ method: "catalog" })).json()) as {
+      result: { platforms: { models: unknown[] }[] };
     };
-    expect(sources.result.items).toHaveLength(2);
+    expect(catalog.result.platforms[0]?.models).toHaveLength(2);
     const created = (await (
-      await post({ method: "device.create", params: { source: "Small_360" } })
+      await post({ method: "device.create", params: { model: "Small 360" } })
     ).json()) as {
       ok: boolean;
       result: { name: string };

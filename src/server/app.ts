@@ -46,7 +46,7 @@ const WhoParams = z.object({ target: z.string().optional() });
 const ForceParams = z.object({ device: z.string() });
 
 /** 화면 갱신 알림이 필요 없는 메서드 */
-const READ_ONLY = new Set(["status", "device.list", "source.list", "lease.who"]);
+const READ_ONLY = new Set(["status", "device.list", "catalog", "lease.who"]);
 
 export type ServerEvent = { type: "changed" } | { type: "progress"; message: string };
 

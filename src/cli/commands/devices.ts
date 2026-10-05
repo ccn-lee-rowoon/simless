@@ -1,9 +1,9 @@
 import { createInterface } from "node:readline/promises";
 import type { Command } from "commander";
-import type { DeviceOpResult, DeviceView, SourceListResult } from "../../shared/api.ts";
+import type { CatalogResult, DeviceOpResult, DeviceView } from "../../shared/api.ts";
 import { ExitCode } from "../../shared/exit-codes.ts";
 import { CliError, type Context, output, type Run, request } from "../context.ts";
-import { devicesTable, table } from "../format.ts";
+import { catalogText, devicesTable } from "../format.ts";
 import { acquire } from "./lease.ts";
 
 /** 진행 알림은 stderr 로 — stdout 은 결과(또는 JSON)만 */
@@ -48,82 +48,67 @@ export function registerDevices(program: Command, run: Run) {
   program
     .command("list")
     .description("이 Mac 의 디바이스 전부 — 켜짐·슬림·점유·argent ID (M5·R20)")
-    .option("--all", "만들 수 있는 원본 목록 (M1)")
     .option("--platform <platform>", "android 또는 ios")
     .option("--created", "Corgi 가 만든 디바이스만")
     .action(
-      run(async (ctx, o: { all?: boolean; platform?: "android" | "ios"; created?: boolean }) => {
-        if (!o.all) {
-          const devices = (await call<DeviceView[]>(ctx, "device.list", {})).filter(
-            (d) => (!o.platform || d.platform === o.platform) && (!o.created || d.createdByCorgi),
-          );
-          output(ctx, devices, () => devicesTable(devices));
-          return;
-        }
-        const result = await call<SourceListResult>(ctx, "source.list", { platform: o.platform });
-        output(ctx, result, () => {
-          const row = (i: SourceListResult["items"][number]) => [
-            i.label,
-            i.name,
-            i.booted ? "켜짐" : "꺼짐",
-            i.managed ? `Corgi ${i.managed}` : i.created ? `만든 것 있음 (${i.created})` : "",
-            i.detail,
-            i.native,
-          ];
-          const devices = result.items.filter((i) => i.kind === "device").map(row);
-          const profiles = result.items.filter((i) => i.kind === "profile").map(row);
-          const problems = result.problems.map((p) => `주의(${p.platform}): ${p.message}`);
-          const header = ["크기", "이름", "상태", "", "기기", "원본 ID"];
-          return [
-            ...(devices.length > 0 ? ["iOS 시뮬레이터 (이 Mac)", table(header, devices), ""] : []),
-            ...(profiles.length > 0
-              ? ["Android 대표 프로필 (Corgi 내장)", table(header, profiles), ""]
-              : []),
-            "만들기: corgi create <이름 또는 원본 ID>",
-            "직접 입력(Android): corgi create --width <dp> --height <dp> --density <dpi> [--image <이미지>]",
-            ...problems,
-          ].join("\n");
-        });
+      run(async (ctx, o: { platform?: "android" | "ios"; created?: boolean }) => {
+        const devices = (await call<DeviceView[]>(ctx, "device.list", {})).filter(
+          (d) => (!o.platform || d.platform === o.platform) && (!o.created || d.createdByCorgi),
+        );
+        output(ctx, devices, () => devicesTable(devices));
+      }),
+    );
+
+  program
+    .command("catalog")
+    .description("만들 수 있는 기종·OS 와 슬림화하면 꺼지는 것 (M1·M4)")
+    .option("--platform <platform>", "android 또는 ios")
+    .action(
+      run(async (ctx, o: { platform?: "android" | "ios" }) => {
+        const result = await call<CatalogResult>(ctx, "catalog", { platform: o.platform });
+        output(ctx, result, () => catalogText(result));
       }),
     );
 
   program
     .command("create")
     .description(
-      "이 Mac 의 디바이스를 원본으로 같은 크기의 `corgi …` 복제본을 만들고 슬림화한다 — 앱은 설치하지 않는다 (R1·R5·M1·M4)",
+      "기종 + OS 로 새 디바이스를 만든다 — 슬림이면 `corgi …` 이름, 앱은 설치하지 않는다 (R1·R5·M1·M4)",
     )
-    .argument("[원본]", "원본 이름 또는 원본 ID(AVD ID·UDID·profile:…) — corgi list --all")
+    .argument("[기종]", "기종 이름 또는 ID — corgi catalog")
+    .option("--platform <platform>", "android 또는 ios (같은 이름의 기종이 양쪽에 있을 때)")
+    .option("--os <os>", "iOS 런타임·Android 시스템 이미지 (기본: 최신·추천)")
     .option("--width <dp>", "직접 입력(Android) — 폭 dp")
     .option("--height <dp>", "직접 입력(Android) — 높이 dp")
     .option("--density <dpi>", "직접 입력(Android) — 밀도 (예: 320, 420)")
-    .option("--image <이미지>", "직접 입력(Android) — 시스템 이미지 (기본: 권장 이미지)")
-    .option("--name <이름>", "표시 이름 (기본: corgi <원본 이름>)")
-    .option("--no-slim", "슬림화하지 않는다")
+    .option("--name <이름>", "표시 이름 (기본: 슬림이면 corgi <기종>, 아니면 <기종>)")
+    .option("--no-slim", "슬림화하지 않는다 — 일반 디바이스")
     .option("--no-baseline", "슬림 전 기준값(메모리)을 재지 않는다 — 1~2분 빨라진다")
     .action(
       run(
         async (
           ctx,
-          source: string | undefined,
+          model: string | undefined,
           o: {
+            platform?: "android" | "ios";
+            os?: string;
             width?: string;
             height?: string;
             density?: string;
-            image?: string;
             name?: string;
             slim: boolean;
             baseline: boolean;
           },
         ) => {
           const custom = o.width || o.height || o.density;
-          if (custom && source)
+          if (custom && model)
             throw new CliError(
-              "원본과 직접 입력(--width 등)은 함께 줄 수 없습니다",
+              "기종과 직접 입력(--width 등)은 함께 줄 수 없습니다",
               ExitCode.usage,
             );
-          if (!custom && !source)
+          if (!custom && !model)
             throw new CliError(
-              "원본을 주거나 --width·--height·--density 로 직접 입력하세요",
+              "기종을 주거나 --width·--height·--density 로 직접 입력하세요 — corgi catalog",
               ExitCode.usage,
             );
           const numbers = [o.width, o.height, o.density].map(Number);
@@ -134,15 +119,12 @@ export function registerDevices(program: Command, run: Run) {
             );
           }
           const device = await call<DeviceView>(ctx, "device.create", {
-            source,
+            platform: o.platform,
+            model,
             custom: custom
-              ? {
-                  widthDp: numbers[0],
-                  heightDp: numbers[1],
-                  density: numbers[2],
-                  systemImage: o.image,
-                }
+              ? { widthDp: numbers[0], heightDp: numbers[1], density: numbers[2] }
               : undefined,
+            os: o.os,
             name: o.name,
             slim: o.slim,
             baseline: o.baseline,

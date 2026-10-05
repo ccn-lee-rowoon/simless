@@ -29,7 +29,7 @@ async function start() {
   return { server, driver, env, A: as("A"), B: as("B"), H: as("web", true) };
 }
 
-const android360 = { source: "Small_360" };
+const android360 = { model: "Small 360" };
 
 describe("디바이스 명령", () => {
   test("만들면 기본 이름·슬림 적용, 같은 크기도 다시 만들고 이름만 겹치지 않는다 (M3·M4·R5)", async () => {
@@ -164,58 +164,37 @@ describe("슬림 재적용", () => {
   });
 });
 
-describe("원본 목록과 복제", () => {
-  test("전체 목록 — 폭 순, 같은 크기로 만든 원본은 «생성됨», Corgi 가 만든 것은 managed (M3·M9)", async () => {
-    const { A, driver } = await start();
-    const made = (await A("device.create", { source: "Small_360" })) as DeviceView;
-    driver.sourceList.push({
-      ...driver.sourceList[0],
-      native: made.native,
-      name: made.name,
-    } as (typeof driver.sourceList)[0]);
-    const { items } = await A("source.list");
-    expect(
-      items.map((i: { native: string; created?: string; managed?: string }) => [
-        i.native,
-        i.created,
-        i.managed,
-      ]),
-    ).toEqual([
-      [made.native, undefined, made.id], // 같은 폭이면 이름 순 — "corgi Small 360" 이 먼저
-      ["Small_360", made.id, undefined],
-      ["Large_412", undefined, undefined],
-    ]);
-  });
-
-  test("Corgi 가 만든 디바이스는 원본으로 쓸 수 없다 (L4 는 나중에)", async () => {
-    const { A, driver } = await start();
-    const made = (await A("device.create", { source: "Small_360" })) as DeviceView;
-    driver.sourceList.push({
-      ...driver.sourceList[1],
-      native: made.native,
-      name: "corgi copy",
-    } as (typeof driver.sourceList)[0]);
-    expect(await A("device.create", { source: made.native })).toMatchObject({ code: "INVALID" });
-  });
-
-  test("이름이 같은 원본이 여럿이면 원본 ID 로 고르게 한다", async () => {
-    const { A, driver } = await start();
-    driver.sourceList.push({
-      ...driver.sourceList[1],
-      native: "Large_412_b",
-      name: "Small 360",
-    } as (typeof driver.sourceList)[0]);
-    const error = await A("device.create", { source: "small 360" });
-    expect(error).toMatchObject({ code: "INVALID" });
-    expect(error.message).toContain("Large_412_b");
-    expect(await A("device.create", { source: "Large_412_b" })).toMatchObject({
-      name: "corgi Small 360",
+describe("기종 목록과 만들기", () => {
+  test("catalog 은 플랫폼별 기종·OS·슬림하면 꺼지는 것을 준다 (M1·M4)", async () => {
+    const { A } = await start();
+    const { platforms, problems } = await A("catalog");
+    expect(problems).toEqual([]);
+    expect(platforms[0]).toMatchObject({
+      platform: "android",
+      models: [{ id: "small-360" }, { id: "large-412" }],
+      os: [{ recommended: true }],
+      slimOff: [{ name: "Assistant & Search", count: 3 }],
     });
   });
 
-  test("없는 원본은 NOT_FOUND", async () => {
+  test("슬림하지 않으면 접두사 없이 기종 이름으로 (R5)", async () => {
     const { A } = await start();
-    expect(await A("device.create", { source: "nope" })).toMatchObject({ code: "NOT_FOUND" });
+    expect(await A("device.create", { model: "large-412", slim: false })).toMatchObject({
+      name: "Large 412",
+      slim: "none",
+      createdByCorgi: true,
+    });
+  });
+
+  test("없는 기종은 NOT_FOUND", async () => {
+    const { A } = await start();
+    expect(await A("device.create", { model: "nope" })).toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("이미 있는 기기 이름과도 겹치지 않게 번호를 붙인다", async () => {
+    const { A, server, driver } = await start();
+    seedDevice(server, driver, "xc17", "corgi Small 360", false);
+    expect(await A("device.create", android360)).toMatchObject({ name: "corgi Small 360 2" });
   });
 });
 
@@ -252,7 +231,7 @@ describe("슬림 수치", () => {
 });
 
 describe("직접 입력", () => {
-  test("Android 크기를 직접 넣어 만든다 — 원본과 직접 입력은 함께 못 준다", async () => {
+  test("Android 크기를 직접 넣어 만든다 — 기종과 직접 입력은 함께 못 준다", async () => {
     const { A } = await start();
     const device = (await A("device.create", {
       custom: { widthDp: 375, heightDp: 812, density: 320 },
@@ -260,7 +239,7 @@ describe("직접 입력", () => {
     expect(device).toMatchObject({ name: "corgi Android 375dp", label: "Android 375dp" });
     expect(
       await A("device.create", {
-        source: "Small_360",
+        model: "Small 360",
         custom: { widthDp: 1, heightDp: 1, density: 160 },
       }),
     ).toMatchObject({

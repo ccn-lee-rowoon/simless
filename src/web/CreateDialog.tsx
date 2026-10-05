@@ -1,81 +1,108 @@
 import { useEffect, useMemo, useState } from "react";
-import type { DeviceView, SourceEntry, SourceListResult } from "../shared/api.ts";
+import type { CatalogModel, CatalogResult, DeviceView, PlatformCatalog } from "../shared/api.ts";
 import { call } from "./api.ts";
 import type { LogLine } from "./types.ts";
-import { Dialog, PlatformBadge } from "./ui.tsx";
+import { Dialog } from "./ui.tsx";
 
-type Filter = "all" | "android" | "ios";
+type Platform = "android" | "ios";
 
-/** 생성(+) — 이 Mac 의 원본을 골라 같은 크기로 복제 + 슬림 (M1~M4) */
+const CUSTOM = "__custom__";
+const PLATFORM_KEY = "corgi-create-platform";
+
+function savedPlatform(): Platform {
+  try {
+    return localStorage.getItem(PLATFORM_KEY) === "android" ? "android" : "ios";
+  } catch {
+    return "ios";
+  }
+}
+
+/** 생성(+) — 플랫폼 → 기종 → OS → 이름·슬림 (M1·M4) */
 export function CreateDialog({
   open,
-  initial,
-  sources,
+  catalog,
   log,
   onClose,
   onCreated,
   onError,
 }: {
   open: boolean;
-  initial: SourceEntry | null;
-  sources: SourceListResult | null;
+  catalog: CatalogResult | null;
   log: LogLine[];
   onClose: () => void;
   onCreated: (name: string) => void;
   onError: (message: string) => void;
 }) {
-  const [picked, setPicked] = useState<SourceEntry | null>(null);
-  const [custom, setCustom] = useState(false);
-  const [size, setSize] = useState({ widthDp: "375", heightDp: "812", density: "420", image: "" });
-  const [filter, setFilter] = useState<Filter>("all");
-  const [query, setQuery] = useState("");
+  const [platform, setPlatformState] = useState<Platform>(savedPlatform);
+  const [modelId, setModelId] = useState("");
+  const [osId, setOsId] = useState("");
+  const [size, setSize] = useState({ widthDp: "375", heightDp: "812", density: "420" });
   const [name, setName] = useState("");
   const [slim, setSlim] = useState(true);
   const [baseline, setBaseline] = useState(true);
+  const [showSlimInfo, setShowSlimInfo] = useState(false);
   const [creating, setCreating] = useState(false);
   const [logStart, setLogStart] = useState(0);
 
-  useEffect(() => {
-    if (!open) return;
-    setPicked(initial);
-    setCustom(false);
-    setName(initial ? `corgi ${initial.name}` : "");
-    setSlim(true);
-    setBaseline(true);
-    setQuery("");
-    setCreating(false);
-  }, [open, initial]);
-
-  const candidates = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return (sources?.items ?? []).filter(
-      (s) =>
-        !s.managed &&
-        (filter === "all" || s.platform === filter) &&
-        (q === "" || `${s.name} ${s.detail} ${s.label}`.toLowerCase().includes(q)),
-    );
-  }, [sources, filter, query]);
-
-  const pick = (s: SourceEntry) => {
-    setPicked(s);
-    setName(`corgi ${s.name}`);
+  const setPlatform = (next: Platform) => {
+    setPlatformState(next);
+    setModelId("");
+    setOsId("");
+    try {
+      localStorage.setItem(PLATFORM_KEY, next);
+    } catch {
+      // 기억 못 해도 된다
+    }
   };
 
+  useEffect(() => {
+    if (!open) return;
+    setModelId("");
+    setOsId("");
+    setName("");
+    setSlim(true);
+    setBaseline(true);
+    setShowSlimInfo(false);
+    setCreating(false);
+  }, [open]);
+
+  const current: PlatformCatalog | undefined = catalog?.platforms.find(
+    (p) => p.platform === platform,
+  );
+  const models = useMemo(
+    () =>
+      [...(current?.models ?? [])].sort(
+        (a, b) => a.layoutWidth - b.layoutWidth || a.name.localeCompare(b.name),
+      ),
+    [current],
+  );
+  const model: CatalogModel | undefined = models.find((m) => m.id === modelId);
+  const custom = modelId === CUSTOM;
+  // iOS 는 기종마다 만들 수 있는 런타임이 다르다
+  const osChoices = (current?.os ?? []).filter((o) => !model?.os || model.os.includes(o.id));
+  const os =
+    osChoices.find((o) => o.id === osId) ?? osChoices.find((o) => o.recommended) ?? osChoices[0];
+  const unit = platform === "android" ? "dp" : "pt";
+  const modelName = custom ? `Android ${size.widthDp}dp` : (model?.name ?? "");
+  const defaultName = modelName ? (slim ? `corgi ${modelName}` : modelName) : "";
+  const problems = catalog?.problems.filter((p) => p.platform === platform) ?? [];
+
   const create = async () => {
-    if (!picked && !custom) return;
+    if (!model && !custom) return;
     setCreating(true);
     setLogStart(log.at(-1)?.id ?? 0);
     try {
       const device = await call<DeviceView>("device.create", {
-        source: custom ? undefined : picked?.native,
+        platform,
+        model: custom ? undefined : model?.id,
         custom: custom
           ? {
               widthDp: Number(size.widthDp),
               heightDp: Number(size.heightDp),
               density: Number(size.density),
-              systemImage: size.image || undefined,
             }
           : undefined,
+        os: os?.id,
         name: name.trim() || undefined,
         slim,
         baseline: slim && baseline,
@@ -87,79 +114,148 @@ export function CreateDialog({
     }
   };
 
+  const group = (form: CatalogModel["form"]) => models.filter((m) => m.form === form);
+
   return (
     <Dialog open={open} onClose={creating ? () => {} : onClose} title="디바이스 생성" wide>
-      {custom ? (
-        <form
-          className="dialog-body"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void create();
-          }}
-        >
-          <p className="subtle">Android 크기를 직접 정합니다. 폭(dp) = 해상도(px) × 160 ÷ 밀도.</p>
-          <div className="grid3">
-            <label className="field">
-              <span>폭 (dp)</span>
-              <input
-                inputMode="numeric"
-                value={size.widthDp}
-                disabled={creating}
-                onChange={(e) => {
-                  setSize({ ...size, widthDp: e.target.value });
-                  setName(`corgi Android ${e.target.value}dp`);
-                }}
-              />
-            </label>
-            <label className="field">
-              <span>높이 (dp)</span>
-              <input
-                inputMode="numeric"
-                value={size.heightDp}
-                disabled={creating}
-                onChange={(e) => setSize({ ...size, heightDp: e.target.value })}
-              />
-            </label>
-            <label className="field">
-              <span>밀도 (dpi)</span>
-              <select
-                value={size.density}
-                disabled={creating}
-                onChange={(e) => setSize({ ...size, density: e.target.value })}
-              >
-                {["160", "240", "320", "420", "440", "480", "560", "640"].map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <p className="subtle">
-            해상도 {Math.round((Number(size.widthDp) * Number(size.density)) / 160) || "?"}×
-            {Math.round((Number(size.heightDp) * Number(size.density)) / 160) || "?"}px
-          </p>
-          <label className="field">
-            <span>시스템 이미지</span>
-            <select
-              value={size.image}
+      <form
+        className="dialog-body create"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void create();
+        }}
+      >
+        <fieldset className="segmented" aria-label="플랫폼">
+          {(["ios", "android"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              aria-pressed={platform === p}
+              className={platform === p ? "segment segment-active" : "segment"}
               disabled={creating}
-              onChange={(e) => setSize({ ...size, image: e.target.value })}
+              onClick={() => setPlatform(p)}
             >
-              <option value="">
-                권장 ({sources?.androidImages.find((i) => i.recommended)?.label ?? "없음"})
-              </option>
-              {sources?.androidImages.map((i) => (
-                <option key={i.sysdir} value={i.sysdir}>
-                  {i.label}
+              {p === "ios" ? "iOS" : "Android"}
+            </button>
+          ))}
+        </fieldset>
+
+        {!catalog && <p className="subtle">만들 수 있는 기종을 읽는 중…</p>}
+        {problems.map((p) => (
+          <p key={p.message} className="notice-inline">
+            {p.message}
+          </p>
+        ))}
+
+        <fieldset className="models" disabled={creating}>
+          <legend>기종</legend>
+          {(["phone", "tablet"] as const).map((form) =>
+            group(form).length === 0 ? null : (
+              <div key={form} className="model-group">
+                <h4>{form === "phone" ? "폰" : "태블릿"}</h4>
+                <ul className="picker">
+                  {group(form).map((m) => (
+                    <li key={m.id}>
+                      <button
+                        type="button"
+                        className={m.id === modelId ? "picker-row picker-row-active" : "picker-row"}
+                        aria-pressed={m.id === modelId}
+                        onClick={() => setModelId(m.id)}
+                      >
+                        <span className="size mono">
+                          {Math.round(m.layoutWidth)}
+                          {unit}
+                        </span>
+                        <span className="picker-name">{m.name}</span>
+                        <span className="subtle mono">{m.detail}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ),
+          )}
+          {current?.custom && (
+            <div className="model-group">
+              <ul className="picker">
+                <li>
+                  <button
+                    type="button"
+                    className={custom ? "picker-row picker-row-active" : "picker-row"}
+                    aria-pressed={custom}
+                    onClick={() => setModelId(CUSTOM)}
+                  >
+                    <span className="size mono">—</span>
+                    <span className="picker-name">직접 입력</span>
+                    <span className="subtle">폭·높이·밀도</span>
+                  </button>
+                </li>
+              </ul>
+              {custom && (
+                <div className="grid3">
+                  <label className="field">
+                    <span>폭 (dp)</span>
+                    <input
+                      inputMode="numeric"
+                      value={size.widthDp}
+                      onChange={(e) => setSize({ ...size, widthDp: e.target.value })}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>높이 (dp)</span>
+                    <input
+                      inputMode="numeric"
+                      value={size.heightDp}
+                      onChange={(e) => setSize({ ...size, heightDp: e.target.value })}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>밀도 (dpi)</span>
+                    <select
+                      value={size.density}
+                      onChange={(e) => setSize({ ...size, density: e.target.value })}
+                    >
+                      {["160", "240", "320", "420", "440", "480", "560", "640"].map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
+        </fieldset>
+
+        <div className="grid2">
+          <label className="field">
+            <span>{platform === "ios" ? "런타임" : "시스템 이미지"}</span>
+            <select
+              value={os?.id ?? ""}
+              disabled={creating || osChoices.length === 0}
+              onChange={(e) => setOsId(e.target.value)}
+            >
+              {osChoices.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                  {o.recommended ? " (기본)" : ""}
                 </option>
               ))}
             </select>
           </label>
           <label className="field">
             <span>이름</span>
-            <input value={name} disabled={creating} onChange={(e) => setName(e.target.value)} />
+            <input
+              value={name}
+              placeholder={defaultName}
+              disabled={creating}
+              onChange={(e) => setName(e.target.value)}
+            />
           </label>
+        </div>
+
+        <div className="slim-option">
           <label className="check">
             <input
               type="checkbox"
@@ -167,152 +263,81 @@ export function CreateDialog({
               disabled={creating}
               onChange={(e) => setSlim(e.target.checked)}
             />
-            만든 뒤 슬림화 (UI 확인용 — 기본)
+            슬림화 — UI 테스트용으로 가볍게 (이름 앞에 corgi)
           </label>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={slim && baseline}
-              disabled={creating || !slim}
-              onChange={(e) => setBaseline(e.target.checked)}
-            />
-            슬림 전후 비교 — 슬림하기 전에 한 번 켜서 메모리를 재 둔다 (1~2분 더 걸림)
-          </label>
-          {creating && <Progress log={log} logStart={logStart} />}
-          <footer className="dialog-footer">
-            <button
-              type="button"
-              className="button"
-              disabled={creating}
-              onClick={() => setCustom(false)}
-            >
-              ← 목록으로
-            </button>
-            <span className="spacer" />
-            <button type="submit" className="button button-primary" disabled={creating}>
-              {creating ? "만드는 중…" : "만들기"}
-            </button>
-          </footer>
-        </form>
-      ) : !picked ? (
-        <div className="dialog-body">
-          <p className="subtle">만들 디바이스를 고르세요. 만든 뒤 슬림화합니다.</p>
-          <div className="filters">
-            {(["all", "android", "ios"] as const).map((f) => (
-              <button
-                key={f}
-                type="button"
-                className={filter === f ? "chip chip-active" : "chip"}
-                onClick={() => setFilter(f)}
-              >
-                {f === "all" ? "전체" : f === "android" ? "Android" : "iOS"}
-              </button>
-            ))}
-            <input
-              className="search"
-              placeholder="이름·기기·크기 검색"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            {filter !== "ios" && (
-              <button
-                type="button"
-                className="button"
-                onClick={() => {
-                  setCustom(true);
-                  setName(`corgi Android ${size.widthDp}dp`);
-                }}
-              >
-                직접 입력…
-              </button>
-            )}
-          </div>
-          {!sources && <p className="subtle">이 Mac 의 디바이스를 읽는 중…</p>}
-          <ul className="picker">
-            {candidates.map((s) => (
-              <li key={s.native}>
-                <button type="button" className="picker-row" onClick={() => pick(s)}>
-                  <span className="size">{s.label.replace(/^(Android|iOS) /, "")}</span>
-                  <PlatformBadge platform={s.platform} />
-                  <span className="picker-name">
-                    {s.kind === "profile" && <span className="badge badge-info">대표 프로필</span>}
-                    {s.name}
-                    <span className="subtle"> · {s.detail}</span>
-                  </span>
-                  <span className="picker-go">
-                    {s.created && (
-                      <span
-                        className="badge badge-neutral"
-                        title={`같은 크기로 만든 디바이스: ${s.created}`}
-                      >
-                        만든 것 있음
-                      </span>
-                    )}{" "}
-                    선택 →
-                  </span>
-                </button>
-              </li>
+          <button
+            type="button"
+            className="icon-button info-button"
+            aria-label="슬림화하면 안 되는 기능"
+            aria-expanded={showSlimInfo}
+            onClick={() => setShowSlimInfo(!showSlimInfo)}
+          >
+            ⓘ
+          </button>
+        </div>
+        {showSlimInfo && current && <SlimInfo catalog={current} />}
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={slim && baseline}
+            disabled={creating || !slim}
+            onChange={(e) => setBaseline(e.target.checked)}
+          />
+          슬림 전후 비교 — 슬림하기 전에 한 번 켜서 메모리를 재 둔다 (1~2분 더 걸림)
+        </label>
+
+        {creating && <Progress log={log} logStart={logStart} />}
+        <footer className="dialog-footer">
+          <span className="subtle">앱은 설치하지 않습니다</span>
+          <span className="spacer" />
+          <button type="button" className="button" disabled={creating} onClick={onClose}>
+            취소
+          </button>
+          <button
+            type="submit"
+            className="button button-primary"
+            disabled={creating || (!model && !custom)}
+          >
+            {creating ? "만드는 중…" : "만들기"}
+          </button>
+        </footer>
+      </form>
+    </Dialog>
+  );
+}
+
+/** 슬림화하면 꺼지는 것 (M4 ⓘ) — simslim·avdslim 이 알려 주는 그대로 */
+function SlimInfo({ catalog }: { catalog: PlatformCatalog }) {
+  if (catalog.slimOff.length === 0) {
+    return (
+      <p className="subtle">
+        {catalog.platform === "ios" ? "simslim" : "avdslim"} 이 없어 목록을 읽지 못했습니다.
+      </p>
+    );
+  }
+  return (
+    <div className="slim-info">
+      <p>슬림화하면 아래 기능이 꺼집니다. 테스트에 필요하면 슬림을 끄고 만드세요.</p>
+      <ul>
+        {catalog.slimOff.map((c) => (
+          <li key={c.name}>
+            <strong>{c.name}</strong>
+            {c.count ? <span className="subtle"> · {c.count}개</span> : null}
+            {c.detail && <div className="subtle">{c.detail}</div>}
+          </li>
+        ))}
+      </ul>
+      {catalog.slimKeeps.length > 0 && (
+        <>
+          <p>그대로 남는 것</p>
+          <ul className="keeps">
+            {catalog.slimKeeps.map((k) => (
+              <li key={k}>{k}</li>
             ))}
           </ul>
-        </div>
-      ) : (
-        <form
-          className="dialog-body"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void create();
-          }}
-        >
-          <div className="summary">
-            <span className="size size-large">{picked.label.replace(/^(Android|iOS) /, "")}</span>
-            <div>
-              <PlatformBadge platform={picked.platform} /> <strong>{picked.name}</strong>
-              <div className="subtle">{picked.detail}</div>
-            </div>
-          </div>
-          <label className="field">
-            <span>이름</span>
-            <input value={name} disabled={creating} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={slim}
-              disabled={creating}
-              onChange={(e) => setSlim(e.target.checked)}
-            />
-            만든 뒤 슬림화 (UI 확인용 — 기본)
-            {picked.platform === "ios" ? " · iOS 는 2~3분 걸립니다" : ""}
-          </label>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={slim && baseline}
-              disabled={creating || !slim}
-              onChange={(e) => setBaseline(e.target.checked)}
-            />
-            슬림 전후 비교 — 슬림하기 전에 한 번 켜서 메모리를 재 둔다 (1~2분 더 걸림)
-          </label>
-          {creating && <Progress log={log} logStart={logStart} />}
-          <footer className="dialog-footer">
-            {!initial && (
-              <button
-                type="button"
-                className="button"
-                disabled={creating}
-                onClick={() => setPicked(null)}
-              >
-                ← 원본 다시 고르기
-              </button>
-            )}
-            <span className="spacer" />
-            <button type="submit" className="button button-primary" disabled={creating}>
-              {creating ? "만드는 중…" : "만들기"}
-            </button>
-          </footer>
-        </form>
+        </>
       )}
-    </Dialog>
+    </div>
   );
 }
 

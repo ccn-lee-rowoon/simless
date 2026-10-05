@@ -1,9 +1,9 @@
-import type { SlimStats } from "../../shared/api.ts";
+import type { CatalogModel, PlatformCatalog, SlimCategory, SlimStats } from "../../shared/api.ts";
 import type { Config } from "../../shared/config.ts";
 import { run as defaultRun, type Runner, runOk, which } from "../../shared/exec.ts";
 import type { Device, DeviceSpec, SlimState } from "../../shared/model.ts";
 import { HandlerError } from "../socket.ts";
-import type { Discovered, Driver, Progress, RuntimeState, SourceDevice } from "./types.ts";
+import type { Discovered, Driver, ModelRequest, Progress, RuntimeState } from "./types.ts";
 
 // iOS 시뮬레이터 — simctl 로 만들고 켜고, simslim 으로 슬림화한다 (docs/design.md §9).
 // 화면 크기는 기기 종류로 정해지고 바꿀 수 없다.
@@ -48,6 +48,39 @@ export function parseSimslimMeasure(text: string): { memoryBytes?: number; proce
     processes: processes ? Number(processes) : undefined,
     memoryBytes: memory?.[1] && memory[2] ? Number(memory[1]) * (UNITS[memory[2]] ?? 1) : undefined,
   };
+}
+
+/** «26.5» 와 «26.10» 을 숫자로 비교한다 */
+function compareVersions(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+/**
+ * `simslim profiles` 출력 — 묶음마다 «<ID>  <이름>» 줄, 그 아래 «When disabled: …»,
+ * 늘 켜 두는 데몬은 «Always on: <라벨> — <이유>».
+ */
+export function parseSimslimProfiles(text: string): { off: SlimCategory[]; keeps: string[] } {
+  const off: SlimCategory[] = [];
+  const keeps: string[] = [];
+  for (const line of text.split("\n")) {
+    const head = /^(\S+)\s{2,}(\S.*)$/.exec(line);
+    if (head?.[2]) {
+      off.push({ name: head[2].trim() });
+      continue;
+    }
+    const disabled = /^\s+When disabled:\s*(.+)$/.exec(line);
+    const last = off.at(-1);
+    if (disabled?.[1] && last) last.detail = disabled[1].trim();
+    const always = /^\s+Always on:\s*\S+\s+—\s*(.+)$/.exec(line);
+    if (always?.[1]) keeps.push(always[1].trim());
+  }
+  return { off, keeps };
 }
 
 export class IosDriver implements Driver {
@@ -160,31 +193,106 @@ export class IosDriver implements Driver {
     }));
   }
 
-  /** 생성 원본 후보 (M1) */
-  async sources(): Promise<SourceDevice[]> {
-    return (await this.simulators()).map(({ sim, deviceType, runtime, spec }) => ({
+  /** iPhone·iPad 이고 쓸 수 있는 iOS 런타임 — 최신 먼저 */
+  private async iosRuntimes(): Promise<SimRuntime[]> {
+    const { runtimes } = await this.simCatalog();
+    return runtimes
+      .filter((r) => r.platform === "iOS" && r.isAvailable)
+      .sort((a, b) => compareVersions(b.version, a.version));
+  }
+
+  async catalog(): Promise<PlatformCatalog> {
+    const [{ deviceTypes }, runtimes] = await Promise.all([this.simCatalog(), this.iosRuntimes()]);
+    const models: CatalogModel[] = [];
+    for (const type of deviceTypes) {
+      if (type.productFamily !== "iPhone" && type.productFamily !== "iPad") continue;
+      const os = runtimes
+        .filter((r) => r.supportedDeviceTypes.some((t) => t.identifier === type.identifier))
+        .map((r) => r.identifier);
+      if (os.length === 0) continue;
+      const profile = await this.profile(type);
+      models.push({
+        id: type.identifier,
+        name: type.name,
+        form: type.productFamily === "iPad" ? "tablet" : "phone",
+        layoutWidth: profile.widthPt,
+        layoutHeight: profile.heightPt,
+        detail: `${profile.widthPt * profile.scale}×${profile.heightPt * profile.scale}px @${profile.scale}x`,
+        os,
+      });
+    }
+    const slim = await this.slimCategories();
+    return {
       platform: "ios",
-      native: sim.udid,
-      name: sim.name,
-      spec,
-      detail: `${deviceType.name === sim.name ? "" : `${deviceType.name} · `}${spec.widthPt * spec.scale}×${spec.heightPt * spec.scale}px @${spec.scale}x · ${runtime.name}`,
-      booted: sim.state === "Booted",
-    }));
+      models,
+      os: runtimes.map((r, i) => ({ id: r.identifier, name: r.name, recommended: i === 0 })),
+      custom: false,
+      slimOff: slim.off,
+      slimKeeps: slim.keeps,
+    };
+  }
+
+  private slimCache?: { off: SlimCategory[]; keeps: string[] };
+
+  /** `simslim profiles` — 묶음 ID·이름 줄 뒤에 «When disabled: …» 설명이 온다 */
+  private async slimCategories(): Promise<{ off: SlimCategory[]; keeps: string[] }> {
+    if (this.slimCache) return this.slimCache;
+    const path = this.simslimPath();
+    if (!path) return { off: [], keeps: [] };
+    const result = await this.runner([path, "profiles"]);
+    if (result.code !== 0) return { off: [], keeps: [] };
+    this.slimCache = parseSimslimProfiles(result.stdout);
+    return this.slimCache;
+  }
+
+  async resolve(request: ModelRequest): Promise<{ spec: DeviceSpec; modelName: string }> {
+    if (request.custom)
+      throw new HandlerError(
+        "INVALID",
+        "iOS 는 크기를 직접 넣을 수 없습니다 — 기기 종류를 고르세요",
+      );
+    const [{ deviceTypes }, runtimes] = await Promise.all([this.simCatalog(), this.iosRuntimes()]);
+    const wanted = (request.model ?? "").toLowerCase();
+    const type = deviceTypes.find(
+      (t) =>
+        (t.productFamily === "iPhone" || t.productFamily === "iPad") &&
+        (t.identifier.toLowerCase() === wanted || t.name.toLowerCase() === wanted),
+    );
+    if (!type) throw new HandlerError("NOT_FOUND", `없는 기기 종류: ${request.model}`);
+    const supported = runtimes.filter((r) =>
+      r.supportedDeviceTypes.some((t) => t.identifier === type.identifier),
+    );
+    const os = request.os?.toLowerCase();
+    const runtime = os
+      ? runtimes.find(
+          (r) =>
+            r.identifier.toLowerCase() === os ||
+            r.name.toLowerCase() === os ||
+            r.version === request.os,
+        )
+      : supported[0];
+    if (!runtime) {
+      throw new HandlerError(
+        "NOT_FOUND",
+        os ? `없는 런타임: ${request.os}` : `${type.name} 을 만들 수 있는 런타임이 없습니다`,
+      );
+    }
+    if (!supported.includes(runtime))
+      throw new HandlerError("INVALID", `${runtime.name} 은 ${type.name} 을 지원하지 않습니다`);
+    return { spec: await this.spec(type, runtime), modelName: type.name };
   }
 
   /**
-   * 원본과 같은 기기 종류·런타임으로 새로 만든다. `simctl clone` 은 원본의 앱·데이터가
-   * 따라오고 원본이 꺼져 있어야 해서 쓰지 않는다 (requirements «결정 기록»).
+   * 기기 종류·런타임으로 새로 만든다. `simctl clone` 은 원본의 앱·데이터가 따라오고
+   * 원본이 꺼져 있어야 해서 쓰지 않는다 (requirements «결정 기록»).
    */
   async create(
-    input: { name: string; source: SourceDevice },
+    input: { name: string; spec: DeviceSpec },
     progress: Progress,
   ): Promise<{ native: string }> {
-    const { spec } = input.source;
-    if (spec.platform !== "ios") throw new HandlerError("INVALID", "iOS 원본이 아닙니다");
-    progress(
-      `시뮬레이터 생성: ${input.name} ← ${input.source.name} (${spec.deviceTypeName} · ${spec.runtimeName})`,
-    );
+    const { spec } = input;
+    if (spec.platform !== "ios") throw new HandlerError("INVALID", "iOS 기종이 아닙니다");
+    progress(`시뮬레이터 생성: ${input.name} (${spec.deviceTypeName} · ${spec.runtimeName})`);
     const udid = (
       await runOk(this.runner, this.simctl("create", input.name, spec.deviceTypeId, spec.runtimeId))
     ).trim();

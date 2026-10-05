@@ -2,7 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AndroidDriver, type AndroidDriverOptions } from "../src/server/drivers/android.ts";
+import {
+  AndroidDriver,
+  type AndroidDriverOptions,
+  parseAvdslimProfiles,
+} from "../src/server/drivers/android.ts";
 import { Config } from "../src/shared/config.ts";
 import type { RunResult } from "../src/shared/exec.ts";
 import type { Device } from "../src/shared/model.ts";
@@ -106,12 +110,6 @@ describe("AndroidDriver", () => {
     "tag.id": "google_apis_playstore",
   };
 
-  test("sources 는 비어 있다 — 이 Mac 의 AVD 가 있어도 원본으로 쓰지 않는다 (M1)", async () => {
-    const { env } = sdkWithImages();
-    sourceAvd(env.ANDROID_AVD_HOME, "Size_Small_360dp", small);
-    expect(await driver(env, { runner: fakeAdb().runner }).sources()).toEqual([]);
-  });
-
   test("list — 이 Mac 의 AVD 전부, 크기가 없으면 skin.name, 표시 이름이 없으면 ID 로 (R20)", async () => {
     const { env } = sdkWithImages();
     sourceAvd(env.ANDROID_AVD_HOME, "Size_Small_360dp", small);
@@ -146,14 +144,13 @@ describe("AndroidDriver", () => {
     const { env } = sdkWithImages();
     sourceAvd(env.ANDROID_AVD_HOME, "Size_Small_360dp", small);
     const d = driver(env, { runner: fakeAdb().runner });
-    const source = (await d.presetSources()).find((p) => p.native === "profile:small-phone");
-    if (!source) throw new Error("프로필 없음");
-    const { native } = await d.create({ id: "ab12", name: "corgi Small", source }, () => {});
+    const { spec } = await d.resolve({ model: "small-phone" });
+    const { native } = await d.create({ id: "ab12", name: "corgi Small", spec }, () => {});
     expect(native).toBe("corgi_ab12");
     const dir = join(env.ANDROID_AVD_HOME, "corgi_ab12.avd");
     expect(readFileSync(join(dir, "config.ini"), "utf8")).toContain("AvdId=corgi_ab12");
 
-    const device = { id: "ab12", native, name: "corgi Small", spec: source.spec } as Device;
+    const device = { id: "ab12", native, name: "corgi Small", spec } as Device;
     await d.rename(device, "작은 폰");
     const config = readFileSync(join(dir, "config.ini"), "utf8");
     expect(config).toContain("avd.ini.displayname=작은 폰");
@@ -271,45 +268,51 @@ describe("parseFootprint", () => {
   });
 });
 
-describe("AndroidDriver 대표 프로필·직접 입력", () => {
-  test("대표 프로필은 기본 이미지(4KB 페이지·API 높은 순)로, 폭별로 나온다", async () => {
+describe("AndroidDriver 기종 목록·만들기", () => {
+  test("catalog — 대표 프로필(폭 dp), 시스템 이미지(4KB 페이지·API 높은 순이 기본), 직접 입력 가능", async () => {
     const { env } = sdkWithImages();
-    const presets = await driver(env).presetSources();
-    expect(presets.map((p) => p.native)).toContain("profile:medium-phone");
-    expect(
-      presets.every(
-        (p) => p.spec.platform === "android" && p.spec.systemImage.includes("android-36/"),
-      ),
-    ).toBe(true);
-    const small = presets.find((p) => p.native === "profile:small-phone");
-    expect(small?.spec).toMatchObject({ widthPx: 720, heightPx: 1280, density: 320 });
+    const catalog = await driver(env).catalog();
+    expect(catalog.custom).toBe(true);
+    expect(catalog.models.find((m) => m.id === "medium-phone")).toMatchObject({
+      layoutWidth: 411,
+      form: "phone",
+    });
+    expect(catalog.models.find((m) => m.id === "medium-tablet")?.form).toBe("tablet");
+    expect(catalog.os[0]).toMatchObject({
+      recommended: true,
+      id: expect.stringContaining("android-36/"),
+    });
   });
 
-  test("직접 입력은 dp·밀도에서 px 를 계산하고, 이미지를 고를 수 있다", async () => {
+  test("resolve — 직접 입력은 dp·밀도에서 px 를 계산하고, 이미지를 고를 수 있다", async () => {
     const { env } = sdkWithImages();
-    const source = await driver(env).customSource({
-      widthDp: 375,
-      heightDp: 812,
+    const { spec, modelName } = await driver(env).resolve({
+      custom: { widthDp: 375, heightDp: 812, density: 420 },
+      os: "android-37.1",
+    });
+    expect(modelName).toBe("Android 375dp");
+    expect(spec).toMatchObject({
+      widthPx: 984,
+      heightPx: 2132,
       density: 420,
-      systemImage: "android-37.1",
-    });
-    expect(source).toMatchObject({
-      native: "custom:375x812@420",
-      spec: {
-        widthPx: 984,
-        heightPx: 2132,
-        density: 420,
-        systemImage: expect.stringContaining("android-37.1"),
-      },
+      systemImage: expect.stringContaining("android-37.1"),
     });
   });
 
-  test("프로필로 만들면 원본 없이 새 config.ini 를 쓴다", async () => {
+  test("resolve — 없는 프로필·이미지는 NOT_FOUND", async () => {
+    const { env } = sdkWithImages();
+    const d = driver(env);
+    expect(await d.resolve({ model: "nope" }).catch((e) => e)).toMatchObject({ code: "NOT_FOUND" });
+    expect(
+      await d.resolve({ model: "small-phone", os: "android-99" }).catch((e) => e),
+    ).toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("프로필로 만들면 새 config.ini 를 쓴다", async () => {
     const { env } = sdkWithImages();
     const d = driver(env, { runner: fakeAdb().runner });
-    const source = (await d.presetSources()).find((p) => p.native === "profile:tablet-7");
-    if (!source) throw new Error("프로필 없음");
-    await d.create({ id: "tb01", name: "corgi 7 inch Tablet", source }, () => {});
+    const { spec } = await d.resolve({ model: "7 inch Tablet" });
+    await d.create({ id: "tb01", name: "corgi 7 inch Tablet", spec }, () => {});
     const config = readFileSync(join(env.ANDROID_AVD_HOME, "corgi_tb01.avd", "config.ini"), "utf8");
     expect(config).toContain("hw.lcd.width=1200");
     expect(config).toContain("hw.lcd.density=320");
@@ -319,5 +322,34 @@ describe("AndroidDriver 대표 프로필·직접 입력", () => {
     expect(readFileSync(join(env.ANDROID_AVD_HOME, "corgi_tb01.ini"), "utf8")).toContain(
       "target=android-36",
     );
+  });
+});
+
+describe("parseAvdslimProfiles", () => {
+  test("꺼지는 묶음과 패키지 수, 끄지 않는 것 — 공격적 모드는 뺀다 (M4 ⓘ)", () => {
+    const text = [
+      "📋 AVD-SLIM Slimming Categories & Packages:",
+      "",
+      "📦 Assistant & Search (~250-400 MB RAM):",
+      "   • com.google.android.googlequicksearchbox",
+      "   • com.google.android.as",
+      "",
+      "📦 Printing & Background Spoolers (~30-60 MB RAM):",
+      "   • com.android.printspooler",
+      "",
+      "🔥 Aggressive Mode Additional Packages (via `avdslim on --aggressive`):",
+      "   • com.android.vending",
+      "",
+      "🔒 GUARANTEED FUNCTIONAL (Never Disabled):",
+      "   ✓ Core Android OS & SystemUI",
+      "   ✓ Flutter / React Native / Native APK execution",
+    ].join("\n");
+    expect(parseAvdslimProfiles(text)).toEqual({
+      off: [
+        { name: "Assistant & Search", count: 2 },
+        { name: "Printing & Background Spoolers", count: 1 },
+      ],
+      keeps: ["Core Android OS & SystemUI", "Flutter / React Native / Native APK execution"],
+    });
   });
 });

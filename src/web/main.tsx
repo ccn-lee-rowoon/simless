@@ -1,6 +1,6 @@
 import { StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { SourceEntry, SourceListResult, StatusResult } from "../shared/api.ts";
+import type { CatalogResult, StatusResult } from "../shared/api.ts";
 import { ApiError, call, subscribe, token } from "./api.ts";
 import { CreateDialog } from "./CreateDialog.tsx";
 import corgiIcon from "./corgi.svg";
@@ -47,11 +47,11 @@ function App() {
     }
   };
   const [status, setStatus] = useState<StatusResult | null>(null);
-  const [sources, setSources] = useState<SourceListResult | null>(null);
+  const [catalog, setCatalog] = useState<CatalogResult | null>(null);
   const [online, setOnline] = useState(true);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [log, setLog] = useState<LogLine[]>([]);
-  const [createFrom, setCreateFrom] = useState<SourceEntry | "pick" | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const notify = useCallback((kind: Notice["kind"], text: string) => {
     const id = ++noticeId;
@@ -68,8 +68,8 @@ function App() {
     );
   }, [notify]);
 
-  const refreshSources = useCallback(() => {
-    call<SourceListResult>("source.list").then(setSources, (e: unknown) =>
+  const refreshCatalog = useCallback(() => {
+    call<CatalogResult>("catalog").then(setCatalog, (e: unknown) =>
       notify("error", String((e as Error).message)),
     );
   }, [notify]);
@@ -90,10 +90,10 @@ function App() {
     };
   }, [refreshStatus]);
 
-  // 원본 목록(이 Mac 의 디바이스·대표 프로필)은 생성(+) 화면을 열 때 읽는다
+  // 만들 수 있는 기종·OS 는 생성(+) 화면을 열 때 읽는다
   useEffect(() => {
-    if (createFrom !== null) refreshSources();
-  }, [createFrom, refreshSources]);
+    if (creating) refreshCatalog();
+  }, [creating, refreshCatalog]);
 
   /** 버튼 동작 공통 — 실패하면 알림, 다른 세션이 쓰는 중이면 누가 쓰는지 */
   const act = useCallback(
@@ -141,11 +141,7 @@ function App() {
             title={online ? "서버 연결됨" : "서버 연결 끊김"}
           />
           <span className="subtle">{status ? `서버 ${status.serverVersion}` : "연결 중…"}</span>
-          <button
-            type="button"
-            className="button button-primary"
-            onClick={() => setCreateFrom("pick")}
-          >
+          <button type="button" className="button button-primary" onClick={() => setCreating(true)}>
             + 생성
           </button>
         </div>
@@ -175,7 +171,7 @@ function App() {
           platform={tab}
           queue={status?.queue ?? []}
           act={act}
-          onCreate={() => setCreateFrom("pick")}
+          onCreate={() => setCreating(true)}
         />
       </main>
 
@@ -197,13 +193,12 @@ function App() {
       </div>
 
       <CreateDialog
-        open={createFrom !== null}
-        initial={createFrom === "pick" ? null : createFrom}
-        sources={sources}
+        open={creating}
+        catalog={catalog}
         log={log}
-        onClose={() => setCreateFrom(null)}
+        onClose={() => setCreating(false)}
         onCreated={(name) => {
-          setCreateFrom(null);
+          setCreating(false);
           notify("info", `만들었습니다: ${name}`);
           refreshStatus();
         }}

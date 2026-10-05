@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { IosDriver } from "../src/server/drivers/ios.ts";
+import { IosDriver, parseSimslimProfiles } from "../src/server/drivers/ios.ts";
 import { Config } from "../src/shared/config.ts";
 import type { RunResult } from "../src/shared/exec.ts";
 import type { Device } from "../src/shared/model.ts";
@@ -124,37 +124,59 @@ describe("IosDriver", () => {
       "xcrun simctl list -j devices": { stdout: JSON.stringify({ devices }) },
     });
     const driver = new IosDriver(config, runner, () => "/bin/simslim");
+    // 워치·쓸 수 없는 것·없는 런타임은 빠진다
     expect(await driver.list()).toEqual([
-      { native: "U-17", name: "iPhone 17", spec: expect.objectContaining({ widthPt: 402 }) },
-    ]);
-    const sources = await driver.sources();
-    expect(sources).toHaveLength(1); // 워치·쓸 수 없는 것·없는 런타임은 빠진다
-    expect(sources[0]).toMatchObject({
-      native: "U-17",
-      name: "iPhone 17",
-      booted: true,
-      spec: {
-        deviceTypeId: "dt.iphone-17",
-        runtimeId: "rt.26-5",
-        widthPt: 402,
-        heightPt: 874,
-        scale: 3,
+      {
+        native: "U-17",
+        name: "iPhone 17",
+        spec: expect.objectContaining({
+          deviceTypeId: "dt.iphone-17",
+          runtimeId: "rt.26-5",
+          widthPt: 402,
+          heightPt: 874,
+          scale: 3,
+        }),
       },
+    ]);
+  });
+
+  test("catalog — 런타임이 지원하는 iPhone·iPad 기종, 최신 런타임이 기본", async () => {
+    const { runner } = fakeRunner();
+    const catalog = await new IosDriver(config, runner, () => undefined).catalog();
+    // iPhone 8 은 지원하는 런타임이 없고, 워치는 iPhone·iPad 가 아니다
+    expect(catalog.models).toEqual([
+      expect.objectContaining({
+        id: "dt.iphone-17",
+        form: "phone",
+        layoutWidth: 402,
+        os: ["rt.26-5", "rt.26-0"],
+      }),
+    ]);
+    expect(catalog.os.map((o) => [o.id, o.recommended])).toEqual([
+      ["rt.26-5", true],
+      ["rt.26-0", false],
+    ]);
+    expect(catalog.custom).toBe(false);
+  });
+
+  test("resolve — 이름·ID 로 기종을, 버전·이름으로 런타임을 고른다", async () => {
+    const { runner } = fakeRunner();
+    const driver = new IosDriver(config, runner);
+    expect((await driver.resolve({ model: "iPhone 17" })).spec).toMatchObject({
+      runtimeId: "rt.26-5",
+    });
+    expect((await driver.resolve({ model: "dt.iphone-17", os: "26.0" })).spec).toMatchObject({
+      runtimeId: "rt.26-0",
+    });
+    expect(await driver.resolve({ model: "iPhone 8" }).catch((e) => e)).toMatchObject({
+      code: "NOT_FOUND",
     });
   });
 
-  test("create — 원본과 같은 기기 종류·런타임으로 새로 만든다 (clone 아님), UDID 가 native", async () => {
+  test("create — 기기 종류·런타임으로 새로 만든다 (clone 아님), UDID 가 native", async () => {
     const { runner, calls } = fakeRunner({ "xcrun simctl create": { stdout: "NEW-UDID\n" } });
-    const source = {
-      platform: "ios" as const,
-      native: "U-17",
-      name: "iPhone 17",
-      spec: device.spec,
-      detail: "",
-      booted: true,
-    };
     const result = await new IosDriver(config, runner).create(
-      { name: "corgi iPhone 17", source },
+      { name: "corgi iPhone 17", spec: device.spec },
       () => {},
     );
     expect(result.native).toBe("NEW-UDID");
@@ -213,5 +235,33 @@ describe("IosDriver", () => {
     const driver = new IosDriver(config, runner, () => "/bin/simslim");
     expect(await driver.checkSlim(device, { booted: false })).toBeUndefined();
     expect(await driver.checkSlim(device, { booted: true })).toBe("drifted");
+  });
+});
+
+describe("parseSimslimProfiles", () => {
+  test("묶음 이름과 «When disabled» 설명, 늘 켜 두는 것 (M4 ⓘ)", () => {
+    const text = [
+      "siri           Siri & Intelligence",
+      "               29 daemons · ~265 MB idle footprint when enabled",
+      "               When disabled: Siri, speech features, and Apple Intelligence services are unavailable.",
+      "connectivity   Sharing & Device Connectivity",
+      "               When disabled: AirDrop and Continuity will not work.",
+      "               Always on: com.apple.sharingd — Required for system share sheets.",
+      "",
+      "170 daemons across 15 categories. Core workflow and deadlock-prone daemons are never disabled.",
+    ].join("\n");
+    expect(parseSimslimProfiles(text)).toEqual({
+      off: [
+        {
+          name: "Siri & Intelligence",
+          detail: "Siri, speech features, and Apple Intelligence services are unavailable.",
+        },
+        {
+          name: "Sharing & Device Connectivity",
+          detail: "AirDrop and Continuity will not work.",
+        },
+      ],
+      keeps: ["Required for system share sheets."],
+    });
   });
 });
