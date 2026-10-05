@@ -1,7 +1,7 @@
 {
   "name": "corgi",
   "version": "0.0.0",
-  "description": "크기별 디바이스 레이아웃 확인 도구",
+  "description": "시뮬레이터·에뮬레이터 중개·관리 도구 — 여러 에이전트 세션이 이 Mac 의 기기를 나눠 쓴다",
   "private": true,
   "type": "module",
   "bin": {
@@ -10,6 +10,9 @@
   "scripts": {
     "check": "biome check . && tsc --noEmit",
     "format": "biome check --write .",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "trace": "bun scripts/trace.ts",
     "build": "bun scripts/build.ts"
   },
   "devDependencies": {
