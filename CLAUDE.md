@@ -8,8 +8,9 @@
 
 1. `HANDOFF.md` — 배경, 실측한 사실, 머신 상태
 2. `requirements.md` — 요구사항 정본(맨 아래 «결정 기록» 포함)
-3. `docs/design.md` — 설계안
-4. `reference-design-draft.md` — 요구사항 정리 전 초안. 참고만 한다
+3. `docs/design.md` — 설계안 (저장소 구조·폴더 경계는 §3)
+4. `docs/development.md` — 개발 가이드: «무엇을 바꾸려면 어디를 고치나», 테스트 쓰는 법, 화면 확인, 이 Mac 에 반영
+5. `reference-design-draft.md` — 요구사항 정리 전 초안. 참고만 한다
 
 ## 문서 규칙
 
@@ -24,7 +25,8 @@
 ```sh
 bun install
 bun run check   # biome check + tsc --noEmit
-bun test
+bun run test    # 모든 테스트
+bun run trace   # 요구사항 ID ↔ 테스트 (--missing: 테스트 없는 요구사항)
 bun run build   # dist/corgi 단일 실행 파일 — 진입점·파일 포함을 바꿨을 때
 ```
 
@@ -58,7 +60,7 @@ Co-Authored-By: …
   | `build` | `package.json`·`tsconfig`·`biome.json`·`mise.toml`, 의존성 |
   | `chore` | 그 밖의 잡일 (`.gitignore` 등) |
 
-- **scope** (선택) — 바뀐 곳(`src/` 아래 폴더 기준): `shared` · `server` · `cli` · `hook` · `mcp` · `web` · `tray` · `skill`(`integrations/`). 여러 곳에 걸치면 생략한다. `docs` 는 scope 없이 쓴다.
+- **scope** (선택) — 바뀐 곳(`src/` 아래 폴더 기준): `shared` · `install` · `server` · `cli` · `hook` · `mcp` · `web` · `tray` · `skill`(`integrations/`). 여러 곳에 걸치면 생략한다. `docs` 는 scope 없이 쓴다.
 - **요약** — 한국어, 마침표 없이, 50자 안팎. «무엇을 했다» 가 드러나게 쓴다.
 - **본문** — 한국어, 한 줄 72자 안팎에서 줄바꿈. 이유가 diff 로 뻔하면 생략해도 된다.
 - **`관련:`** — 해당 요구사항 ID 가 있으면 적는다.
