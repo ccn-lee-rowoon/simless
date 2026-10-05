@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import type { AcquireResult, BusyData, HistoryEvent, LeaseItem } from "../../shared/api.ts";
 import { ExitCode } from "../../shared/exit-codes.ts";
-import { t } from "../../shared/i18n.ts";
+import { language, t } from "../../shared/i18n.ts";
 import { CliError, type Context, output, type Run, request } from "../context.ts";
 import { formatHolder } from "../format.ts";
 
@@ -135,7 +135,7 @@ export function registerLease(program: Command, run: Run) {
             : events
                 .map(
                   (e) =>
-                    `${new Date(e.at).toLocaleString()}  ${e.human ? t("common.human") : e.agent} (${e.sessionKey})  ${t(`web.history.${e.kind}`)}: ${e.deviceIds.join(", ")}`,
+                    `${new Date(e.at).toLocaleString(language() === "ko" ? "ko-KR" : "en-US")}  ${e.human ? t("common.human") : e.agent} (${e.sessionKey})  ${t(`web.history.${e.kind}`)}: ${e.deviceIds.join(", ")}`,
                 )
                 .join("\n"),
         );
