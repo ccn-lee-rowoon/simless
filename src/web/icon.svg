@@ -1,8 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <title>simless</title>
-  <!-- 크기가 다른 화면 둘을 이음매 없는 한 줄로 — simulator + seamless -->
+  <!-- 폰 하나에 눈·입을 살짝 — 사람·에이전트 곁에서 기기를 맡아 주는 도구 (M12) -->
   <rect x="64" y="64" width="896" height="896" rx="200" fill="#14171D"/>
-  <path fill="none" stroke="#5EEAC0" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"
-    d="M 470 560 C 446 470 432 356 368 356 L 280 356 Q 216 356 216 420 L 216 716 Q 216 780 280 780 L 368 780 C 432 780 446 650 470 560 C 498 452 510 228 600 228 L 744 228 Q 808 228 808 292 L 808 716 Q 808 780 744 780 L 600 780 C 510 780 498 668 470 560 Z"/>
-  <path stroke="#5EEAC0" stroke-width="34" stroke-linecap="round" d="M292 702 H344 M640 702 H712"/>
+  <g fill="none" stroke="#5EEAC0" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="322" y="196" width="380" height="632" rx="86" stroke-width="56"/>
+    <path d="M444 430v34M580 430v34" stroke-width="58"/>
+    <path d="M452 560q60 52 120 0" stroke-width="44"/>
+    <path d="M472 744h80" stroke-width="34"/>
+  </g>
 </svg>

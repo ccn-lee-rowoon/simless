@@ -223,8 +223,9 @@ export function useMenuDismiss(): void {
 }
 
 /** 앱 아이콘 — 폭이 다른 기기 세 대 (M12) */
-/** 로고 — 크기가 다른 화면 둘을 이음매 없는 한 줄로 (simulator + seamless). icon.svg 와 같은 경로 */
+/** 로고 — 폰 하나에 눈·입을 살짝 (icon.svg 와 같은 모양). 작으면 홈 바를 빼고 선을 굵게 */
 export function Logo({ size = 24 }: { size?: number }) {
+  const small = size < 40;
   return (
     <svg
       width={size}
@@ -232,11 +233,20 @@ export function Logo({ size = 24 }: { size?: number }) {
       viewBox="168 168 688 688"
       fill="none"
       stroke="currentColor"
-      strokeWidth={size >= 40 ? 44 : 58}
+      strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M 470 560 C 446 470 432 356 368 356 L 280 356 Q 216 356 216 420 L 216 716 Q 216 780 280 780 L 368 780 C 432 780 446 650 470 560 C 498 452 510 228 600 228 L 744 228 Q 808 228 808 292 L 808 716 Q 808 780 744 780 L 600 780 C 510 780 498 668 470 560 Z" />
+      <rect x="322" y="196" width="380" height="632" rx="86" strokeWidth={small ? 60 : 44} />
+      <path
+        d={small ? "M444 440v14M580 440v14" : "M444 430v34M580 430v34"}
+        strokeWidth={small ? 74 : 50}
+      />
+      <path
+        d={small ? "M452 572q60 52 120 0" : "M452 560q60 52 120 0"}
+        strokeWidth={small ? 58 : 38}
+      />
+      {!small && <path d="M472 744h80" strokeWidth={30} />}
     </svg>
   );
 }

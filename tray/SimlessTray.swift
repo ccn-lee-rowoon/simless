@@ -52,33 +52,37 @@ enum Strings {
   }
 }
 
-/// 앱 아이콘과 같은 모양 — 크기가 다른 화면 둘을 이음매 없는 한 줄로 (simulator + seamless, M12).
-/// src/web/icon.svg 의 경로를 1024 칸 기준 168…856 범위로 잘라 그린다. 단색 템플릿
+/// 앱 아이콘과 같은 모양 — 폰 하나에 눈·입을 살짝 (M12). src/web/icon.svg 를 1024 칸 기준
+/// 168…856 범위로 잘라 그린다. 18px 에서도 보이게 홈 바는 빼고 눈·입을 굵게. 단색 템플릿
 func devicesTemplate(size: CGFloat) -> NSImage {
   let image = NSImage(size: NSSize(width: size, height: size), flipped: true) { r in
     let s = r.height / 688
     func p(_ x: CGFloat, _ y: CGFloat) -> NSPoint { NSPoint(x: (x - 168) * s, y: (y - 168) * s) }
-    let path = NSBezierPath()
-    path.move(to: p(470, 560))
-    path.curve(to: p(368, 356), controlPoint1: p(446, 470), controlPoint2: p(432, 356))
-    path.line(to: p(280, 356))
-    path.curve(to: p(216, 420), controlPoint1: p(237.33, 356.0), controlPoint2: p(216.0, 377.33))
-    path.line(to: p(216, 716))
-    path.curve(to: p(280, 780), controlPoint1: p(216.0, 758.67), controlPoint2: p(237.33, 780.0))
-    path.line(to: p(368, 780))
-    path.curve(to: p(470, 560), controlPoint1: p(432, 780), controlPoint2: p(446, 650))
-    path.curve(to: p(600, 228), controlPoint1: p(498, 452), controlPoint2: p(510, 228))
-    path.line(to: p(744, 228))
-    path.curve(to: p(808, 292), controlPoint1: p(786.67, 228.0), controlPoint2: p(808.0, 249.33))
-    path.line(to: p(808, 716))
-    path.curve(to: p(744, 780), controlPoint1: p(808.0, 758.67), controlPoint2: p(786.67, 780.0))
-    path.line(to: p(600, 780))
-    path.curve(to: p(470, 560), controlPoint1: p(510, 780), controlPoint2: p(498, 668))
-    path.close()
-    path.lineWidth = 1.45 * r.height / 18
-    path.lineJoinStyle = .round
+    let unit = r.height / 18
     NSColor.black.setStroke()
-    path.stroke()
+
+    let body = NSBezierPath(
+      roundedRect: NSRect(x: (322 - 168) * s, y: (196 - 168) * s, width: 380 * s, height: 632 * s),
+      xRadius: 86 * s, yRadius: 86 * s)
+    body.lineWidth = 1.5 * unit
+    body.stroke()
+
+    let eyes = NSBezierPath()
+    eyes.move(to: p(444, 440))
+    eyes.line(to: p(444, 454))
+    eyes.move(to: p(580, 440))
+    eyes.line(to: p(580, 454))
+    eyes.lineWidth = 1.9 * unit
+    eyes.lineCapStyle = .round
+    eyes.stroke()
+
+    // 미소 — q(60,52)→(120,0) 을 3차 곡선으로
+    let mouth = NSBezierPath()
+    mouth.move(to: p(452, 572))
+    mouth.curve(to: p(572, 572), controlPoint1: p(492, 606.67), controlPoint2: p(532, 606.67))
+    mouth.lineWidth = 1.5 * unit
+    mouth.lineCapStyle = .round
+    mouth.stroke()
     return true
   }
   image.isTemplate = true
