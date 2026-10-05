@@ -71,6 +71,7 @@ describe("디바이스 명령", () => {
 
   test("다른 세션이 쓰는 중이면 이름 변경·삭제를 막는다 (M8·P1)", async () => {
     const { A, B } = await start();
+    await A("device.create", { model: "Large 412" }); // 처음 만든 것은 기본 디바이스라 못 지운다
     const device = (await A("device.create", android360)) as DeviceView;
     await A("lease.acquire", { devices: [device.id] });
     expect(await B("device.rename", { device: device.id, name: "x" })).toMatchObject({
@@ -84,13 +85,14 @@ describe("디바이스 명령", () => {
 
   test("삭제하면 켜져 있던 것은 끄고 목록·점유에서 빠진다", async () => {
     const { A, server, driver } = await start();
+    await A("device.create", { model: "Large 412" }); // 처음 만든 것은 기본 디바이스라 못 지운다
     const device = (await A("device.create", android360)) as DeviceView;
     await A("lease.acquire", { devices: [device.id] });
     await A("device.up");
     expect(driver.booted.has(device.id)).toBe(true);
     await A("device.delete", { device: device.id });
     expect(driver.booted.has(device.id)).toBe(false);
-    expect(server.registry.list()).toEqual([]);
+    expect(server.registry.get(device.id)).toBeUndefined();
     expect(server.leases.heldBy("A")).toEqual([]);
   });
 

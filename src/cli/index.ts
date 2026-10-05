@@ -3,6 +3,7 @@ import { ExitCode } from "../shared/exit-codes.ts";
 import { VERSION } from "../shared/version.ts";
 import { registerDevices } from "./commands/devices.ts";
 import { registerDoctor } from "./commands/doctor.ts";
+import { registerGroups } from "./commands/groups.ts";
 import { registerLease } from "./commands/lease.ts";
 import { registerStatus } from "./commands/status.ts";
 import { CliError, makeContext, output, type Run } from "./context.ts";
@@ -11,7 +12,9 @@ export async function runCli(argv: string[]): Promise<number> {
   let exitCode: number = ExitCode.ok;
 
   const program = new Command("corgi")
-    .description("크기별 디바이스 레이아웃 확인 도구")
+    .description(
+      "시뮬레이터·에뮬레이터 중개·관리 도구 — 용도별 그룹·기본 디바이스·UI 테스트용 슬림 디바이스",
+    )
     .version(VERSION, "-v, --version")
     .option("--json", "결과를 JSON 으로 출력 (에이전트용)")
     .option("--session <id>", "세션을 직접 지정 (기본: 명령을 실행한 에이전트 프로세스)")
@@ -112,6 +115,7 @@ export async function runCli(argv: string[]): Promise<number> {
   registerStatus(program, run);
   registerLease(program, run);
   registerDevices(program, run);
+  registerGroups(program, run);
   registerDoctor(program, run);
 
   try {

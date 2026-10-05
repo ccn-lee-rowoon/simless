@@ -1,4 +1,4 @@
-import type { Device } from "./model.ts";
+import type { Defaults, Device, Group } from "./model.ts";
 import type { SessionInfo } from "./protocol.ts";
 
 // 메서드별 결과 형식 — 서버와 CLI(나중에 MCP·웹 UI)가 같이 쓴다. 상세는 docs/protocol.md
@@ -37,6 +37,10 @@ export interface DeviceView extends Device {
   slimStats?: SlimStats;
   /** 이 세션이 점유 중 */
   mine: boolean;
+  /** 이 플랫폼의 기본 디바이스 (R22) */
+  default: boolean;
+  /** 든 그룹 ID (R21) */
+  groups: string[];
 }
 
 export interface StatusResult {
@@ -45,6 +49,8 @@ export interface StatusResult {
   held: string[];
   queuePosition?: number;
   devices: DeviceView[];
+  groups: Group[];
+  defaults: Defaults;
   queue: { sessionKey: string; agent: string; deviceIds: string[]; enqueuedAt: number }[];
 }
 

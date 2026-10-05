@@ -147,6 +147,58 @@ export function registerDevices(program: Command, run: Run) {
     );
 
   program
+    .command("memo")
+    .description(
+      "디바이스 메모 — 로그인한 계정 등. 글을 안 주면 보여 주고, --clear 면 지운다 (R24)",
+    )
+    .argument("<device>", "디바이스 ID 또는 이름")
+    .argument("[text...]", "메모")
+    .option("--clear", "메모를 지운다")
+    .action(
+      run(async (ctx, device: string, text: string[], o: { clear?: boolean }) => {
+        if (text.length === 0 && !o.clear) {
+          const [found] = (await call<DeviceView[]>(ctx, "device.list", {})).filter(
+            (d) => d.id === device || d.name.toLowerCase() === device.toLowerCase(),
+          );
+          if (!found) throw new CliError(`없는 디바이스: ${device}`, ExitCode.failed, "NOT_FOUND");
+          output(
+            ctx,
+            { id: found.id, memo: found.memo ?? null },
+            () => found.memo ?? "(메모 없음)",
+          );
+          return;
+        }
+        const result = await call<DeviceView>(ctx, "device.setMemo", {
+          device,
+          memo: o.clear ? "" : text.join(" "),
+        });
+        output(ctx, result, () => devicesTable([result]));
+      }),
+    );
+
+  program
+    .command("default")
+    .description("기본 디바이스 — 플랫폼마다 하나. 주면 그 디바이스를 기본으로 (R22)")
+    .argument("[device]", "디바이스 ID 또는 이름")
+    .action(
+      run(async (ctx, device: string | undefined) => {
+        if (device) {
+          const result = await call<DeviceView>(ctx, "device.setDefault", { device });
+          output(ctx, result, () => `기본 디바이스(${result.platform}): ${result.name}`);
+          return;
+        }
+        const defaults = (await call<DeviceView[]>(ctx, "device.list", {})).filter(
+          (d) => d.default,
+        );
+        output(ctx, defaults, () =>
+          defaults.length > 0
+            ? devicesTable(defaults)
+            : "기본 디바이스가 없습니다 — corgi create 로 처음 만든 디바이스가 기본이 됩니다",
+        );
+      }),
+    );
+
+  program
     .command("delete")
     .description(
       "Corgi 가 만든 디바이스를 지운다 — 켜져 있으면 끄고, 다른 세션이 쓰는 중이면 막는다 (M8)",

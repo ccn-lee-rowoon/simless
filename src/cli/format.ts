@@ -72,14 +72,17 @@ export function devicesTable(devices: DeviceView[]): string {
             (d.slimStats.memoryBytes ? `${(d.slimStats.memoryBytes / 1024 ** 3).toFixed(1)}GB` : "")
           }`.trim()
         : d.slim,
-      d.createdByCorgi ? "Corgi" : "",
+      [d.default ? "기본" : "", d.createdByCorgi ? "Corgi" : ""].filter(Boolean).join(" "),
+      d.memo ?? "",
       d.mine ? "나" : d.holder ? formatHolder(d.holder) : "",
     ]);
   // 슬림 실패 이유는 표에 넣기엔 길어 아래에 따로 적는다
   const notes = devices
     .filter((d) => d.slim === "failed" && d.slimError)
     .map((d) => `슬림 실패 ${d.id}: ${d.slimError?.split("\n")[0]}`);
-  return [table(["ID", "크기", "이름", "상태", "슬림", "만듦", "점유"], rows), ...notes].join("\n");
+  return [table(["ID", "크기", "이름", "상태", "슬림", "", "메모", "점유"], rows), ...notes].join(
+    "\n",
+  );
 }
 
 /** 만들 수 있는 기종·OS — 폭 순 (M1·M2) */

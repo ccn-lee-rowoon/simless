@@ -52,10 +52,30 @@ export const DeviceMeta = z.object({
       measuredAt: z.string(),
     })
     .optional(),
+  /** 디바이스 메모 — 로그인한 계정 등 (R24) */
+  memo: z.string().optional(),
   /** Corgi 가 처음 본(또는 만든) 시각 */
   createdAt: z.string(),
 });
 export type DeviceMeta = z.infer<typeof DeviceMeta>;
+
+/** 용도별 디바이스 묶음 (R21). 한 디바이스가 여러 그룹에 들 수 있다 */
+export const Group = z.object({
+  id: z.string(),
+  /** 겹치지 않는다 */
+  name: z.string().min(1),
+  /** 사람·에이전트가 읽는 설명 — «모두 필요» 같은 힌트도 여기에 (R23) */
+  description: z.string().default(""),
+  deviceIds: z.array(z.string()),
+  /** 마지막으로 고친 쪽 — `human` 또는 에이전트 이름 */
+  updatedBy: z.string(),
+  updatedAt: z.string(),
+});
+export type Group = z.infer<typeof Group>;
+
+/** 플랫폼마다 기본 디바이스 하나 (R22) */
+export const Defaults = z.object({ android: z.string().optional(), ios: z.string().optional() });
+export type Defaults = z.infer<typeof Defaults>;
 
 /** 이 Mac 의 디바이스 하나 — 드라이버가 읽은 기기 + Corgi 가 붙인 정보 */
 export interface Device extends DeviceMeta {

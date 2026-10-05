@@ -35,6 +35,7 @@ const CreateParams = z
   );
 const DeviceRef = z.object({ device: z.string() });
 const RenameParams = DeviceRef.extend({ name: z.string().min(1) });
+const MemoParams = DeviceRef.extend({ memo: z.string().max(500) });
 const DevicesParams = z.object({ devices: z.array(z.string()).default([]) });
 const SlimParams = DevicesParams.extend({ mode: z.enum(["on", "off", "check"]).default("on") });
 const CatalogParams = z.object({ platform: z.enum(["android", "ios"]).optional() });
@@ -288,6 +289,8 @@ export function registerDeviceMethods(server: CorgiServer): void {
       slim: "none",
       createdAt: new Date().toISOString(),
     });
+    // 그 플랫폼에 기본 디바이스가 없으면 처음 만든 것이 기본이 된다 (R22)
+    if (!server.registry.defaults()[platform]) server.registry.setDefault(platform, id);
     server.invalidate();
     let device: Device = { ...meta, name, spec };
     if (params.slim && params.baseline)
@@ -311,11 +314,34 @@ export function registerDeviceMethods(server: CorgiServer): void {
     return view(session, { ...device, name: params.name });
   });
 
+  /** 메모는 기기 상태 기록이라 누가 쓰는 중이어도 고칠 수 있다 (R24) */
+  server.addMethod("device.setMemo", async (p, session) => {
+    const params = parse(MemoParams, p);
+    const [device] = await server.resolve([params.device]);
+    if (!device) throw new HandlerError("NOT_FOUND", params.device);
+    const memo = params.memo.trim();
+    return view(session, update(device, { memo: memo === "" ? undefined : memo }));
+  });
+
+  server.addMethod("device.setDefault", async (p, session) => {
+    const params = parse(DeviceRef, p);
+    const [device] = await server.resolve([params.device]);
+    if (!device) throw new HandlerError("NOT_FOUND", params.device);
+    server.registry.setDefault(device.platform, device.id);
+    return view(session, device);
+  });
+
   server.addMethod("device.delete", async (p, session, connection) => {
     const params = parse(DeviceRef, p);
     const [device] = await server.resolve([params.device]);
     if (!device) throw new HandlerError("NOT_FOUND", params.device);
     guardCreated(device, "삭제");
+    if (server.registry.defaults()[device.platform] === device.id) {
+      throw new HandlerError(
+        "NOT_ALLOWED",
+        `${device.name} 은 기본 디바이스입니다 — 다른 디바이스를 기본으로 정한 뒤 지우세요`,
+      );
+    }
     guardOthers(device, session);
     const driver = server.driver(device.spec.platform);
     await withLock(device.id, async () => {

@@ -71,15 +71,21 @@
 
 | 메서드 | params | result | 비고 |
 | --- | --- | --- | --- |
-| `status` | `{}` | `StatusResult` — 이 세션, 점유·대기 순번, `DeviceView[]`, 대기열 | |
+| `status` | `{}` | `StatusResult` — 이 세션, 점유·대기 순번, `DeviceView[]`, 그룹 `groups`, 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
 | `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff`)·남는 것(`slimKeeps`) (M1·M4) |
-| `device.list` | `{}` | `DeviceView[]` | 이 Mac 의 디바이스 전부. 켜짐·argent ID(`targetId`)·점유자 포함 (M5·R20) |
+| `device.list` | `{}` | `DeviceView[]` | 이 Mac 의 디바이스 전부. 켜짐·argent ID(`targetId`)·점유자·메모(`memo`)·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20) |
 | `device.create` | `{ platform?, model \| custom, os?, name?, slim = true, baseline = true }` | `DeviceView` | `model` = 기종 ID·이름(`platform` 을 안 주면 두 플랫폼에서 찾고, 양쪽에 있으면 `INVALID`), `custom` = `{ widthDp, heightDp, density }`(Android). `os` 를 안 주면 기본값. 앱 없이 만들고 `slim` 이면 기준값을 잰 뒤 슬림화. 기본 이름은 슬림이면 `corgi <기종>`, 아니면 `<기종>` — 겹치면 번호를 붙인다. 진행 알림 있음 |
 | `device.rename` | `{ device, name }` | `DeviceView` | 원래 있던 디바이스도 된다. 다른 세션이 쓰는 중이면 `BUSY` |
-| `device.delete` | `{ device }` | `{ deleted }` | Corgi 가 만든 것만(`NOT_ALLOWED`). 켜져 있으면 끄고 지운다. 다른 세션이 쓰는 중이면 `BUSY` (M8) |
+| `device.setMemo` | `{ device, memo }` | `DeviceView` | 로그인한 계정 등 (R24). 빈 글이면 지운다. 누가 쓰는 중이어도 고칠 수 있다 |
+| `device.setDefault` | `{ device }` | `DeviceView` | 그 플랫폼의 기본 디바이스로 (R22). 기본이 없는 플랫폼은 처음 만든 디바이스가 자동으로 기본이 된다 |
+| `device.delete` | `{ device }` | `{ deleted }` | Corgi 가 만든 것만, 기본 디바이스는 안 됨(`NOT_ALLOWED`). 메모·그룹 소속도 지운다. 켜져 있으면 끄고 지운다. 다른 세션이 쓰는 중이면 `BUSY` (M8) |
 | `device.slim` | `{ devices = Corgi 가 만든 것 전부, mode = "on" \| "off" \| "check" }` | `{ results, devices }` | Corgi 가 만든 것만(`NOT_ALLOWED`). on·off 는 다른 세션이 쓰는 중이면 `BUSY` |
 | `device.up` | `{ devices = 이 세션의 점유 전부 }` | `{ results, devices }` | 점유가 있어야 함(`NOT_HELD`). 켠 뒤 슬림을 확인하고 풀렸으면 다시 적용 (M6) |
 | `device.down` | 같음 | `{ results, devices }` | |
+| `group.list` | `{}` | `Group[]` — `{ id, name, description, deviceIds, updatedBy, updatedAt }` | `updatedBy` 는 `human` 또는 에이전트 이름 (R21) |
+| `group.create` | `{ name, description?, devices? }` | `Group` | 이름이 겹치면 `INVALID` |
+| `group.update` | `{ group, name?, description?, devices?, add?, remove? }` | `Group` | `devices` 는 통째로 바꾸기, `add`·`remove` 는 넣고 빼기. 안 준 값은 그대로 |
+| `group.delete` | `{ group }` | `{ deleted }` | 디바이스는 그대로 |
 | `lease.acquire` | `{ devices, wait = false, timeoutMs = 600000 }` | `{ status: "granted", deviceIds }` 또는 `{ status: "queued", position, holders }` | 전부 아니면 전무. 바쁘면 `BUSY`, `wait` 면 `queued` 알림 후 차례가 오거나 시간이 지날 때까지 기다린다 |
 | `lease.release` | `{ devices? }` | `{ released }` | 안 주면 이 세션의 점유·대기 전부 |
 | `lease.who` | `{ target? }` | `[{ deviceId, name, holder? }]` | `target` 은 ID·이름·AVD ID·UDID·시리얼 |

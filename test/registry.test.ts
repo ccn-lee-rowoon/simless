@@ -81,3 +81,24 @@ describe("Registry", () => {
     ]);
   });
 });
+
+describe("Registry 그룹·기본 디바이스", () => {
+  test("디바이스를 지우면 그룹 소속과 기본 지정도 지운다", () => {
+    const path = tempPath();
+    const registry = new Registry(path);
+    const a = registry.adopt("android", "A", true);
+    const b = registry.adopt("android", "B", true);
+    registry.setDefault("android", a.id);
+    const group = registry.addGroup({
+      name: "g",
+      description: "",
+      deviceIds: [a.id, b.id],
+      updatedBy: "human",
+      updatedAt: "2026-10-05T00:00:00.000Z",
+    });
+    registry.remove(a.id);
+    const reopened = new Registry(path);
+    expect(reopened.group(group.id)?.deviceIds).toEqual([b.id]);
+    expect(reopened.defaults()).toEqual({});
+  });
+});

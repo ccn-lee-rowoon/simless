@@ -15,6 +15,7 @@ import type { Request, SessionInfo } from "../shared/protocol.ts";
 import { VERSION } from "../shared/version.ts";
 import { registerDeviceMethods } from "./devices.ts";
 import type { Discovered, Driver, RuntimeState } from "./drivers/types.ts";
+import { registerGroupMethods } from "./groups.ts";
 import { EMPTY_LEASE_STATE, type Holder, LeaseManager, LeaseStateSchema } from "./leases.ts";
 import { Registry } from "./registry.ts";
 import { type Connection, type Handler, HandlerError } from "./socket.ts";
@@ -46,7 +47,7 @@ const WhoParams = z.object({ target: z.string().optional() });
 const ForceParams = z.object({ device: z.string() });
 
 /** 화면 갱신 알림이 필요 없는 메서드 */
-const READ_ONLY = new Set(["status", "device.list", "catalog", "lease.who"]);
+const READ_ONLY = new Set(["status", "device.list", "catalog", "group.list", "lease.who"]);
 
 export type ServerEvent = { type: "changed" } | { type: "progress"; message: string };
 
@@ -87,6 +88,7 @@ export class CorgiServer {
       "lease.forceRelease": (p, session) => this.forceRelease(parse(ForceParams, p), session),
     };
     registerDeviceMethods(this);
+    registerGroupMethods(this);
   }
 
   /** 다른 모듈(드라이버 명령 등)이 메서드를 붙인다 */
@@ -293,6 +295,8 @@ export class CorgiServer {
     if (!only) this.writeManagedIndex(all, states);
     this.refreshSlimStats(devices, states);
     const leases = new Map(this.leases.snapshot().leases.map((l) => [l.deviceId, l]));
+    const defaults = this.registry.defaults();
+    const groups = this.registry.groups();
     return devices.map((device) => {
       const state = states.get(device.id);
       const lease = leases.get(device.id);
@@ -315,6 +319,8 @@ export class CorgiServer {
             : undefined,
         slimStats: state?.booted ? this.slimStatsCache.get(device.id) : undefined,
         mine: lease?.sessionKey === session.key,
+        default: defaults[device.platform] === device.id,
+        groups: groups.filter((g) => g.deviceIds.includes(device.id)).map((g) => g.id),
       };
     });
   }
@@ -344,6 +350,8 @@ export class CorgiServer {
       held: this.leases.heldBy(session.key),
       queuePosition: this.leases.queuePosition(session.key),
       devices: await this.deviceViews(session),
+      groups: this.registry.groups(),
+      defaults: this.registry.defaults(),
       queue: snapshot.queue.map((e) => ({
         sessionKey: e.sessionKey,
         agent: this.leases.session(e.sessionKey)?.agent ?? "unknown",
