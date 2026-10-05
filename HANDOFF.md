@@ -27,8 +27,8 @@
 - **첫 실행 설정 창(M14) 완료** (2026-10-05) — 앱을 처음 열면 «simless 시작하기» 창: 이 Mac 점검 → 에이전트 연결(스킬·보호·MCP 를 버튼으로) → 기본 디바이스. 서버 `setup.*`, 끝내면 `…/simless/setup.json`. 이 Mac 에서는 아직 «완료» 안 누름(창이 열려 있음)
 - **2026-10-05 이름 변경** — Corgi → **simless**(simulator + seamless, «Make simulator management seamless.»). 이 Mac 은 `simless install` 로 옮김: 예전 서버·메뉴바·앱 내림, 데이터 폴더 `~/Library/Application Support/simless`·`~/.config/simless`·`~/Library/Logs/simless` 로 이동, 스킬·규칙·훅·MCP 를 새 이름으로. 예전 상태 백업은 세션 스크래치패드에만 있었다. 저장소 폴더는 `…/corgi` 그대로
 - **2026-10-05 추가** — 점유 기록 SQLite(90일 보관), 스킬: 모바일 앱 작업에서만 반응·세션마다 자기 Metro(S11)·설치 범위(기본 전역, 프로젝트 선택 — `simless skill`)·업데이트 알림(대시보드 띠·메뉴바), 기본 디바이스가 없으면 만들어서 빌려주기(`--create`)
-- **다른 에이전트 연결 구현** (2026-10-05) — Copilot CLI·Codex·Cursor·Gemini CLI: 세션 ID 로 세션 묶기, 훅 어댑터, 보호·MCP 설치(설정 창 «다른 에이전트», `simless install --agents`), 스킬은 `~/.agents/skills` 에도. **실제 에이전트로는 아직 확인 안 함**, 이 Mac 의 다른 에이전트 설정은 아무것도 켜지 않음. OpenCode 는 뺐다. 조사는 `docs/agent-integrations.md`
-- 남은 것: U단계(배포·업데이트 — GitHub 리모트가 생긴 뒤), OpenCode 연결, 다른 에이전트 실측, NOVA 로 주 흐름(R15), 차별점 후보(그룹 안 역할·결과 나란히 보기 R10·그룹에 앱·화면 정보), 병렬 개발용 «빈 기기 아무거나» 요청, 네이티브 빌드 캐시(조사만 — NOVA 쪽 A 방법 추천)
+- **다른 에이전트 연결 구현** (2026-10-05) — Copilot CLI·Codex·Cursor·Gemini CLI: 세션 ID 로 세션 묶기, 훅 어댑터, 보호·MCP 설치(설정 창 «다른 에이전트», `simless install --agents`), 스킬은 `~/.agents/skills` 에도. **실제 에이전트로는 아직 확인 안 함**, 이 Mac 의 다른 에이전트 설정은 아무것도 켜지 않음. OpenCode 는 당분간 다루지 않는다(사용자 결정 2026-10-05). 조사는 `docs/agent-integrations.md`
+- 남은 것: U단계(배포·업데이트 — GitHub 리모트가 생긴 뒤), 다른 에이전트 실측, NOVA 로 주 흐름(R15), 차별점 후보(그룹 안 역할·결과 나란히 보기 R10·그룹에 앱·화면 정보), 병렬 개발용 «빈 기기 아무거나» 요청, 네이티브 빌드 캐시(조사만 — NOVA 쪽 A 방법 추천)
 - 남은 확인: 실제 기기로 그룹 점유·생성(기종 + OS)을 끝까지, 라이트 모드 화면, simslim 0.11.0 에서 슬림 적용·확인(정보 읽기는 확인함), 설정 창 바로 설치 중 avdslim·argent(simslim 업데이트는 됨), 웹 화면 자동 테스트 없음(`bun run trace --missing`)
 - 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `simless.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
 - 범용 도구 → NOVA 레포(xb3-client)와 분리해 별도 프로젝트로 만든다
