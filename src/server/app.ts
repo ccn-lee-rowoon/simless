@@ -258,7 +258,7 @@ export class CorgiServer {
         );
         devices.push({
           ...meta,
-          listed: meta.listed ?? meta.createdByCorgi,
+          listed: meta.listed ?? this.wasInUse(meta),
           name: item.name,
           spec: item.spec,
         });
@@ -268,6 +268,18 @@ export class CorgiServer {
     }
     this.inventoryCache = { at: Date.now(), devices, problems };
     return this.inventoryCache;
+  }
+
+  /**
+   * listed 가 없는(이전 형식) 정보 — Corgi 가 만든 것, 기본 디바이스, 그룹에 든 것은 이미 쓰던
+   * 기기라 목록에 둔다. 나머지(Xcode 기본 시뮬레이터 등)는 빼 둔다
+   */
+  private wasInUse(meta: { id: string; platform: Device["platform"]; createdByCorgi: boolean }) {
+    return (
+      meta.createdByCorgi ||
+      this.registry.defaults()[meta.platform] === meta.id ||
+      this.registry.groups().some((g) => g.deviceIds.includes(meta.id))
+    );
   }
 
   /** Corgi 목록 — 메인 목록·점유·보호는 이것만 (R20) */

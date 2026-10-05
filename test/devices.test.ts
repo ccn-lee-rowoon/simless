@@ -132,6 +132,26 @@ describe("디바이스 명령", () => {
     expect(driver.existing).toHaveLength(1);
   });
 
+  test("목록 표시가 없던 이전 정보 — 기본 디바이스나 그룹에 든 기기는 목록에 둔다", async () => {
+    const { A, server, driver } = await start();
+    seedDevice(server, driver, "def1", "iPhone 17 Pro", false);
+    seedDevice(server, driver, "grp1", "Pixel 6a", false);
+    seedDevice(server, driver, "oth1", "iPad Air", false);
+    // listed 가 없는 이전 형식처럼
+    for (const id of ["def1", "grp1", "oth1"]) server.registry.update(id, { listed: undefined });
+    server.registry.setDefault("android", "def1");
+    server.registry.addGroup({
+      name: "g",
+      description: "",
+      deviceIds: ["grp1"],
+      updatedBy: "human",
+      updatedAt: "2026-10-05T00:00:00.000Z",
+    });
+    server.invalidate();
+    const ids = ((await A("device.list")) as DeviceView[]).map((d) => d.id).sort();
+    expect(ids).toEqual(["def1", "grp1"]);
+  });
+
   test("Corgi 가 만든 디바이스는 목록에서 뺄 수 없다 — 삭제한다", async () => {
     const { A } = await start();
     const device = (await A("device.create", android360)) as DeviceView;
