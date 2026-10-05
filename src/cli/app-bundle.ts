@@ -10,7 +10,8 @@ import { APP_BUNDLE_ID, LAUNCH_LABEL, MENUBAR_LABEL, type Paths } from "../share
 import { VERSION } from "../shared/version.ts";
 import { selfCommand } from "./launchd.ts";
 
-// Corgi.app — 메뉴바 앱. 실행하면 메뉴바에 웰시코기가 생기고 «대시보드 열기» 로 웹 UI 를 연다.
+// Corgi.app — 메뉴바 앱 + 앱 창. 실행하면 메뉴바에 아이콘이 생기고 «대시보드 열기» 로 웹 화면을
+// 자기 창(WKWebView)에 연다 (R11).
 // 미리 빌드한 앱을 배포하지 않고 그 Mac 에서 Swift 소스를 컴파일해 만든다 —
 // 서명·공증 없이 Gatekeeper 에 막히지 않는다 (requirements «결정 기록»).
 
@@ -53,6 +54,11 @@ export function infoPlist(
   <string>${VERSION}</string>
   <key>LSUIElement</key>
   <true/>
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsLocalNetworking</key>
+    <true/>
+  </dict>
   <key>CorgiHTTPPort</key>
   <integer>${settings.port}</integer>
   <key>CorgiTokenPath</key>

@@ -1,67 +1,83 @@
-// Corgi 메뉴바 앱 — corgi install 이 이 Mac 에서 `xcrun swiftc` 로 컴파일해 Corgi.app 에 넣는다.
-// 로직은 없다: 서버 HTTP API(127.0.0.1)의 status 를 읽어 보여 주고, 대시보드(웹 UI)를 연다.
-// 설정은 Info.plist 의 CorgiHTTPPort·CorgiTokenPath·CorgiLaunchLabel 에서 읽는다.
+// Corgi 메뉴바 앱 + 앱 창 — corgi install 이 이 Mac 에서 `xcrun swiftc` 로 컴파일해 Corgi.app 에 넣는다.
+// 로직은 없다: 서버 HTTP API(127.0.0.1)의 status 를 읽어 메뉴에 보여 주고, 웹 화면을 자기 창(WKWebView)에 띄운다.
+// 설정은 Info.plist 의 CorgiHTTPPort·CorgiTokenPath·CorgiLaunchLabel 에서 읽는다 (docs/design.md §14).
 
 import AppKit
+import WebKit
 
 struct DeviceRow {
   let label: String
   let name: String
-  let booted: Bool
   let holder: String?
 }
 
-/// 웰시코기 얼굴 실루엣 — 끝이 둥근 큰 귀, 웃는 입, 뚫린 눈·코 (18×18 단위)
-func corgiTemplate(size: CGFloat) -> NSImage {
-  let (w, h) = (size, size)
-  let image = NSImage(size: NSSize(width: w, height: h), flipped: true) { r in
+/// 메뉴 문구 — 서버의 언어 설정(status.language)을 따른다 (R25). 웹 화면은 공용 사전을 쓰고, 여기는 몇 줄뿐이라 따로 둔다
+enum Strings {
+  static var lang = Locale.preferredLanguages.first?.hasPrefix("ko") == true ? "ko" : "en"
+
+  static func get(_ key: String) -> String {
+    let table: [String: (String, String)] = [
+      "connected": ("Corgi — 서버 연결됨 (%@)", "Corgi — server connected (%@)"),
+      "noToken": ("서버 토큰이 없습니다 — 서버를 켜세요", "No server token — start the server"),
+      "serverDown": ("서버가 꺼져 있습니다", "The server is not running"),
+      "badResponse": ("서버 응답을 읽지 못했습니다", "Couldn't read the server's answer"),
+      "connecting": ("연결 중…", "Connecting…"),
+      "startServer": ("서버 켜기", "Start server"),
+      "noneBooted": ("켜진 디바이스가 없습니다", "No devices running"),
+      "booted": ("켜진 디바이스", "Running devices"),
+      "using": ("%@ 사용 중", "in use by %@"),
+      "human": ("사람", "person"),
+      "dashboard": ("대시보드 열기", "Open Dashboard"),
+      "quitMenubar": ("Corgi 종료", "Quit Corgi"),
+      "close": ("창 닫기", "Close Window"),
+      "minimize": ("최소화", "Minimize"),
+      "edit": ("편집", "Edit"),
+      "window": ("윈도우", "Window"),
+      "undo": ("실행 취소", "Undo"),
+      "redo": ("실행 복귀", "Redo"),
+      "cut": ("오려두기", "Cut"),
+      "copy": ("복사하기", "Copy"),
+      "paste": ("붙여넣기", "Paste"),
+      "selectAll": ("전체 선택", "Select All"),
+      "reload": ("새로 고침", "Reload"),
+      "view": ("보기", "View"),
+    ]
+    guard let pair = table[key] else { return key }
+    return lang == "ko" ? pair.0 : pair.1
+  }
+}
+
+/// 앱 아이콘과 같은 모양 — 폭이 다른 기기 세 대 (M12). 18×18 단위, 단색 템플릿
+func devicesTemplate(size: CGFloat) -> NSImage {
+  let image = NSImage(size: NSSize(width: size, height: size), flipped: true) { r in
     let s = r.height / 18
-    let ox = (r.width - 18 * s) / 2
-    func p(_ x: CGFloat, _ y: CGFloat) -> NSPoint { NSPoint(x: ox + x * s, y: y * s) }
-    NSColor.black.setFill()
-    // 둥근 끝의 큰 귀
-    for (base1, tip, base2, c1, c2) in [
-      (p(3.6, 8.2), p(2.8, 1.2), p(8.2, 5.2), p(1.4, 4.0), p(4.6, 0.2)),
-      (p(14.4, 8.2), p(15.2, 1.2), p(9.8, 5.2), p(16.6, 4.0), p(13.4, 0.2)),
-    ] {
-      let ear = NSBezierPath()
-      ear.move(to: base1)
-      ear.curve(to: tip, controlPoint1: c1, controlPoint2: tip)
-      ear.curve(to: base2, controlPoint1: c2, controlPoint2: base2)
-      ear.close(); ear.fill()
+    NSColor.black.setStroke()
+    for (x, y, w, h, radius) in [
+      (1.4, 7.6, 3.6, 7.8, 1.0),
+      (6.3, 5.5, 4.6, 9.9, 1.1),
+      (12.2, 2.6, 5.3, 12.8, 1.3),
+    ] as [(CGFloat, CGFloat, CGFloat, CGFloat, CGFloat)] {
+      let path = NSBezierPath(
+        roundedRect: NSRect(x: x * s, y: y * s, width: w * s, height: h * s),
+        xRadius: radius * s, yRadius: radius * s)
+      path.lineWidth = 1.35 * s
+      path.stroke()
     }
-    // 얼굴
-    let face = NSBezierPath()
-    face.move(to: p(2.6, 9.6))
-    face.curve(to: p(9, 4.6), controlPoint1: p(2.6, 6.2), controlPoint2: p(5.6, 4.6))
-    face.curve(to: p(15.4, 9.6), controlPoint1: p(12.4, 4.6), controlPoint2: p(15.4, 6.2))
-    face.curve(to: p(9, 15.4), controlPoint1: p(15.4, 12.8), controlPoint2: p(12.4, 15.4))
-    face.curve(to: p(2.6, 9.6), controlPoint1: p(5.6, 15.4), controlPoint2: p(2.6, 12.8))
-    face.close(); face.fill()
-    NSGraphicsContext.current?.compositingOperation = .destinationOut
-    // 눈·코
-    NSBezierPath(ovalIn: NSRect(x: ox + 5.2 * s, y: 7.8 * s, width: 1.9 * s, height: 2.1 * s)).fill()
-    NSBezierPath(ovalIn: NSRect(x: ox + 10.9 * s, y: 7.8 * s, width: 1.9 * s, height: 2.1 * s)).fill()
-    NSBezierPath(ovalIn: NSRect(x: ox + 7.7 * s, y: 10.4 * s, width: 2.6 * s, height: 1.7 * s)).fill()
-    // 웃는 입 — 코 아래 W 자, 혀와 얼굴 사이를 가른다
-    let mouth = NSBezierPath()
-    mouth.move(to: p(5.9, 12.4))
-    mouth.curve(to: p(9, 12.6), controlPoint1: p(6.9, 13.9), controlPoint2: p(8.4, 13.9))
-    mouth.curve(to: p(12.1, 12.4), controlPoint1: p(9.6, 13.9), controlPoint2: p(11.1, 13.9))
-    mouth.lineWidth = 0.9 * s; mouth.lineCapStyle = .round
-    mouth.stroke()
     return true
   }
   image.isTemplate = true
   return image
 }
 
-final class TrayController: NSObject, NSMenuDelegate {
+final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigationDelegate {
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let menu = NSMenu()
   private var devices: [DeviceRow] = []
   private var serverVersion: String?
   private var lastError: String?
+  private var window: NSWindow?
+  private var webView: WKWebView?
+  private var retries = 0
 
   private let info = Bundle.main.infoDictionary ?? [:]
   private var port: Int { (info["CorgiHTTPPort"] as? Int) ?? 8791 }
@@ -71,17 +87,12 @@ final class TrayController: NSObject, NSMenuDelegate {
   override init() {
     super.init()
     if let button = statusItem.button {
-      button.image = Self.icon()
+      button.image = devicesTemplate(size: 18)
       button.toolTip = "Corgi"
     }
     menu.delegate = self
     statusItem.menu = menu
     refresh()
-  }
-
-  /// 메뉴바 아이콘 — 다른 메뉴바 아이콘처럼 단색(템플릿). macOS 가 메뉴바 색에 맞춰 칠한다
-  private static func icon() -> NSImage {
-    corgiTemplate(size: 18)
   }
 
   private func token() -> String? {
@@ -92,7 +103,7 @@ final class TrayController: NSObject, NSMenuDelegate {
   /// 서버의 status 를 읽는다 — 서버가 꺼져 있으면 lastError
   func refresh(completion: (() -> Void)? = nil) {
     guard let token = token(), let url = URL(string: "http://127.0.0.1:\(port)/api/call") else {
-      lastError = "서버 토큰이 없습니다 — 서버를 켜세요"
+      lastError = Strings.get("noToken")
       completion?()
       return
     }
@@ -107,12 +118,14 @@ final class TrayController: NSObject, NSMenuDelegate {
         if let data,
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let result = json["result"] as? [String: Any] {
+          if let lang = result["language"] as? String { Strings.lang = lang }
           self.serverVersion = result["serverVersion"] as? String
-          self.devices = ((result["devices"] as? [[String: Any]]) ?? []).map(Self.row)
+          let all = (result["devices"] as? [[String: Any]]) ?? []
+          self.devices = all.filter { ($0["booted"] as? Bool) == true }.map(Self.row)
           self.lastError = nil
         } else {
           self.serverVersion = nil
-          self.lastError = error == nil ? "서버 응답을 읽지 못했습니다" : "서버가 꺼져 있습니다"
+          self.lastError = Strings.get(error == nil ? "badResponse" : "serverDown")
         }
         completion?()
       }
@@ -121,16 +134,17 @@ final class TrayController: NSObject, NSMenuDelegate {
 
   private static func row(_ d: [String: Any]) -> DeviceRow {
     let holder = d["holder"] as? [String: Any]
-    let who = holder.map { ($0["human"] as? Bool) == true ? "사람" : (($0["agent"] as? String) ?? "?") }
+    let who = holder.map {
+      ($0["human"] as? Bool) == true ? Strings.get("human") : (($0["agent"] as? String) ?? "?")
+    }
     return DeviceRow(
       label: (d["label"] as? String) ?? "",
       name: (d["name"] as? String) ?? "",
-      booted: (d["booted"] as? Bool) ?? false,
       holder: who
     )
   }
 
-  // MARK: 메뉴
+  // MARK: 메뉴바 메뉴
 
   func menuWillOpen(_ menu: NSMenu) {
     rebuild()
@@ -140,32 +154,31 @@ final class TrayController: NSObject, NSMenuDelegate {
   private func rebuild() {
     menu.removeAllItems()
     if let version = serverVersion {
-      menu.addItem(disabled("Corgi — 서버 연결됨 (\(version))"))
+      menu.addItem(disabled(String(format: Strings.get("connected"), version)))
     } else {
-      menu.addItem(disabled("Corgi — \(lastError ?? "연결 중…")"))
-      menu.addItem(action("서버 켜기", #selector(startServer)))
+      menu.addItem(disabled("Corgi — \(lastError ?? Strings.get("connecting"))"))
+      menu.addItem(action(Strings.get("startServer"), #selector(startServer)))
     }
     menu.addItem(.separator())
 
     if serverVersion != nil {
       if devices.isEmpty {
-        menu.addItem(disabled("만든 디바이스가 없습니다"))
+        menu.addItem(disabled(Strings.get("noneBooted")))
       } else {
+        menu.addItem(disabled(Strings.get("booted")))
         for device in devices {
-          let state = device.booted ? "켜짐" : "꺼짐"
-          let who = device.holder.map { " · \($0) 사용 중" } ?? ""
-          let item = disabled("\(device.booted ? "●" : "○")  \(device.label)  \(device.name)  — \(state)\(who)")
-          menu.addItem(item)
+          let who = device.holder.map { " · " + String(format: Strings.get("using"), $0) } ?? ""
+          menu.addItem(disabled("●  \(device.label)  \(device.name)\(who)"))
         }
       }
       menu.addItem(.separator())
     }
 
-    let dashboard = action("대시보드 열기", #selector(openDashboard))
+    let dashboard = action(Strings.get("dashboard"), #selector(openDashboard))
     dashboard.keyEquivalent = "d"
     menu.addItem(dashboard)
     menu.addItem(.separator())
-    let quit = action("Corgi 메뉴바 종료", #selector(quit))
+    let quit = action(Strings.get("quitMenubar"), #selector(quit))
     quit.keyEquivalent = "q"
     menu.addItem(quit)
   }
@@ -182,14 +195,6 @@ final class TrayController: NSObject, NSMenuDelegate {
     return item
   }
 
-  @objc private func openDashboard() {
-    guard let token = token(), let url = URL(string: "http://127.0.0.1:\(port)/#token=\(token)") else {
-      startServer()
-      return
-    }
-    NSWorkspace.shared.open(url)
-  }
-
   @objc private func startServer() {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
@@ -202,27 +207,143 @@ final class TrayController: NSObject, NSMenuDelegate {
     NSApp.terminate(nil)
   }
 
-  /// 이미 떠 있는데 앱을 다시 열면 메뉴를 보여 준다
-  func showMenu() {
-    statusItem.button?.performClick(nil)
+  // MARK: 앱 창 (R11)
+
+  /// 대시보드 창을 연다 — 창이 열려 있는 동안만 Dock 아이콘이 보인다
+  @objc func openDashboard() {
+    if window == nil { makeWindow() }
+    NSApp.setActivationPolicy(.regular)
+    installMainMenu()
+    window?.makeKeyAndOrderFront(nil)
+    NSApp.activate(ignoringOtherApps: true)
+    if webView?.url == nil { load() }
+  }
+
+  private func makeWindow() {
+    let config = WKWebViewConfiguration()
+    let web = WKWebView(frame: .zero, configuration: config)
+    web.navigationDelegate = self
+    web.setValue(false, forKey: "drawsBackground") // 불러오는 동안 흰 화면이 번쩍이지 않게
+    let window = NSWindow(
+      contentRect: NSRect(x: 0, y: 0, width: 1280, height: 820),
+      styleMask: [.titled, .closable, .miniaturizable, .resizable],
+      backing: .buffered, defer: false)
+    window.title = "Corgi"
+    window.minSize = NSSize(width: 880, height: 560)
+    window.contentView = web
+    window.isReleasedWhenClosed = false
+    window.delegate = self
+    window.center()
+    window.setFrameAutosaveName("CorgiDashboard") // 크기·위치를 기억한다
+    self.window = window
+    self.webView = web
+  }
+
+  private func load() {
+    guard let token = token(), let url = URL(string: "http://127.0.0.1:\(port)/#token=\(token)") else {
+      // 서버가 처음 켜질 때 토큰을 만든다 — 켜고 잠시 뒤 다시
+      startServer()
+      retryLoad()
+      return
+    }
+    webView?.load(URLRequest(url: url))
+  }
+
+  private func retryLoad() {
+    guard retries < 5 else { return }
+    retries += 1
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.load() }
+  }
+
+  func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+    retries = 0
+  }
+
+  func webView(
+    _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error
+  ) {
+    // 서버가 꺼져 있다 — 켜고 다시
+    startServer()
+    retryLoad()
+  }
+
+  @objc func reload() {
+    retries = 0
+    load()
+  }
+
+  func windowWillClose(_ notification: Notification) {
+    // 창을 닫으면 메뉴바 앱으로 돌아간다 (Dock 아이콘 없음)
+    NSApp.setActivationPolicy(.accessory)
+  }
+
+  /// 앱 메뉴 — 창이 열린 동안 ⌘Q·⌘W·복사·붙여넣기가 동작하게 한다
+  private func installMainMenu() {
+    if NSApp.mainMenu?.items.count ?? 0 > 1 { return }
+    let main = NSMenu()
+
+    let appItem = NSMenuItem()
+    let appMenu = NSMenu()
+    appMenu.addItem(withTitle: Strings.get("quitMenubar"), action: #selector(quit), keyEquivalent: "q")
+      .target = self
+    appItem.submenu = appMenu
+    main.addItem(appItem)
+
+    let editItem = NSMenuItem()
+    let edit = NSMenu(title: Strings.get("edit"))
+    edit.addItem(withTitle: Strings.get("undo"), action: Selector(("undo:")), keyEquivalent: "z")
+    let redo = edit.addItem(withTitle: Strings.get("redo"), action: Selector(("redo:")), keyEquivalent: "z")
+    redo.keyEquivalentModifierMask = [.command, .shift]
+    edit.addItem(.separator())
+    edit.addItem(withTitle: Strings.get("cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+    edit.addItem(withTitle: Strings.get("copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+    edit.addItem(withTitle: Strings.get("paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+    edit.addItem(
+      withTitle: Strings.get("selectAll"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+    editItem.submenu = edit
+    main.addItem(editItem)
+
+    let viewItem = NSMenuItem()
+    let view = NSMenu(title: Strings.get("view"))
+    view.addItem(withTitle: Strings.get("reload"), action: #selector(reload), keyEquivalent: "r").target = self
+    viewItem.submenu = view
+    main.addItem(viewItem)
+
+    let windowItem = NSMenuItem()
+    let windowMenu = NSMenu(title: Strings.get("window"))
+    windowMenu.addItem(
+      withTitle: Strings.get("close"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+    windowMenu.addItem(
+      withTitle: Strings.get("minimize"), action: #selector(NSWindow.performMiniaturize(_:)),
+      keyEquivalent: "m")
+    windowItem.submenu = windowMenu
+    main.addItem(windowItem)
+
+    NSApp.mainMenu = main
   }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-  private var tray: TrayController?
+  private var app: AppController?
 
   func applicationDidFinishLaunching(_ notification: Notification) {
-    tray = TrayController()
+    app = AppController()
   }
 
+  /// 이미 떠 있는데 앱을 다시 열거나(더블클릭·Spotlight) Dock 아이콘을 누르면 창을 연다
   func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-    tray?.showMenu()
+    app?.openDashboard()
     return false
+  }
+
+  /// 창을 닫아도 메뉴바 앱은 계속 돈다
+  func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+    false
   }
 }
 
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
-app.setActivationPolicy(.accessory) // Dock 아이콘 없이 메뉴바에만
+app.setActivationPolicy(.accessory) // 평소엔 Dock 아이콘 없이 메뉴바에만
 app.run()
