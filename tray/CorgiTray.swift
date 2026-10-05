@@ -82,6 +82,8 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
   private var window: NSWindow?
   private var webView: WKWebView?
   private var settingsWindow: NSWindow?
+  /// 세션 기록 창 — 세션 키마다 하나 (M13)
+  private var sessionWindows: [String: NSWindow] = [:]
   private var retries = 0
 
   private let info = Bundle.main.infoDictionary ?? [:]
@@ -231,8 +233,11 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
   func userContentController(
     _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
   ) {
-    if let body = message.body as? [String: Any], body["open"] as? String == "settings" {
-      openSettings()
+    guard let body = message.body as? [String: Any] else { return }
+    switch body["open"] as? String {
+    case "settings": openSettings()
+    case "session": if let key = body["key"] as? String { openSession(key) }
+    default: break
     }
   }
 
@@ -242,31 +247,52 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     return config
   }
 
+  /// 웹 화면을 띄운 보조 창 하나 — 설정·세션 기록
+  private func makeAuxWindow(title: String, query: String, size: NSSize, autosave: String) -> NSWindow {
+    let web = WKWebView(frame: .zero, configuration: webConfiguration())
+    web.setValue(false, forKey: "drawsBackground")
+    let window = NSWindow(
+      contentRect: NSRect(origin: .zero, size: size),
+      styleMask: [.titled, .closable, .resizable, .miniaturizable],
+      backing: .buffered, defer: false)
+    window.title = title
+    window.contentView = web
+    window.isReleasedWhenClosed = false
+    window.delegate = self
+    window.center()
+    window.setFrameAutosaveName(autosave)
+    if let token = token(), let url = URL(string: "http://127.0.0.1:\(port)/?\(query)#token=\(token)") {
+      web.load(URLRequest(url: url))
+    }
+    return window
+  }
+
+  private func show(_ window: NSWindow?) {
+    NSApp.setActivationPolicy(.regular)
+    installMainMenu()
+    window?.makeKeyAndOrderFront(nil)
+    NSApp.activate(ignoringOtherApps: true)
+  }
+
+  /// 세션 기록 창 — 같은 세션이면 이미 연 창을 앞으로
+  func openSession(_ key: String) {
+    if sessionWindows[key] == nil {
+      let query = "window=session&key=" + (key.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? key)
+      sessionWindows[key] = makeAuxWindow(
+        title: "Corgi — \(key)", query: query, size: NSSize(width: 820, height: 700),
+        autosave: "CorgiSession")
+    }
+    show(sessionWindows[key])
+  }
+
   /// 설정 창 — 메인 창과 따로 (macOS 앱의 설정 창처럼)
   @objc func openSettings() {
     if settingsWindow == nil {
-      let web = WKWebView(frame: .zero, configuration: webConfiguration())
-      web.setValue(false, forKey: "drawsBackground")
-      let window = NSWindow(
-        contentRect: NSRect(x: 0, y: 0, width: 760, height: 720),
-        styleMask: [.titled, .closable, .resizable],
-        backing: .buffered, defer: false)
-      window.title = Strings.get("settingsTitle")
-      window.contentView = web
-      window.isReleasedWhenClosed = false
-      window.delegate = self
-      window.center()
-      window.setFrameAutosaveName("CorgiSettings")
-      if let token = token(),
-         let url = URL(string: "http://127.0.0.1:\(port)/?window=settings#token=\(token)") {
-        web.load(URLRequest(url: url))
-      }
-      settingsWindow = window
+      settingsWindow = makeAuxWindow(
+        title: Strings.get("settingsTitle"), query: "window=settings",
+        size: NSSize(width: 760, height: 720), autosave: "CorgiSettings")
     }
-    NSApp.setActivationPolicy(.regular)
-    installMainMenu()
-    settingsWindow?.makeKeyAndOrderFront(nil)
-    NSApp.activate(ignoringOtherApps: true)
+    show(settingsWindow)
   }
 
   private func makeWindow() {
@@ -327,8 +353,10 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
       // 다음에 열 때 설정을 새로 읽도록 닫으면 버린다
       settingsWindow = nil
     }
+    sessionWindows = sessionWindows.filter { $0.value !== closing }
     // 창이 하나도 안 남으면 메뉴바 앱으로 돌아간다 (Dock 아이콘 없음)
-    let others = [window, settingsWindow].contains { $0 !== closing && $0?.isVisible == true }
+    let all = [window, settingsWindow] + sessionWindows.values.map { Optional($0) }
+    let others = all.contains { $0 !== closing && $0?.isVisible == true }
     if !others { NSApp.setActivationPolicy(.accessory) }
   }
 
