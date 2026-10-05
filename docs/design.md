@@ -407,7 +407,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 
 | Q | 제안 |
 | --- | --- |
-| Q16 훅 없는 에이전트 | 규칙 + CLI 의 BUSY 응답으로 보호. 훅을 지원하면 어댑터를 붙인다(§13) |
+| Q16 훅 없는 에이전트 | 규칙 + CLI 의 BUSY 응답으로 보호. 훅을 지원하면 어댑터를 붙인다(§13). **조사 결과(2026-10-05)** `docs/agent-integrations.md` — Copilot CLI·Codex·Cursor·OpenCode 는 실행 직전 막기가 되고, Gemini CLI 는 설치본(0.16.0)이 너무 오래돼 안 된다. 붙이는 순서: Copilot CLI → Codex → Cursor → OpenCode·Gemini |
 
 ## 19. 업데이트 (R19)
 
