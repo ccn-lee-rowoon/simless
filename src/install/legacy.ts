@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { run } from "../shared/exec.ts";
 import type { Paths } from "../shared/paths.ts";
 import { AGENT_INTEGRATIONS } from "./agents.ts";
-import { installHook, installRule } from "./claude-hook.ts";
+import { hookStatus, installHook, installRule } from "./claude-hook.ts";
 import { claudeBinary, installMcp } from "./claude-mcp.ts";
 import { installSkillAt, loadSkillLocations, projectRoots } from "./skill.ts";
 
@@ -107,11 +107,8 @@ export async function migrateLegacy(
     await installRule(env);
     done.push("rule");
   }
-  const settings = join(home, ".claude", "settings.json");
-  if (
-    existsSync(settings) &&
-    readFileSync(settings, "utf8").includes(" hook claude pre-tool-use")
-  ) {
+  // 명령이 지금 것과 다를 때(예전 경로·이름)만 — 이미 옮겼으면 그대로 둔다
+  if (hookStatus(command, env) === "outdated") {
     installHook(command, env);
     done.push("hook");
   }
@@ -132,7 +129,7 @@ export async function migrateLegacy(
   // 6. 다른 에이전트 — 훅은 명령 끝으로 찾으니 다시 넣으면 바뀐다. 규칙 블록·MCP 이름은 바꿔 넣는다
   for (const agent of AGENT_INTEGRATIONS) {
     try {
-      if ((await agent.hookState(command, env)) !== "missing") {
+      if ((await agent.hookState(command, env)) === "outdated") {
         await agent.installHook(command, env);
         done.push(`hook:${agent.agent}`);
       }
