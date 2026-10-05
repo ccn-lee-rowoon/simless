@@ -41,7 +41,7 @@ describe("소켓 서버", () => {
       { devices: ["Small"] },
       session("A"),
     );
-    expect(granted.result).toEqual({ status: "granted", deviceIds: ["aaaa"] });
+    expect(granted.result).toMatchObject({ status: "granted", deviceIds: ["aaaa"] });
 
     const error = await call(socket, "lease.acquire", { devices: ["aaaa"] }, session("B")).catch(
       (e: unknown) => e,
@@ -70,7 +70,7 @@ describe("소켓 서버", () => {
     await Bun.sleep(50);
     await call(socket, "lease.release", {}, session("A"));
 
-    expect((await waiting).result).toEqual({ status: "granted", deviceIds: ["aaaa"] });
+    expect((await waiting).result).toMatchObject({ status: "granted", deviceIds: ["aaaa"] });
     expect(events).toEqual(["queued"]);
   });
 

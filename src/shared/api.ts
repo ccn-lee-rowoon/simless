@@ -54,12 +54,36 @@ export interface StatusResult {
   queue: { sessionKey: string; agent: string; deviceIds: string[]; enqueuedAt: number }[];
 }
 
-export type AcquireResult =
-  | { status: "granted"; deviceIds: string[] }
-  | { status: "queued"; position: number; holders: (HolderView & { deviceId: string })[] };
+/** 요청한 디바이스마다 지금 상태 — 에이전트가 이걸 보고 판단한다 (R23) */
+export interface LeaseItem {
+  deviceId: string;
+  name: string;
+  /**
+   * held = 이 세션이 잡음, queued = 대기열에서 기다리는 중, busy = 다른 세션이 쓰는 중(기다리지 않음),
+   * free = 비어 있음(전부 아니면 아무것도 — 다른 것 때문에 못 잡았을 때)
+   */
+  state: "held" | "queued" | "busy" | "free";
+  /** queued·busy 일 때 막고 있는 쪽 */
+  holder?: HolderView;
+}
 
+export type AcquireResult =
+  | { status: "granted"; deviceIds: string[]; devices: LeaseItem[] }
+  /** available 모드 — 비어 있던 것만 잡았다. queued 면 나머지는 빌 때마다 서버가 잡아 준다 */
+  | { status: "partial"; deviceIds: string[]; devices: LeaseItem[]; queued: boolean }
+  | {
+      status: "queued";
+      position: number;
+      holders: (HolderView & { deviceId: string })[];
+      devices: LeaseItem[];
+    };
+
+/** BUSY·DEADLOCK 오류의 data */
 export interface BusyData {
   holders: (HolderView & { deviceId: string })[];
+  devices?: LeaseItem[];
+  /** DEADLOCK — 서로 기다리게 되는 세션들의 에이전트 이름 */
+  cycle?: string[];
 }
 
 /** 만들 수 있는 기종 하나 — iOS 기기 종류, Android 대표 프로필 (M1) */

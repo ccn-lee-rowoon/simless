@@ -4,7 +4,7 @@ import type { CatalogResult, DeviceOpResult, DeviceView } from "../../shared/api
 import { ExitCode } from "../../shared/exit-codes.ts";
 import { CliError, type Context, output, type Run, request } from "../context.ts";
 import { catalogText, devicesTable } from "../format.ts";
-import { acquire } from "./lease.ts";
+import { type AcquireOptions, acquire, acquireOptions } from "./lease.ts";
 
 /** 진행 알림은 stderr 로 — stdout 은 결과(또는 JSON)만 */
 function showProgress(event: string, data: unknown): void {
@@ -248,16 +248,14 @@ export function registerDevices(program: Command, run: Run) {
       ),
     );
 
-  program
+  const useCommand = program
     .command("use")
-    .description("점유하고 켠다 — 주 흐름의 첫 단계 (R15)")
-    .argument("<devices...>", "디바이스 ID 또는 이름")
-    .option("--wait", "다른 세션이 쓰는 중이면 풀릴 때까지 기다린다")
-    .option("--timeout <시간>", "기다리기 최대 시간 (예: 90s, 10m — 기본 10m)")
-    .action(
-      run(async (ctx, devices: string[], o: { wait?: boolean; timeout?: string }) => {
-        const ids = await acquire(ctx, devices, o);
-        finish(ctx, await call(ctx, "device.up", { devices: ids }), "켜기");
-      }),
-    );
+    .description("점유하고 켠다 — 주 흐름의 첫 단계. 디바이스·그룹·기본 디바이스로 (R15)")
+    .argument("[devices...]", "디바이스 ID 또는 이름");
+  acquireOptions(useCommand).action(
+    run(async (ctx, devices: string[], o: AcquireOptions) => {
+      const result = await acquire(ctx, devices, o);
+      finish(ctx, await call(ctx, "device.up", { devices: result.deviceIds }), "켜기");
+    }),
+  );
 }

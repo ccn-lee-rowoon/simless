@@ -101,7 +101,7 @@ describe("디바이스 명령", () => {
     seedDevice(server, driver, "pix6", "Pixel 6a", false);
     const [device] = (await A("device.list")) as DeviceView[];
     expect(device).toMatchObject({ id: "pix6", name: "Pixel 6a", createdByCorgi: false });
-    expect(await A("lease.acquire", { devices: ["Pixel 6a"] })).toEqual({
+    expect(await A("lease.acquire", { devices: ["Pixel 6a"] })).toMatchObject({
       status: "granted",
       deviceIds: ["pix6"],
     });

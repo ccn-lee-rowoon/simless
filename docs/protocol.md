@@ -54,6 +54,8 @@
 | 코드 | 뜻 | CLI 종료 코드 |
 | --- | --- | --- |
 | `BUSY` | 다른 세션이 사용 중(또는 같은 디바이스를 먼저 기다리는 중). `data.holders` 에 누가·언제부터 | 3 |
+| `DEADLOCK` | 기다리면 서로를 기다리게 됨 — 대기열에 넣지 않았다. `data.cycle` 에 엮인 세션의 에이전트 이름 (§8) | 3 |
+| `NO_DEFAULT` | 기본 디바이스가 없음 | 1 |
 | `NOT_HELD` | 이 세션이 점유하지 않은 디바이스를 켜거나 끄려 함 | 1 |
 | `NOT_FOUND` | 없는 디바이스·기종·런타임·시스템 이미지 | 1 |
 | `INVALID` | 잘못된 매개변수, 이미 쓰는 이름, 이름이 같은 디바이스가 여럿(ID 로 고르게 함) | 2 |
@@ -86,7 +88,7 @@
 | `group.create` | `{ name, description?, devices? }` | `Group` | 이름이 겹치면 `INVALID` |
 | `group.update` | `{ group, name?, description?, devices?, add?, remove? }` | `Group` | `devices` 는 통째로 바꾸기, `add`·`remove` 는 넣고 빼기. 안 준 값은 그대로 |
 | `group.delete` | `{ group }` | `{ deleted }` | 디바이스는 그대로 |
-| `lease.acquire` | `{ devices, wait = false, timeoutMs = 600000 }` | `{ status: "granted", deviceIds }` 또는 `{ status: "queued", position, holders }` | 전부 아니면 전무. 바쁘면 `BUSY`, `wait` 면 `queued` 알림 후 차례가 오거나 시간이 지날 때까지 기다린다 |
+| `lease.acquire` | `{ devices?, group?, default?: "android" \| "ios" \| "both", mode = "all" \| "available", wait = false, timeoutMs = 600000 }` | `{ status: "granted", deviceIds, devices }` · `{ status: "partial", deviceIds, devices, queued }` · `{ status: "queued", position, holders, devices }` | 디바이스·그룹·기본 디바이스를 합쳐 요청한다. `devices` 는 기기마다 `{ deviceId, name, state: held·queued·busy·free, holder? }` (R23). `all` 은 전부 아니면 아무것도 — 바쁘면 `BUSY`(data 에 `devices`), `available` 은 비어 있는 것만 잡는다(하나도 없으면 `BUSY`). `wait` 면 대기열에 넣는다 — `all` 은 전부 빌 때까지 기다리고, `available` 은 비어 있던 것을 잡고 바로 돌아오며 나머지는 빌 때마다 서버가 잡아 준다(비어 있던 게 없으면 처음 잡힐 때까지 기다린다). 대기열에 넣으면 교착이 생기는 요청은 `DEADLOCK` |
 | `lease.release` | `{ devices? }` | `{ released }` | 안 주면 이 세션의 점유·대기 전부 |
 | `lease.who` | `{ target? }` | `[{ deviceId, name, holder? }]` | `target` 은 ID·이름·AVD ID·UDID·시리얼 |
 
@@ -98,4 +100,5 @@
 - 대기 항목은 **세션**에 붙는다. 연결이 끊기거나 `timeoutMs` 가 지나도 대기열에 남고, 같은 세션이 다시 `wait` 로 요청하면 순번을 이어 간다.
 - 차례가 오면 서버가 그 세션에 점유를 준다 — 기다리던 연결이 있으면 바로 `granted` 로 끝난다.
 - 대기는 디바이스마다 먼저 온 순서다. 같은 디바이스를 먼저 기다리는 세션이 있으면 비어 있어도 새치기하지 못한다.
+- **교착 검사**: 대기열에 넣기 전에, 기다리는 기기의 주인(또는 먼저 기다리는 세션)이 직간접으로 이 세션이 쥔 기기를 기다리는지 따라간다. 순환이 생기면 넣지 않고 `DEADLOCK` 으로 돌려준다 — 쥔 것으로 진행하거나 놓고 다시 요청한다.
 - `lease.release`(디바이스 지정 없이) 또는 세션 프로세스 종료로 대기에서 빠진다.

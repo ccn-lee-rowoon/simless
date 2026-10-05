@@ -39,6 +39,10 @@ export const ErrorCode = z.enum([
   "INVALID",
   /** 할 수 없는 작업 — 원래 있던 디바이스 삭제·슬림 등 */
   "NOT_ALLOWED",
+  /** 기다리면 서로를 기다리게 된다 — 대기열에 넣지 않았다 (docs/design.md §8) */
+  "DEADLOCK",
+  /** 기본 디바이스가 정해지지 않음 */
+  "NO_DEFAULT",
   /** avdslim·simslim 등 필요한 도구가 없음 */
   "TOOL_MISSING",
   "FAILED",

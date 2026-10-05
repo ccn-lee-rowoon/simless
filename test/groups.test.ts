@@ -27,7 +27,7 @@ async function start() {
       call(env.paths.socket, method, params, session(key, { human }))
         .then((r) => r.result)
         .catch((e: unknown) => e);
-  return { server, driver, A: as("A"), H: as("web", true) };
+  return { server, driver, A: as("A"), B: as("B"), H: as("web", true) };
 }
 
 describe("그룹 (R21)", () => {
@@ -120,5 +120,53 @@ describe("기본 디바이스 (R22)", () => {
     expect(await A("device.delete", { device: first.id })).toMatchObject({ code: "NOT_ALLOWED" });
     expect(await A("device.setDefault", { device: "mod1" })).toMatchObject({ default: true });
     expect(await A("device.delete", { device: first.id })).toEqual({ deleted: first.id });
+  });
+});
+
+describe("그룹·기본 디바이스로 점유 (R22·R23)", () => {
+  test("그룹으로 점유하면 그룹의 디바이스 전부 — 기기마다 상태가 온다", async () => {
+    const { A } = await start();
+    await A("group.create", { name: "DM 확인", devices: ["mod1", "usr1"] });
+    expect(await A("lease.acquire", { group: "DM 확인" })).toMatchObject({
+      status: "granted",
+      deviceIds: ["mod1", "usr1"],
+      devices: [
+        { deviceId: "mod1", state: "held" },
+        { deviceId: "usr1", state: "held" },
+      ],
+    });
+  });
+
+  test("일부가 사용 중이면 기본은 BUSY, available 이면 비어 있는 것만", async () => {
+    const { A, B } = await start();
+    await A("group.create", { name: "UI 레이아웃 체크", devices: ["mod1", "usr1"] });
+    await B("lease.acquire", { devices: ["usr1"] });
+    const busy = await A("lease.acquire", { group: "UI 레이아웃 체크" });
+    expect(busy).toMatchObject({ code: "BUSY" });
+    expect(busy.data.devices).toMatchObject([
+      { deviceId: "mod1", state: "free" },
+      { deviceId: "usr1", state: "busy", holder: { sessionKey: "B" } },
+    ]);
+    expect(
+      await A("lease.acquire", { group: "UI 레이아웃 체크", mode: "available" }),
+    ).toMatchObject({
+      status: "partial",
+      deviceIds: ["mod1"],
+      queued: false,
+      devices: [
+        { deviceId: "mod1", state: "held" },
+        { deviceId: "usr1", state: "busy" },
+      ],
+    });
+  });
+
+  test("기본 디바이스로 점유 — 없으면 NO_DEFAULT", async () => {
+    const { A } = await start();
+    expect(await A("lease.acquire", { default: "android" })).toMatchObject({ code: "NO_DEFAULT" });
+    await A("device.setDefault", { device: "mod1" });
+    expect(await A("lease.acquire", { default: "both" })).toMatchObject({
+      status: "granted",
+      deviceIds: ["mod1"],
+    });
   });
 });

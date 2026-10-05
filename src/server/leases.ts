@@ -13,11 +13,15 @@ export interface Lease {
   acquiredAt: number;
 }
 
-/** 대기 항목은 연결이 아니라 세션에 붙는다 — CLI 가 끊겨도 순번이 남는다 */
+/**
+ * 대기 항목은 연결이 아니라 세션에 붙는다 — CLI 가 끊겨도 순번이 남는다.
+ * `all` 은 전부 빌 때 한 번에, `each` 는 하나씩 빌 때마다 준다 (R23, docs/design.md §8).
+ */
 export interface QueueEntry {
   sessionKey: string;
   deviceIds: string[];
   enqueuedAt: number;
+  mode?: "all" | "each";
 }
 
 export interface LeaseState {
@@ -34,10 +38,20 @@ export interface Holder {
   reason: "held" | "queued";
 }
 
+/**
+ * 여러 대를 요청할 때 무엇을 잡을지 (R23) — `all` 은 전부 아니면 아무것도,
+ * `available` 은 비어 있는 것만 (기다리기면 나머지는 하나씩 빌 때마다).
+ */
+export type AcquireMode = "all" | "available";
+
 export type AcquireResult =
   | { status: "granted"; deviceIds: string[] }
+  /** available — 일부만 잡았다. queued 면 나머지는 대기열에 */
+  | { status: "partial"; deviceIds: string[]; holders: Holder[]; queued: boolean }
   | { status: "busy"; holders: Holder[] }
-  | { status: "queued"; position: number; holders: Holder[] };
+  | { status: "queued"; position: number; holders: Holder[] }
+  /** 기다리면 서로를 기다리게 된다 — 대기열에 넣지 않았다 */
+  | { status: "deadlock"; holders: Holder[]; cycle: string[] };
 
 export interface LeaseOptions {
   /** 마지막 사용 후 이 시간이 지나고 기다리는 세션이 있으면 푼다 */
@@ -88,6 +102,11 @@ export class LeaseManager {
       .map((l) => l.deviceId);
   }
 
+  /** 이 세션이 대기열에서 기다리는 디바이스 */
+  queuedFor(sessionKey: string): string[] {
+    return this.queue.find((e) => e.sessionKey === sessionKey)?.deviceIds ?? [];
+  }
+
   queuePosition(sessionKey: string): number | undefined {
     const index = this.queue.findIndex((e) => e.sessionKey === sessionKey);
     return index < 0 ? undefined : index + 1;
@@ -109,7 +128,11 @@ export class LeaseManager {
     return record;
   }
 
-  acquire(info: SessionInfo, deviceIds: string[], { wait }: { wait: boolean }): AcquireResult {
+  acquire(
+    info: SessionInfo,
+    deviceIds: string[],
+    { wait, mode = "all" }: { wait: boolean; mode?: AcquireMode },
+  ): AcquireResult {
     const session = this.touch(info);
     const wanted = [...new Set(deviceIds)].sort();
     const blockers = this.blockers(session.key, wanted);
@@ -120,20 +143,79 @@ export class LeaseManager {
       this.changed();
       return { status: "granted", deviceIds: wanted };
     }
-    if (!wait) return { status: "busy", holders: blockers };
 
+    const blocked = new Set(blockers.map((h) => h.deviceId));
+    const free = mode === "available" ? wanted.filter((id) => !blocked.has(id)) : [];
+    const rest = mode === "available" ? wanted.filter((id) => blocked.has(id)) : wanted;
+    if (!wait) {
+      if (free.length === 0) return { status: "busy", holders: blockers };
+      this.grant(session.key, free);
+      this.changed();
+      return { status: "partial", deviceIds: free, holders: blockers, queued: false };
+    }
+
+    // 대기열에 넣기 전에 — 기다리면 서로를 기다리게 되는지 본다 (교착을 생기기 전에 막는다)
+    const cycle = this.cycle(session.key, rest, free);
+    if (cycle) {
+      if (free.length > 0) {
+        this.grant(session.key, free);
+        this.changed();
+      }
+      return { status: "deadlock", holders: blockers, cycle };
+    }
+
+    this.grant(session.key, free);
+    const entryMode = mode === "available" ? "each" : "all";
     const entry = this.queue.find((e) => e.sessionKey === session.key);
     if (entry) {
-      entry.deviceIds = wanted;
+      entry.deviceIds = rest;
+      entry.mode = entryMode;
     } else {
-      this.queue.push({ sessionKey: session.key, deviceIds: wanted, enqueuedAt: this.now() });
+      this.queue.push({
+        sessionKey: session.key,
+        deviceIds: rest,
+        enqueuedAt: this.now(),
+        mode: entryMode,
+      });
     }
     this.changed();
+    if (free.length > 0) {
+      return { status: "partial", deviceIds: free, holders: blockers, queued: true };
+    }
     return {
       status: "queued",
       position: this.queuePosition(session.key) ?? this.queue.length,
       holders: this.blockers(session.key, wanted),
     };
+  }
+
+  /**
+   * 이 세션이 rest 를 기다리면 순환이 생기는가 — 기다리는 기기의 주인(또는 먼저 기다리는 세션)이
+   * 직간접으로 이 세션이 쥔(또는 곧 쥘 extra) 기기를 기다리면 교착이다. 생기면 세션 키 순환을 돌려준다.
+   */
+  private cycle(sessionKey: string, rest: string[], extra: string[]): string[] | undefined {
+    const mine = new Set([...this.heldBy(sessionKey), ...extra]);
+    if (mine.size === 0) return undefined; // 아무것도 쥐지 않고 기다리면 순환이 없다
+    const waitsFor = (key: string, ids: string[]): string[] =>
+      [...new Set(this.blockers(key, ids).map((h) => h.session.key))].filter((k) => k !== key);
+    const start = waitsFor(sessionKey, rest);
+    const seen = new Set<string>();
+    const stack = start.map((key) => [sessionKey, key]);
+    while (stack.length > 0) {
+      const path = stack.pop() as string[];
+      const key = path.at(-1) as string;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const entry = this.queue.find((e) => e.sessionKey === key);
+      if (!entry) continue;
+      // 이 세션이 쥔 기기를 기다리면 순환
+      if (entry.deviceIds.some((id) => mine.has(id))) return path;
+      for (const next of waitsFor(key, entry.deviceIds)) {
+        if (next === sessionKey) return path;
+        stack.push([...path, next]);
+      }
+    }
+    return undefined;
   }
 
   /** deviceIds 를 안 주면 이 세션의 점유·대기를 모두 푼다. */
@@ -191,7 +273,7 @@ export class LeaseManager {
   }
 
   /** 이 세션이 지금 잡을 수 없게 막는 것 — 남의 점유, 같은 디바이스를 먼저 기다리는 세션 */
-  private blockers(sessionKey: string, deviceIds: string[]): Holder[] {
+  blockers(sessionKey: string, deviceIds: string[]): Holder[] {
     const result: Holder[] = [];
     for (const id of deviceIds) {
       const lease = this.leases.get(id);
@@ -228,6 +310,25 @@ export class LeaseManager {
     let index = 0;
     while (index < this.queue.length) {
       const entry = this.queue[index];
+      // each — 하나씩 빌 때마다 준다
+      if (entry?.mode === "each") {
+        const blocked = new Set(
+          this.blockers(entry.sessionKey, entry.deviceIds).map((h) => h.deviceId),
+        );
+        const free = entry.deviceIds.filter((id) => !blocked.has(id));
+        if (free.length > 0) {
+          this.grant(entry.sessionKey, free);
+          entry.deviceIds = entry.deviceIds.filter((id) => blocked.has(id));
+          if (entry.deviceIds.length === 0) this.queue.splice(index, 1);
+          const session = this.sessions.get(entry.sessionKey);
+          if (session) session.lastUsedAt = this.now();
+          this.options.onGranted?.(entry.sessionKey, free);
+          index = 0;
+          continue;
+        }
+        index += 1;
+        continue;
+      }
       if (entry && this.blockers(entry.sessionKey, entry.deviceIds).length === 0) {
         this.grant(entry.sessionKey, entry.deviceIds);
         this.queue.splice(index, 1);
@@ -262,7 +363,12 @@ export const LeaseStateSchema = z.object({
     z.object({ deviceId: z.string(), sessionKey: z.string(), acquiredAt: z.number() }),
   ),
   queue: z.array(
-    z.object({ sessionKey: z.string(), deviceIds: z.array(z.string()), enqueuedAt: z.number() }),
+    z.object({
+      sessionKey: z.string(),
+      deviceIds: z.array(z.string()),
+      enqueuedAt: z.number(),
+      mode: z.enum(["all", "each"]).optional(),
+    }),
   ),
 });
 

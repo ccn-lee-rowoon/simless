@@ -146,3 +146,73 @@ describe("LeaseManager", () => {
     expect(restored.queuePosition("B")).toBe(1);
   });
 });
+
+describe("LeaseManager — 비어 있는 것만 (R23)", () => {
+  test("available 은 비어 있는 것만 잡고 바쁜 것은 알려 준다", () => {
+    const { leases } = setup();
+    leases.acquire(A, ["d1"], { wait: false });
+    const result = leases.acquire(B, ["d1", "d2", "d3"], { wait: false, mode: "available" });
+    expect(result).toMatchObject({ status: "partial", deviceIds: ["d2", "d3"], queued: false });
+    expect(holders(leases, ["d1", "d2", "d3"])).toEqual(["A", "B", "B"]);
+  });
+
+  test("하나도 비어 있지 않으면 busy", () => {
+    const { leases } = setup();
+    leases.acquire(A, ["d1"], { wait: false });
+    expect(leases.acquire(B, ["d1"], { wait: false, mode: "available" }).status).toBe("busy");
+  });
+
+  test("available + 기다리기 — 나머지는 하나씩 빌 때마다 받는다", () => {
+    const { leases, granted } = setup();
+    leases.acquire(A, ["d1"], { wait: false });
+    leases.acquire(C, ["d2"], { wait: false });
+    const result = leases.acquire(B, ["d1", "d2", "d3"], { wait: true, mode: "available" });
+    expect(result).toMatchObject({ status: "partial", deviceIds: ["d3"], queued: true });
+    leases.release("A");
+    expect(granted).toEqual([["B", ["d1"]]]);
+    expect(leases.queuedFor("B")).toEqual(["d2"]);
+    leases.release("C");
+    expect(holders(leases, ["d1", "d2", "d3"])).toEqual(["B", "B", "B"]);
+    expect(leases.queuePosition("B")).toBeUndefined();
+  });
+});
+
+describe("LeaseManager — 교착 막기", () => {
+  test("서로 상대가 쥔 것을 기다리게 되면 대기열에 넣지 않고 deadlock", () => {
+    const { leases } = setup();
+    leases.acquire(A, ["x"], { wait: false });
+    leases.acquire(B, ["y"], { wait: false });
+    expect(leases.acquire(A, ["y"], { wait: true }).status).toBe("queued");
+    const result = leases.acquire(B, ["x"], { wait: true });
+    expect(result).toMatchObject({ status: "deadlock", cycle: ["B", "A"] });
+    expect(leases.queuePosition("B")).toBeUndefined();
+  });
+
+  test("available + 기다리기로 쥔 것도 셈한다 — 비어 있던 것을 잡은 뒤 서로 기다리게 되면 deadlock", () => {
+    const { leases } = setup();
+    leases.acquire(A, ["y"], { wait: false });
+    leases.acquire(A, ["x"], { wait: true }); // x 는 비어 있어 바로 잡힘
+    leases.release("A", ["x"]);
+    // A: y 를 쥠. B: x 를 쥐고 y 를 기다림
+    leases.acquire(B, ["x", "y"], { wait: true, mode: "available" });
+    // A 가 x 를 기다리면 A→B→A
+    expect(leases.acquire(A, ["x"], { wait: true })).toMatchObject({ status: "deadlock" });
+  });
+
+  test("아무것도 쥐지 않고 기다리면 순환이 없다", () => {
+    const { leases } = setup();
+    leases.acquire(A, ["x"], { wait: false });
+    leases.acquire(B, ["x"], { wait: true });
+    expect(leases.acquire(C, ["x"], { wait: true }).status).toBe("queued");
+  });
+
+  test("먼저 기다리는 세션이 내 것을 기다려도 교착이다 (빈 기기를 앞에서 막는 경우)", () => {
+    const { leases } = setup();
+    leases.acquire(A, ["x"], { wait: false });
+    leases.acquire(C, ["d"], { wait: false });
+    // B 는 d·x 를 함께 기다린다 (all) — x 는 A 가 쥠
+    leases.acquire(B, ["d", "x"], { wait: true });
+    leases.release("C"); // d 는 비었지만 B 가 먼저 기다린다
+    expect(leases.acquire(A, ["d"], { wait: true })).toMatchObject({ status: "deadlock" });
+  });
+});

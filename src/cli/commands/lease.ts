@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import type { AcquireResult, BusyData } from "../../shared/api.ts";
+import type { AcquireResult, BusyData, LeaseItem } from "../../shared/api.ts";
 import { ExitCode } from "../../shared/exit-codes.ts";
 import { CliError, type Context, output, type Run, request } from "../context.ts";
 import { formatHolder } from "../format.ts";
@@ -15,17 +15,58 @@ function parseDuration(text: string): number {
   return value * unit;
 }
 
-/** 점유 — 바쁘면 바로 실패(3), --wait 면 차례가 올 때까지 기다린다 (R14) */
+export interface AcquireOptions {
+  group?: string;
+  /** commander: 값 없이 주면 true */
+  default?: string | boolean;
+  available?: boolean;
+  wait?: boolean;
+  timeout?: string;
+}
+
+/** acquire·use 공통 옵션 */
+export function acquireOptions(command: Command): Command {
+  return command
+    .option("--group <group>", "그룹의 디바이스 전부 (R21)")
+    .option("--default [platform]", "기본 디바이스 — android·ios, 안 주면 둘 다 (R22)")
+    .option("--available", "비어 있는 것만 잡는다 — 바쁜 것은 상태만 알려 준다 (R23)")
+    .option(
+      "--wait",
+      "다른 세션이 쓰는 중이면 풀릴 때까지 기다린다 (--available 과 함께면 나머지만)",
+    )
+    .option("--timeout <시간>", "기다리기 최대 시간 (예: 90s, 10m — 기본 10m)");
+}
+
+function itemLine(item: LeaseItem): string {
+  const state = { held: "점유함", queued: "대기 중", busy: "사용 중", free: "비어 있음" }[
+    item.state
+  ];
+  const who = item.holder ? ` — ${formatHolder(item.holder)}` : "";
+  return `  ${item.deviceId} ${item.name}: ${state}${who}`;
+}
+
+/**
+ * 점유 — 바쁘면 바로 실패(3), --wait 면 차례가 올 때까지 기다린다 (R14).
+ * --available 이면 비어 있는 것만 잡고(일부만이면 종료 코드 0), 하나도 못 잡으면 3.
+ */
 export async function acquire(
   ctx: Context,
   devices: string[],
-  options: { wait?: boolean; timeout?: string },
-): Promise<string[]> {
+  options: AcquireOptions,
+): Promise<AcquireResult & { status: "granted" | "partial" }> {
   const result = await request<AcquireResult>(
     ctx,
     "lease.acquire",
     {
       devices,
+      group: options.group,
+      default:
+        options.default === undefined
+          ? undefined
+          : options.default === true
+            ? "both"
+            : options.default,
+      mode: options.available ? "available" : "all",
       wait: options.wait ?? false,
       timeoutMs: options.timeout ? parseDuration(options.timeout) : undefined,
     },
@@ -46,28 +87,26 @@ export async function acquire(
       result,
     );
   }
-  return result.deviceIds;
+  if (result.status === "partial" && !ctx.json) {
+    const rest = result.queued
+      ? "나머지는 빌 때마다 서버가 잡아 줍니다 — corgi status 로 확인, 잡히면 corgi up"
+      : "나머지는 다른 세션이 쓰는 중입니다";
+    console.error(`일부만 점유했습니다. ${rest}\n${result.devices.map(itemLine).join("\n")}`);
+  }
+  return result;
 }
 
 export function registerLease(program: Command, run: Run) {
-  program
+  const acquireCommand = program
     .command("acquire")
-    .description("디바이스를 점유한다")
-    .argument("<devices...>", "디바이스 ID 또는 이름")
-    .option("--wait", "다른 세션이 쓰는 중이면 풀릴 때까지 기다렸다 점유")
-    .option("--timeout <시간>", "기다리기 최대 시간 (예: 90s, 10m — 기본 10m)")
-    .action(
-      run(
-        async (ctx: Context, devices: string[], options: { wait?: boolean; timeout?: string }) => {
-          const ids = await acquire(ctx, devices, options);
-          output(
-            ctx,
-            { status: "granted", deviceIds: ids },
-            () => `점유했습니다: ${ids.join(", ")}`,
-          );
-        },
-      ),
-    );
+    .description("디바이스를 점유한다 — 디바이스·그룹·기본 디바이스로")
+    .argument("[devices...]", "디바이스 ID 또는 이름");
+  acquireOptions(acquireCommand).action(
+    run(async (ctx: Context, devices: string[], options: AcquireOptions) => {
+      const result = await acquire(ctx, devices, options);
+      output(ctx, result, () => `점유했습니다: ${result.deviceIds.join(", ")}`);
+    }),
+  );
 
   program
     .command("release")

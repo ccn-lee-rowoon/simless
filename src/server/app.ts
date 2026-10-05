@@ -4,6 +4,7 @@ import type {
   BusyData,
   DeviceView,
   HolderView,
+  LeaseItem,
   SlimStats,
   StatusResult,
 } from "../shared/api.ts";
@@ -38,6 +39,12 @@ export interface InventoryProblem {
 
 const AcquireParams = z.object({
   devices: z.array(z.string()).default([]),
+  /** 그룹의 디바이스 전부 (R21) */
+  group: z.string().optional(),
+  /** 기본 디바이스 — 플랫폼 하나 또는 둘 다 (R22) */
+  default: z.enum(["android", "ios", "both"]).optional(),
+  /** all = 전부 아니면 아무것도, available = 비어 있는 것만 (R23) */
+  mode: z.enum(["all", "available"]).default("all"),
   wait: z.boolean().default(false),
   /** 기다리기의 이번 호출 최대 시간 — 지나면 «아직 대기 중» 으로 돌려준다 */
   timeoutMs: z.number().int().positive().max(3_600_000).default(600_000),
@@ -368,21 +375,83 @@ export class CorgiServer {
     });
   }
 
+  /** 디바이스·그룹·기본 디바이스를 디바이스 목록으로 푼다 */
+  private async targets(params: z.infer<typeof AcquireParams>): Promise<Device[]> {
+    const refs = [...params.devices];
+    if (params.group) {
+      const group = this.registry.findGroup(params.group);
+      if (!group) throw new HandlerError("NOT_FOUND", `없는 그룹: ${params.group}`);
+      if (group.deviceIds.length === 0)
+        throw new HandlerError("INVALID", `그룹에 디바이스가 없습니다: ${group.name}`);
+      refs.push(...group.deviceIds);
+    }
+    if (params.default) {
+      const defaults = this.registry.defaults();
+      const platforms =
+        params.default === "both" ? (["android", "ios"] as const) : [params.default];
+      const ids = platforms.map((p) => defaults[p]).filter((id): id is string => id !== undefined);
+      if (ids.length === 0 || (params.default !== "both" && ids.length < platforms.length)) {
+        throw new HandlerError(
+          "NO_DEFAULT",
+          "기본 디바이스가 없습니다 — corgi create 로 만들거나 corgi default <디바이스> 로 정하세요",
+        );
+      }
+      refs.push(...ids);
+    }
+    if (refs.length === 0)
+      throw new HandlerError("INVALID", "점유할 디바이스·그룹·기본 디바이스를 지정하세요");
+    const devices = await this.resolve(refs);
+    return [...new Map(devices.map((d) => [d.id, d])).values()];
+  }
+
+  /** 요청한 디바이스마다 지금 상태 (R23) */
+  private leaseItems(session: SessionInfo, devices: Device[]): LeaseItem[] {
+    const held = new Set(this.leases.heldBy(session.key));
+    const queued = new Set(this.leases.queuedFor(session.key));
+    return devices.map((device) => {
+      if (held.has(device.id)) return { deviceId: device.id, name: device.name, state: "held" };
+      const [blocker] = this.leases.blockers(session.key, [device.id]);
+      if (!blocker) return { deviceId: device.id, name: device.name, state: "free" };
+      return {
+        deviceId: device.id,
+        name: device.name,
+        state: queued.has(device.id) ? "queued" : "busy",
+        holder: this.holderView(blocker),
+      };
+    });
+  }
+
   private async acquire(
     params: z.infer<typeof AcquireParams>,
     session: SessionInfo,
     connection: Connection,
   ): Promise<AcquireResult> {
-    if (params.devices.length === 0)
-      throw new HandlerError("INVALID", "점유할 디바이스를 지정하세요");
-    const devices = await this.resolve(params.devices);
+    const devices = await this.targets(params);
     const ids = devices.map((d) => d.id);
+    const items = () => this.leaseItems(session, devices);
+    const options = { wait: params.wait, mode: params.mode };
 
-    const result = this.leases.acquire(session, ids, { wait: params.wait });
-    if (result.status === "granted") return result;
+    const result = this.leases.acquire(session, ids, options);
+    if (result.status === "granted") return { ...result, devices: items() };
+    if (result.status === "partial")
+      return {
+        status: "partial",
+        deviceIds: result.deviceIds,
+        devices: items(),
+        queued: result.queued,
+      };
     if (result.status === "busy") {
-      const data: BusyData = { holders: this.holdersData(result.holders) };
+      const data: BusyData = { holders: this.holdersData(result.holders), devices: items() };
       throw new HandlerError("BUSY", "다른 세션이 사용 중입니다", data);
+    }
+    if (result.status === "deadlock") {
+      const cycle = result.cycle.map((key) => this.leases.session(key)?.agent ?? key);
+      const data: BusyData = { holders: this.holdersData(result.holders), devices: items(), cycle };
+      throw new HandlerError(
+        "DEADLOCK",
+        `기다리면 서로를 기다리게 됩니다(${cycle.join(" → ")}) — 쥔 디바이스로 진행하거나, 놓고 다시 요청하세요`,
+        data,
+      );
     }
 
     connection.emit("queued", {
@@ -392,11 +461,19 @@ export class CorgiServer {
     await this.waitForGrant(session.key, params.timeoutMs, connection);
 
     const held = new Set(this.leases.heldBy(session.key));
-    if (ids.every((id) => held.has(id))) return { status: "granted", deviceIds: ids };
-    const again = this.leases.acquire(session, ids, { wait: true });
-    if (again.status === "granted") return again;
-    if (again.status === "busy") throw new HandlerError("BUSY", "다른 세션이 사용 중입니다");
-    return { status: "queued", position: again.position, holders: this.holdersData(again.holders) };
+    if (ids.every((id) => held.has(id)))
+      return { status: "granted", deviceIds: ids, devices: items() };
+    if (params.mode === "available" && ids.some((id) => held.has(id))) {
+      const got = ids.filter((id) => held.has(id));
+      return { status: "partial", deviceIds: got, devices: items(), queued: true };
+    }
+    const position = this.leases.queuePosition(session.key);
+    return {
+      status: "queued",
+      position: position ?? 0,
+      holders: this.holdersData(this.leases.blockers(session.key, ids)),
+      devices: items(),
+    };
   }
 
   private waitForGrant(

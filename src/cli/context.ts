@@ -77,12 +77,14 @@ export async function request<T>(
     }
     if (error instanceof RemoteError) {
       let message = error.message;
-      if (error.code === "BUSY") {
+      if (error.code === "BUSY" || error.code === "DEADLOCK") {
         const { holders } = error.data as BusyData;
-        message += `\n${holders.map((h) => `  ${formatHolder(h)}`).join("\n")}\n  기다리려면 --wait`;
+        message += `\n${holders.map((h) => `  ${formatHolder(h)}`).join("\n")}`;
+        if (error.code === "BUSY")
+          message += "\n  기다리려면 --wait, 비어 있는 것만 쓰려면 --available";
       }
       const exitCode =
-        error.code === "BUSY"
+        error.code === "BUSY" || error.code === "DEADLOCK"
           ? ExitCode.busy
           : error.code === "INVALID"
             ? ExitCode.usage
