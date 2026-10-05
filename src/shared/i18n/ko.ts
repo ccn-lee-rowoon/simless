@@ -520,4 +520,6 @@ export const ko = {
   "web.settings.setup": "첫 실행 설정",
   "web.settings.setupHint": "도구 점검·에이전트 연결·기본 디바이스를 다시 확인합니다.",
   "web.settings.openSetup": "설정 안내 열기",
+  "web.settings.retention": "기록 보관 (일)",
+  "web.settings.retentionHint": "세션 화면의 점유 기록을 이 기간만큼 남기고, 지난 것은 지웁니다.",
 } as const;

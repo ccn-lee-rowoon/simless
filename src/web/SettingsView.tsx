@@ -41,6 +41,7 @@ export function SettingsView({
           const saved = await call<SettingsResult>("settings.set", {
             language: draft.language,
             idleReleaseMinutes: draft.idleReleaseMinutes,
+            historyRetentionDays: draft.historyRetentionDays,
             androidRamMb: draft.androidRamMb,
             simslimProfile: draft.simslimProfile?.trim() ? draft.simslimProfile.trim() : null,
           });
@@ -95,6 +96,17 @@ export function SettingsView({
           />
         </label>
         <p className="sub">{t("web.settings.idleHint")}</p>
+        <label className="field field-inline">
+          <span>{t("web.settings.retention")}</span>
+          <input
+            type="number"
+            min={1}
+            max={3650}
+            value={draft.historyRetentionDays}
+            onChange={(e) => setDraft({ ...draft, historyRetentionDays: Number(e.target.value) })}
+          />
+        </label>
+        <p className="sub">{t("web.settings.retentionHint")}</p>
       </section>
 
       <section className="panel settings-section">

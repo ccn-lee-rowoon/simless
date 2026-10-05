@@ -77,8 +77,8 @@
 | `setup.status` | `{}` | `{ needed, finishedAt?, checks: CheckView[], agents: { claude, skill, mcp, hook, rule } }` | 첫 실행 설정 창 (M14). `checks` 는 `corgi doctor` 와 같은 점검(항목마다 `id` — `server`·`launchd`·`xcode`·`simslim`·`androidSdk`·`images`·`avdslim`·`argent`·…). `agents` 는 설치 상태 `missing`·`outdated`·`current`, `claude` 는 claude 명령이 있는지. 점검에 몇 초 걸린다 |
 | `setup.apply` | `{ item: "skill" \| "mcp" \| "protection", enabled }` | `agents` (위와 같음) | 켜면 설치·끄면 제거. `protection` = 훅 + 규칙. `mcp` 는 `claude mcp add --scope user corgi -- <corgi> mcp` — claude 가 없으면 `TOOL_MISSING` |
 | `setup.finish` | `{}` | `{ finished: true }` | `…/Corgi/setup.json` 에 끝낸 시각을 남긴다 — 앱이 다시 띄우지 않는다 |
-| `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, androidRamMb, simslimProfile? }` | 설정 화면·`corgi config` (M11) |
-| `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·Android RAM·simslim 프로필 (R25) |
+| `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, historyRetentionDays, androidRamMb, simslimProfile? }` | 설정 화면·`corgi config` (M11) |
+| `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·기록 보관 일수(1~3650)·Android RAM·simslim 프로필 (R25) |
 | `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff`)·남는 것(`slimKeeps`) (M1·M4) |
 | `device.list` | `{}` | `DeviceView[]` | Corgi 목록. 켜짐·argent ID(`targetId`)·점유자·메모(`memo`)·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20) |
 | `device.create` | `{ platform?, model \| custom, os?, name?, slim = true, baseline = true }` | `DeviceView` | `model` = 기종 ID·이름(`platform` 을 안 주면 두 플랫폼에서 찾고, 양쪽에 있으면 `INVALID`), `custom` = `{ widthDp, heightDp, density }`(Android). `os` 를 안 주면 기본값. 앱 없이 만들고 `slim` 이면 기준값을 잰 뒤 슬림화. 기본 이름은 슬림이면 `corgi <기종>`, 아니면 `<기종>` — 겹치면 번호를 붙인다. 진행 알림 있음 |
@@ -98,7 +98,8 @@
 | `group.delete` | `{ group }` | `{ deleted }` | 디바이스는 그대로 |
 | `lease.acquire` | `{ devices?, group?, default?: "android" \| "ios" \| "both", mode = "all" \| "available", wait = false, timeoutMs = 600000 }` | `{ status: "granted", deviceIds, devices }` · `{ status: "partial", deviceIds, devices, queued }` · `{ status: "queued", position, holders, devices }` | 디바이스·그룹·기본 디바이스를 합쳐 요청한다. `devices` 는 기기마다 `{ deviceId, name, state: held·queued·busy·free, holder? }` (R23). `all` 은 전부 아니면 아무것도 — 바쁘면 `BUSY`(data 에 `devices`), `available` 은 비어 있는 것만 잡는다(하나도 없으면 `BUSY`). `wait` 면 대기열에 넣는다 — `all` 은 전부 빌 때까지 기다리고, `available` 은 비어 있던 것을 잡고 바로 돌아오며 나머지는 빌 때마다 서버가 잡아 준다(비어 있던 게 없으면 처음 잡힐 때까지 기다린다). 대기열에 넣으면 교착이 생기는 요청은 `DEADLOCK` |
 | `lease.release` | `{ devices? }` | `{ released }` | 안 주면 이 세션의 점유·대기 전부 |
-| `lease.history` | `{ limit = 100, session? }` | `[{ at, kind, sessionKey, agentSessionId?, agent, cwd, human, deviceIds }]` — 최근 것부터 | `kind`: `acquired` 바로 점유 · `queued` 대기 등록 · `granted` 기다려서 점유 · `released` 스스로 해제 · `forced` 강제 해제됨 · `ended` 세션 종료로 해제 · `idle` 오래 안 써서 해제 · `deadlock` 교착이라 대기 거절 (M13) |
+| `lease.history` | `{ limit = 100 (최대 5000), session? }` | `[{ at, kind, sessionKey, agentSessionId?, agent, cwd, human, deviceIds }]` — 최근 것부터 | `kind`: `acquired` 바로 점유 · `queued` 대기 등록 · `granted` 기다려서 점유 · `released` 스스로 해제 · `forced` 강제 해제됨 · `ended` 세션 종료로 해제 · `idle` 오래 안 써서 해제 · `deadlock` 교착이라 대기 거절 (M13) |
+| `lease.sessions` | `{ limit = 200 (최대 1000) }` | `[{ sessionKey, agentSessionId?, agent, cwd, human, lastAt, events }]` — 마지막 활동이 최근인 것부터 | 기록에 남은 세션마다 묶음 — 세션 화면의 지난 세션 (M13) |
 | `lease.who` | `{ target? }` | `[{ deviceId, name, holder? }]` | `target` 은 ID·이름·AVD ID·UDID·시리얼 |
 
 - 여러 대 작업(`slim`·`up`·`down`)은 하나가 실패해도 나머지를 계속하고 `results: [{ id, name, ok, error? }]` 로 대마다 알려 준다.

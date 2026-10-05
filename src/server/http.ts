@@ -44,6 +44,7 @@ const WEB_METHODS = new Set([
   "lease.release",
   "lease.forceRelease",
   "lease.history",
+  "lease.sessions",
 ]);
 
 /** 없으면 만든다 — 같은 사용자만 읽을 수 있다 */

@@ -8,6 +8,8 @@ export const Config = z.object({
   language: z.enum(["system", "ko", "en"]).default("system"),
   /** 마지막 사용 후 이 시간이 지나고 기다리는 세션이 있으면 점유를 푼다 (R17) */
   idleReleaseMinutes: z.number().positive().default(30),
+  /** 점유 기록을 남겨 두는 날 수 — 지난 것은 서버가 지운다 (M13) */
+  historyRetentionDays: z.number().int().positive().default(90),
   httpPort: z.number().int().positive().default(8791),
   /** 슬림 전 기준값을 잴 때 켜고 나서 기다리는 시간 — 백그라운드 서비스가 다 뜰 때까지 */
   slimBaselineSettleSeconds: z.number().nonnegative().default(45),
@@ -42,6 +44,7 @@ export type Config = z.infer<typeof Config>;
 export interface SettingsPatch {
   language?: Config["language"];
   idleReleaseMinutes?: number;
+  historyRetentionDays?: number;
   androidRamMb?: number;
   simslimProfile?: string | null;
 }
@@ -59,6 +62,8 @@ export function saveSettings(path: string, patch: SettingsPatch): Config {
   const ios = { ...((raw.ios as Record<string, unknown>) ?? {}) };
   if (patch.language !== undefined) raw.language = patch.language;
   if (patch.idleReleaseMinutes !== undefined) raw.idleReleaseMinutes = patch.idleReleaseMinutes;
+  if (patch.historyRetentionDays !== undefined)
+    raw.historyRetentionDays = patch.historyRetentionDays;
   if (patch.androidRamMb !== undefined) android.ramMb = patch.androidRamMb;
   if (patch.simslimProfile !== undefined) {
     if (patch.simslimProfile) ios.simslimProfile = patch.simslimProfile;

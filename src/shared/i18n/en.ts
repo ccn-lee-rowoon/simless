@@ -510,4 +510,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.settings.setup": "First-run setup",
   "web.settings.setupHint": "Check tools, agent connections and default devices again.",
   "web.settings.openSetup": "Open setup",
+  "web.settings.retention": "Keep history (days)",
+  "web.settings.retentionHint":
+    "Lease history in the Sessions view is kept this long; older entries are deleted.",
 };

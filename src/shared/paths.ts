@@ -14,8 +14,10 @@ export interface Paths {
   socket: string;
   registry: string;
   leases: string;
-  /** 점유 기록 (M13) */
+  /** 점유 기록 (M13) — SQLite */
   history: string;
+  /** 예전 JSON 기록 — 처음 한 번 history 로 옮긴다 */
+  legacyHistory: string;
   managedIndex: string;
   /** 첫 실행 설정을 끝낸 시각 (M14) — 없으면 앱이 설정 창을 띄운다 */
   setup: string;
@@ -43,7 +45,8 @@ export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
     socket: env.CORGI_SOCKET ?? join(stateDir, "corgi.sock"),
     registry: join(stateDir, "registry.json"),
     leases: join(stateDir, "leases.json"),
-    history: join(stateDir, "history.json"),
+    history: join(stateDir, "history.db"),
+    legacyHistory: join(stateDir, "history.json"),
     managedIndex: join(stateDir, "managed-index.json"),
     setup: join(stateDir, "setup.json"),
     webToken: join(stateDir, "web-token"),

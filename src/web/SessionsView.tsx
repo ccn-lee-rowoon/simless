@@ -3,6 +3,7 @@ import type {
   DeviceView,
   HistoryEvent,
   HistoryKind,
+  HistorySession,
   SessionView,
   StatusResult,
 } from "../shared/api.ts";
@@ -28,26 +29,10 @@ interface SessionRow {
   active?: SessionView;
 }
 
-function rows(status: StatusResult, events: HistoryEvent[]): SessionRow[] {
+function rows(status: StatusResult, past: HistorySession[]): SessionRow[] {
   const byKey = new Map<string, SessionRow>();
-  // 기록은 최근 것부터 온다 — 처음 만나는 것이 마지막 활동
-  for (const e of events) {
-    const row = byKey.get(e.sessionKey);
-    if (row) {
-      row.events += 1;
-      row.agentSessionId ??= e.agentSessionId;
-    } else {
-      byKey.set(e.sessionKey, {
-        sessionKey: e.sessionKey,
-        agentSessionId: e.agentSessionId,
-        agent: e.agent,
-        human: e.human,
-        cwd: e.cwd,
-        lastAt: e.at,
-        events: 1,
-      });
-    }
-  }
+  // 서버가 세션마다 묶어 준다 (lease.sessions — 마지막 활동·기록 수)
+  for (const s of past) byKey.set(s.sessionKey, { ...s });
   for (const s of status.sessions) {
     const row = byKey.get(s.sessionKey);
     byKey.set(s.sessionKey, {
@@ -78,17 +63,19 @@ export function openSessionWindow(sessionKey: string): void {
 
 /** 세션 화면 — 세션마다 지금 점유·대기와 마지막 활동. 누르면 그 세션의 기록이 새 창으로 (M13) */
 export function SessionsView({ status, act }: { status: StatusResult; act: Act }) {
-  const [events, setEvents] = useState<HistoryEvent[] | null>(null);
+  const [recorded, setRecorded] = useState<HistorySession[] | null>(null);
   const byId = useMemo(() => new Map(status.devices.map((d) => [d.id, d])), [status.devices]);
 
   // 상태가 바뀔 때마다(SSE·주기 갱신) 다시 읽는다
   useEffect(() => {
     void status;
-    call<HistoryEvent[]>("lease.history", { limit: 500 }).then(setEvents, () => setEvents([]));
+    call<HistorySession[]>("lease.sessions", { limit: 200 }).then(setRecorded, () =>
+      setRecorded([]),
+    );
   }, [status]);
 
-  if (!events) return <p className="sub">{t("web.loading")}</p>;
-  const list = rows(status, events);
+  if (!recorded) return <p className="sub">{t("web.loading")}</p>;
+  const list = rows(status, recorded);
   const active = list.filter((r) => r.active);
   const past = list.filter((r) => !r.active);
 
@@ -261,8 +248,9 @@ export function SessionWindow({
 
   useEffect(() => {
     void status;
-    call<HistoryEvent[]>("lease.history", { limit: 500, session: sessionKey }).then(setEvents, () =>
-      setEvents([]),
+    call<HistoryEvent[]>("lease.history", { limit: 2000, session: sessionKey }).then(
+      setEvents,
+      () => setEvents([]),
     );
   }, [status, sessionKey]);
 

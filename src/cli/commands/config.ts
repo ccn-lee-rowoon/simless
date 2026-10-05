@@ -11,6 +11,7 @@ const KEYS = {
     return { language: v };
   },
   idleReleaseMinutes: (v: string) => ({ idleReleaseMinutes: Number(v) }),
+  historyRetentionDays: (v: string) => ({ historyRetentionDays: Number(v) }),
   "android.ramMb": (v: string) => ({ androidRamMb: Number(v) }),
   "ios.simslimProfile": (v: string) => ({ simslimProfile: v === "" ? null : v }),
 } as const;
@@ -19,6 +20,7 @@ function rows(settings: SettingsResult): string {
   return [
     `language = ${settings.language}`,
     `idleReleaseMinutes = ${settings.idleReleaseMinutes}`,
+    `historyRetentionDays = ${settings.historyRetentionDays}`,
     `android.ramMb = ${settings.androidRamMb}`,
     `ios.simslimProfile = ${settings.simslimProfile ?? ""}`,
   ].join("\n");

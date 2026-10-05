@@ -34,6 +34,7 @@
 | CLI 인자 | `commander` | 서브커맨드·`--help` 정리 |
 | 검증·타입 | `zod` 4 | 설정·소켓 메시지·저장 파일 스키마를 한 곳에서 정의하고 타입도 뽑는다. MCP SDK 도 쓴다 |
 | 프로세스 정보 | `bun:ffi` 로 macOS libproc(`proc_pidinfo`·`proc_pidpath`) 호출 | 세션 찾기(§7)·종료 감지. `ps` 는 한 번에 20~80ms, FFI 는 약 3ms(실측) — 훅이 Bash 마다 돌기 때문 |
+| 기록 저장 | `bun:sqlite` | macOS 에 든 SQLite 를 Bun 이 쓴다 — 단일 실행 파일에 더할 것이 없고, Bun 이 없는 환경에서도 돈다(실측). 기록만 SQLite, 설정·레지스트리·점유는 JSON(«결정 기록») |
 | MCP | `@modelcontextprotocol/sdk` (6단계) | stdio. zod 4 를 그대로 받는다. 단일 실행 파일이 약 3.4MB 커졌다(65→68MB) |
 | 웹 화면 | React + Bun 내장 번들러(HTML import) | Vite 없이 `Bun.serve` 가 서빙. `Corgi.app` 창(WKWebView)과 브라우저가 같은 화면을 연다 |
 | 플랫폼 로고 | `simple-icons` (CC0) | 애플·안드로이드 로고 경로 두 개만 쓴다(번들에도 그 둘만 들어간다). 손으로 그리면 모양이 어긋난다 |
@@ -103,7 +104,7 @@ corgi/
 | --- | --- | --- |
 | `~/Library/Application Support/Corgi/registry.json` | 디바이스에 Corgi 가 붙인 정보(메모·슬림·만든 여부·기준값), 그룹, 기본 디바이스 (영속). 기기 자체 목록은 저장하지 않는다(§6) | 서버 |
 | `…/Corgi/leases.json` | 점유·대기열 — 서버를 다시 켜도 복원 | 서버 |
-| `…/Corgi/history.json` | 점유 기록 — 최근 500개 (M13) | 서버 |
+| `…/Corgi/history.db` | 점유 기록 — SQLite(`bun:sqlite`, WAL). 사건마다 한 줄 덧붙이고, 보관 기간(`historyRetentionDays`, 기본 90일)이 지난 것은 서버가 한 시간마다 지운다 (M13). 예전 `history.json` 은 처음 켤 때 옮기고 `history.json.migrated` 로 남긴다 | 서버 |
 | `…/Corgi/managed-index.json` | 이 Mac 디바이스 식별자(UDID·AVD ID·마지막 시리얼). **서버가 꺼졌을 때 훅이 읽는다** | 서버 쓰기 / 훅 읽기 |
 | `…/Corgi/corgi.sock` | 소켓 (권한 0600) | 서버 |
 | `…/Corgi/web-token` | 웹 화면 요청 토큰 (0600) | 서버 |
@@ -334,7 +335,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 
 **왼쪽 메뉴** (M9) — 디바이스 · 그룹 · 세션, 아래쪽에 설정(새 창 — 앱에서는 `window.webkit.messageHandlers.corgi` 로 Swift 에 알려 별도 NSWindow, 브라우저에서는 `window.open`)과 서버 상태.
 
-**세션 화면** (M13) — `status.sessions`(지금 점유·대기)와 `lease.history`(기록)를 세션 키로 묶어 «지금 쓰는 세션 / 지난 세션» 카드로 보인다. 카드에 에이전트 아이콘(이름으로 종류를 가림 — 각 도구의 대표 색에 단순한 기호, 실제 로고는 쓰지 않음)·세션 ID(에이전트가 주는 `agentSessionId` 와 Corgi 세션 키)·작업 폴더·마지막 활동·기록 수. 지금 쓰는 세션은 점유한 디바이스(사람은 강제 해제)와 대기. 카드를 누르면 `?window=session&key=…` 를 새 창(앱은 Swift 별도 창, 브라우저는 `window.open`)으로 — 그 세션의 기록을 시간순 타임라인으로. 기록은 LeaseManager 가 점유·대기·해제가 일어날 때마다 남기는 사건(acquired·queued·granted·released·forced·ended·idle·deadlock, `agentSessionId` 포함)을 서버가 `…/Corgi/history.json` 에 최근 500개까지 둔다. CLI `corgi history`.
+**세션 화면** (M13) — `status.sessions`(지금 점유·대기)와 `lease.history`(기록)를 세션 키로 묶어 «지금 쓰는 세션 / 지난 세션» 카드로 보인다. 카드에 에이전트 아이콘(이름으로 종류를 가림 — 각 도구의 대표 색에 단순한 기호, 실제 로고는 쓰지 않음)·세션 ID(에이전트가 주는 `agentSessionId` 와 Corgi 세션 키)·작업 폴더·마지막 활동·기록 수. 지금 쓰는 세션은 점유한 디바이스(사람은 강제 해제)와 대기. 카드를 누르면 `?window=session&key=…` 를 새 창(앱은 Swift 별도 창, 브라우저는 `window.open`)으로 — 그 세션의 기록을 시간순 타임라인으로. 기록은 LeaseManager 가 점유·대기·해제가 일어날 때마다 남기는 사건(acquired·queued·granted·released·forced·ended·idle·deadlock, `agentSessionId` 포함)을 서버가 `…/Corgi/history.db`(SQLite)에 덧붙이고 90일 보관한다. 세션 목록은 서버가 세션마다 묶어 준다(`lease.sessions`). CLI `corgi history`.
 
 **메인 화면** (M5·M9)
 - Corgi 목록 — 위에 **All · Android · iOS 탭**(마지막 탭 기억)과 그룹 거르기, 검색.

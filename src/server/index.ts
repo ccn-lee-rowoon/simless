@@ -33,6 +33,7 @@ export async function serve(): Promise<void> {
     clearInterval(timer);
     http?.stop(true);
     listener.stop();
+    server.history.close();
     process.exit(0);
   };
   process.on("SIGINT", stop);

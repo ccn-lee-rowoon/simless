@@ -67,8 +67,11 @@ const ReleaseParams = z.object({ devices: z.array(z.string()).optional() });
 const WhoParams = z.object({ target: z.string().optional() });
 const ForceParams = z.object({ device: z.string() });
 const HistoryParams = z.object({
-  limit: z.number().int().positive().max(500).default(100),
+  limit: z.number().int().positive().max(5000).default(100),
   session: z.string().optional(),
+});
+const SessionsParams = z.object({
+  limit: z.number().int().positive().max(1000).default(200),
 });
 const SettingsParams = z.object({
   language: z.enum(["system", "ko", "en"]).optional(),
@@ -77,6 +80,7 @@ const SettingsParams = z.object({
     .positive()
     .max(24 * 60)
     .optional(),
+  historyRetentionDays: z.number().int().min(1).max(3650).optional(),
   androidRamMb: z.number().int().min(1024).max(16384).optional(),
   simslimProfile: z.string().nullable().optional(),
 });
@@ -90,6 +94,7 @@ const READ_ONLY = new Set([
   "group.list",
   "lease.who",
   "lease.history",
+  "lease.sessions",
   "settings.get",
   "hook.check",
 ]);
@@ -113,7 +118,11 @@ export class CorgiServer {
   constructor(private readonly deps: ServerDeps) {
     this.isAlive = deps.isAlive ?? ((pid, startedAt) => defaultIsAlive(pid, startedAt));
     this.registry = new Registry(deps.paths.registry);
-    this.history = new History(deps.paths.history);
+    this.history = new History(deps.paths.history, {
+      retentionDays: deps.config.historyRetentionDays,
+      legacyPath: deps.paths.legacyHistory,
+      now: deps.now,
+    });
     this.leases = new LeaseManager(
       readJson(deps.paths.leases, LeaseStateSchema, EMPTY_LEASE_STATE),
       {
@@ -138,6 +147,8 @@ export class CorgiServer {
         const params = parse(HistoryParams, p);
         return this.history.list({ limit: params.limit, sessionKey: params.session });
       },
+      "lease.sessions": async (p) =>
+        this.history.sessions({ limit: parse(SessionsParams, p).limit }),
       "settings.get": async () => this.settings(),
       "settings.set": async (p) => this.setSettings(parse(SettingsParams, p)),
     };
@@ -199,6 +210,7 @@ export class CorgiServer {
       }
     }
     this.leases.sweepIdle();
+    this.history.pruneIfDue();
   }
 
   get config(): Config {
@@ -228,6 +240,7 @@ export class CorgiServer {
     return {
       language: config.language,
       idleReleaseMinutes: config.idleReleaseMinutes,
+      historyRetentionDays: config.historyRetentionDays,
       androidRamMb: config.android.ramMb,
       simslimProfile: config.ios.simslimProfile,
     };
@@ -239,6 +252,8 @@ export class CorgiServer {
     const { config } = this.deps;
     config.language = next.language;
     config.idleReleaseMinutes = next.idleReleaseMinutes;
+    config.historyRetentionDays = next.historyRetentionDays;
+    this.history.setRetentionDays(next.historyRetentionDays);
     config.android.ramMb = next.android.ramMb;
     config.ios.simslimProfile = next.ios.simslimProfile;
     this.leases.setIdleMs(next.idleReleaseMinutes * 60_000);

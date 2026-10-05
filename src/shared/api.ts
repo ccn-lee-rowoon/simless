@@ -64,6 +64,8 @@ export interface SettingsResult {
   /** 설정값 — system·ko·en */
   language: "system" | Lang;
   idleReleaseMinutes: number;
+  /** 점유 기록 보관 기간 (M13) */
+  historyRetentionDays: number;
   androidRamMb: number;
   simslimProfile?: string;
 }
@@ -214,6 +216,19 @@ export interface HistoryEvent {
   cwd: string;
   human: boolean;
   deviceIds: string[];
+}
+
+/** 기록에 남은 세션 하나 — 세션 화면의 «지난 세션» (M13) */
+export interface HistorySession {
+  sessionKey: string;
+  agentSessionId?: string;
+  agent: string;
+  cwd: string;
+  human: boolean;
+  /** 마지막 기록 시각 */
+  lastAt: number;
+  /** 기록 수 */
+  events: number;
 }
 
 /** 점검 항목 — corgi doctor 와 첫 실행 설정 창이 같이 쓴다 (S1·S2·M14) */
