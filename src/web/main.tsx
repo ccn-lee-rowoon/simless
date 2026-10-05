@@ -30,12 +30,12 @@ const SESSION_WINDOW = PARAMS.get("window") === "session" ? PARAMS.get("key") : 
 /** ?window=setup — 첫 실행 설정 (M14) */
 const SETUP_WINDOW = PARAMS.get("window") === "setup";
 
-/** 설정 창 열기 — 앱(Corgi.app)이면 Swift 에 알려 별도 창, 브라우저면 새 창 */
+/** 설정 창 열기 — 앱(simless.app)이면 Swift 에 알려 별도 창, 브라우저면 새 창 */
 function openSettings(): void {
   if (!postToApp({ open: "settings" }))
-    window.open("/?window=settings", "corgi-settings", "width=760,height=720");
+    window.open("/?window=settings", "simless-settings", "width=760,height=720");
 }
-const VIEW_KEY = "corgi-view";
+const VIEW_KEY = "simless-view";
 
 function savedView(): View {
   try {
@@ -152,7 +152,7 @@ function App() {
     return (
       <main className="empty-page">
         <Logo size={56} />
-        <h1>Corgi</h1>
+        <h1>simless</h1>
         <p>{t("web.noToken")}</p>
       </main>
     );
@@ -240,7 +240,7 @@ function App() {
       <aside className="sidebar">
         <div className="brand">
           <Logo />
-          <span className="side-text">Corgi</span>
+          <span className="side-text">simless</span>
         </div>
         <nav className="side-nav" aria-label={t("web.nav")}>
           {nav.map((item) => (

@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 function sdkWithImages() {
-  const root = mkdtempSync(join(tmpdir(), "corgi-android-"));
+  const root = mkdtempSync(join(tmpdir(), "simless-android-"));
   dirs.push(root);
   const sdk = join(root, "sdk");
   for (const [target, tag, api] of [
@@ -145,16 +145,16 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
     sourceAvd(env.ANDROID_AVD_HOME, "Size_Small_360dp", small);
     const d = driver(env, { runner: fakeAdb().runner });
     const { spec } = await d.resolve({ model: "small-phone" });
-    const { native } = await d.create({ id: "ab12", name: "corgi Small", spec }, () => {});
-    expect(native).toBe("corgi_ab12");
-    const dir = join(env.ANDROID_AVD_HOME, "corgi_ab12.avd");
-    expect(readFileSync(join(dir, "config.ini"), "utf8")).toContain("AvdId=corgi_ab12");
+    const { native } = await d.create({ id: "ab12", name: "simless Small", spec }, () => {});
+    expect(native).toBe("simless_ab12");
+    const dir = join(env.ANDROID_AVD_HOME, "simless_ab12.avd");
+    expect(readFileSync(join(dir, "config.ini"), "utf8")).toContain("AvdId=simless_ab12");
 
-    const device = { id: "ab12", native, name: "corgi Small", spec } as Device;
+    const device = { id: "ab12", native, name: "simless Small", spec } as Device;
     await d.rename(device, "작은 폰");
     const config = readFileSync(join(dir, "config.ini"), "utf8");
     expect(config).toContain("avd.ini.displayname=작은 폰");
-    expect(config).toContain("AvdId=corgi_ab12");
+    expect(config).toContain("AvdId=simless_ab12");
 
     await d.remove(device);
     expect(existsSync(dir)).toBe(false);
@@ -173,19 +173,19 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
       spawnEmulator: (command) => {
         spawned.push(command);
         const port = command[command.indexOf("-port") + 1];
-        adb.running.set(`emulator-${port}`, { avd: "corgi_ab12", booted: false });
+        adb.running.set(`emulator-${port}`, { avd: "simless_ab12", booted: false });
         setTimeout(
-          () => adb.running.set(`emulator-${port}`, { avd: "corgi_ab12", booted: true }),
+          () => adb.running.set(`emulator-${port}`, { avd: "simless_ab12", booted: true }),
           10,
         );
         return { exited: new Promise(() => {}) };
       },
     });
-    const device = { id: "ab12", native: "corgi_ab12", name: "작은 폰" } as Device;
+    const device = { id: "ab12", native: "simless_ab12", name: "작은 폰" } as Device;
     const state = await d.boot(device, () => {});
     expect(state).toEqual({ booted: true, targetId: "emulator-5556" });
     expect(spawned[0]).toContain("-avd");
-    expect(spawned[0]).toContain("corgi_ab12");
+    expect(spawned[0]).toContain("simless_ab12");
 
     const states = await d.states([device]);
     expect(states.get("ab12")).toEqual({ booted: true, targetId: "emulator-5556" });
@@ -203,7 +203,7 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
       spawnEmulator: () => ({ exited: Promise.resolve(1) }),
     });
     const error = await d
-      .boot({ id: "x", native: "corgi_x", name: "x" } as Device, () => {})
+      .boot({ id: "x", native: "simless_x", name: "x" } as Device, () => {})
       .catch((e) => e);
     expect(String(error)).toContain("exited while booting");
   });
@@ -211,7 +211,7 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
   test("slim — avdslim 이 없으면 TOOL_MISSING", async () => {
     const { env } = sdkWithImages();
     const error = await driver(env)
-      .slim({ id: "x", native: "corgi_x", name: "x" } as Device, () => {})
+      .slim({ id: "x", native: "simless_x", name: "x" } as Device, () => {})
       .catch((e) => e);
     expect(error).toMatchObject({ code: "TOOL_MISSING" });
   });
@@ -312,14 +312,17 @@ describe("AndroidDriver 기종 목록·만들기 (R1·R2·M1)", () => {
     const { env } = sdkWithImages();
     const d = driver(env, { runner: fakeAdb().runner });
     const { spec } = await d.resolve({ model: "7 inch Tablet" });
-    await d.create({ id: "tb01", name: "corgi 7 inch Tablet", spec }, () => {});
-    const config = readFileSync(join(env.ANDROID_AVD_HOME, "corgi_tb01.avd", "config.ini"), "utf8");
+    await d.create({ id: "tb01", name: "simless 7 inch Tablet", spec }, () => {});
+    const config = readFileSync(
+      join(env.ANDROID_AVD_HOME, "simless_tb01.avd", "config.ini"),
+      "utf8",
+    );
     expect(config).toContain("hw.lcd.width=1200");
     expect(config).toContain("hw.lcd.density=320");
     expect(config).toContain(
       "image.sysdir.1=system-images/android-36/google_apis_playstore/arm64-v8a/",
     );
-    expect(readFileSync(join(env.ANDROID_AVD_HOME, "corgi_tb01.ini"), "utf8")).toContain(
+    expect(readFileSync(join(env.ANDROID_AVD_HOME, "simless_tb01.ini"), "utf8")).toContain(
       "target=android-36",
     );
   });

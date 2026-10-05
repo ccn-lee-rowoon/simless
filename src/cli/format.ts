@@ -87,7 +87,7 @@ export function devicesTable(devices: DeviceView[]): string {
       d.name,
       d.booted ? `${t("common.on")} ${d.targetId ?? ""}`.trim() : t("common.off"),
       slimText(d),
-      [d.default ? t("table.default") : "", d.createdByCorgi ? "Corgi" : ""]
+      [d.default ? t("table.default") : "", d.createdBySimless ? "simless" : ""]
         .filter(Boolean)
         .join(" "),
       d.mine ? t("table.me") : d.holder ? formatHolder(d.holder) : "",

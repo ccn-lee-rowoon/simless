@@ -90,9 +90,9 @@ describe("detectSession — 세션 = 에이전트 프로세스 (R18)", () => {
     });
   });
 
-  test("CORGI_SESSION_ID 를 주면 그 값이 세션", () => {
+  test("SIMLESS_SESSION_ID 를 주면 그 값이 세션", () => {
     const read = table([[50, 1, "worker", "/x/worker"]]);
-    const env = { CORGI_SESSION_ID: "job-7", CORGI_SESSION_PID: "50" };
+    const env = { SIMLESS_SESSION_ID: "job-7", SIMLESS_SESSION_PID: "50" };
     expect(detectSession({ ...base, env, startPid: 999, read })).toMatchObject({
       key: "x:job-7",
       pid: 50,

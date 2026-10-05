@@ -6,7 +6,7 @@ import { agentSessionKey } from "../shared/session.ts";
 
 export type HookAgent = "claude" | "copilot" | "codex" | "cursor" | "gemini";
 
-/** 어댑터마다 받는 이벤트 — `corgi hook <에이전트> <이벤트>` */
+/** 어댑터마다 받는 이벤트 — `simless hook <에이전트> <이벤트>` */
 export const HOOK_EVENTS: Record<HookAgent, readonly string[]> = {
   claude: ["pre-tool-use"],
   copilot: ["pre-tool-use"],
@@ -113,7 +113,7 @@ export function normalize(agent: HookAgent, event: string, raw: Raw): HookInput 
 
 /** 막을 때 — 그 에이전트가 읽는 모양 */
 export function denyOutput(agent: HookAgent, reason: string): string {
-  const text = `[Corgi] ${reason}`;
+  const text = `[simless] ${reason}`;
   switch (agent) {
     case "claude":
     case "codex":

@@ -4,7 +4,7 @@ import type { SessionInfo } from "../shared/protocol.ts";
 import { PROTOCOL_VERSION } from "../shared/protocol.ts";
 import { VERSION } from "../shared/version.ts";
 import index from "../web/index.html";
-import type { CorgiServer } from "./app.ts";
+import type { SimlessServer } from "./app.ts";
 import { HandlerError } from "./socket.ts";
 
 // 웹 UI·메뉴바용 HTTP (docs/design.md §11). 상태를 바꾸는 요청도 받지만 다음으로 막는다.
@@ -70,9 +70,9 @@ export function checkRequest(
   if (!hosts.includes(request.headers.get("host") ?? ""))
     return { status: 403, message: "허용하지 않는 Host" };
   const url = new URL(request.url);
-  const given = request.headers.get("x-corgi-token") ?? url.searchParams.get("token");
+  const given = request.headers.get("x-simless-token") ?? url.searchParams.get("token");
   if (given !== token)
-    return { status: 401, message: "토큰이 없거나 틀립니다 — corgi ui 로 여세요" };
+    return { status: 401, message: "토큰이 없거나 틀립니다 — simless ui 로 여세요" };
   const origin = request.headers.get("origin");
   if (request.method !== "GET" && origin !== null && !hosts.some((h) => origin === `http://${h}`)) {
     return { status: 403, message: "허용하지 않는 Origin" };
@@ -87,7 +87,11 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-async function callMethod(server: CorgiServer, method: string, params: unknown): Promise<Response> {
+async function callMethod(
+  server: SimlessServer,
+  method: string,
+  params: unknown,
+): Promise<Response> {
   if (!WEB_METHODS.has(method))
     return json(
       { ok: false, error: { code: "INVALID", message: `웹 UI 에서 못 쓰는 메서드: ${method}` } },
@@ -123,7 +127,7 @@ async function callMethod(server: CorgiServer, method: string, params: unknown):
 }
 
 /** 점유·켜짐·진행 알림을 SSE 로 — 화면은 changed 를 받으면 다시 읽는다 */
-function events(server: CorgiServer): Response {
+function events(server: SimlessServer): Response {
   let cleanup = () => {};
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -152,13 +156,13 @@ function events(server: CorgiServer): Response {
   });
 }
 
-export function startHttp(server: CorgiServer, options: { port: number; token: string }) {
+export function startHttp(server: SimlessServer, options: { port: number; token: string }) {
   const http = Bun.serve({
     hostname: "127.0.0.1",
     port: options.port,
-    // HMR·오류 오버레이 없이 묶어서 서빙한다 — 개발할 때만 CORGI_WEB_DEV=1
-    development: process.env.CORGI_WEB_DEV === "1",
-    // 페이지에는 비밀이 없다 — 토큰은 corgi ui 가 주소의 #token= 으로 넘긴다
+    // HMR·오류 오버레이 없이 묶어서 서빙한다 — 개발할 때만 SIMLESS_WEB_DEV=1
+    development: process.env.SIMLESS_WEB_DEV === "1",
+    // 페이지에는 비밀이 없다 — 토큰은 simless ui 가 주소의 #token= 으로 넘긴다
     routes: { "/": index },
     async fetch(request) {
       const url = new URL(request.url);

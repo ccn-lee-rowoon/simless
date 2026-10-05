@@ -21,7 +21,7 @@ const ALLOWED: Record<string, string[]> = {
   web: ["shared", "web"],
 };
 
-/** 정해 둔 예외 — 서버가 웹 화면 묶음을 내보내고, `corgi serve` 가 서버를 켠다 */
+/** 정해 둔 예외 — 서버가 웹 화면 묶음을 내보내고, `simless serve` 가 서버를 켠다 */
 const EXCEPTIONS = new Set(["server/http.ts → web/index.html", "cli/index.ts → server/index.ts"]);
 
 function sources(dir: string): string[] {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { CorgiServer } from "../src/server/app.ts";
+import { SimlessServer } from "../src/server/app.ts";
 import { listen } from "../src/server/socket.ts";
 import type { SettingsResult, StatusResult } from "../src/shared/api.ts";
 import { call } from "../src/shared/client.ts";
@@ -42,7 +42,7 @@ describe("i18n (R25)", () => {
 describe("설정 (M11)", () => {
   async function start(languages: string[]) {
     const env = tempEnv();
-    const server = new CorgiServer({
+    const server = new SimlessServer({
       ...env,
       drivers: [fakeDriver()],
       systemLanguages: () => languages,

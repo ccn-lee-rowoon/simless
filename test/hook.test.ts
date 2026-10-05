@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { offlineDecision } from "../src/hook/index.ts";
 import { extractTargets } from "../src/hook/targets.ts";
-import { CorgiServer } from "../src/server/app.ts";
+import { SimlessServer } from "../src/server/app.ts";
 import { listen } from "../src/server/socket.ts";
 import { call } from "../src/shared/client.ts";
 import { VERSION } from "../src/shared/version.ts";
@@ -13,7 +13,7 @@ describe("훅 대상 뽑기 (P4·P6)", () => {
 
   test("디바이스 도구가 없는 명령·기기 인자 없는 argent 도구는 바로 통과", () => {
     expect(bash("ls -la && git status")).toBeUndefined();
-    expect(bash("corgi use bakw")).toBeUndefined();
+    expect(bash("simless use bakw")).toBeUndefined();
     expect(extractTargets("mcp__argent__list-devices", {})).toBeUndefined();
     expect(extractTargets("Read", { file_path: "/x" })).toBeUndefined();
   });
@@ -32,8 +32,8 @@ describe("훅 대상 뽑기 (P4·P6)", () => {
   test("simctl booted 은 켜진 iOS 전부, simctl boot·emulator -avd 는 켜기", () => {
     expect(bash("xcrun simctl openurl booted myapp://home")?.allIos).toBe(true);
     expect(bash("xcrun simctl boot UDID-1")?.boots).toEqual(["UDID-1"]);
-    expect(bash("$ANDROID_HOME/emulator/emulator -avd corgi_ab12 -no-audio")?.boots).toEqual([
-      "corgi_ab12",
+    expect(bash("$ANDROID_HOME/emulator/emulator -avd simless_ab12 -no-audio")?.boots).toEqual([
+      "simless_ab12",
     ]);
     expect(bash("emulator @Pixel_6a")?.boots).toEqual(["Pixel_6a"]);
     expect(bash("xcrun simctl list devices")).toMatchObject({ allIos: false, boots: [] });
@@ -49,8 +49,8 @@ describe("훅 대상 뽑기 (P4·P6)", () => {
     expect(
       extractTargets("mcp__argent__debugger-component-tree", { device_id: "emulator-5554" })?.ids,
     ).toEqual(["emulator-5554"]);
-    expect(extractTargets("mcp__argent__boot-device", { avdName: "corgi_ab12" })?.boots).toEqual([
-      "corgi_ab12",
+    expect(extractTargets("mcp__argent__boot-device", { avdName: "simless_ab12" })?.boots).toEqual([
+      "simless_ab12",
     ]);
   });
 });
@@ -62,7 +62,7 @@ describe("서버가 꺼졌을 때 (P9)", () => {
         id: "ab12",
         name: "Small",
         platform: "android" as const,
-        native: "corgi_ab12",
+        native: "simless_ab12",
         targetId: "emulator-5554",
       },
       { id: "cd34", name: "SE", platform: "ios" as const, native: "UDID-1" },
@@ -86,7 +86,7 @@ describe("서버가 꺼졌을 때 (P9)", () => {
 describe("hook.check — 점유했는지 (P1·P5·P8)", () => {
   const env = tempEnv();
   let driver: FakeDriver;
-  let server: CorgiServer;
+  let server: SimlessServer;
   let stop = () => {};
   const check = (key: string, params: unknown) =>
     call<{ allow: boolean; reason?: string }>(
@@ -98,9 +98,9 @@ describe("hook.check — 점유했는지 (P1·P5·P8)", () => {
 
   beforeAll(async () => {
     driver = fakeDriver();
-    server = new CorgiServer({ ...env, drivers: [driver] });
+    server = new SimlessServer({ ...env, drivers: [driver] });
     seedDevice(server, driver, "ab12", "Small");
-    seedDevice(server, driver, "pix6", "Pixel 6a", false, false); // Corgi 목록에 없음
+    seedDevice(server, driver, "pix6", "Pixel 6a", false, false); // simless 목록에 없음
     stop = (await listen(env.paths.socket, VERSION, server.handle)).stop;
   });
   afterAll(() => {
@@ -108,38 +108,38 @@ describe("hook.check — 점유했는지 (P1·P5·P8)", () => {
     env.cleanup();
   });
 
-  test("Corgi 목록에 없는 기기는 통과, 점유하지 않은 관리 디바이스는 막고 점유 방법을 알려 준다", async () => {
+  test("simless 목록에 없는 기기는 통과, 점유하지 않은 관리 디바이스는 막고 점유 방법을 알려 준다", async () => {
     expect(await check("A", { ids: ["Pixel_6a_pix6"] })).toMatchObject({ allow: true });
-    const denied = await check("A", { ids: ["corgi_ab12"] });
+    const denied = await check("A", { ids: ["simless_ab12"] });
     expect(denied.allow).toBe(false);
-    expect(denied.reason).toContain("corgi use ab12");
+    expect(denied.reason).toContain("simless use ab12");
   });
 
   test("점유한 세션은 통과, 다른 세션은 누가 쓰는지와 함께 막힌다", async () => {
     await call(env.paths.socket, "lease.acquire", { devices: ["ab12"] }, session("A"));
-    expect(await check("A", { ids: ["corgi_ab12"] })).toMatchObject({ allow: true });
-    expect(await check("B", { ids: ["corgi_ab12"] })).toMatchObject({
+    expect(await check("A", { ids: ["simless_ab12"] })).toMatchObject({ allow: true });
+    expect(await check("B", { ids: ["simless_ab12"] })).toMatchObject({
       allow: false,
       reason: expect.stringContaining("test-agent"),
     });
   });
 
-  test("켜진 기기의 시리얼·기기 지정 없는 adb 도 대상, 켜기는 점유해도 Corgi 로", async () => {
+  test("켜진 기기의 시리얼·기기 지정 없는 adb 도 대상, 켜기는 점유해도 simless 로", async () => {
     // 켜기는 상태를 바꾸는 요청이라 서버가 켜짐 상태 기억을 버린다
     await call(env.paths.socket, "device.up", { devices: ["ab12"] }, session("A"));
     const serial = (await server.runtimeStates(await server.devices())).get("ab12")?.targetId ?? "";
     expect(serial).toStartWith("emulator-");
     expect(await check("B", { ids: [serial] })).toMatchObject({ allow: false });
     expect(await check("B", { allAndroid: true })).toMatchObject({ allow: false });
-    expect(await check("A", { boots: ["corgi_ab12"] })).toMatchObject({
+    expect(await check("A", { boots: ["simless_ab12"] })).toMatchObject({
       allow: false,
-      reason: expect.stringContaining("corgi use"),
+      reason: expect.stringContaining("simless use"),
     });
   });
 });
 
-describe("corgi hook claude pre-tool-use", () => {
-  const entry = new URL("../bin/corgi.ts", import.meta.url).pathname;
+describe("simless hook claude pre-tool-use", () => {
+  const entry = new URL("../bin/simless.ts", import.meta.url).pathname;
 
   async function hook(input: unknown, extraEnv: Record<string, string>) {
     const proc = Bun.spawn([process.execPath, entry, "hook", "claude", "pre-tool-use"], {
@@ -161,15 +161,15 @@ describe("corgi hook claude pre-tool-use", () => {
 
   test("서버가 꺼져 있고 관리 디바이스로 보이면 deny JSON 을 낸다", async () => {
     const env = tempEnv();
-    mkdirSync(env.env.CORGI_STATE_DIR, { recursive: true });
+    mkdirSync(env.env.SIMLESS_STATE_DIR, { recursive: true });
     writeFileSync(
       env.paths.managedIndex,
       JSON.stringify({
-        devices: [{ id: "ab12", name: "Small", platform: "android", native: "corgi_ab12" }],
+        devices: [{ id: "ab12", name: "Small", platform: "android", native: "simless_ab12" }],
       }),
     );
     const result = await hook(
-      { tool_name: "mcp__argent__gesture-tap", tool_input: { udid: "corgi_ab12" } },
+      { tool_name: "mcp__argent__gesture-tap", tool_input: { udid: "simless_ab12" } },
       env.env,
     );
     env.cleanup();

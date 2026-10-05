@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { CorgiServer } from "../src/server/app.ts";
+import { SimlessServer } from "../src/server/app.ts";
 import { listen } from "../src/server/socket.ts";
 import type { AcquireResult, StatusResult } from "../src/shared/api.ts";
 import { call, RemoteError, ServerDownError } from "../src/shared/client.ts";
@@ -129,14 +129,14 @@ describe("소켓 서버", () => {
 
   test("서버가 없으면 ServerDownError", async () => {
     await expect(
-      call("/tmp/corgi-test-none.sock", "status", {}, session("A")),
+      call("/tmp/simless-test-none.sock", "status", {}, session("A")),
     ).rejects.toBeInstanceOf(ServerDownError);
   });
 
   test("이미 떠 있으면 두 번째 서버는 시작하지 않는다", async () => {
     const env = tempEnv();
     cleanups.push(env.cleanup);
-    const handle = new CorgiServer({ ...env, drivers: [] }).handle;
+    const handle = new SimlessServer({ ...env, drivers: [] }).handle;
     const first = await listen(env.paths.socket, VERSION, handle);
     cleanups.push(() => first.stop());
     await expect(listen(env.paths.socket, VERSION, handle)).rejects.toThrow("이미 실행 중");
@@ -158,7 +158,7 @@ describe("점유 기록", () => {
   test("lease.history — 최근 것부터, 세션으로 거를 수 있고 서버를 다시 켜도 남는다", async () => {
     const env = tempEnv();
     const driver = fakeDriver();
-    const server = new CorgiServer({ ...env, drivers: [driver] });
+    const server = new SimlessServer({ ...env, drivers: [driver] });
     seedDevice(server, driver, "aaaa", "Small");
     const listener = await listen(env.paths.socket, VERSION, server.handle);
     cleanups.push(() => listener.stop(), env.cleanup);
@@ -167,7 +167,7 @@ describe("점유 기록", () => {
     await call(socket, "lease.release", {}, session("A"));
     const { result } = await call<{ kind: string }[]>(socket, "lease.history", {}, session("B"));
     expect(result.map((e) => e.kind)).toEqual(["released", "acquired"]);
-    const again = new CorgiServer({ ...env, drivers: [driver] });
+    const again = new SimlessServer({ ...env, drivers: [driver] });
     expect(again.history.list({ sessionKey: "A" })).toHaveLength(2);
     expect(again.history.list({ sessionKey: "B" })).toHaveLength(0);
   });

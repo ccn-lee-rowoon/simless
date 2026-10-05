@@ -6,7 +6,7 @@ import { ExitCode } from "../../shared/exit-codes.ts";
 import { t } from "../../shared/i18n.ts";
 import { CliError, type Context, output, type Run } from "../context.ts";
 
-// corgi doctor (S1·S2) — 점검은 install/checks.ts, 여기서는 보여 주고 --fix 로 고친다.
+// simless doctor (S1·S2) — 점검은 install/checks.ts, 여기서는 보여 주고 --fix 로 고친다.
 
 const MARK: Record<Check["status"], string> = { ok: "✓", warn: "!", fail: "✗" };
 

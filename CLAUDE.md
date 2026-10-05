@@ -1,6 +1,6 @@
-# Corgi — 작업 규칙
+# simless — 작업 규칙
 
-시뮬레이터·에뮬레이터 중개·관리 도구(용도별 그룹·기본 디바이스·UI 테스트용 슬림 디바이스) — TypeScript(Bun) 상주 서버 + CLI + 웹 화면(`Corgi.app` 창) + 로컬 MCP + 스킬. 단일 실행 파일로 배포하고, 개발 중에는 `bun link` 로 쓴다.
+시뮬레이터·에뮬레이터 중개·관리 도구(용도별 그룹·기본 디바이스·UI 테스트용 슬림 디바이스) — TypeScript(Bun) 상주 서버 + CLI + 웹 화면(`simless.app` 창) + 로컬 MCP + 스킬. 단일 실행 파일로 배포하고, 개발 중에는 `bun link` 로 쓴다.
 
 **기술 스택**: TypeScript 7 · Bun 1.3.6(`mise.toml`) · commander · zod 4 · `bun:ffi`(libproc) · Biome · `bun test`. 배포는 `bun build --compile` 단일 실행 파일. 자세한 표는 `docs/design.md` §2, 소켓 메시지는 `docs/protocol.md`.
 
@@ -20,19 +20,19 @@
 
 ## 빌드·검사
 
-처음 한 번: `mise install` (Bun 1.3.6) → `bun install` → `bun link` (`corgi` 명령이 이 저장소를 가리키게 된다).
+처음 한 번: `mise install` (Bun 1.3.6) → `bun install` → `bun link` (`simless` 명령이 이 저장소를 가리키게 된다).
 
 ```sh
 bun install
 bun run check   # biome check + tsc --noEmit
 bun run test    # 모든 테스트
 bun run trace   # 요구사항 ID ↔ 테스트 (--missing: 테스트 없는 요구사항)
-bun run build   # dist/corgi 단일 실행 파일 — 진입점·파일 포함을 바꿨을 때
+bun run build   # dist/simless 단일 실행 파일 — 진입점·파일 포함을 바꿨을 때
 ```
 
 **테스트에서 주의할 것**
 - 같은 프로세스 안의 소켓 서버를 부르는 promise 에 `expect(…).rejects` 를 쓰면 Bun 1.3.6 에서 오동작한다(응답 전에 연결이 끊긴 것처럼 보임). `.catch((e) => e)` 로 받아서 검사한다.
-- 실제 디바이스를 다루는 확인은 `CORGI_STATE_DIR`·`CORGI_SOCKET` 등을 임시 경로로 바꿔 서버를 띄우고 한다. 만든 시험 디바이스는 끝나면 `corgi delete --yes` 로 지운다.
+- 실제 디바이스를 다루는 확인은 `SIMLESS_STATE_DIR`·`SIMLESS_SOCKET` 등을 임시 경로로 바꿔 서버를 띄우고 한다. 만든 시험 디바이스는 끝나면 `simless delete --yes` 로 지운다.
 
 ## 커밋 규칙
 
@@ -98,4 +98,4 @@ feat(server): 점유 대기열과 세션 종료 시 자동 해제 추가
 ## 디바이스를 다룰 때
 
 - 이 Mac 에는 다른 세션이 쓰는 에뮬레이터·시뮬레이터·Metro 가 있을 수 있다. **이 작업이 만든 것이 아니면 건드리지 않는다.**
-- 시험용 디바이스는 `corgi_` 로 시작하는 이름으로 만들고, 작업이 끝나면 무엇을 남겼는지 알린다.
+- 시험용 디바이스는 `simless_` 로 시작하는 이름으로 만들고, 작업이 끝나면 무엇을 남겼는지 알린다.

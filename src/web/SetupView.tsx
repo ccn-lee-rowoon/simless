@@ -30,7 +30,7 @@ const STEPS: { id: Step; label: MessageKey }[] = [
   { id: "devices", label: "web.setup.steps.devices" },
 ];
 
-/** 점검을 묶어 보이는 차례 — 서버 등록·스킬·훅 같은 Corgi 자신의 것은 다른 단계에서 */
+/** 점검을 묶어 보이는 차례 — 서버 등록·스킬·훅 같은 simless 자신의 것은 다른 단계에서 */
 const CHECK_SECTIONS: { label: MessageKey; ids: CheckId[] }[] = [
   { label: "web.setup.check.server", ids: ["server", "launchd"] },
   { label: "web.setup.check.ios", ids: ["xcode", "simslim"] },
@@ -132,6 +132,7 @@ export function SetupView({
         <Logo size={40} />
         <div>
           <h1 className="page-title">{t("web.setup.title")}</h1>
+          <p className="setup-slogan">{t("web.slogan")}</p>
           <p className="sub">{t("web.setup.intro")}</p>
         </div>
       </header>
@@ -461,7 +462,7 @@ function AgentsStep({
         title={t("web.setup.protect.title")}
         badge={t("web.setup.recommended")}
         description={t("web.setup.protect.desc")}
-        path="~/.claude/settings.json · ~/.claude/rules/corgi.md"
+        path="~/.claude/settings.json · ~/.claude/rules/simless.md"
         state={protection}
         warning={protection === "current" ? undefined : t("web.setup.protect.warn")}
         onApply={(enabled) => apply("protection", enabled, t("web.setup.protect.title"))}
@@ -695,7 +696,7 @@ function DevicesStep({
 /** 스킬 위치를 사람에게 — 홈 폴더는 ~ 로 */
 function locationText(location: SkillLocation): string {
   return location.kind === "global"
-    ? "~/.claude/skills/corgi · ~/.agents/skills/corgi"
+    ? "~/.claude/skills/simless · ~/.agents/skills/simless"
     : location.path;
 }
 

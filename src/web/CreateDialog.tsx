@@ -9,7 +9,7 @@ import { Dialog, osText, resolutionText, widthText } from "./ui.tsx";
 type Platform = "android" | "ios";
 
 const CUSTOM = "__custom__";
-const PLATFORM_KEY = "corgi-create-platform";
+const PLATFORM_KEY = "simless-create-platform";
 
 function savedPlatform(): Platform {
   try {
@@ -90,7 +90,7 @@ export function CreateDialog({
     osChoices.find((o) => o.id === osId) ?? osChoices.find((o) => o.recommended) ?? osChoices[0];
   const unit = platform === "android" ? "dp" : "pt";
   const modelName = custom ? `Android ${size.widthDp}dp` : (model?.name ?? "");
-  const defaultName = modelName ? (slim ? `corgi ${modelName}` : modelName) : "";
+  const defaultName = modelName ? (slim ? `simless ${modelName}` : modelName) : "";
   const problems = catalog?.problems.filter((p) => p.platform === platform) ?? [];
 
   const create = async () => {
@@ -333,7 +333,7 @@ export function CreateDialog({
   );
 }
 
-/** 이 Mac 의 디바이스 — Corgi 목록에 없는 것을 골라 추가한다 (M1·R20) */
+/** 이 Mac 의 디바이스 — simless 목록에 없는 것을 골라 추가한다 (M1·R20) */
 function MacDevices({
   onAdded,
   onError,

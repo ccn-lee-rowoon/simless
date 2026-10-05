@@ -1,11 +1,11 @@
 {
-  "name": "corgi",
+  "name": "simless",
   "version": "0.0.0",
-  "description": "시뮬레이터·에뮬레이터 중개·관리 도구 — 여러 에이전트 세션이 이 Mac 의 기기를 나눠 쓴다",
+  "description": "Make simulator management seamless. — 여러 에이전트 세션이 이 Mac 의 시뮬레이터·에뮬레이터를 나눠 쓴다",
   "private": true,
   "type": "module",
   "bin": {
-    "corgi": "./bin/corgi.ts"
+    "simless": "./bin/simless.ts"
   },
   "scripts": {
     "check": "biome check . && tsc --noEmit",

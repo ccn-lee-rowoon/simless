@@ -55,7 +55,7 @@ export function registerDevices(program: Command, run: Run) {
         ) => {
           const method = o.available ? "device.available" : "device.list";
           const devices = (await call<DeviceView[]>(ctx, method, {})).filter(
-            (d) => (!o.platform || d.platform === o.platform) && (!o.created || d.createdByCorgi),
+            (d) => (!o.platform || d.platform === o.platform) && (!o.created || d.createdBySimless),
           );
           output(ctx, devices, () => devicesTable(devices));
         },

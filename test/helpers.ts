@@ -2,7 +2,7 @@ import { afterEach } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CorgiServer, type ServerDeps } from "../src/server/app.ts";
+import { type ServerDeps, SimlessServer } from "../src/server/app.ts";
 import type { Discovered, Driver, RuntimeState } from "../src/server/drivers/types.ts";
 import type { Registry } from "../src/server/registry.ts";
 import { HandlerError, listen } from "../src/server/socket.ts";
@@ -15,13 +15,13 @@ import { VERSION } from "../src/shared/version.ts";
 
 /** 임시 상태 폴더와 짧은 소켓 경로(104바이트 제한) — 끝나면 cleanup() */
 export function tempEnv() {
-  const dir = mkdtempSync(join(tmpdir(), "corgi-"));
+  const dir = mkdtempSync(join(tmpdir(), "simless-"));
   const env = {
     HOME: dir,
-    CORGI_STATE_DIR: join(dir, "state"),
-    CORGI_CONFIG_DIR: join(dir, "config"),
-    CORGI_LOG_DIR: join(dir, "logs"),
-    CORGI_SOCKET: `/tmp/corgi-test-${process.pid}-${Math.random().toString(36).slice(2, 8)}.sock`,
+    SIMLESS_STATE_DIR: join(dir, "state"),
+    SIMLESS_CONFIG_DIR: join(dir, "config"),
+    SIMLESS_LOG_DIR: join(dir, "logs"),
+    SIMLESS_SOCKET: `/tmp/simless-test-${process.pid}-${Math.random().toString(36).slice(2, 8)}.sock`,
   };
   return {
     env,
@@ -44,15 +44,15 @@ const ANDROID_SPEC = {
   systemImage: "x",
 } as const;
 
-/** Corgi 가 만든 Android 디바이스 하나 (레지스트리 정보 + 기기) */
+/** simless 가 만든 Android 디바이스 하나 (레지스트리 정보 + 기기) */
 export function androidDevice(id: string, name = `Android ${id}`): Device {
   return {
     id,
     platform: "android",
     name,
-    native: `corgi_${id}`,
+    native: `simless_${id}`,
     spec: ANDROID_SPEC,
-    createdByCorgi: true,
+    createdBySimless: true,
     listed: true,
     slim: "none",
     createdAt: "2026-10-02T00:00:00.000Z",
@@ -114,7 +114,7 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
       return { spec: { ...ANDROID_SPEC, widthPx: found.widthDp * 2 }, modelName: found.name };
     },
     create: async ({ id, name, spec }) => {
-      const native = `corgi_${id}`;
+      const native = `simless_${id}`;
       driver.existing.push({ native, name, spec });
       return { native };
     },
@@ -158,24 +158,24 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
 
 /**
  * 이 Mac 에 기기를 두고 ID 를 정해 둔다 — 테스트에서 ID 로 가리키려고.
- * 원래 있던 기기(createdByCorgi false)는 기본으로 Corgi 목록에 추가된 것으로 둔다
+ * 원래 있던 기기(createdBySimless false)는 기본으로 simless 목록에 추가된 것으로 둔다
  */
 export function seedDevice(
   server: { registry: Registry },
   driver: FakeDriver,
   id: string,
   name: string,
-  createdByCorgi = true,
+  createdBySimless = true,
   listed = true,
 ): void {
   const device = androidDevice(id, name);
-  if (!createdByCorgi) device.native = `${name.replace(/\s/g, "_")}_${id}`;
+  if (!createdBySimless) device.native = `${name.replace(/\s/g, "_")}_${id}`;
   driver.existing.push({ native: device.native, name, spec: device.spec });
   server.registry.add({
     id,
     platform: "android",
     native: device.native,
-    createdByCorgi,
+    createdBySimless,
     listed,
     slim: "none",
     createdAt: device.createdAt,
@@ -187,7 +187,7 @@ export function seedDevice(
 export type Caller = (method: string, params?: unknown) => Promise<any>;
 
 export interface TestServer {
-  server: CorgiServer;
+  server: SimlessServer;
   driver: FakeDriver;
   env: ReturnType<typeof tempEnv>;
   socket: string;
@@ -200,10 +200,10 @@ export interface TestServer {
 }
 
 export interface StartOptions {
-  /** CorgiServer 에 더 넘길 것 — env·selfCommand·setupChecks·isAlive·systemLanguages … (임시 폴더가 필요하면 함수로) */
+  /** SimlessServer 에 더 넘길 것 — env·selfCommand·setupChecks·isAlive·systemLanguages … (임시 폴더가 필요하면 함수로) */
   deps?: Partial<ServerDeps> | ((env: ReturnType<typeof tempEnv>) => Partial<ServerDeps>);
   /** 서버를 띄우기 전에 디바이스를 넣는다 */
-  seed?: (server: CorgiServer, driver: FakeDriver) => void;
+  seed?: (server: SimlessServer, driver: FakeDriver) => void;
   /** 소켓을 열기 전에 임시 HOME 을 준비한다 (예: 가짜 claude) */
   prepare?: (env: ReturnType<typeof tempEnv>) => void;
 }
@@ -225,7 +225,7 @@ export function testServers(): (options?: StartOptions) => Promise<TestServer> {
     options.prepare?.(env);
     const driver = fakeDriver();
     const deps = typeof options.deps === "function" ? options.deps(env) : options.deps;
-    const server = new CorgiServer({ ...env, drivers: [driver], ...deps });
+    const server = new SimlessServer({ ...env, drivers: [driver], ...deps });
     options.seed?.(server, driver);
     const listener = await listen(env.paths.socket, VERSION, server.handle);
     cleanups.push(

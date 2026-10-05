@@ -37,9 +37,9 @@ export interface ServerDeps {
   now?: () => number;
   /** 첫 실행 설정 창이 스킬·훅·MCP 를 넣을 때 보는 환경(HOME) — 테스트는 임시 HOME 을 준다 (M14) */
   env?: NodeJS.ProcessEnv;
-  /** 훅·MCP 에 적을 corgi 명령 — 기본은 지금 실행 중인 corgi */
+  /** 훅·MCP 에 적을 simless 명령 — 기본은 지금 실행 중인 simless */
   selfCommand?: string[];
-  /** 설정 창의 점검 — 기본은 corgi doctor 와 같은 점검. 테스트는 바꾼다 */
+  /** 설정 창의 점검 — 기본은 simless doctor 와 같은 점검. 테스트는 바꾼다 */
   setupChecks?: () => Promise<CheckView[]>;
   /** 설정 창의 설치 명령 — 기본은 install/fixes.ts. 테스트는 가짜 명령으로 바꾼다 */
   fixes?: Partial<Record<FixId, Fix>>;
@@ -75,7 +75,7 @@ export type ServerEvent =
   | { type: "output"; job: string; line: string }
   | { type: "job"; job: JobView };
 
-export class CorgiServer {
+export class SimlessServer {
   readonly registry: Registry;
   readonly leases: LeaseManager;
   readonly history: History;
@@ -246,7 +246,7 @@ export class CorgiServer {
         const meta = this.registry.adopt(
           driver.platform,
           item.native,
-          driver.platform === "android" && item.native.startsWith("corgi_"),
+          driver.platform === "android" && item.native.startsWith("simless_"),
         );
         devices.push({
           ...meta,
@@ -263,28 +263,28 @@ export class CorgiServer {
   }
 
   /**
-   * listed 가 없는(이전 형식) 정보 — Corgi 가 만든 것, 기본 디바이스, 그룹에 든 것은 이미 쓰던
+   * listed 가 없는(이전 형식) 정보 — simless 가 만든 것, 기본 디바이스, 그룹에 든 것은 이미 쓰던
    * 기기라 목록에 둔다. 나머지(Xcode 기본 시뮬레이터 등)는 빼 둔다
    */
-  private wasInUse(meta: { id: string; platform: Device["platform"]; createdByCorgi: boolean }) {
+  private wasInUse(meta: { id: string; platform: Device["platform"]; createdBySimless: boolean }) {
     return (
-      meta.createdByCorgi ||
+      meta.createdBySimless ||
       this.registry.defaults()[meta.platform] === meta.id ||
       this.registry.groups().some((g) => g.deviceIds.includes(meta.id))
     );
   }
 
-  /** Corgi 목록 — 메인 목록·점유·보호는 이것만 (R20) */
+  /** simless 목록 — 메인 목록·점유·보호는 이것만 (R20) */
   async devices(): Promise<Device[]> {
     return (await this.inventory()).devices.filter((d) => d.listed);
   }
 
-  /** 이 Mac 에 있지만 Corgi 목록에 없는 디바이스 — 생성 화면에서 골라 추가한다 */
+  /** 이 Mac 에 있지만 simless 목록에 없는 디바이스 — 생성 화면에서 골라 추가한다 */
   async available(): Promise<Device[]> {
     return (await this.inventory()).devices.filter((d) => !d.listed);
   }
 
-  /** 이 Mac 에는 있지만 Corgi 목록에 없는 디바이스인지 — 오류 안내용 */
+  /** 이 Mac 에는 있지만 simless 목록에 없는 디바이스인지 — 오류 안내용 */
   private isOnMac(ref: string): boolean {
     const lower = ref.toLowerCase();
     return (this.inventoryCache?.devices ?? []).some(
@@ -352,8 +352,8 @@ export class CorgiServer {
    * 15초가 지났으면 뒤에서 다시 읽은 뒤 화면에 바뀌었다고 알린다.
    */
   private refreshSlimStats(all: Device[], states: Map<string, RuntimeState>): void {
-    // 슬림 수치는 Corgi 가 슬림화한 기기만 본다
-    const devices = all.filter((d) => d.createdByCorgi && states.get(d.id)?.booted);
+    // 슬림 수치는 simless 가 슬림화한 기기만 본다
+    const devices = all.filter((d) => d.createdBySimless && states.get(d.id)?.booted);
     // 켜진 디바이스가 바뀌면 시간과 상관없이 다시 읽는다
     const booted = devices.map((d) => d.id).join(",");
     if (this.slimStatsRefreshing) return;

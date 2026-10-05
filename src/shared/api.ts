@@ -86,7 +86,7 @@ export interface StatusResult {
   sessions: SessionView[];
   /** 첫 실행 설정을 아직 안 끝냄 — 앱이 설정 창을 띄운다 (M14) */
   setupNeeded: boolean;
-  /** 넣어 둔 스킬이 이 Corgi 의 것과 다른 곳이 있다 — 앱이 «스킬 업데이트» 를 알린다 (S9) */
+  /** 넣어 둔 스킬이 이 simless 의 것과 다른 곳이 있다 — 앱이 «스킬 업데이트» 를 알린다 (S9) */
   skillUpdate: boolean;
   queue: { sessionKey: string; agent: string; deviceIds: string[]; enqueuedAt: number }[];
 }
@@ -233,7 +233,7 @@ export interface HistorySession {
   events: number;
 }
 
-/** 점검 항목 — corgi doctor 와 첫 실행 설정 창이 같이 쓴다 (S1·S2·M14) */
+/** 점검 항목 — simless doctor 와 첫 실행 설정 창이 같이 쓴다 (S1·S2·M14) */
 export type CheckId =
   | "server"
   | "launchd"
@@ -256,7 +256,7 @@ export interface CheckView {
   detail: string;
   /** 고치는 방법 — 사람이 실행할 명령 */
   fix?: string;
-  /** corgi doctor --fix 가 고칠 수 있는 것 */
+  /** simless doctor --fix 가 고칠 수 있는 것 */
   autofix?: "launchd" | "skill" | "app" | "hook";
   /** 설정 창에서 바로 고치는 버튼 (M14) — install·update 는 명령 실행, open 은 앱·페이지 열기 */
   action?: { fix: FixId; kind: "install" | "update" | "open" };

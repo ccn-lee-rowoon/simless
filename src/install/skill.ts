@@ -9,21 +9,21 @@ import {
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { z } from "zod";
-import skillPath from "../../integrations/skill/corgi/SKILL.md" with { type: "file" };
+import skillPath from "../../integrations/skill/simless/SKILL.md" with { type: "file" };
 import type { InstallState, SkillLocation } from "../shared/api.ts";
 import { run } from "../shared/exec.ts";
 
-// 에이전트 스킬 — 단일 실행 파일 안에 넣어 두고 corgi install·설정 창이 꺼내 설치한다 (S9, docs/design.md §15).
+// 에이전트 스킬 — 단일 실행 파일 안에 넣어 두고 simless install·설정 창이 꺼내 설치한다 (S9, docs/design.md §15).
 // 설치 위치는 전역(~/.claude/skills) 또는 프로젝트(<폴더>/.claude/skills) — 어디에 넣었는지 기억해 두고
-// Corgi 가 바뀌면 모든 위치를 같이 고친다. 프로젝트에 넣을 때는 그 저장소의 작업 트리마다 넣고,
+// simless 가 바뀌면 모든 위치를 같이 고친다. 프로젝트에 넣을 때는 그 저장소의 작업 트리마다 넣고,
 // git 에는 이 Mac 에서만 무시하도록(.git/info/exclude) 적어 팀 저장소에 흔적을 남기지 않는다.
 
-const SKILL_DIR = join(".claude", "skills", "corgi");
+const SKILL_DIR = join(".claude", "skills", "simless");
 /** Codex·Copilot CLI·Cursor·Gemini CLI 가 같이 읽는 곳 (docs/agent-integrations.md) */
-const AGENTS_SKILL_DIR = join(".agents", "skills", "corgi");
+const AGENTS_SKILL_DIR = join(".agents", "skills", "simless");
 /** .git/info/exclude 에 넣는 줄 — 저장소 루트 기준 */
-const EXCLUDE_LINES = ["/.claude/skills/corgi/", "/.agents/skills/corgi/"];
-const EXCLUDE_COMMENT = "# Corgi 스킬 (이 Mac 에만)";
+const EXCLUDE_LINES = ["/.claude/skills/simless/", "/.agents/skills/simless/"];
+const EXCLUDE_COMMENT = "# simless 스킬 (이 Mac 에만)";
 
 const LocationsFile = z.object({
   locations: z.array(
@@ -201,7 +201,7 @@ export async function uninstallSkillAt(
 
 /** 사람에게 보일 위치 — 홈 폴더는 ~ 로 */
 export function locationText(location: SkillLocation): string {
-  if (location.kind === "global") return "~/.claude/skills/corgi · ~/.agents/skills/corgi";
+  if (location.kind === "global") return "~/.claude/skills/simless · ~/.agents/skills/simless";
   const home = homedir();
   return location.path.startsWith(home) ? `~${location.path.slice(home.length)}` : location.path;
 }

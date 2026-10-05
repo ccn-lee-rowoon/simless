@@ -29,7 +29,7 @@ export async function runCli(argv: string[]): Promise<number> {
   let exitCode: number = ExitCode.ok;
   applyLanguage();
 
-  const program = new Command("corgi")
+  const program = new Command("simless")
     .description(t("cli.description"))
     .version(VERSION, "-v, --version")
     .option("--json", t("cli.opt.json"))
@@ -93,6 +93,13 @@ export async function runCli(argv: string[]): Promise<number> {
           },
         ) => {
           const done: Record<string, string> = {};
+          // 예전 이름(Corgi)으로 설치된 것이 있으면 먼저 옮긴다 — 서버를 새로 올리기 전에
+          {
+            const { migrateLegacy } = await import("../install/legacy.ts");
+            const { selfCommand } = await import("../install/launchd.ts");
+            const moved = await migrateLegacy(ctx.paths, selfCommand());
+            if (moved.length > 0) done.legacy = moved.join(", ");
+          }
           if (o.launchd) {
             const { install } = await import("../install/launchd.ts");
             await install(ctx.paths);

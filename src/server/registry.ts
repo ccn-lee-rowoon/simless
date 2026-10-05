@@ -17,7 +17,7 @@ const RegistryV2 = z.object({
 });
 type RegistryV2 = z.infer<typeof RegistryV2>;
 
-/** 1단계~3단계의 형식 — Corgi 가 만든 디바이스만, 이름·크기까지 저장했다 */
+/** 1단계~3단계의 형식 — simless 가 만든 디바이스만, 이름·크기까지 저장했다 */
 const RegistryV1 = z.object({
   version: z.literal(1),
   devices: z.array(
@@ -33,7 +33,23 @@ const RegistryV1 = z.object({
   ),
 });
 
-const RegistryFile = z.union([RegistryV2, RegistryV1]);
+/** 이름을 Corgi 에서 simless 로 바꾸기 전에 쓴 키 — 읽을 때 새 키로 바꾼다 (다음에 쓸 때 새 키로 저장) */
+const LEGACY_CREATED = "createdByCorgi";
+
+function renameLegacyKeys(raw: unknown): unknown {
+  const file = raw as { devices?: Record<string, unknown>[] } | null;
+  if (!file || !Array.isArray(file.devices)) return raw;
+  return {
+    ...file,
+    devices: file.devices.map((d) => {
+      if (!(LEGACY_CREATED in d) || "createdBySimless" in d) return d;
+      const { [LEGACY_CREATED]: created, ...rest } = d;
+      return { ...rest, createdBySimless: created };
+    }),
+  };
+}
+
+const RegistryFile = z.preprocess(renameLegacyKeys, z.union([RegistryV2, RegistryV1]));
 
 function migrate(file: z.infer<typeof RegistryFile>): RegistryV2 {
   if (file.version === 2) return file;
@@ -49,7 +65,7 @@ function migrate(file: z.infer<typeof RegistryFile>): RegistryV2 {
       id: d.id,
       platform: d.spec.platform,
       native: d.native,
-      createdByCorgi: true,
+      createdBySimless: true,
       slim: d.slim,
       slimError: d.slimError,
       slimBaseline: d.slimBaseline,
@@ -62,7 +78,7 @@ function migrate(file: z.infer<typeof RegistryFile>): RegistryV2 {
 export type GroupPatch = Partial<Pick<Group, "name" | "description" | "deviceIds">>;
 
 /**
- * 디바이스에 Corgi 가 붙인 정보 (docs/design.md §6). 기기 목록 자체는 드라이버에서 읽고,
+ * 디바이스에 simless 가 붙인 정보 (docs/design.md §6). 기기 목록 자체는 드라이버에서 읽고,
  * 여기에는 ID·만든 여부·슬림 상태·메모와 그룹·기본 디바이스만 둔다 — `native`(AVD ID·UDID)로
  * 기기와 잇는다.
  */
@@ -92,7 +108,7 @@ export class Registry {
     return this.devices.find((d) => d.platform === platform && d.native === native);
   }
 
-  /** 겹치지 않는 짧은 ID — AVD ID(`corgi_<id>`)에도 쓰므로 소문자·숫자만. 그룹 ID 와도 안 겹친다 */
+  /** 겹치지 않는 짧은 ID — AVD ID(`simless_<id>`)에도 쓰므로 소문자·숫자만. 그룹 ID 와도 안 겹친다 */
   newId(): string {
     for (;;) {
       const id = Math.random().toString(36).slice(2, 6);
@@ -109,14 +125,14 @@ export class Registry {
   }
 
   /** 처음 본 기기에 ID 를 붙인다 */
-  adopt(platform: Platform, native: string, createdByCorgi: boolean): DeviceMeta {
+  adopt(platform: Platform, native: string, createdBySimless: boolean): DeviceMeta {
     return (
       this.findByNative(platform, native) ??
       this.add({
         id: this.newId(),
         platform,
         native,
-        createdByCorgi,
+        createdBySimless,
         slim: "none",
         createdAt: new Date().toISOString(),
       })
@@ -139,7 +155,7 @@ export class Registry {
     this.save();
   }
 
-  /** Corgi 목록에서 뺀다 — 정보는 남기고 그룹 소속·기본 지정만 푼다 (R20) */
+  /** simless 목록에서 뺀다 — 정보는 남기고 그룹 소속·기본 지정만 푼다 (R20) */
   unlist(id: string): void {
     this.detach(new Set([id]));
     this.update(id, { listed: false });

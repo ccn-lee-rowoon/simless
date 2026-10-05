@@ -37,7 +37,9 @@ export interface Context {
 export function makeContext(options: { json?: boolean; session?: string }): Context {
   const paths = resolvePaths();
   const config = loadConfig(paths.config);
-  const env = options.session ? { ...process.env, CORGI_SESSION_ID: options.session } : process.env;
+  const env = options.session
+    ? { ...process.env, SIMLESS_SESSION_ID: options.session }
+    : process.env;
   const session = detectSession({
     env,
     extraShells: config.session.extraShells,

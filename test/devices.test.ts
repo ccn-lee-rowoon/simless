@@ -12,13 +12,13 @@ describe("디바이스 명령", () => {
     const { A } = await start();
     const device = (await A("device.create", android360)) as DeviceView;
     expect(device).toMatchObject({
-      name: "corgi Small 360",
+      name: "simless Small 360",
       slim: "applied",
       label: "Android 360dp",
-      createdByCorgi: true,
+      createdBySimless: true,
     });
-    expect(await A("device.create", android360)).toMatchObject({ name: "corgi Small 360 2" });
-    expect(await A("device.create", { ...android360, name: "corgi Small 360" })).toMatchObject({
+    expect(await A("device.create", android360)).toMatchObject({ name: "simless Small 360 2" });
+    expect(await A("device.create", { ...android360, name: "simless Small 360" })).toMatchObject({
       code: "INVALID",
     });
   });
@@ -78,10 +78,10 @@ describe("디바이스 명령", () => {
     expect(await A("device.list")).toEqual([]);
     expect(await A("lease.acquire", { devices: ["Pixel 6a"] })).toMatchObject({
       code: "NOT_FOUND",
-      message: expect.stringContaining("corgi add"),
+      message: expect.stringContaining("simless add"),
     });
     const [available] = (await A("device.available")) as DeviceView[];
-    expect(available).toMatchObject({ id: "pix6", listed: false, createdByCorgi: false });
+    expect(available).toMatchObject({ id: "pix6", listed: false, createdBySimless: false });
     expect(await A("device.add", { device: "Pixel 6a" })).toMatchObject({
       id: "pix6",
       listed: true,
@@ -128,7 +128,7 @@ describe("디바이스 명령", () => {
     expect(ids).toEqual(["def1", "grp1"]);
   });
 
-  test("Corgi 가 만든 디바이스는 목록에서 뺄 수 없다 — 삭제한다", async () => {
+  test("simless 가 만든 디바이스는 목록에서 뺄 수 없다 — 삭제한다", async () => {
     const { A } = await start();
     const device = (await A("device.create", android360)) as DeviceView;
     expect(await A("device.unlist", { device: device.id })).toMatchObject({ code: "NOT_ALLOWED" });
@@ -175,7 +175,7 @@ describe("디바이스 명령", () => {
     await A("device.list");
     expect(existsSync(env.paths.managedIndex)).toBe(true);
     const index = JSON.parse(readFileSync(env.paths.managedIndex, "utf8"));
-    expect(index.devices[0]).toMatchObject({ id: device.id, native: `corgi_${device.id}` });
+    expect(index.devices[0]).toMatchObject({ id: device.id, native: `simless_${device.id}` });
   });
 });
 
@@ -211,7 +211,7 @@ describe("기종 목록과 만들기", () => {
     expect(await A("device.create", { model: "large-412", slim: false })).toMatchObject({
       name: "Large 412",
       slim: "none",
-      createdByCorgi: true,
+      createdBySimless: true,
     });
   });
 
@@ -222,8 +222,8 @@ describe("기종 목록과 만들기", () => {
 
   test("이미 있는 기기 이름과도 겹치지 않게 번호를 붙인다", async () => {
     const { A, server, driver } = await start();
-    seedDevice(server, driver, "xc17", "corgi Small 360", false);
-    expect(await A("device.create", android360)).toMatchObject({ name: "corgi Small 360 2" });
+    seedDevice(server, driver, "xc17", "simless Small 360", false);
+    expect(await A("device.create", android360)).toMatchObject({ name: "simless Small 360 2" });
   });
 });
 
@@ -265,7 +265,7 @@ describe("직접 입력", () => {
     const device = (await A("device.create", {
       custom: { widthDp: 375, heightDp: 812, density: 320 },
     })) as DeviceView;
-    expect(device).toMatchObject({ name: "corgi Android 375dp", label: "Android 375dp" });
+    expect(device).toMatchObject({ name: "simless Android 375dp", label: "Android 375dp" });
     expect(
       await A("device.create", {
         model: "Small 360",
@@ -314,7 +314,7 @@ describe("기본 디바이스가 없을 때 (R22)", () => {
     const result = await A("lease.acquire", { default: "android", create: true });
     expect(result.status).toBe("granted");
     const [device] = await server.devices();
-    expect(device).toMatchObject({ name: "corgi Small 360", slim: "applied" });
+    expect(device).toMatchObject({ name: "simless Small 360", slim: "applied" });
     expect(server.registry.defaults().android).toBe(device?.id);
     expect(result.deviceIds).toEqual([device?.id]);
   });

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { mcpAddArgs, mcpStatus } from "../src/install/claude-mcp.ts";
-import { CorgiServer } from "../src/server/app.ts";
+import { SimlessServer } from "../src/server/app.ts";
 import { listen } from "../src/server/socket.ts";
 import type {
   CheckView,
@@ -20,7 +20,7 @@ afterEach(() => {
   for (const fn of cleanups.splice(0)) fn();
 });
 
-const COMMAND = ["/opt/corgi/bin/corgi"];
+const COMMAND = ["/opt/simless/bin/simless"];
 const CHECKS: CheckView[] = [
   { id: "xcode", group: "iOS", name: "Xcode simctl", status: "ok", detail: "Xcode 26" },
   {
@@ -43,7 +43,7 @@ function fakeClaude(home: string): string {
     `#!/bin/sh
 echo "$@" >> "$HOME/claude-calls.log"
 if [ "$2" = "add" ]; then
-  printf '{"mcpServers":{"corgi":{"type":"stdio","command":"%s","args":["mcp"]}}}' "$7" > "$HOME/.claude.json"
+  printf '{"mcpServers":{"simless":{"type":"stdio","command":"%s","args":["mcp"]}}}' "$7" > "$HOME/.claude.json"
 fi
 if [ "$2" = "remove" ]; then /bin/rm -f "$HOME/.claude.json"; fi
 `,
@@ -90,13 +90,13 @@ describe("첫 실행 설정 (M14)", () => {
     const { H, home } = await start();
     let agents = (await H("setup.apply", { item: "skill", enabled: true })) as SetupAgents;
     expect(agents.skill).toBe("current");
-    expect(existsSync(join(home, ".claude", "skills", "corgi", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(home, ".claude", "skills", "simless", "SKILL.md"))).toBe(true);
 
     agents = (await H("setup.apply", { item: "protection", enabled: true })) as SetupAgents;
     expect(agents.hook).toBe("current");
     expect(agents.rule).toBe("current");
     const settings = readFileSync(join(home, ".claude", "settings.json"), "utf8");
-    expect(settings).toContain("/opt/corgi/bin/corgi hook claude pre-tool-use");
+    expect(settings).toContain("/opt/simless/bin/simless hook claude pre-tool-use");
 
     agents = (await H("setup.apply", { item: "protection", enabled: false })) as SetupAgents;
     expect(agents.hook).toBe("missing");
@@ -122,11 +122,11 @@ describe("첫 실행 설정 (M14)", () => {
       // 작업 트리 둘 × (.claude·.agents)
       { location: { kind: "project", path: repo }, state: "current", targets: 4 },
     ]);
-    expect(existsSync(join(home, ".claude", "skills", "corgi"))).toBe(false);
-    expect(existsSync(join(repo, ".claude", "skills", "corgi", "SKILL.md"))).toBe(true);
-    expect(existsSync(join(home, "app-wt", ".claude", "skills", "corgi", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(home, ".claude", "skills", "simless"))).toBe(false);
+    expect(existsSync(join(repo, ".claude", "skills", "simless", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(home, "app-wt", ".claude", "skills", "simless", "SKILL.md"))).toBe(true);
     expect(readFileSync(join(repo, ".git", "info", "exclude"), "utf8")).toContain(
-      "/.claude/skills/corgi/",
+      "/.claude/skills/simless/",
     );
     // 저장소에는 새 파일로 보이지 않는다
     expect(new TextDecoder().decode(git("status", "--porcelain").stdout).trim()).toBe("");
@@ -134,18 +134,18 @@ describe("첫 실행 설정 (M14)", () => {
     // 다시 전역으로
     const back = (await H("setup.skillScope", { kind: "global" })) as SetupAgents;
     expect(back.skillLocations.map((l) => l.location)).toEqual([{ kind: "global" }]);
-    expect(existsSync(join(repo, ".claude", "skills", "corgi"))).toBe(false);
+    expect(existsSync(join(repo, ".claude", "skills", "simless"))).toBe(false);
     // 적어 둔 무시 줄도 지운다
     expect(readFileSync(join(repo, ".git", "info", "exclude"), "utf8")).not.toContain(
-      "/.claude/skills/corgi/",
+      "/.claude/skills/simless/",
     );
   });
 
   test("넣어 둔 스킬이 예전 것이면 status 가 알리고, 업데이트하면 꺼진다 (S9)", async () => {
     const env = tempEnv();
-    mkdirSync(join(env.env.HOME, ".claude", "skills", "corgi"), { recursive: true });
-    writeFileSync(join(env.env.HOME, ".claude", "skills", "corgi", "SKILL.md"), "old");
-    const server = new CorgiServer({
+    mkdirSync(join(env.env.HOME, ".claude", "skills", "simless"), { recursive: true });
+    writeFileSync(join(env.env.HOME, ".claude", "skills", "simless", "SKILL.md"), "old");
+    const server = new SimlessServer({
       ...env,
       drivers: [fakeDriver()],
       env: { ...env.env, PATH: "" },
@@ -181,7 +181,7 @@ describe("첫 실행 설정 (M14)", () => {
     expect(agents.claude).toBe(true);
     expect(agents.mcp).toBe("current");
     const calls = readFileSync(join(home, "claude-calls.log"), "utf8");
-    expect(calls).toContain("mcp add --scope user corgi -- /opt/corgi/bin/corgi mcp");
+    expect(calls).toContain("mcp add --scope user simless -- /opt/simless/bin/simless mcp");
 
     agents = (await H("setup.apply", { item: "mcp", enabled: false })) as SetupAgents;
     expect(agents.mcp).toBe("missing");
@@ -197,13 +197,13 @@ describe("첫 실행 설정 (M14)", () => {
 });
 
 describe("Claude Code MCP 등록", () => {
-  test("등록 인자 — 사용자 범위, corgi 명령 뒤에 mcp", () => {
+  test("등록 인자 — 사용자 범위, simless 명령 뒤에 mcp", () => {
     expect(mcpAddArgs(["/usr/local/bin/bun", "/src/main.ts"])).toEqual([
       "mcp",
       "add",
       "--scope",
       "user",
-      "corgi",
+      "simless",
       "--",
       "/usr/local/bin/bun",
       "/src/main.ts",
@@ -218,12 +218,12 @@ describe("Claude Code MCP 등록", () => {
     const write = (command: string, args: string[]) =>
       writeFileSync(
         join(home, ".claude.json"),
-        JSON.stringify({ mcpServers: { corgi: { type: "stdio", command, args } } }),
+        JSON.stringify({ mcpServers: { simless: { type: "stdio", command, args } } }),
       );
     expect(mcpStatus(COMMAND, env.env)).toBe("missing");
-    write("/opt/corgi/bin/corgi", ["mcp"]);
+    write("/opt/simless/bin/simless", ["mcp"]);
     expect(mcpStatus(COMMAND, env.env)).toBe("current");
-    write("/old/corgi", ["mcp"]);
+    write("/old/simless", ["mcp"]);
     expect(mcpStatus(COMMAND, env.env)).toBe("outdated");
   });
 });

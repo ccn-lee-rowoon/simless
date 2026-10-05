@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { CorgiServer } from "../src/server/app.ts";
+import { SimlessServer } from "../src/server/app.ts";
 import { checkRequest, ensureToken, startHttp } from "../src/server/http.ts";
 import { fakeDriver, tempEnv } from "./helpers.ts";
 
@@ -10,12 +10,12 @@ afterEach(() => {
 
 function start() {
   const env = tempEnv();
-  const server = new CorgiServer({ ...env, drivers: [fakeDriver()] });
+  const server = new SimlessServer({ ...env, drivers: [fakeDriver()] });
   const token = ensureToken(env.paths.webToken);
   const http = startHttp(server, { port: 0, token });
   cleanups.push(() => http.stop(true), env.cleanup);
   const base = `http://127.0.0.1:${http.port}`;
-  const post = (body: unknown, headers: Record<string, string> = { "x-corgi-token": token }) =>
+  const post = (body: unknown, headers: Record<string, string> = { "x-simless-token": token }) =>
     fetch(`${base}/api/call`, {
       method: "POST",
       headers: { "content-type": "application/json", ...headers },
@@ -60,7 +60,7 @@ describe("웹 UI HTTP (R11)", () => {
       ok: boolean;
       result: { name: string };
     };
-    expect(created).toMatchObject({ ok: true, result: { name: "corgi Small 360" } });
+    expect(created).toMatchObject({ ok: true, result: { name: "simless Small 360" } });
   });
 
   test("이벤트 스트림은 hello 로 시작한다", async () => {
@@ -80,17 +80,18 @@ describe("checkRequest", () => {
 
   test("Host 가 127.0.0.1·localhost 가 아니면 거부 (DNS rebinding)", () => {
     expect(
-      checkRequest(req({ host: "evil.example:8791", "x-corgi-token": token }), 8791, token)?.status,
+      checkRequest(req({ host: "evil.example:8791", "x-simless-token": token }), 8791, token)
+        ?.status,
     ).toBe(403);
     expect(
-      checkRequest(req({ host: "localhost:8791", "x-corgi-token": token }), 8791, token),
+      checkRequest(req({ host: "localhost:8791", "x-simless-token": token }), 8791, token),
     ).toBeUndefined();
   });
 
   test("다른 Origin 의 POST 는 거부", () => {
     const headers = {
       host: "127.0.0.1:8791",
-      "x-corgi-token": token,
+      "x-simless-token": token,
       origin: "http://evil.example",
     };
     expect(checkRequest(req(headers), 8791, token)?.status).toBe(403);

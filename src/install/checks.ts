@@ -14,7 +14,7 @@ import { hookStatus, ruleStatus, ruleTarget, settingsPath } from "./claude-hook.
 import { isInstalled, selfCommand } from "./launchd.ts";
 import { combineStates, loadSkillLocations, locationStatus, locationText } from "./skill.ts";
 
-// 설치·연결 점검 (S1·S2) — `corgi doctor` 와 첫 실행 설정 창(M14)이 같이 쓴다.
+// 설치·연결 점검 (S1·S2) — `simless doctor` 와 첫 실행 설정 창(M14)이 같이 쓴다.
 // 서버가 꺼져 있어도 돌아야 하므로 서버 코드 없이 직접 본다. 서버 안에서 부를 때는 serverVersion 을 준다.
 
 export type Check = CheckView;
@@ -75,7 +75,7 @@ export async function runChecks(
       detail: t("doctor.server.down", { path: ctx.paths.socket }),
       fix: isInstalled(ctx.paths)
         ? `launchctl kickstart gui/${process.getuid?.()}/${LAUNCH_LABEL}`
-        : "corgi install",
+        : "simless install",
     });
   } else {
     const same = server.serverVersion === VERSION;
@@ -85,7 +85,7 @@ export async function runChecks(
       name: t("doctor.server"),
       status: same ? "ok" : "warn",
       detail: same
-        ? `corgi ${VERSION}`
+        ? `simless ${VERSION}`
         : t("doctor.server.mismatch", { server: server.serverVersion, cli: VERSION }),
       fix: same ? undefined : t("doctor.server.restart"),
     });
@@ -97,7 +97,7 @@ export async function runChecks(
       name: t("doctor.launchd"),
       status: "warn",
       detail: t("doctor.launchd.missing"),
-      fix: "corgi install",
+      fix: "simless install",
       autofix: "launchd",
     });
   } else {
@@ -109,7 +109,7 @@ export async function runChecks(
       name: t("doctor.launchd"),
       status: running ? "ok" : "warn",
       detail: running ? ctx.paths.launchAgent : t("doctor.launchd.notRunning"),
-      fix: running ? undefined : "corgi install",
+      fix: running ? undefined : "simless install",
       autofix: running ? undefined : "launchd",
     });
   }
@@ -246,7 +246,7 @@ export async function runChecks(
         : skill === "missing"
           ? t("doctor.skill.missing")
           : t("doctor.skill.outdated"),
-    fix: skill === "current" ? undefined : "corgi skill install",
+    fix: skill === "current" ? undefined : "simless skill install",
     autofix: skill === "current" ? undefined : "skill",
   });
 
@@ -263,7 +263,7 @@ export async function runChecks(
           ? t("doctor.hook.missing")
           : t("doctor.hook.outdated"),
     // 보호는 고르는 것이다 (M14) — 없으면 안내만, 예전 것이면 고친다
-    fix: hook === "current" ? undefined : "corgi install --no-launchd --no-app --hook",
+    fix: hook === "current" ? undefined : "simless install --no-launchd --no-app --hook",
     autofix: hook === "outdated" ? "hook" : undefined,
   });
   const rule = await ruleStatus();
@@ -278,7 +278,7 @@ export async function runChecks(
         : rule === "missing"
           ? t("doctor.skill.missing")
           : t("doctor.skill.outdated"),
-    fix: rule === "current" ? undefined : "corgi install --no-launchd --no-app --hook",
+    fix: rule === "current" ? undefined : "simless install --no-launchd --no-app --hook",
     autofix: rule === "outdated" ? "hook" : undefined,
   });
 
@@ -286,10 +286,10 @@ export async function runChecks(
   add({
     id: "app",
     group: t("doctor.group.agents"),
-    name: "Corgi.app",
+    name: "simless.app",
     status: app ? "ok" : "warn",
     detail: app ? ctx.paths.appBundle : t("doctor.app.missing"),
-    fix: app ? undefined : "corgi install",
+    fix: app ? undefined : "simless install",
     autofix: app ? undefined : "app",
   });
 

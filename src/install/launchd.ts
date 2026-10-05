@@ -6,14 +6,14 @@ import { APP_BUNDLE_ID, LAUNCH_LABEL, type Paths } from "../shared/paths.ts";
 // 서버를 launchd 사용자 에이전트로 등록한다 — 로그인 시 켜지고, 죽으면 다시 살아난다 (docs/design.md §4).
 
 const PASS_ENV = [
-  "CORGI_STATE_DIR",
-  "CORGI_CONFIG_DIR",
-  "CORGI_LOG_DIR",
-  "CORGI_SOCKET",
+  "SIMLESS_STATE_DIR",
+  "SIMLESS_CONFIG_DIR",
+  "SIMLESS_LOG_DIR",
+  "SIMLESS_SOCKET",
   "ANDROID_HOME",
 ];
 
-/** 지금 실행 중인 corgi 를 다시 실행하는 명령 — 단일 실행 파일이면 그 파일, 개발 중이면 bun + 스크립트 */
+/** 지금 실행 중인 simless 를 다시 실행하는 명령 — 단일 실행 파일이면 그 파일, 개발 중이면 bun + 스크립트 */
 export function selfCommand(): string[] {
   const compiled = Bun.main.startsWith("/$bunfs/");
   return compiled ? [process.execPath] : [process.execPath, Bun.main];

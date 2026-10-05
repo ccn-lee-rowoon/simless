@@ -6,7 +6,7 @@ import { Registry } from "../src/server/registry.ts";
 
 const dirs: string[] = [];
 function tempPath() {
-  const dir = mkdtempSync(join(tmpdir(), "corgi-registry-"));
+  const dir = mkdtempSync(join(tmpdir(), "simless-registry-"));
   dirs.push(dir);
   return join(dir, "registry.json");
 }
@@ -18,7 +18,7 @@ describe("Registry — 디바이스 기억 (R4·R20)", () => {
   test("처음 본 기기에 ID 를 붙이고, 다시 열어도 같은 ID 다 (R4)", () => {
     const path = tempPath();
     const first = new Registry(path).adopt("ios", "UDID-1", false);
-    expect(first).toMatchObject({ platform: "ios", native: "UDID-1", createdByCorgi: false });
+    expect(first).toMatchObject({ platform: "ios", native: "UDID-1", createdBySimless: false });
     expect(first.id).toMatch(/^[a-z0-9]{4}$/);
     expect(new Registry(path).adopt("ios", "UDID-1", false).id).toBe(first.id);
   });
@@ -53,8 +53,8 @@ describe("Registry — 디바이스 기억 (R4·R20)", () => {
         devices: [
           {
             id: "ab12",
-            name: "corgi Small",
-            native: "corgi_ab12",
+            name: "simless Small",
+            native: "simless_ab12",
             spec: {
               platform: "android",
               widthPx: 720,
@@ -75,8 +75,8 @@ describe("Registry — 디바이스 기억 (R4·R20)", () => {
       {
         id: "ab12",
         platform: "android",
-        native: "corgi_ab12",
-        createdByCorgi: true,
+        native: "simless_ab12",
+        createdBySimless: true,
         slim: "applied",
         createdAt: "2026-10-02T00:00:00.000Z",
       },
@@ -102,5 +102,34 @@ describe("Registry 그룹·기본 디바이스 (R21·R22)", () => {
     const reopened = new Registry(path);
     expect(reopened.group(group.id)?.deviceIds).toEqual([b.id]);
     expect(reopened.defaults()).toEqual({});
+  });
+});
+
+describe("Registry — 이름을 바꾸기 전 형식", () => {
+  test("createdByCorgi 키를 createdBySimless 로 읽는다", () => {
+    const dir = mkdtempSync(join(tmpdir(), "simless-reg-"));
+    const path = join(dir, "registry.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        version: 2,
+        devices: [
+          {
+            id: "bakw",
+            platform: "android",
+            native: "corgi_bakw",
+            createdByCorgi: true,
+            listed: true,
+            slim: "applied",
+            createdAt: "2026-10-02T00:00:00.000Z",
+          },
+        ],
+        groups: [],
+        defaults: { android: "bakw" },
+      }),
+    );
+    const registry = new Registry(path);
+    expect(registry.get("bakw")).toMatchObject({ createdBySimless: true, native: "corgi_bakw" });
+    rmSync(dir, { recursive: true, force: true });
   });
 });

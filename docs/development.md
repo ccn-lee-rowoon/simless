@@ -1,12 +1,12 @@
 # 개발 가이드
 
-Corgi 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 어디를 고치나» 를 바로 찾게 하는 문서다.
+simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 어디를 고치나» 를 바로 찾게 하는 문서다.
 요구사항은 `requirements.md`, 설계는 `docs/design.md`(저장소 구조는 §3), 메시지는 `docs/protocol.md`,
 작업·커밋 규칙은 `CLAUDE.md` 가 정본이다.
 
 ## 1. 준비와 매일 쓰는 명령
 
-처음 한 번: `mise install`(Bun 1.3.6) → `bun install` → `bun link`(`corgi` 가 이 저장소를 가리킨다).
+처음 한 번: `mise install`(Bun 1.3.6) → `bun install` → `bun link`(`simless` 가 이 저장소를 가리킨다).
 
 | 명령 | 하는 일 |
 | --- | --- |
@@ -15,7 +15,7 @@ Corgi 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 어
 | `bun run test:watch` | 고칠 때마다 다시 |
 | `bun run trace` | 요구사항 ID 마다 테스트·코드에서 몇 번 가리키나. `--missing` 은 테스트가 없는 것만 |
 | `bun run format` | 포맷·import 정리를 고쳐 쓴다 |
-| `bun run build` | `dist/corgi` 단일 실행 파일 — 진입점·묶음 파일(`with { type: "file" }`)을 바꿨을 때 |
+| `bun run build` | `dist/simless` 단일 실행 파일 — 진입점·묶음 파일(`with { type: "file" }`)을 바꿨을 때 |
 
 커밋마다 `check`·`test` 가 통과해야 한다. 종료 코드로 확인한다 — 출력을 `grep` 에 넘기면 실패해도 성공으로 보일 수 있다.
 
@@ -24,7 +24,7 @@ Corgi 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 어
 ```
 에이전트 ─ CLI·MCP·훅 ─┐            ┌─ 드라이버 ─ simctl·emulator·adb·simslim·avdslim
                       ├─ 소켓 ─ 서버 ┤
-사람 ─ Corgi.app·웹 ───┘   (HTTP)    └─ 상태 파일 ─ registry·leases(JSON), history(SQLite)
+사람 ─ simless.app·웹 ───┘   (HTTP)    └─ 상태 파일 ─ registry·leases(JSON), history(SQLite)
 ```
 
 - **상태는 서버 하나만** 갖는다. CLI·MCP·훅·웹·메뉴바는 요청을 보내는 창구다.
@@ -46,17 +46,17 @@ Corgi 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 어
 
 ### 오류 코드 하나 더하기
 
-`src/shared/protocol.ts` 의 `ErrorCode` → `docs/protocol.md` «오류 코드» 표(종료 코드 포함) → CLI 종료 코드가 다르면 `src/cli/context.ts` → 스킬이 판단해야 하면 `integrations/skill/corgi/SKILL.md`.
+`src/shared/protocol.ts` 의 `ErrorCode` → `docs/protocol.md` «오류 코드» 표(종료 코드 포함) → CLI 종료 코드가 다르면 `src/cli/context.ts` → 스킬이 판단해야 하면 `integrations/skill/simless/SKILL.md`.
 
 ### 설정 하나 더하기
 
-`src/shared/config.ts`(`Config` 기본값·`SettingsPatch`·`saveSettings`) → `src/server/settings.ts`(`SettingsParams`·읽기·반영) → `SettingsResult`(`shared/api.ts`) → 설정 창(`web/SettingsView.tsx`) → `corgi config` 키(`cli/commands/config.ts`) → 문구(i18n) → `docs/protocol.md` 의 `settings.*`. 테스트는 `test/i18n.test.ts` 의 설정 테스트를 본뜬다.
+`src/shared/config.ts`(`Config` 기본값·`SettingsPatch`·`saveSettings`) → `src/server/settings.ts`(`SettingsParams`·읽기·반영) → `SettingsResult`(`shared/api.ts`) → 설정 창(`web/SettingsView.tsx`) → `simless config` 키(`cli/commands/config.ts`) → 문구(i18n) → `docs/protocol.md` 의 `settings.*`. 테스트는 `test/i18n.test.ts` 의 설정 테스트를 본뜬다.
 
 ### 문구 하나 더하기 (i18n, R25)
 
 - 키는 `src/shared/i18n/ko.ts` 가 정본이다. `en.ts` 는 `Record<keyof typeof ko, string>` 이라 빠뜨리면 타입 오류가 난다. 자리 표시자(`{name}`)도 같아야 한다(`test/i18n.test.ts`).
 - 키 이름은 `묶음.뜻` — `err.*`(오류) · `cli.*` · `web.*` · `doctor.*` · `hint.*` · `setup.*` …
-- 메뉴바(Swift)는 따로 작은 사전(`tray/CorgiTray.swift` 의 `Strings`)이 있다.
+- 메뉴바(Swift)는 따로 작은 사전(`tray/SimlessTray.swift` 의 `Strings`)이 있다.
 - 스킬·규칙은 영어로 쓴다(읽는 쪽이 에이전트).
 
 ### 웹 화면·창 하나 더하기
@@ -71,9 +71,9 @@ Corgi 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 어
 
 ### 스킬·규칙 고치기
 
-- `integrations/skill/corgi/SKILL.md`·`integrations/rules/corgi.md` — 커밋 type 은 `docs`
+- `integrations/skill/simless/SKILL.md`·`integrations/rules/simless.md` — 커밋 type 은 `docs`
 - 요구사항(S1~S11)을 담은 문장은 `test/skill.test.ts` 가 검사한다 — 바꾸면 테스트도 같이
-- 이 Mac 에 반영: `corgi skill install`(넣어 둔 모든 곳). 서버는 10분마다 예전 스킬을 찾아 앱에 알린다
+- 이 Mac 에 반영: `simless skill install`(넣어 둔 모든 곳). 서버는 10분마다 예전 스킬을 찾아 앱에 알린다
 
 ### 다른 에이전트 연결 (Q16)
 
@@ -95,22 +95,22 @@ Corgi 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 어
 1. **시험 서버** — 진짜 서버(8791)·진짜 HOME 을 건드리지 않게 따로 띄운다
    ```sh
    S=<임시 폴더>
-   HOME=$S/home CORGI_STATE_DIR=$S/state CORGI_CONFIG_DIR=$S/config CORGI_LOG_DIR=$S/logs \
-     CORGI_SOCKET=/tmp/corgi-ui-test.sock bun bin/corgi.ts serve &
+   HOME=$S/home SIMLESS_STATE_DIR=$S/state SIMLESS_CONFIG_DIR=$S/config SIMLESS_LOG_DIR=$S/logs \
+     SIMLESS_SOCKET=/tmp/simless-ui-test.sock bun bin/simless.ts serve &
    ```
    `$S/config/config.json` 에 `{"httpPort": 8792}` 를 넣어 두면 포트가 겹치지 않는다. 토큰은 `$S/state/web-token`.
 2. **브라우저** — Chrome 을 `--headless=new --remote-debugging-port=9222 --user-data-dir=$S/chrome` 로 `http://127.0.0.1:8792/?window=setup#token=<토큰>` 에 열고 argent(Chromium)로 누르고 스크린샷. SSE 가 계속 열려 있어 `--screenshot` 은 끝나지 않는다. CSS 를 바꿨으면 캐시 없이 다시 읽는다
-3. **앱 창** — `corgi install` 로 앱을 다시 만들고(아래), 창 ID 를 찾아 `screencapture -x -l<창 ID>`
+3. **앱 창** — `simless install` 로 앱을 다시 만들고(아래), 창 ID 를 찾아 `screencapture -x -l<창 ID>`
 
 ## 6. 이 Mac 에 반영
 
 | 바꾼 것 | 할 일 |
 | --- | --- |
-| 서버·CLI 코드 | `launchctl kickstart -k gui/$(id -u)/corgi.server` (개발 중에는 `bun link` 라 다시 빌드할 필요 없다) |
-| 메뉴바·앱 창(Swift)·Info.plist | `corgi install` — 서버 다시 시작 + 스킬 + 앱 다시 만들기. 훅·MCP 는 넣지 않는다(`--hook`·`--mcp`) |
-| 스킬 | `corgi skill install` |
+| 서버·CLI 코드 | `launchctl kickstart -k gui/$(id -u)/simless.server` (개발 중에는 `bun link` 라 다시 빌드할 필요 없다) |
+| 메뉴바·앱 창(Swift)·Info.plist | `simless install` — 서버 다시 시작 + 스킬 + 앱 다시 만들기. 훅·MCP 는 넣지 않는다(`--hook`·`--mcp`) |
+| 스킬 | `simless skill install` |
 
-다른 세션이 쓰는 기기·Metro 는 건드리지 않는다. 점유가 있는지 먼저 본다(`corgi status`).
+다른 세션이 쓰는 기기·Metro 는 건드리지 않는다. 점유가 있는지 먼저 본다(`simless status`).
 
 ## 7. 문서를 고칠 때
 

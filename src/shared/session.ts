@@ -74,7 +74,7 @@ const AGENT_HINTS: [hint: string, agent: string][] = [
 
 export interface DetectOptions {
   env?: NodeJS.ProcessEnv;
-  /** 여기서부터 위로 찾는다 — 보통 corgi 의 부모 */
+  /** 여기서부터 위로 찾는다 — 보통 simless 의 부모 */
   startPid?: number;
   cwd?: string;
   extraShells?: string[];
@@ -142,12 +142,12 @@ function detectByProcess(options: DetectOptions): SessionInfo {
   const common = { cwd, agentSessionId: agentSession(env)?.id };
 
   // 1. 직접 준 세션
-  if (env.CORGI_SESSION_ID) {
-    const pid = env.CORGI_SESSION_PID ? Number(env.CORGI_SESSION_PID) : undefined;
+  if (env.SIMLESS_SESSION_ID) {
+    const pid = env.SIMLESS_SESSION_PID ? Number(env.SIMLESS_SESSION_PID) : undefined;
     const info = pid ? read(pid) : null;
     return {
       ...common,
-      key: `x:${env.CORGI_SESSION_ID}`,
+      key: `x:${env.SIMLESS_SESSION_ID}`,
       pid: info?.pid,
       pidStartedAt: info?.startedAt,
       agent: envAgent ?? "unknown",

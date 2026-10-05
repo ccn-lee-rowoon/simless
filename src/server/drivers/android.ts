@@ -314,7 +314,7 @@ export class AndroidDriver implements Driver {
   ): Promise<{ native: string }> {
     const { spec } = input;
     if (spec.platform !== "android") throw new HandlerError("INVALID", "Not an Android model");
-    const avdId = `corgi_${input.id}`;
+    const avdId = `simless_${input.id}`;
     const avdDir = join(this.avdHome, `${avdId}.avd`);
     if (existsSync(avdDir)) throw new HandlerError("INVALID", t("err.avdExists", { id: avdId }));
     progress(

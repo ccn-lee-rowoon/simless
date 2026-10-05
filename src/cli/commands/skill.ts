@@ -16,7 +16,7 @@ import { ExitCode } from "../../shared/exit-codes.ts";
 import { t } from "../../shared/i18n.ts";
 import { CliError, output, type Run } from "../context.ts";
 
-// corgi skill — 스킬을 넣는 곳(전역·프로젝트)과 상태 (S9). 서버 없이 돈다.
+// simless skill — 스킬을 넣는 곳(전역·프로젝트)과 상태 (S9). 서버 없이 돈다.
 
 function projectLocation(path: string): SkillLocation {
   const absolute = resolve(path.replace(/^~(?=\/|$)/, homedir()));

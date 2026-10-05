@@ -2,7 +2,7 @@ import { z } from "zod";
 import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
-import type { CorgiServer } from "./app.ts";
+import type { SimlessServer } from "./app.ts";
 import { parse } from "./params.ts";
 import { HandlerError } from "./socket.ts";
 
@@ -28,7 +28,7 @@ function editor(session: SessionInfo): string {
   return session.human ? "human" : session.agent;
 }
 
-export function registerGroupMethods(server: CorgiServer): void {
+export function registerGroupMethods(server: SimlessServer): void {
   const find = (ref: string): Group => {
     const group = server.registry.findGroup(ref);
     if (!group) throw new HandlerError("NOT_FOUND", t("err.noGroup", { ref }));

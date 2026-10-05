@@ -1,4 +1,4 @@
-/* Corgi 화면 — 단정한 개발 도구 (M12). 라이트는 그래파이트 + 파랑, 다크는 잉크 + 민트. */
+/* simless 화면 — 단정한 개발 도구 (M12). 라이트는 그래파이트 + 파랑, 다크는 잉크 + 민트. */
 
 :root {
   color-scheme: light;
@@ -1788,4 +1788,11 @@ summary:focus-visible {
 
 .setup-agent-absent {
   opacity: 0.55;
+}
+
+.setup-slogan {
+  margin: 2px 0 0;
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 600;
 }

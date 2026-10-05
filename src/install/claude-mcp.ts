@@ -3,11 +3,11 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { run, which } from "../shared/exec.ts";
 
-// Claude Code 에 `corgi mcp` 를 사용자 범위로 등록한다 (R12, 6단계).
+// Claude Code 에 `simless mcp` 를 사용자 범위로 등록한다 (R12, 6단계).
 // ~/.claude.json 은 Claude Code 가 수시로 고쳐 쓰는 파일이라 직접 쓰지 않고 `claude mcp` 명령에 맡긴다.
 // 읽기(등록 여부)만 파일에서 한다 — `claude mcp get` 은 서버에 연결까지 해 봐서 느리다.
 
-export const MCP_NAME = "corgi";
+export const MCP_NAME = "simless";
 
 function home(env: NodeJS.ProcessEnv): string {
   return env.HOME ?? homedir();

@@ -7,7 +7,7 @@ import { bundledRule, hookCommandFor } from "./claude-hook.ts";
 
 // Claude Code 말고 다른 에이전트 연결 (Q16, docs/agent-integrations.md) — 보호(훅 + 규칙)와 MCP.
 // 스킬은 ~/.agents/skills 하나로 같이 읽으므로 skill.ts 가 넣는다.
-// 원칙: Corgi 가 넣은 것만 넣고 뺀다. 남의 설정은 그대로, 고치기 전에 .corgi-backup 을 남긴다.
+// 원칙: simless 가 넣은 것만 넣고 뺀다. 남의 설정은 그대로, 고치기 전에 .simless-backup 을 남긴다.
 // 설정 파일을 읽지 못하면(주석이 든 JSON 등) 덮어쓰지 않고 오류를 낸다.
 
 export class AgentConfigError extends Error {}
@@ -29,19 +29,19 @@ function readJson(path: string): Json {
 
 function writeJson(path: string, data: Json): void {
   mkdirSync(dirname(path), { recursive: true });
-  if (existsSync(path)) copyFileSync(path, `${path}.corgi-backup`);
+  if (existsSync(path)) copyFileSync(path, `${path}.simless-backup`);
   writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`);
 }
 
-/** 이벤트 배열에서 Corgi 항목만 빼고, 넣을 게 있으면 넣는다. 빈 배열·빈 hooks 는 남기지 않는다 */
+/** 이벤트 배열에서 simless 항목만 빼고, 넣을 게 있으면 넣는다. 빈 배열·빈 hooks 는 남기지 않는다 */
 function setHookEntries(
   config: Json,
   event: string,
-  isCorgi: (entry: Json) => boolean,
+  isSimless: (entry: Json) => boolean,
   add?: Json,
 ): Json {
   const hooks = { ...((config.hooks as Json | undefined) ?? {}) };
-  const entries = ((hooks[event] as Json[] | undefined) ?? []).filter((e) => !isCorgi(e));
+  const entries = ((hooks[event] as Json[] | undefined) ?? []).filter((e) => !isSimless(e));
   if (add) entries.push(add);
   if (entries.length > 0) hooks[event] = entries;
   else delete hooks[event];
@@ -49,12 +49,12 @@ function setHookEntries(
   return Object.keys(hooks).length > 0 ? { ...rest, hooks } : rest;
 }
 
-/** Claude 식 중첩 항목 {matcher, hooks: [{command}]} 안에 Corgi 명령이 있는지 */
+/** Claude 식 중첩 항목 {matcher, hooks: [{command}]} 안에 simless 명령이 있는지 */
 const nestedHas = (mark: string) => (entry: Json) =>
   ((entry.hooks as Json[] | undefined) ?? []).some(
     (h) => typeof h.command === "string" && h.command.endsWith(mark),
   );
-/** 평평한 항목 {command} 가 Corgi 명령인지 (Cursor) */
+/** 평평한 항목 {command} 가 simless 명령인지 (Cursor) */
 const flatIs = (mark: string) => (entry: Json) =>
   typeof entry.command === "string" && entry.command.endsWith(mark);
 
@@ -69,10 +69,10 @@ function nestedState(config: Json, event: string, command: string, mark: string)
   return hook?.command === command ? "current" : "outdated";
 }
 
-// --- 규칙 — 전역 지시 파일에 Corgi 블록 하나 ---
+// --- 규칙 — 전역 지시 파일에 simless 블록 하나 ---
 
-const BLOCK_START = "<!-- corgi:start — Corgi 가 넣고 지운다 -->";
-const BLOCK_END = "<!-- corgi:end -->";
+const BLOCK_START = "<!-- simless:start — simless 가 넣고 지운다 -->";
+const BLOCK_END = "<!-- simless:end -->";
 
 function withoutBlock(text: string): string {
   const start = text.indexOf(BLOCK_START);
@@ -95,7 +95,7 @@ async function writeBlock(path: string): Promise<void> {
   const before = existsSync(path) ? readFileSync(path, "utf8") : "";
   const rest = withoutBlock(before).trimEnd();
   mkdirSync(dirname(path), { recursive: true });
-  if (existsSync(path)) copyFileSync(path, `${path}.corgi-backup`);
+  if (existsSync(path)) copyFileSync(path, `${path}.simless-backup`);
   const block = `${BLOCK_START}\n${await bundledRule()}${BLOCK_END}\n`;
   writeFileSync(path, rest ? `${rest}\n\n${block}` : block);
 }
@@ -125,11 +125,13 @@ export interface AgentIntegration {
   uninstallMcp(env: NodeJS.ProcessEnv): Promise<void>;
 }
 
-/** {mcpServers: {corgi: {command, args}}} 모양의 JSON 설정 — Copilot·Cursor·Gemini */
+/** {mcpServers: {simless: {command, args}}} 모양의 JSON 설정 — Copilot·Cursor·Gemini */
 function jsonMcp(file: (env: NodeJS.ProcessEnv) => string, extra: Json = {}) {
   return {
     async mcpState(command: string[], env: NodeJS.ProcessEnv): Promise<InstallState> {
-      const entry = (readJson(file(env)).mcpServers as Json | undefined)?.corgi as Json | undefined;
+      const entry = (readJson(file(env)).mcpServers as Json | undefined)?.simless as
+        | Json
+        | undefined;
       if (!entry) return "missing";
       const [bin, ...rest] = command;
       return entry.command === bin &&
@@ -142,15 +144,15 @@ function jsonMcp(file: (env: NodeJS.ProcessEnv) => string, extra: Json = {}) {
       const config = readJson(path);
       const [bin, ...rest] = command;
       const servers = { ...((config.mcpServers as Json | undefined) ?? {}) };
-      servers.corgi = { ...extra, command: bin, args: [...rest, "mcp"] };
+      servers.simless = { ...extra, command: bin, args: [...rest, "mcp"] };
       writeJson(path, { ...config, mcpServers: servers });
     },
     async uninstallMcp(env: NodeJS.ProcessEnv): Promise<void> {
       const path = file(env);
       const config = readJson(path);
       const servers = { ...((config.mcpServers as Json | undefined) ?? {}) };
-      if (!("corgi" in servers)) return;
-      delete servers.corgi;
+      if (!("simless" in servers)) return;
+      delete servers.simless;
       writeJson(path, { ...config, mcpServers: servers });
     },
   };
@@ -166,9 +168,9 @@ const copilot: AgentIntegration = {
   agent: "copilot",
   label: "Copilot CLI",
   binary: "copilot",
-  // 훅은 Corgi 파일 하나 — Claude 식(PascalCase)으로 걸면 입력도 Claude 식(tool_name·tool_input)으로 온다
+  // 훅은 simless 파일 하나 — Claude 식(PascalCase)으로 걸면 입력도 Claude 식(tool_name·tool_input)으로 온다
   async hookState(command, env) {
-    const path = join(home(env), ".copilot", "hooks", "corgi.json");
+    const path = join(home(env), ".copilot", "hooks", "simless.json");
     if (!existsSync(path)) return "missing";
     return nestedState(
       readJson(path),
@@ -178,7 +180,7 @@ const copilot: AgentIntegration = {
     );
   },
   async installHook(command, env) {
-    writeJson(join(home(env), ".copilot", "hooks", "corgi.json"), {
+    writeJson(join(home(env), ".copilot", "hooks", "simless.json"), {
       hooks: {
         PreToolUse: [
           {
@@ -196,7 +198,7 @@ const copilot: AgentIntegration = {
     });
   },
   async uninstallHook(env) {
-    rmSync(join(home(env), ".copilot", "hooks", "corgi.json"), { force: true });
+    rmSync(join(home(env), ".copilot", "hooks", "simless.json"), { force: true });
   },
   ruleState: async (env) => blockState(join(home(env), ".copilot", "copilot-instructions.md")),
   installRule: async (env) => writeBlock(join(home(env), ".copilot", "copilot-instructions.md")),
@@ -251,7 +253,7 @@ const codex: AgentIntegration = {
     const path = codexConfig(env);
     if (!existsSync(path)) return "missing";
     const text = readFileSync(path, "utf8");
-    const section = /\[mcp_servers\.corgi\]([\s\S]*?)(?=\n\[|$)/.exec(text)?.[1];
+    const section = /\[mcp_servers\.simless\]([\s\S]*?)(?=\n\[|$)/.exec(text)?.[1];
     if (section === undefined) return "missing";
     const [bin] = command;
     return section.includes(`command = "${bin}"`) ? "current" : "outdated";
@@ -259,8 +261,8 @@ const codex: AgentIntegration = {
   async installMcp(command, env) {
     const bin = which("codex", env);
     if (!bin) throw new AgentConfigError("codex");
-    await run([bin, "mcp", "remove", "corgi"], { env, cwd: home(env), timeoutMs: 30_000 });
-    const result = await run([bin, "mcp", "add", "corgi", "--", ...command, "mcp"], {
+    await run([bin, "mcp", "remove", "simless"], { env, cwd: home(env), timeoutMs: 30_000 });
+    const result = await run([bin, "mcp", "add", "simless", "--", ...command, "mcp"], {
       env,
       cwd: home(env),
       timeoutMs: 30_000,
@@ -269,7 +271,8 @@ const codex: AgentIntegration = {
   },
   async uninstallMcp(env) {
     const bin = which("codex", env);
-    if (bin) await run([bin, "mcp", "remove", "corgi"], { env, cwd: home(env), timeoutMs: 30_000 });
+    if (bin)
+      await run([bin, "mcp", "remove", "simless"], { env, cwd: home(env), timeoutMs: 30_000 });
   },
 };
 
@@ -320,23 +323,23 @@ const cursor: AgentIntegration = {
   },
   // 파일 규칙은 .mdc 만 읽는다 — 늘 적용
   async ruleState(env) {
-    const path = join(home(env), ".cursor", "rules", "corgi.mdc");
+    const path = join(home(env), ".cursor", "rules", "simless.mdc");
     if (!existsSync(path)) return "missing";
     return readFileSync(path, "utf8") === (await cursorRule()) ? "current" : "outdated";
   },
   async installRule(env) {
-    const path = join(home(env), ".cursor", "rules", "corgi.mdc");
+    const path = join(home(env), ".cursor", "rules", "simless.mdc");
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, await cursorRule());
   },
   async uninstallRule(env) {
-    rmSync(join(home(env), ".cursor", "rules", "corgi.mdc"), { force: true });
+    rmSync(join(home(env), ".cursor", "rules", "simless.mdc"), { force: true });
   },
   ...jsonMcp((env) => join(home(env), ".cursor", "mcp.json")),
 };
 
 async function cursorRule(): Promise<string> {
-  return `---\ndescription: Corgi — shared simulators and emulators\nalwaysApply: true\n---\n\n${await bundledRule()}`;
+  return `---\ndescription: simless — shared simulators and emulators\nalwaysApply: true\n---\n\n${await bundledRule()}`;
 }
 
 const geminiSettings = (env: NodeJS.ProcessEnv) => join(home(env), ".gemini", "settings.json");
@@ -363,7 +366,7 @@ const gemini: AgentIntegration = {
         hooks: [
           {
             type: "command",
-            name: "corgi",
+            name: "simless",
             command: hookCommandFor(command, "gemini", "before-tool"),
             timeout: 10_000,
           },

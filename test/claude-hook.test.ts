@@ -18,7 +18,7 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 function home() {
-  const dir = mkdtempSync(join(tmpdir(), "corgi-claude-"));
+  const dir = mkdtempSync(join(tmpdir(), "simless-claude-"));
   dirs.push(dir);
   return { HOME: dir };
 }
@@ -38,8 +38,8 @@ describe("Claude Code 훅 설치 (P3)", () => {
         },
       }),
     );
-    expect(hookStatus(["/bin/corgi"], env)).toBe("missing");
-    installHook(["/bin/corgi"], env);
+    expect(hookStatus(["/bin/simless"], env)).toBe("missing");
+    installHook(["/bin/simless"], env);
     const settings = read(env);
     expect(settings.model).toBe("opus");
     expect(settings.hooks.PostCompact).toHaveLength(1);
@@ -47,39 +47,41 @@ describe("Claude Code 훅 설치 (P3)", () => {
       { matcher: "Write", hooks: [{ type: "command", command: "lint" }] },
       {
         matcher: HOOK_MATCHER,
-        hooks: [{ type: "command", command: "/bin/corgi hook claude pre-tool-use" }],
+        hooks: [{ type: "command", command: "/bin/simless hook claude pre-tool-use" }],
       },
     ]);
-    expect(existsSync(`${settingsPath(env)}.corgi-backup`)).toBe(true);
-    expect(hookStatus(["/bin/corgi"], env)).toBe("current");
+    expect(existsSync(`${settingsPath(env)}.simless-backup`)).toBe(true);
+    expect(hookStatus(["/bin/simless"], env)).toBe("current");
   });
 
-  test("다시 설치하면 예전 Corgi 훅을 바꾼다 — 여러 줄 생기지 않는다, 경로의 공백은 따옴표로", () => {
+  test("다시 설치하면 예전 simless 훅을 바꾼다 — 여러 줄 생기지 않는다, 경로의 공백은 따옴표로", () => {
     const env = home();
-    installHook(["/old/corgi"], env);
-    expect(hookStatus(["/new path/bun", "/x/corgi.ts"], env)).toBe("outdated");
-    installHook(["/new path/bun", "/x/corgi.ts"], env);
+    installHook(["/old/simless"], env);
+    expect(hookStatus(["/new path/bun", "/x/simless.ts"], env)).toBe("outdated");
+    installHook(["/new path/bun", "/x/simless.ts"], env);
     const hooks = read(env).hooks.PreToolUse;
     expect(hooks).toHaveLength(1);
-    expect(hooks[0].hooks[0].command).toBe(hookCommand(["/new path/bun", "/x/corgi.ts"]));
-    expect(hooks[0].hooks[0].command).toBe("'/new path/bun' /x/corgi.ts hook claude pre-tool-use");
+    expect(hooks[0].hooks[0].command).toBe(hookCommand(["/new path/bun", "/x/simless.ts"]));
+    expect(hooks[0].hooks[0].command).toBe(
+      "'/new path/bun' /x/simless.ts hook claude pre-tool-use",
+    );
   });
 
-  test("지우면 Corgi 훅만 빠지고, 남은 게 없으면 PreToolUse 도 없앤다", () => {
+  test("지우면 simless 훅만 빠지고, 남은 게 없으면 PreToolUse 도 없앤다", () => {
     const env = home();
-    installHook(["/bin/corgi"], env);
+    installHook(["/bin/simless"], env);
     uninstallHook(env);
     // 다른 훅이 없었으면 빈 "hooks" 도 남기지 않는다
     expect(read(env).hooks).toBeUndefined();
-    expect(hookStatus(["/bin/corgi"], env)).toBe("missing");
+    expect(hookStatus(["/bin/simless"], env)).toBe("missing");
   });
 
-  test("규칙 파일은 ~/.claude/rules/corgi.md", async () => {
+  test("규칙 파일은 ~/.claude/rules/simless.md", async () => {
     const env = home();
     expect(await ruleStatus(env)).toBe("missing");
     const target = await installRule(env);
-    expect(target).toBe(join(env.HOME, ".claude", "rules", "corgi.md"));
-    expect(readFileSync(target, "utf8")).toContain("corgi use");
+    expect(target).toBe(join(env.HOME, ".claude", "rules", "simless.md"));
+    expect(readFileSync(target, "utf8")).toContain("simless use");
     expect(await ruleStatus(env)).toBe("current");
   });
 });

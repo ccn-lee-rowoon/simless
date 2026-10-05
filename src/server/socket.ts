@@ -80,7 +80,7 @@ async function claimSocket(path: string): Promise<boolean> {
 
 export async function listen(path: string, version: string, handle: Handler) {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  if (await claimSocket(path)) throw new Error(`Corgi 서버가 이미 실행 중입니다 (${path})`);
+  if (await claimSocket(path)) throw new Error(`simless 서버가 이미 실행 중입니다 (${path})`);
 
   const respond = (socket: Socket<ConnState>, response: Response) => send(socket, response, true);
 

@@ -1,10 +1,10 @@
-# Corgi 소켓 프로토콜 (v1)
+# simless 소켓 프로토콜 (v1)
 
-> CLI·훅·(나중의) MCP 가 상주 서버(`corgi serve`)에 요청하는 형식이다. 타입의 정본은 코드다 — 메시지 `src/shared/protocol.ts`, 결과 `src/shared/api.ts`, 매개변수 검증 `src/server/app.ts`·`src/server/devices.ts`.
+> CLI·훅·(나중의) MCP 가 상주 서버(`simless serve`)에 요청하는 형식이다. 타입의 정본은 코드다 — 메시지 `src/shared/protocol.ts`, 결과 `src/shared/api.ts`, 매개변수 검증 `src/server/app.ts`·`src/server/devices.ts`.
 
 ## 연결
 
-- **Unix 도메인 소켓**: `~/Library/Application Support/Corgi/corgi.sock` (권한 0600, `CORGI_SOCKET` 으로 바꿀 수 있음).
+- **Unix 도메인 소켓**: `~/Library/Application Support/simless/simless.sock` (권한 0600, `SIMLESS_SOCKET` 으로 바꿀 수 있음).
 - **연결 하나에 요청 하나.** 클라이언트가 요청 한 줄을 보내고, 서버는 진행 알림(0개 이상) 뒤에 응답 한 줄을 보내고 연결을 닫는다.
 - 한 줄에 JSON 하나(UTF-8, `\n` 으로 끝). 오류·진행 문장은 서버의 설정 언어(R25)다 — 판단은 `code` 로 한다. 큰 응답은 여러 조각으로 오므로 스트리밍 디코더로 이어 붙인다.
 - 서버가 없으면 클라이언트는 `SERVER_DOWN`(CLI 종료 코드 4)으로 끝낸다. CLI 는 launchd 에 등록돼 있으면 먼저 서버를 켜고 한 번 더 보낸다.
@@ -69,32 +69,32 @@
 
 ## 메서드
 
-디바이스는 Corgi ID·AVD ID·UDID·이름으로 가리킨다. 목록·점유는 **Corgi 목록**(만든 것 + 이 Mac 에서 추가한 것, `listed: true`)만 다룬다(R20) — Corgi 가 만든 것은 `createdByCorgi: true`. 목록에 없는 이 Mac 의 디바이스를 가리키면 `NOT_FOUND`(추가하라는 안내). `devices` 를 비우면 메서드마다 정한 기본값을 쓴다.
+디바이스는 simless ID·AVD ID·UDID·이름으로 가리킨다. 목록·점유는 **simless 목록**(만든 것 + 이 Mac 에서 추가한 것, `listed: true`)만 다룬다(R20) — simless 가 만든 것은 `createdBySimless: true`. 목록에 없는 이 Mac 의 디바이스를 가리키면 `NOT_FOUND`(추가하라는 안내). `devices` 를 비우면 메서드마다 정한 기본값을 쓴다.
 
 | 메서드 | params | result | 비고 |
 | --- | --- | --- | --- |
-| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en)·시스템 언어 `systemLanguage`, 첫 실행 설정을 안 끝냈는지 `setupNeeded`(M14), 넣어 둔 스킬이 예전 것인지 `skillUpdate`(S9), 이 세션, 점유·대기 순번, `DeviceView[]`(Corgi 목록), 그룹 `groups`, 세션마다 점유·대기 `sessions`(점유하거나 기다리는 세션만 — `{ sessionKey, agentSessionId?, agent, cwd, human, lastUsedAt, held: [{deviceId, since}], queued, queuePosition? }`, M13), 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
-| `setup.status` | `{}` | `{ needed, finishedAt?, checks: CheckView[], agents: { claude, skill, skillLocations: [{ location, state, targets }], mcp, hook, rule, others: [{ agent, label, installed, hook, rule, mcp }] } }` | 첫 실행 설정 창 (M14). `checks` 는 `corgi doctor` 와 같은 점검(항목마다 `id` — `server`·`launchd`·`xcode`·`simslim`·`androidSdk`·`images`·`avdslim`·`argent`·…). `agents` 는 설치 상태 `missing`·`outdated`·`current`, `claude` 는 claude 명령이 있는지. 점검에 몇 초 걸린다 |
+| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en)·시스템 언어 `systemLanguage`, 첫 실행 설정을 안 끝냈는지 `setupNeeded`(M14), 넣어 둔 스킬이 예전 것인지 `skillUpdate`(S9), 이 세션, 점유·대기 순번, `DeviceView[]`(simless 목록), 그룹 `groups`, 세션마다 점유·대기 `sessions`(점유하거나 기다리는 세션만 — `{ sessionKey, agentSessionId?, agent, cwd, human, lastUsedAt, held: [{deviceId, since}], queued, queuePosition? }`, M13), 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
+| `setup.status` | `{}` | `{ needed, finishedAt?, checks: CheckView[], agents: { claude, skill, skillLocations: [{ location, state, targets }], mcp, hook, rule, others: [{ agent, label, installed, hook, rule, mcp }] } }` | 첫 실행 설정 창 (M14). `checks` 는 `simless doctor` 와 같은 점검(항목마다 `id` — `server`·`launchd`·`xcode`·`simslim`·`androidSdk`·`images`·`avdslim`·`argent`·…). `agents` 는 설치 상태 `missing`·`outdated`·`current`, `claude` 는 claude 명령이 있는지. 점검에 몇 초 걸린다 |
 | `setup.skillScope` | `{ kind: "global" }` · `{ kind: "project", paths: [폴더] }` | `agents` | 스킬을 넣는 곳 바꾸기 (S9) — 빠진 곳은 지우고 새 곳에 넣는다. 프로젝트는 작업 트리마다 넣고 `.git/info/exclude` 에 적는다. 없는 폴더는 `INVALID` |
-| `setup.apply` | `{ item: "skill" \| "mcp" \| "protection", enabled, agent = "claude" \| "copilot" \| "codex" \| "cursor" \| "gemini" }` | `agents` (위와 같음) | 켜면 설치·끄면 제거. `protection` = 훅 + 규칙. `mcp` 는 `claude mcp add --scope user corgi -- <corgi> mcp` — claude 가 없으면 `TOOL_MISSING` |
+| `setup.apply` | `{ item: "skill" \| "mcp" \| "protection", enabled, agent = "claude" \| "copilot" \| "codex" \| "cursor" \| "gemini" }` | `agents` (위와 같음) | 켜면 설치·끄면 제거. `protection` = 훅 + 규칙. `mcp` 는 `claude mcp add --scope user simless -- <simless> mcp` — claude 가 없으면 `TOOL_MISSING` |
 | `setup.run` | `{ fix }` | `JobView` — `{ id, fix, status: running·done·failed·canceled, lines, command, startedAt, endedAt?, exitCode? }` | 바로 설치 (M14). `fix` 는 정해 둔 항목(`simslim.install`·`simslim.upgrade`·`avdslim.install`·`avdslim.upgrade`·`argent.install`·`xcode.open`·`androidStudio.open`)만, 그 밖은 `INVALID`. 바로 돌려주고 뒤에서 돈다 — 출력은 SSE `output { job, line }`, 상태는 `job { job }`. 같은 항목이 돌고 있으면 그것을 준다 |
 | `setup.jobs` | `{}` | `JobView[]` | 돌고 있거나 끝난 설치 (항목마다 마지막 하나) |
 | `setup.cancel` | `{ job }` | `JobView` | 돌던 것을 멈춘다 |
 | `setup.openTerminal` | `{ fix }` | `{ opened }` | 입력이 필요할 때 — Terminal 앱에 같은 명령을 띄운다 |
-| `setup.finish` | `{}` | `{ finished: true }` | `…/Corgi/setup.json` 에 끝낸 시각을 남긴다 — 앱이 다시 띄우지 않는다 |
-| `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, historyRetentionDays, androidRamMb, simslimProfile? }` | 설정 화면·`corgi config` (M11) |
+| `setup.finish` | `{}` | `{ finished: true }` | `…/simless/setup.json` 에 끝낸 시각을 남긴다 — 앱이 다시 띄우지 않는다 |
+| `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, historyRetentionDays, androidRamMb, simslimProfile? }` | 설정 화면·`simless config` (M11) |
 | `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·기록 보관 일수(1~3650)·Android RAM·simslim 프로필 (R25) |
 | `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff`)·남는 것(`slimKeeps`) (M1·M4) |
-| `device.list` | `{}` | `DeviceView[]` | Corgi 목록. 켜짐·argent ID(`targetId`)·점유자·메모(`memo`)·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20) |
-| `device.create` | `{ platform?, model \| custom, os?, name?, slim = true, baseline = true }` | `DeviceView` | `model` = 기종 ID·이름(`platform` 을 안 주면 두 플랫폼에서 찾고, 양쪽에 있으면 `INVALID`), `custom` = `{ widthDp, heightDp, density }`(Android). `os` 를 안 주면 기본값. 앱 없이 만들고 `slim` 이면 기준값을 잰 뒤 슬림화. 기본 이름은 슬림이면 `corgi <기종>`, 아니면 `<기종>` — 겹치면 번호를 붙인다. 진행 알림 있음 |
+| `device.list` | `{}` | `DeviceView[]` | simless 목록. 켜짐·argent ID(`targetId`)·점유자·메모(`memo`)·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20) |
+| `device.create` | `{ platform?, model \| custom, os?, name?, slim = true, baseline = true }` | `DeviceView` | `model` = 기종 ID·이름(`platform` 을 안 주면 두 플랫폼에서 찾고, 양쪽에 있으면 `INVALID`), `custom` = `{ widthDp, heightDp, density }`(Android). `os` 를 안 주면 기본값. 앱 없이 만들고 `slim` 이면 기준값을 잰 뒤 슬림화. 기본 이름은 슬림이면 `simless <기종>`, 아니면 `<기종>` — 겹치면 번호를 붙인다. 진행 알림 있음 |
 | `device.rename` | `{ device, name }` | `DeviceView` | 원래 있던 디바이스도 된다. 다른 세션이 쓰는 중이면 `BUSY` |
-| `device.available` | `{}` | `DeviceView[]` | 이 Mac 에 있지만 Corgi 목록에 없는 디바이스 — 생성 화면의 «이 Mac 의 디바이스» (M1) |
-| `device.add` | `{ device }` | `DeviceView` | 이 Mac 의 디바이스를 Corgi 목록에 넣는다 — 만들지도 슬림화하지도 않는다. 이미 있으면 `INVALID` |
-| `device.unlist` | `{ device }` | `{ unlisted }` | 추가한 디바이스를 목록에서 뺀다 — 기기는 그대로, 점유·그룹 소속·기본 지정은 풀린다. Corgi 가 만든 것은 `NOT_ALLOWED`(삭제를 쓴다) |
+| `device.available` | `{}` | `DeviceView[]` | 이 Mac 에 있지만 simless 목록에 없는 디바이스 — 생성 화면의 «이 Mac 의 디바이스» (M1) |
+| `device.add` | `{ device }` | `DeviceView` | 이 Mac 의 디바이스를 simless 목록에 넣는다 — 만들지도 슬림화하지도 않는다. 이미 있으면 `INVALID` |
+| `device.unlist` | `{ device }` | `{ unlisted }` | 추가한 디바이스를 목록에서 뺀다 — 기기는 그대로, 점유·그룹 소속·기본 지정은 풀린다. simless 가 만든 것은 `NOT_ALLOWED`(삭제를 쓴다) |
 | `device.setMemo` | `{ device, memo }` | `DeviceView` | 로그인한 계정 등 (R24). 빈 글이면 지운다. 누가 쓰는 중이어도 고칠 수 있다 |
 | `device.setDefault` | `{ device }` | `DeviceView` | 그 플랫폼의 기본 디바이스로 (R22). 기본이 없는 플랫폼은 처음 만든 디바이스가 자동으로 기본이 된다 |
-| `device.delete` | `{ device }` | `{ deleted }` | Corgi 가 만든 것만, 기본 디바이스는 안 됨(`NOT_ALLOWED`). 메모·그룹 소속도 지운다. 켜져 있으면 끄고 지운다. 다른 세션이 쓰는 중이면 `BUSY` (M8) |
-| `device.slim` | `{ devices = Corgi 가 만든 것 전부, mode = "on" \| "off" \| "check" }` | `{ results, devices }` | Corgi 가 만든 것만(`NOT_ALLOWED`). on·off 는 다른 세션이 쓰는 중이면 `BUSY` |
+| `device.delete` | `{ device }` | `{ deleted }` | simless 가 만든 것만, 기본 디바이스는 안 됨(`NOT_ALLOWED`). 메모·그룹 소속도 지운다. 켜져 있으면 끄고 지운다. 다른 세션이 쓰는 중이면 `BUSY` (M8) |
+| `device.slim` | `{ devices = simless 가 만든 것 전부, mode = "on" \| "off" \| "check" }` | `{ results, devices }` | simless 가 만든 것만(`NOT_ALLOWED`). on·off 는 다른 세션이 쓰는 중이면 `BUSY` |
 | `device.up` | `{ devices = 이 세션의 점유 전부 }` | `{ results, devices }` | 점유가 있어야 함(`NOT_HELD`). 켠 뒤 슬림을 확인하고 풀렸으면 다시 적용 (M6) |
 | `device.down` | 같음 | `{ results, devices }` | |
 | `group.list` | `{}` | `Group[]` — `{ id, name, description, deviceIds, updatedBy, updatedAt }` | `updatedBy` 는 `human` 또는 에이전트 이름 (R21) |

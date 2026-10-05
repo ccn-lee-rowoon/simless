@@ -3,7 +3,7 @@ import type { AcquireResult, BusyData, LeaseItem } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Device } from "../shared/model.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
-import type { CorgiServer } from "./app.ts";
+import type { SimlessServer } from "./app.ts";
 import type { Holder } from "./leases.ts";
 import { parse } from "./params.ts";
 import { type Connection, HandlerError } from "./socket.ts";
@@ -37,7 +37,7 @@ const SessionsParams = z.object({
   limit: z.number().int().positive().max(1000).default(200),
 });
 
-export function registerLeaseMethods(server: CorgiServer): void {
+export function registerLeaseMethods(server: SimlessServer): void {
   const { leases } = server;
 
   const holdersData = (holders: Holder[]): BusyData["holders"] =>

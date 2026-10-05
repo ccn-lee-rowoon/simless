@@ -9,23 +9,23 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 function home() {
-  const dir = mkdtempSync(join(tmpdir(), "corgi-skill-"));
+  const dir = mkdtempSync(join(tmpdir(), "simless-skill-"));
   dirs.push(dir);
   return { HOME: dir };
 }
 
 describe("에이전트 스킬 (R16·S9)", () => {
-  test("들어 있는 스킬은 corgi 스킬 문서다 (이름·트리거 포함)", async () => {
+  test("들어 있는 스킬은 simless 스킬 문서다 (이름·트리거 포함)", async () => {
     const text = await bundledSkill();
-    expect(text).toStartWith("---\nname: corgi\n");
-    expect(text).toContain("코기로 확인해 줘");
+    expect(text).toStartWith("---\nname: simless\n");
+    expect(text).toContain("심리스로 확인해 줘");
   });
 
   test("없음 → 설치 → 같음, 내용이 바뀌면 예전 버전", async () => {
     const env = home();
     expect(await skillStatus(env)).toBe("missing");
     const target = await installSkill(env);
-    expect(target).toBe(join(env.HOME, ".claude", "skills", "corgi", "SKILL.md"));
+    expect(target).toBe(join(env.HOME, ".claude", "skills", "simless", "SKILL.md"));
     expect(await skillStatus(env)).toBe("current");
     writeFileSync(skillTarget(env), "old");
     expect(await skillStatus(env)).toBe("outdated");
@@ -38,7 +38,7 @@ describe("에이전트 스킬 (R16·S9)", () => {
     const description = /^description: (.*)$/m.exec(await bundledSkill())?.[1] ?? "";
     expect(description).toContain("mobile app");
     expect(description).toContain("Not for web projects");
-    expect(description).toContain("코기로 확인해 줘");
+    expect(description).toContain("심리스로 확인해 줘");
   });
 
   test("순서 — 용도 고르기 → 점유·켜기 → Metro → argent → 보고 → 정리 (S5·S6·S8)", async () => {

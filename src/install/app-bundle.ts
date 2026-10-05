@@ -1,8 +1,8 @@
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import icnsPath from "../../assets/Corgi.icns" with { type: "file" };
-import traySource from "../../tray/CorgiTray.swift" with { type: "file" };
+import icnsPath from "../../assets/simless.icns" with { type: "file" };
+import traySource from "../../tray/SimlessTray.swift" with { type: "file" };
 import type { Config } from "../shared/config.ts";
 import { run } from "../shared/exec.ts";
 import { t } from "../shared/i18n.ts";
@@ -10,7 +10,7 @@ import { APP_BUNDLE_ID, LAUNCH_LABEL, MENUBAR_LABEL, type Paths } from "../share
 import { VERSION } from "../shared/version.ts";
 import { selfCommand } from "./launchd.ts";
 
-// Corgi.app — 메뉴바 앱 + 앱 창. 실행하면 메뉴바에 아이콘이 생기고 «대시보드 열기» 로 웹 화면을
+// simless.app — 메뉴바 앱 + 앱 창. 실행하면 메뉴바에 아이콘이 생기고 «대시보드 열기» 로 웹 화면을
 // 자기 창(WKWebView)에 연다 (R11).
 // 미리 빌드한 앱을 배포하지 않고 그 Mac 에서 Swift 소스를 컴파일해 만든다 —
 // 서명·공증 없이 Gatekeeper 에 막히지 않는다 (requirements «결정 기록»).
@@ -18,9 +18,9 @@ import { selfCommand } from "./launchd.ts";
 const LSREGISTER =
   "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
 
-const MENUBAR_EXECUTABLE = "corgi-menubar";
+const MENUBAR_EXECUTABLE = "simless-menubar";
 /** 컴파일을 못 하면(Xcode 없음) 웹 UI 를 바로 여는 스크립트로 대신한다 */
-const FALLBACK_EXECUTABLE = "corgi-app";
+const FALLBACK_EXECUTABLE = "simless-app";
 
 function shellQuote(text: string): string {
   return `'${text.replace(/'/g, "'\\''")}'`;
@@ -39,15 +39,15 @@ export function infoPlist(
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key>
-  <string>Corgi</string>
+  <string>simless</string>
   <key>CFBundleDisplayName</key>
-  <string>Corgi</string>
+  <string>simless</string>
   <key>CFBundleIdentifier</key>
   <string>${APP_BUNDLE_ID}</string>
   <key>CFBundleExecutable</key>
   <string>${executable}</string>
   <key>CFBundleIconFile</key>
-  <string>Corgi</string>
+  <string>simless</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
@@ -59,18 +59,18 @@ export function infoPlist(
     <key>NSAllowsLocalNetworking</key>
     <true/>
   </dict>
-  <key>CorgiHTTPPort</key>
+  <key>SimlessHTTPPort</key>
   <integer>${settings.port}</integer>
-  <key>CorgiTokenPath</key>
+  <key>SimlessTokenPath</key>
   <string>${xml(settings.tokenPath)}</string>
-  <key>CorgiLaunchLabel</key>
+  <key>SimlessLaunchLabel</key>
   <string>${LAUNCH_LABEL}</string>
 </dict>
 </plist>
 `;
 }
 
-/** 컴파일을 못 했을 때 — 앱 실행 = corgi ui */
+/** 컴파일을 못 했을 때 — 앱 실행 = simless ui */
 export function launcherScript(command: string[]): string {
   return `#!/bin/sh\nexec ${command.map(shellQuote).join(" ")} ui\n`;
 }
@@ -101,9 +101,9 @@ export function menubarAgentPlist(appPath: string): string {
 }
 
 async function compileMenubar(output: string): Promise<string | undefined> {
-  const work = mkdtempSync(join(tmpdir(), "corgi-tray-"));
+  const work = mkdtempSync(join(tmpdir(), "simless-tray-"));
   try {
-    const source = join(work, "CorgiTray.swift");
+    const source = join(work, "SimlessTray.swift");
     writeFileSync(source, await Bun.file(traySource).text());
     const result = await run(["xcrun", "swiftc", "-O", "-o", output, source], {
       timeoutMs: 5 * 60_000,
@@ -140,7 +140,7 @@ export async function installApp(paths: Paths, config: Config): Promise<AppInsta
   mkdirSync(macos, { recursive: true });
   mkdirSync(join(contents, "Resources"), { recursive: true });
   writeFileSync(
-    join(contents, "Resources", "Corgi.icns"),
+    join(contents, "Resources", "simless.icns"),
     new Uint8Array(await Bun.file(icnsPath).arrayBuffer()),
   );
 

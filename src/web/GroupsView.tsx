@@ -171,7 +171,7 @@ function GroupDialog({
     setPlatform("all");
   }, [group]);
 
-  // 고른 것·켜진 것·Corgi 가 만든 것을 위로
+  // 고른 것·켜진 것·simless 가 만든 것을 위로
   const sorted = useMemo(() => {
     const q = query.trim().toLowerCase();
     return devices
@@ -181,7 +181,7 @@ function GroupDialog({
         (a, b) =>
           a.platform.localeCompare(b.platform) ||
           Number(openedWith.has(b.id)) - Number(openedWith.has(a.id)) ||
-          Number(b.createdByCorgi || b.booted) - Number(a.createdByCorgi || a.booted) ||
+          Number(b.createdBySimless || b.booted) - Number(a.createdBySimless || a.booted) ||
           a.platform.localeCompare(b.platform) ||
           a.layoutWidth - b.layoutWidth,
       );

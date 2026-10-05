@@ -1,7 +1,7 @@
-// 단일 실행 파일 빌드 → dist/corgi (docs/design.md §2)
+// 단일 실행 파일 빌드 → dist/simless (docs/design.md §2)
 // 빌드에 쓰는 Bun 이 결과물에 들어가므로, mise.toml 에 고정한 버전으로 실행한다.
 
-const outfile = "dist/corgi";
+const outfile = "dist/simless";
 
 const proc = Bun.spawnSync(
   [
@@ -11,7 +11,7 @@ const proc = Bun.spawnSync(
     "--minify",
     "--bytecode", // 시작 시간을 줄인다 — 훅이 Bash 호출마다 실행된다
     "--target=bun-darwin-arm64",
-    "bin/corgi.ts",
+    "bin/simless.ts",
     "--outfile",
     outfile,
   ],

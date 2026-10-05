@@ -1,8 +1,8 @@
 import type { JobView } from "../shared/api.ts";
 
-// 서버 HTTP API 클라이언트 — 토큰은 corgi ui 가 주소의 #token= 으로 넘긴다.
+// 서버 HTTP API 클라이언트 — 토큰은 simless ui 가 주소의 #token= 으로 넘긴다.
 
-const TOKEN_KEY = "corgi-token";
+const TOKEN_KEY = "simless-token";
 
 function readToken(): string | null {
   const fromHash = new URLSearchParams(location.hash.slice(1)).get("token");
@@ -34,7 +34,7 @@ export class ApiError extends Error {
 export async function call<T>(method: string, params: unknown = {}): Promise<T> {
   const response = await fetch("/api/call", {
     method: "POST",
-    headers: { "content-type": "application/json", "x-corgi-token": token ?? "" },
+    headers: { "content-type": "application/json", "x-simless-token": token ?? "" },
     body: JSON.stringify({ method, params }),
   });
   const body = (await response.json()) as

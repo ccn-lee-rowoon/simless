@@ -56,7 +56,7 @@ export function openSessionWindow(sessionKey: string): void {
   if (postToApp({ open: "session", key: sessionKey })) return;
   window.open(
     `/?window=session&key=${encodeURIComponent(sessionKey)}`,
-    `corgi-session-${sessionKey}`,
+    `simless-session-${sessionKey}`,
     "width=820,height=700",
   );
 }
@@ -118,7 +118,7 @@ export function SessionsView({ status, act }: { status: StatusResult; act: Act }
   );
 }
 
-/** 세션 ID — 에이전트가 주는 ID 가 있으면 그것과 Corgi 세션 키를 함께 */
+/** 세션 ID — 에이전트가 주는 ID 가 있으면 그것과 simless 세션 키를 함께 */
 function SessionIds({ row }: { row: Pick<SessionRow, "agentSessionId" | "sessionKey"> }) {
   return (
     <span className="session-ids">
@@ -127,7 +127,7 @@ function SessionIds({ row }: { row: Pick<SessionRow, "agentSessionId" | "session
           {row.agentSessionId}
         </span>
       )}
-      <span className="mono sub" title={t("web.sessions.corgiKey")}>
+      <span className="mono sub" title={t("web.sessions.simlessKey")}>
         {row.sessionKey}
       </span>
     </span>

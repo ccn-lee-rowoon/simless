@@ -3,12 +3,12 @@ import type { CatalogResult, DeviceOpResult, DeviceView, PlatformCatalog } from 
 import { t } from "../shared/i18n.ts";
 import type { Device, DeviceSpec, Platform } from "../shared/model.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
-import type { CorgiServer } from "./app.ts";
+import type { SimlessServer } from "./app.ts";
 import type { Progress, RuntimeState } from "./drivers/types.ts";
 import { parse } from "./params.ts";
 import { type Connection, HandlerError } from "./socket.ts";
 
-// 디바이스 만들기·관리·켜기 (R1~R7, M1~M8). 메서드를 CorgiServer 에 붙인다.
+// 디바이스 만들기·관리·켜기 (R1~R7, M1~M8). 메서드를 SimlessServer 에 붙인다.
 
 const CreateParams = z
   .object({
@@ -42,16 +42,16 @@ const DevicesParams = z.object({ devices: z.array(z.string()).default([]) });
 const SlimParams = DevicesParams.extend({ mode: z.enum(["on", "off", "check"]).default("on") });
 const CatalogParams = z.object({ platform: z.enum(["android", "ios"]).optional() });
 
-/** 기본 이름 — 슬림이면 `corgi <기종>`, 아니면 `<기종>` (R5·M4) */
+/** 기본 이름 — 슬림이면 `simless <기종>`, 아니면 `<기종>` (R5·M4) */
 function defaultName(modelName: string, slim: boolean): string {
-  return slim ? `corgi ${modelName}` : modelName;
+  return slim ? `simless ${modelName}` : modelName;
 }
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function registerDeviceMethods(server: CorgiServer): void {
+export function registerDeviceMethods(server: SimlessServer): void {
   const locks = new Map<string, Promise<unknown>>();
 
   /** 같은 디바이스에 대한 작업은 한 번에 하나씩 */
@@ -86,9 +86,9 @@ export function registerDeviceMethods(server: CorgiServer): void {
     }
   };
 
-  /** Corgi 가 만든 디바이스만 — 삭제·슬림 켜고 끄기 (M7·M8·N5) */
+  /** simless 가 만든 디바이스만 — 삭제·슬림 켜고 끄기 (M7·M8·N5) */
   const guardCreated = (device: Device, what: "delete" | "slim") => {
-    if (!device.createdByCorgi) {
+    if (!device.createdBySimless) {
       throw new HandlerError(
         "NOT_ALLOWED",
         t(what === "delete" ? "err.preexistingDelete" : "err.preexistingSlim", {
@@ -279,7 +279,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
       id,
       platform,
       native,
-      createdByCorgi: true,
+      createdBySimless: true,
       listed: true,
       slim: "none",
       createdAt: new Date().toISOString(),
@@ -309,12 +309,12 @@ export function registerDeviceMethods(server: CorgiServer): void {
     return view(session, { ...device, name: params.name });
   });
 
-  /** 이 Mac 에 있지만 Corgi 목록에 없는 디바이스 — 생성 화면의 «이 Mac 의 디바이스» (M1·R20) */
+  /** 이 Mac 에 있지만 simless 목록에 없는 디바이스 — 생성 화면의 «이 Mac 의 디바이스» (M1·R20) */
   server.addMethod("device.available", async (_p, session) =>
     server.deviceViews(session, await server.available()),
   );
 
-  /** 이 Mac 의 디바이스를 Corgi 목록에 넣는다 — 만들지도 슬림화하지도 않는다 (R20) */
+  /** 이 Mac 의 디바이스를 simless 목록에 넣는다 — 만들지도 슬림화하지도 않는다 (R20) */
   server.addMethod("device.add", async (p, session) => {
     const params = parse(DeviceRef, p);
     const lower = params.device.toLowerCase();
@@ -343,12 +343,12 @@ export function registerDeviceMethods(server: CorgiServer): void {
     return view(session, { ...update(device, { listed: true }), listed: true });
   });
 
-  /** Corgi 목록에서 뺀다 — 원래 있던(추가한) 디바이스만, 기기는 그대로 (R20) */
+  /** simless 목록에서 뺀다 — 원래 있던(추가한) 디바이스만, 기기는 그대로 (R20) */
   server.addMethod("device.unlist", async (p) => {
     const params = parse(DeviceRef, p);
     const [device] = await server.resolve([params.device]);
     if (!device) throw new HandlerError("NOT_FOUND", params.device);
-    if (device.createdByCorgi)
+    if (device.createdBySimless)
       throw new HandlerError("NOT_ALLOWED", t("err.unlistCreated", { name: device.name }));
     server.registry.unlist(device.id);
     server.leases.forgetDevice(device.id);
@@ -402,7 +402,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
     const devices =
       params.devices.length > 0
         ? await server.resolve(params.devices)
-        : (await server.devices()).filter((d) => d.createdByCorgi);
+        : (await server.devices()).filter((d) => d.createdBySimless);
     const progress = progressOf(connection);
     for (const device of devices) guardCreated(device, "slim");
     if (params.mode !== "check") for (const device of devices) guardOthers(device, session);
@@ -466,8 +466,8 @@ export function registerDeviceMethods(server: CorgiServer): void {
 }
 
 /** 서버가 켜질 때 — 켜져 있는 디바이스의 슬림 상태를 확인한다 (M6) */
-export async function checkBootedSlim(server: CorgiServer): Promise<void> {
-  const devices = (await server.devices()).filter((d) => d.createdByCorgi && d.slim !== "none");
+export async function checkBootedSlim(server: SimlessServer): Promise<void> {
+  const devices = (await server.devices()).filter((d) => d.createdBySimless && d.slim !== "none");
   const states = await server.runtimeStates(devices);
   for (const device of devices) {
     const state = states.get(device.id);

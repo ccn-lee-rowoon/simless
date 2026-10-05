@@ -1,6 +1,6 @@
-// Corgi 메뉴바 앱 + 앱 창 — corgi install 이 이 Mac 에서 `xcrun swiftc` 로 컴파일해 Corgi.app 에 넣는다.
+// simless 메뉴바 앱 + 앱 창 — simless install 이 이 Mac 에서 `xcrun swiftc` 로 컴파일해 simless.app 에 넣는다.
 // 로직은 없다: 서버 HTTP API(127.0.0.1)의 status 를 읽어 메뉴에 보여 주고, 웹 화면을 자기 창(WKWebView)에 띄운다.
-// 설정은 Info.plist 의 CorgiHTTPPort·CorgiTokenPath·CorgiLaunchLabel 에서 읽는다 (docs/design.md §14).
+// 설정은 Info.plist 의 SimlessHTTPPort·SimlessTokenPath·SimlessLaunchLabel 에서 읽는다 (docs/design.md §14).
 
 import AppKit
 import WebKit
@@ -17,7 +17,7 @@ enum Strings {
 
   static func get(_ key: String) -> String {
     let table: [String: (String, String)] = [
-      "connected": ("Corgi — 서버 연결됨 (%@)", "Corgi — server connected (%@)"),
+      "connected": ("simless — 서버 연결됨 (%@)", "simless — server connected (%@)"),
       "noToken": ("서버 토큰이 없습니다 — 서버를 켜세요", "No server token — start the server"),
       "serverDown": ("서버가 꺼져 있습니다", "The server is not running"),
       "badResponse": ("서버 응답을 읽지 못했습니다", "Couldn't read the server's answer"),
@@ -28,7 +28,7 @@ enum Strings {
       "using": ("%@ 사용 중", "in use by %@"),
       "human": ("사람", "person"),
       "dashboard": ("대시보드 열기", "Open Dashboard"),
-      "quitMenubar": ("Corgi 종료", "Quit Corgi"),
+      "quitMenubar": ("simless 종료", "Quit simless"),
       "close": ("창 닫기", "Close Window"),
       "minimize": ("최소화", "Minimize"),
       "edit": ("편집", "Edit"),
@@ -42,10 +42,10 @@ enum Strings {
       "reload": ("새로 고침", "Reload"),
       "view": ("보기", "View"),
       "settings": ("설정…", "Settings…"),
-      "settingsTitle": ("Corgi 설정", "Corgi Settings"),
-      "setupTitle": ("Corgi 시작하기", "Get started with Corgi"),
+      "settingsTitle": ("simless 설정", "simless Settings"),
+      "setupTitle": ("simless 시작하기", "Get started with simless"),
       "skillUpdate": ("스킬 업데이트 있음 — 업데이트", "Skill update available — Update"),
-      "skillUpdated": ("Corgi 스킬을 업데이트했습니다", "Updated the Corgi skill"),
+      "skillUpdated": ("simless 스킬을 업데이트했습니다", "Updated the simless skill"),
     ]
     guard let pair = table[key] else { return key }
     return lang == "ko" ? pair.0 : pair.1
@@ -96,15 +96,15 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
   private var retries = 0
 
   private let info = Bundle.main.infoDictionary ?? [:]
-  private var port: Int { (info["CorgiHTTPPort"] as? Int) ?? 8791 }
-  private var tokenPath: String { (info["CorgiTokenPath"] as? String) ?? "" }
-  private var launchLabel: String { (info["CorgiLaunchLabel"] as? String) ?? "corgi.server" }
+  private var port: Int { (info["SimlessHTTPPort"] as? Int) ?? 8791 }
+  private var tokenPath: String { (info["SimlessTokenPath"] as? String) ?? "" }
+  private var launchLabel: String { (info["SimlessLaunchLabel"] as? String) ?? "simless.server" }
 
   override init() {
     super.init()
     if let button = statusItem.button {
       button.image = devicesTemplate(size: 18)
-      button.toolTip = "Corgi"
+      button.toolTip = "simless"
     }
     menu.delegate = self
     statusItem.menu = menu
@@ -138,7 +138,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     var request = URLRequest(url: url, timeoutInterval: 5)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "content-type")
-    request.setValue(token, forHTTPHeaderField: "x-corgi-token")
+    request.setValue(token, forHTTPHeaderField: "x-simless-token")
     request.httpBody = try? JSONSerialization.data(withJSONObject: ["method": "status", "params": [:]])
     URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
       DispatchQueue.main.async {
@@ -186,7 +186,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     if let version = serverVersion {
       menu.addItem(disabled(String(format: Strings.get("connected"), version)))
     } else {
-      menu.addItem(disabled("Corgi — \(lastError ?? Strings.get("connecting"))"))
+      menu.addItem(disabled("simless — \(lastError ?? Strings.get("connecting"))"))
       menu.addItem(action(Strings.get("startServer"), #selector(startServer)))
     }
     menu.addItem(.separator())
@@ -247,7 +247,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     var request = URLRequest(url: url, timeoutInterval: 30)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "content-type")
-    request.setValue(token, forHTTPHeaderField: "x-corgi-token")
+    request.setValue(token, forHTTPHeaderField: "x-simless-token")
     request.httpBody = try? JSONSerialization.data(
       withJSONObject: ["method": "setup.apply", "params": ["item": "skill", "enabled": true]])
     URLSession.shared.dataTask(with: request) { [weak self] _, _, _ in
@@ -274,7 +274,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     if webView?.url == nil { load() }
   }
 
-  /// 웹 화면이 window.webkit.messageHandlers.corgi 로 «설정 창 열기» 를 알린다 (M11)
+  /// 웹 화면이 window.webkit.messageHandlers.simless 로 «설정 창 열기» 를 알린다 (M11)
   func userContentController(
     _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
   ) {
@@ -294,7 +294,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
 
   private func webConfiguration() -> WKWebViewConfiguration {
     let config = WKWebViewConfiguration()
-    config.userContentController.add(self, name: "corgi")
+    config.userContentController.add(self, name: "simless")
     return config
   }
 
@@ -330,8 +330,8 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     if sessionWindows[key] == nil {
       let query = "window=session&key=" + (key.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? key)
       sessionWindows[key] = makeAuxWindow(
-        title: "Corgi — \(key)", query: query, size: NSSize(width: 820, height: 700),
-        autosave: "CorgiSession")
+        title: "simless — \(key)", query: query, size: NSSize(width: 820, height: 700),
+        autosave: "SimlessSession")
     }
     show(sessionWindows[key])
   }
@@ -341,7 +341,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     if settingsWindow == nil {
       settingsWindow = makeAuxWindow(
         title: Strings.get("settingsTitle"), query: "window=settings",
-        size: NSSize(width: 760, height: 720), autosave: "CorgiSettings")
+        size: NSSize(width: 760, height: 720), autosave: "SimlessSettings")
     }
     show(settingsWindow)
   }
@@ -351,7 +351,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     if setupWindow == nil {
       setupWindow = makeAuxWindow(
         title: Strings.get("setupTitle"), query: "window=setup",
-        size: NSSize(width: 820, height: 780), autosave: "CorgiSetup")
+        size: NSSize(width: 820, height: 780), autosave: "SimlessSetup")
     }
     show(setupWindow)
   }
@@ -364,13 +364,13 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
       contentRect: NSRect(x: 0, y: 0, width: 1280, height: 820),
       styleMask: [.titled, .closable, .miniaturizable, .resizable],
       backing: .buffered, defer: false)
-    window.title = "Corgi"
+    window.title = "simless"
     window.minSize = NSSize(width: 880, height: 560)
     window.contentView = web
     window.isReleasedWhenClosed = false
     window.delegate = self
     window.center()
-    window.setFrameAutosaveName("CorgiDashboard") // 크기·위치를 기억한다
+    window.setFrameAutosaveName("SimlessDashboard") // 크기·위치를 기억한다
     self.window = window
     self.webView = web
   }

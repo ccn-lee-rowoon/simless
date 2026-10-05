@@ -3,9 +3,9 @@
 
 /** 훅이 서버에 묻는 대상 */
 export interface Targets {
-  /** 디바이스를 가리킬 수 있는 문자열 — UDID·AVD ID·시리얼·Corgi ID. 관리 디바이스가 아닌 것은 서버가 버린다 */
+  /** 디바이스를 가리킬 수 있는 문자열 — UDID·AVD ID·시리얼·simless ID. 관리 디바이스가 아닌 것은 서버가 버린다 */
   ids: string[];
-  /** 켜려는 디바이스 — 켜기는 Corgi 로 해야 한다 (S6) */
+  /** 켜려는 디바이스 — 켜기는 simless 로 해야 한다 (S6) */
   boots: string[];
   /** 기기를 지정하지 않은 adb 기기 명령 — 켜진 Android 전부가 대상 */
   allAndroid: boolean;

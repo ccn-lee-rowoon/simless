@@ -39,14 +39,14 @@ import { run } from "../shared/exec.ts";
 import { t } from "../shared/i18n.ts";
 import type { Paths } from "../shared/paths.ts";
 import { VERSION } from "../shared/version.ts";
-import type { CorgiServer } from "./app.ts";
+import type { SimlessServer } from "./app.ts";
 import { isFixId, Jobs } from "./jobs.ts";
 import { parse } from "./params.ts";
 import { HandlerError } from "./socket.ts";
 import { readJson, writeJson } from "./store.ts";
 
 // 첫 실행 설정 (M14) — 앱을 처음 열면 뜨는 창이 부른다. 터미널 없이 점검·에이전트 연결·기본 디바이스까지.
-// 설치 자체는 CLI(`corgi install`)와 같은 함수를 쓴다. 서버가 하므로 창은 버튼만 누르면 된다.
+// 설치 자체는 CLI(`simless install`)와 같은 함수를 쓴다. 서버가 하므로 창은 버튼만 누르면 된다.
 
 /** 스킬 업데이트 확인 간격 — 작업 트리가 새로 생겼는지도 이때 본다 */
 const SKILL_CHECK_MS = 10 * 60_000;
@@ -73,7 +73,7 @@ export function setupNeeded(paths: Paths): boolean {
   return !existsSync(paths.setup);
 }
 
-export function registerSetupMethods(server: CorgiServer): void {
+export function registerSetupMethods(server: SimlessServer): void {
   const deps = server.setupDeps;
   const env = deps.env ?? process.env;
   const command = () => deps.selfCommand ?? selfCommand();

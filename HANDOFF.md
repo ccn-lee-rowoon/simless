@@ -1,4 +1,4 @@
-# 인계 — Corgi (시뮬레이터·에뮬레이터 중개·관리 도구)
+# 인계 — simless (시뮬레이터·에뮬레이터 중개·관리 도구)
 
 > 2026-10-01~02, xb3-client(NOVA) 세션에서 정리한 내용. 이 폴더에서 새 세션을 시작할 때 **이 파일과 `requirements.md` 를 먼저 읽는다.**
 
@@ -16,20 +16,20 @@
 
 - 요구사항 정리 **완료**. 설계 전에 정할 것은 없다 (남은 Q 는 만들면서 정해도 됨)
 - 설계안 v0.2 작성(`docs/design.md`)
-- **0단계(저장소 뼈대) 완료** — `bun link` 로 `corgi` 등록됨(`~/.bun/bin/corgi` → 이 저장소). 다음은 1단계(서버 + CLI 코어), 세션 구분은 에이전트 무관(프로세스 트리) — 에이전트별 실측 항목은 `docs/design.md` §17
-- **1단계(서버 + CLI 코어) 완료** — `corgi serve`·`install`·`status`·`catalog`·`create`·`list`·`use`·`up`·`down`·`acquire`·`release`·`who` 등. 실제 Android·iOS 디바이스로 만들기·켜기·점유를 확인하고 시험 디바이스는 지웠다. 남은 확인(에이전트별 프로세스 트리)은 `docs/design.md` §17
-- **2단계(doctor + 스킬) 완료** — 앱 설치·실행·딥링크는 argent 로 하기로 하고 Corgi 일괄 기능은 «나중에»(L1~L3). 스킬은 `~/.claude/skills/corgi` 에 설치됨. 남은 확인: NOVA 로 «코기로 확인해 줘» 처음부터 끝까지
-- **3단계(웹 UI + `Corgi.app`) 완료** — 순서를 앞당겼다(훅은 4단계로). 웹 UI(`corgi ui`·메뉴바 «대시보드 열기»): 만든 디바이스 목록(All·Android·iOS 탭), 생성(+)은 iOS 시뮬레이터·Android 대표 프로필·직접 입력, 같은 크기 여러 대 허용(이름만 안 겹치게), 슬림 수치와 슬림 전후 비교(만들 때 기준값 측정). `Corgi.app` 은 메뉴바 앱(단색 웰시코기 아이콘)
-- **2026-10-05 사양 변경** — 레이아웃 확인 전용 → 이 Mac 의 디바이스 전부를 중개(R20). 용도별 **그룹**·**기본 디바이스**(Android·iOS 1대씩)·디바이스 메모, 만들 때 슬림 선택(슬림만 `corgi` 접두사), 그룹 점유는 에이전트가 판단(R23), «사용 안 함» 제거, 슬림은 자동 재적용 + `SLIM` 배지, 화면은 `Corgi.app` 창(WKWebView), 귀엽지 않은 디자인, 한국어·영어(설정에서 선택). 이름 변경은 나중에(Q17 — SimPool 은 bitomule/simpool 과 겹침)
-- **4단계(사양 변경) 완료** — Corgi 목록(만든 것 + 이 Mac 에서 추가한 것, 레지스트리 v2 — Corgi 가 붙인 정보만, v1 은 읽어서 옮기고 처음 만든 것을 기본으로), 왼쪽 메뉴(디바이스·그룹·세션 — 세션은 점유·대기와 기록), 설정은 새 창, 기종 + OS 생성·슬림 선택·ⓘ, 그룹·기본 디바이스·메모, 그룹 점유(all·available·대기·교착 검사), 한국어·영어(설정), 새 화면(디바이스·그룹·설정), `Corgi.app` 창(WKWebView)·새 아이콘, 영어 스킬. 실제 서버에 적용해 확인함(기존 `bakw`·`8rav` 가 그대로 기본 디바이스로)
-- **5단계(보호) 구현** — `corgi hook claude pre-tool-use`(Corgi 목록 디바이스를 점유하지 않은 argent·adb·simctl 호출을 막음, 서버가 꺼지면 managed-index 로 막음), 규칙 `~/.claude/rules/corgi.md`, `corgi install`·`doctor` 연동. **설치는 보류**(사용자 결정 2026-10-05 — 다른 세션이 쓰는 iPhone 17 Pro 가 Corgi 목록·iOS 기본이라 그 세션이 막힐 수 있음). 이제 `corgi install` 은 훅을 기본으로 넣지 않는다(`--hook` 일 때만)
-- **6단계(MCP) 완료** — `corgi mcp`. 등록은 사용자 결정: 첫 실행 설정 창의 «MCP 도구» 또는 `corgi install --mcp`
-- **첫 실행 설정 창(M14) 완료** (2026-10-05) — 앱을 처음 열면 «Corgi 시작하기» 창: 이 Mac 점검 → 에이전트 연결(스킬·보호·MCP 를 버튼으로) → 기본 디바이스. 서버 `setup.*`, 끝내면 `…/Corgi/setup.json`. 이 Mac 에서는 아직 «완료» 안 누름(창이 열려 있음)
-- **2026-10-05 추가** — 점유 기록 SQLite(90일 보관), 스킬: 모바일 앱 작업에서만 반응·세션마다 자기 Metro(S11)·설치 범위(기본 전역, 프로젝트 선택 — `corgi skill`)·업데이트 알림(대시보드 띠·메뉴바), 기본 디바이스가 없으면 만들어서 빌려주기(`--create`)
+- **0단계(저장소 뼈대) 완료** — `bun link` 로 `simless` 등록됨(`~/.bun/bin/simless` → 이 저장소). 다음은 1단계(서버 + CLI 코어), 세션 구분은 에이전트 무관(프로세스 트리) — 에이전트별 실측 항목은 `docs/design.md` §17
+- **1단계(서버 + CLI 코어) 완료** — `simless serve`·`install`·`status`·`catalog`·`create`·`list`·`use`·`up`·`down`·`acquire`·`release`·`who` 등. 실제 Android·iOS 디바이스로 만들기·켜기·점유를 확인하고 시험 디바이스는 지웠다. 남은 확인(에이전트별 프로세스 트리)은 `docs/design.md` §17
+- **2단계(doctor + 스킬) 완료** — 앱 설치·실행·딥링크는 argent 로 하기로 하고 simless 일괄 기능은 «나중에»(L1~L3). 스킬은 `~/.claude/skills/simless` 에 설치됨. 남은 확인: NOVA 로 «심리스로 확인해 줘» 처음부터 끝까지
+- **3단계(웹 UI + `simless.app`) 완료** — 순서를 앞당겼다(훅은 4단계로). 웹 UI(`simless ui`·메뉴바 «대시보드 열기»): 만든 디바이스 목록(All·Android·iOS 탭), 생성(+)은 iOS 시뮬레이터·Android 대표 프로필·직접 입력, 같은 크기 여러 대 허용(이름만 안 겹치게), 슬림 수치와 슬림 전후 비교(만들 때 기준값 측정). `simless.app` 은 메뉴바 앱(단색 웰시심리스 아이콘)
+- **2026-10-05 사양 변경** — 레이아웃 확인 전용 → 이 Mac 의 디바이스 전부를 중개(R20). 용도별 **그룹**·**기본 디바이스**(Android·iOS 1대씩)·디바이스 메모, 만들 때 슬림 선택(슬림만 `simless` 접두사), 그룹 점유는 에이전트가 판단(R23), «사용 안 함» 제거, 슬림은 자동 재적용 + `SLIM` 배지, 화면은 `simless.app` 창(WKWebView), 귀엽지 않은 디자인, 한국어·영어(설정에서 선택). 이름 변경은 나중에(Q17 — SimPool 은 bitomule/simpool 과 겹침)
+- **4단계(사양 변경) 완료** — simless 목록(만든 것 + 이 Mac 에서 추가한 것, 레지스트리 v2 — simless 가 붙인 정보만, v1 은 읽어서 옮기고 처음 만든 것을 기본으로), 왼쪽 메뉴(디바이스·그룹·세션 — 세션은 점유·대기와 기록), 설정은 새 창, 기종 + OS 생성·슬림 선택·ⓘ, 그룹·기본 디바이스·메모, 그룹 점유(all·available·대기·교착 검사), 한국어·영어(설정), 새 화면(디바이스·그룹·설정), `simless.app` 창(WKWebView)·새 아이콘, 영어 스킬. 실제 서버에 적용해 확인함(기존 `bakw`·`8rav` 가 그대로 기본 디바이스로)
+- **5단계(보호) 구현** — `simless hook claude pre-tool-use`(simless 목록 디바이스를 점유하지 않은 argent·adb·simctl 호출을 막음, 서버가 꺼지면 managed-index 로 막음), 규칙 `~/.claude/rules/simless.md`, `simless install`·`doctor` 연동. **설치는 보류**(사용자 결정 2026-10-05 — 다른 세션이 쓰는 iPhone 17 Pro 가 simless 목록·iOS 기본이라 그 세션이 막힐 수 있음). 이제 `simless install` 은 훅을 기본으로 넣지 않는다(`--hook` 일 때만)
+- **6단계(MCP) 완료** — `simless mcp`. 등록은 사용자 결정: 첫 실행 설정 창의 «MCP 도구» 또는 `simless install --mcp`
+- **첫 실행 설정 창(M14) 완료** (2026-10-05) — 앱을 처음 열면 «simless 시작하기» 창: 이 Mac 점검 → 에이전트 연결(스킬·보호·MCP 를 버튼으로) → 기본 디바이스. 서버 `setup.*`, 끝내면 `…/simless/setup.json`. 이 Mac 에서는 아직 «완료» 안 누름(창이 열려 있음)
+- **2026-10-05 추가** — 점유 기록 SQLite(90일 보관), 스킬: 모바일 앱 작업에서만 반응·세션마다 자기 Metro(S11)·설치 범위(기본 전역, 프로젝트 선택 — `simless skill`)·업데이트 알림(대시보드 띠·메뉴바), 기본 디바이스가 없으면 만들어서 빌려주기(`--create`)
 - **다른 에이전트 조사(Q16) 끝** — `docs/agent-integrations.md`. 붙이는 순서 제안: Copilot CLI → Codex → Cursor → (업그레이드 뒤) OpenCode·Gemini
 - 남은 것: 다른 에이전트 훅 어댑터(조사 후), U단계(GitHub 리모트가 생긴 뒤), NOVA 로 주 흐름(R15) 확인
 - 남은 확인: 실제 기기로 그룹 점유·생성(기종 + OS)을 끝까지, 라이트 모드 화면, NOVA 로 주 흐름(R15)
-- 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `Corgi.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
+- 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `simless.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
 - 범용 도구 → NOVA 레포(xb3-client)와 분리해 별도 프로젝트로 만든다
 
 ## 실측으로 확인한 사실 (이 머신)
@@ -40,7 +40,7 @@
 - 시스템 이미지: `android-37.1/google_apis_playstore_ps16k/arm64-v8a`, `android-36/google_apis_playstore`
 - iOS 런타임: 18.6 · 26.0 · 26.2 · 26.5
 - 설치됨: simslim **0.8.0**(최신 0.11.0) · scrcpy 4.1 · Bun · argent 0.26.0
-- **avdslim 1.0.15 설치됨** (2026-10-02) — `brew install kdbhalala/avdslim/avdslim` 가 `brew trust` 없이 설치됐다(전에는 비공식 tap 이라 거부한다고 봤음 — brew 버전에 따라 다를 수 있어 `corgi doctor` 는 둘 다 안내)
+- **avdslim 1.0.15 설치됨** (2026-10-02) — `brew install kdbhalala/avdslim/avdslim` 가 `brew trust` 없이 설치됐다(전에는 비공식 tap 이라 거부한다고 봤음 — brew 버전에 따라 다를 수 있어 `simless doctor` 는 둘 다 안내)
 - baguette 미설치 (iOS 화면 스트리밍용, 지금 범위 밖)
 
 **AVD 직접 생성** (`avdmanager` 없이 동작 확인)
@@ -76,12 +76,12 @@
 | Android 에뮬레이터 3대 | 켜져 있음 (`Size_Small_360dp`·`Size_Large_412dp`·`Size_Tablet_800dp`) | `adb -s <serial> emu kill` |
 | AVD 3개 | `~/.android/avd/Size_*.avd` + `.ini` (약 7GB) | 필요 없으면 폴더·ini 삭제 |
 | scrcpy 4.1 | brew 설치 | 필요 없으면 `brew uninstall scrcpy` |
-| brew tap · avdslim | `kdbhalala/avdslim` tap + avdslim 1.0.15 설치됨 | Corgi 가 쓰므로 유지 |
-| Corgi launchd 등록 | `~/Library/LaunchAgents/corgi.server.plist` (개발 모드: bun + 이 저장소의 `bin/corgi.ts`) | Corgi 를 쓰는 동안 유지. 지우려면 `corgi uninstall` |
-| `corgi` 명령 | `~/.bun/bin/corgi` → 이 저장소 (`bun link`) | 유지 |
-| Corgi.app (메뉴바 앱 + 앱 창) | `~/Applications/Corgi.app` + 로그인 항목 `~/Library/LaunchAgents/corgi.menubar.plist` | 유지. 지우려면 `corgi uninstall`. Swift 를 고치면 `corgi install --no-launchd --no-skill` |
-| Corgi 디바이스 | 웹 UI 에서 만든 `corgi Small 360x760dp`(`bakw`, Android 기본)·`corgi iPhone SE (3rd generation)`(`8rav`, iOS 기본), 그 밖에 `corgi_rddv`(corgi Medium Tablet) AVD 가 있음 | 사용자가 만든 것 — 필요 없으면 화면에서 삭제(기본은 다른 기기를 기본으로 정한 뒤) |
-| Corgi 스킬 | `~/.claude/skills/corgi/SKILL.md` (`corgi install` 이 씀) | 유지. 스킬을 고치면 `corgi install --no-launchd` 로 다시 설치 |
+| brew tap · avdslim | `kdbhalala/avdslim` tap + avdslim 1.0.15 설치됨 | simless 가 쓰므로 유지 |
+| simless launchd 등록 | `~/Library/LaunchAgents/simless.server.plist` (개발 모드: bun + 이 저장소의 `bin/simless.ts`) | simless 를 쓰는 동안 유지. 지우려면 `simless uninstall` |
+| `simless` 명령 | `~/.bun/bin/simless` → 이 저장소 (`bun link`) | 유지 |
+| simless.app (메뉴바 앱 + 앱 창) | `~/Applications/simless.app` + 로그인 항목 `~/Library/LaunchAgents/simless.menubar.plist` | 유지. 지우려면 `simless uninstall`. Swift 를 고치면 `simless install --no-launchd --no-skill` |
+| simless 디바이스 | 웹 UI 에서 만든 `simless Small 360x760dp`(`bakw`, Android 기본)·`simless iPhone SE (3rd generation)`(`8rav`, iOS 기본), 그 밖에 `simless_rddv`(simless Medium Tablet) AVD 가 있음 | 사용자가 만든 것 — 필요 없으면 화면에서 삭제(기본은 다른 기기를 기본으로 정한 뒤) |
+| simless 스킬 | `~/.claude/skills/simless/SKILL.md` (`simless install` 이 씀) | 유지. 스킬을 고치면 `simless install --no-launchd` 로 다시 설치 |
 | avdslim | brew 1.0.15 | 유지 |
 | 기존 `Pixel_6a` AVD·기존 iOS 시뮬레이터 | 건드리지 않음 | — |
 | NOVA alpha APK | 위 3대 AVD 에 설치됨 | AVD 삭제 시 함께 사라짐 |
@@ -107,7 +107,7 @@
 
 ## 새 세션 시작 프롬프트
 
-`~/Projects/ccn-lee-rowoon/corgi` 에서:
+`~/Projects/ccn-lee-rowoon/simless` 에서:
 
 ```
 HANDOFF.md 와 requirements.md(맨 아래 «결정 기록» 포함)를 먼저 읽어줘. reference-design-draft.md 는 확정 아닌 참고용이야.

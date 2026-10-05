@@ -86,19 +86,19 @@ export async function runMcp(): Promise<void> {
           return text(`${error.code}: ${error.message}${data}`, true);
         }
         if (error instanceof ServerDownError)
-          return text(`SERVER_DOWN: ${error.message} — run \`corgi doctor\``, true);
+          return text(`SERVER_DOWN: ${error.message} — run \`simless doctor\``, true);
         return text(`FAILED: ${error instanceof Error ? error.message : String(error)}`, true);
       }
     };
 
-  const server = new McpServer({ name: "corgi", version: VERSION });
+  const server = new McpServer({ name: "simless", version: VERSION });
 
   server.registerTool(
-    "corgi_status",
+    "simless_status",
     {
-      title: "Corgi status",
+      title: "simless status",
       description:
-        "Devices in the Corgi list (argent targetId, size label, booted, slim, default, groups, who holds it), device groups with their descriptions, and what this session holds. Call this first to pick a device group or the default device.",
+        "Devices in the simless list (argent targetId, size label, booted, slim, default, groups, who holds it), device groups with their descriptions, and what this session holds. Call this first to pick a device group or the default device.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
@@ -123,7 +123,7 @@ export async function runMcp(): Promise<void> {
   );
 
   server.registerTool(
-    "corgi_use",
+    "simless_use",
     {
       title: "Acquire and boot devices",
       description:
@@ -157,7 +157,7 @@ export async function runMcp(): Promise<void> {
       });
       if (acquired.status === "queued") {
         return json(
-          `STILL_QUEUED: waiting #${acquired.position}. Call corgi_use again with the same arguments to keep waiting.`,
+          `STILL_QUEUED: waiting #${acquired.position}. Call simless_use again with the same arguments to keep waiting.`,
           acquired.devices,
         );
       }
@@ -167,7 +167,7 @@ export async function runMcp(): Promise<void> {
       const failed = up.results.filter((r) => !r.ok);
       const partial =
         acquired.status === "partial"
-          ? ` Only some devices were free${acquired.queued ? "; the server takes the rest as they free up — check corgi_status, then call corgi_use for them" : ""}.`
+          ? ` Only some devices were free${acquired.queued ? "; the server takes the rest as they free up — check simless_status, then call simless_use for them" : ""}.`
           : "";
       return json(
         `Acquired and booted ${up.devices.length} device(s).${partial}${failed.length > 0 ? ` Failed to boot: ${failed.map((f) => `${f.name} (${f.error})`).join(", ")}` : ""}`,
@@ -177,11 +177,11 @@ export async function runMcp(): Promise<void> {
   );
 
   server.registerTool(
-    "corgi_release",
+    "simless_release",
     {
       title: "Release devices",
       description:
-        "Release devices this session holds (all of them, and any queue entry, when devices is omitted). Ask the user first whether to shut them down (corgi_down).",
+        "Release devices this session holds (all of them, and any queue entry, when devices is omitted). Ask the user first whether to shut them down (simless_down).",
       inputSchema: { devices: z.array(z.string()).optional() },
     },
     guard(async (args) => {
@@ -193,7 +193,7 @@ export async function runMcp(): Promise<void> {
   );
 
   server.registerTool(
-    "corgi_down",
+    "simless_down",
     {
       title: "Shut down devices",
       description: "Shut down devices this session holds (all of them when devices is omitted).",
@@ -208,11 +208,11 @@ export async function runMcp(): Promise<void> {
   );
 
   server.registerTool(
-    "corgi_catalog",
+    "simless_catalog",
     {
       title: "Models you can create",
       description:
-        "iOS device types and runtimes, Android profiles and system images, and what slimming turns off. Use before corgi_create — and only create devices when the user asks.",
+        "iOS device types and runtimes, Android profiles and system images, and what slimming turns off. Use before simless_create — and only create devices when the user asks.",
       inputSchema: { platform: z.enum(["android", "ios"]).optional() },
       annotations: { readOnlyHint: true },
     },
@@ -223,13 +223,13 @@ export async function runMcp(): Promise<void> {
   );
 
   server.registerTool(
-    "corgi_create",
+    "simless_create",
     {
       title: "Create a device",
       description:
-        "Create a new simulator or emulator from a model (and optional OS). Slim by default (named `corgi …`); set slim false when the test needs push notifications, iCloud and so on. Only when the user asks. Takes several minutes.",
+        "Create a new simulator or emulator from a model (and optional OS). Slim by default (named `simless …`); set slim false when the test needs push notifications, iCloud and so on. Only when the user asks. Takes several minutes.",
       inputSchema: {
-        model: z.string().describe("Model name or ID from corgi_catalog"),
+        model: z.string().describe("Model name or ID from simless_catalog"),
         platform: z.enum(["android", "ios"]).optional(),
         os: z.string().optional(),
         name: z.string().optional(),
@@ -250,7 +250,7 @@ export async function runMcp(): Promise<void> {
   );
 
   server.registerTool(
-    "corgi_group_save",
+    "simless_group_save",
     {
       title: "Create or change a device group",
       description:

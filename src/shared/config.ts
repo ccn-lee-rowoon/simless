@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { z } from "zod";
 
-/** 사용자 설정 `~/.config/corgi/config.json` — 없는 값은 기본값. */
+/** 사용자 설정 `~/.config/simless/config.json` — 없는 값은 기본값. */
 export const Config = z.object({
   /** 화면·CLI 언어 — system 이면 macOS 언어 설정을 따른다 (R25) */
   language: z.enum(["system", "ko", "en"]).default("system"),
@@ -40,7 +40,7 @@ export const Config = z.object({
 });
 export type Config = z.infer<typeof Config>;
 
-/** 설정 화면·`corgi config set` 이 바꾸는 값 (M11) */
+/** 설정 화면·`simless config set` 이 바꾸는 값 (M11) */
 export interface SettingsPatch {
   language?: Config["language"];
   idleReleaseMinutes?: number;

@@ -21,8 +21,8 @@ import {
 
 type Platform = "all" | "android" | "ios";
 
-const TAB_KEY = "corgi-tab";
-const GROUP_KEY = "corgi-group-filter";
+const TAB_KEY = "simless-tab";
+const GROUP_KEY = "simless-group-filter";
 
 function saved(key: string, fallback: string): string {
   try {
@@ -129,7 +129,7 @@ export function DevicesView({
           </div>
           <div className="sub name-sub">
             {osText(d)}
-            {d.createdByCorgi ? ` · ${t("web.device.createdByCorgi")}` : ""}
+            {d.createdBySimless ? ` · ${t("web.device.createdBySimless")}` : ""}
           </div>
         </td>
         <td>
@@ -211,7 +211,7 @@ export function DevicesView({
             >
               {t("web.device.makeDefault")}
             </MenuItem>
-            {d.createdByCorgi && (
+            {d.createdBySimless && (
               <>
                 <MenuSeparator />
                 {d.slim === "applied" || d.slim === "drifted" ? (
@@ -254,7 +254,7 @@ export function DevicesView({
               </>
             )}
             <MenuSeparator />
-            {d.createdByCorgi ? (
+            {d.createdBySimless ? (
               <MenuItem
                 danger
                 disabled={lockedByOther || d.default}

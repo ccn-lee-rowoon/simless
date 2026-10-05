@@ -31,18 +31,18 @@ export const DeviceSpec = z.discriminatedUnion("platform", [AndroidSpec, IosSpec
 export type DeviceSpec = z.infer<typeof DeviceSpec>;
 
 /**
- * 디바이스에 Corgi 가 붙인 정보 — registry 에 저장한다 (docs/design.md §6).
+ * 디바이스에 simless 가 붙인 정보 — registry 에 저장한다 (docs/design.md §6).
  * 기기 자체(이름·크기)는 저장하지 않고 드라이버에서 그때그때 읽는다 (R20).
  */
 export const DeviceMeta = z.object({
-  /** Corgi 가 붙이는 ID. 절대 안 바뀐다 (R4) */
+  /** simless 가 붙이는 ID. 절대 안 바뀐다 (R4) */
   id: z.string(),
   platform: Platform,
   /** Android AVD ID 또는 iOS UDID — 이름을 바꿔도 그대로. 기기와 이 정보를 잇는다 */
   native: z.string(),
-  /** Corgi 가 만든 디바이스 — 삭제·슬림 켜고 끄기는 이것만 (M7·M8·N5) */
-  createdByCorgi: z.boolean(),
-  /** Corgi 목록에 있는지 (R20) — 없으면(이전 형식) createdByCorgi 와 같다 */
+  /** simless 가 만든 디바이스 — 삭제·슬림 켜고 끄기는 이것만 (M7·M8·N5) */
+  createdBySimless: z.boolean(),
+  /** simless 목록에 있는지 (R20) — 없으면(이전 형식) createdBySimless 와 같다 */
   listed: z.boolean().optional(),
   slim: SlimState,
   slimError: z.string().optional(),
@@ -56,7 +56,7 @@ export const DeviceMeta = z.object({
     .optional(),
   /** 디바이스 메모 — 로그인한 계정 등 (R24) */
   memo: z.string().optional(),
-  /** Corgi 가 처음 본(또는 만든) 시각 */
+  /** simless 가 처음 본(또는 만든) 시각 */
   createdAt: z.string(),
 });
 export type DeviceMeta = z.infer<typeof DeviceMeta>;
@@ -79,9 +79,9 @@ export type Group = z.infer<typeof Group>;
 export const Defaults = z.object({ android: z.string().optional(), ios: z.string().optional() });
 export type Defaults = z.infer<typeof Defaults>;
 
-/** 이 Mac 의 디바이스 하나 — 드라이버가 읽은 기기 + Corgi 가 붙인 정보 */
+/** 이 Mac 의 디바이스 하나 — 드라이버가 읽은 기기 + simless 가 붙인 정보 */
 export interface Device extends DeviceMeta {
-  /** Corgi 목록에 있는지 — 메인 목록·점유·보호는 이것만 (R20) */
+  /** simless 목록에 있는지 — 메인 목록·점유·보호는 이것만 (R20) */
   listed: boolean;
   /** 표시 이름 — Android `avd.ini.displayname`, iOS 시뮬레이터 이름. 바꿀 수 있다 (R3) */
   name: string;

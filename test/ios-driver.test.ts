@@ -79,7 +79,7 @@ const device: Device = {
     scale: 3,
   },
   platform: "ios",
-  createdByCorgi: true,
+  createdBySimless: true,
   listed: true,
   slim: "none",
   createdAt: "2026-10-02T00:00:00.000Z",
@@ -177,11 +177,11 @@ describe("IosDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
   test("create — 기기 종류·런타임으로 새로 만든다 (clone 아님), UDID 가 native", async () => {
     const { runner, calls } = fakeRunner({ "xcrun simctl create": { stdout: "NEW-UDID\n" } });
     const result = await new IosDriver(config, runner).create(
-      { name: "corgi iPhone 17", spec: device.spec },
+      { name: "simless iPhone 17", spec: device.spec },
       () => {},
     );
     expect(result.native).toBe("NEW-UDID");
-    expect(calls).toContain("xcrun simctl create corgi iPhone 17 dt.iphone-17 rt.26-5");
+    expect(calls).toContain("xcrun simctl create simless iPhone 17 dt.iphone-17 rt.26-5");
     expect(calls.some((c) => c.includes("clone"))).toBe(false);
   });
 

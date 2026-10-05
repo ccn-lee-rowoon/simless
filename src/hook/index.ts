@@ -50,7 +50,7 @@ function readIndex(path: string): ManagedIndex | undefined {
 }
 
 /**
- * 에이전트 훅 진입점 (`corgi hook <에이전트> <이벤트>`, P3~P9).
+ * 에이전트 훅 진입점 (`simless hook <에이전트> <이벤트>`, P3~P9).
  * 디바이스를 건드리지 않는 호출은 소켓도 열지 않고 바로 통과한다. 아무것도 출력하지 않고 0 으로
  * 끝나면 에이전트는 평소대로 진행한다.
  */
@@ -108,7 +108,7 @@ export async function runHook(
   } catch (error) {
     if (!(error instanceof ServerDownError)) {
       // 서버가 이상한 답을 하면 막지 않는다 — 훅 때문에 에이전트가 멈추지 않게
-      console.error(`corgi hook: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`simless hook: ${error instanceof Error ? error.message : String(error)}`);
       return allow();
     }
     setLanguage(resolveLanguage(config?.language ?? "system", systemLanguages()));
