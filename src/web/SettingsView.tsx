@@ -138,7 +138,9 @@ export function SettingsView({
       </section>
 
       <footer className="settings-footer">
-        <span className="sub">{t("web.settings.file")}</span>
+        <span className="sub">
+          simless {status.serverVersion} · {t("web.settings.file")}
+        </span>
         <span className="spacer" />
         <button
           type="button"
