@@ -25,7 +25,8 @@
 - **5단계(보호) 구현** — `corgi hook claude pre-tool-use`(Corgi 목록 디바이스를 점유하지 않은 argent·adb·simctl 호출을 막음, 서버가 꺼지면 managed-index 로 막음), 규칙 `~/.claude/rules/corgi.md`, `corgi install`·`doctor` 연동. **설치는 보류**(사용자 결정 2026-10-05 — 다른 세션이 쓰는 iPhone 17 Pro 가 Corgi 목록·iOS 기본이라 그 세션이 막힐 수 있음). 이제 `corgi install` 은 훅을 기본으로 넣지 않는다(`--hook` 일 때만)
 - **6단계(MCP) 완료** — `corgi mcp`. 등록은 사용자 결정: 첫 실행 설정 창의 «MCP 도구» 또는 `corgi install --mcp`
 - **첫 실행 설정 창(M14) 완료** (2026-10-05) — 앱을 처음 열면 «Corgi 시작하기» 창: 이 Mac 점검 → 에이전트 연결(스킬·보호·MCP 를 버튼으로) → 기본 디바이스. 서버 `setup.*`, 끝내면 `…/Corgi/setup.json`. 이 Mac 에서는 아직 «완료» 안 누름(창이 열려 있음)
-- 남은 것: 다른 에이전트 훅 어댑터 조사(Q16), U단계(GitHub 리모트가 생긴 뒤), NOVA 로 주 흐름(R15) 확인
+- **다른 에이전트 조사(Q16) 진행 중** — 결과는 `docs/agent-integrations.md`. Codex·Gemini 끝, Copilot CLI·Cursor·OpenCode 남음
+- 남은 것: 다른 에이전트 훅 어댑터(조사 후), U단계(GitHub 리모트가 생긴 뒤), NOVA 로 주 흐름(R15) 확인
 - 남은 확인: 실제 기기로 그룹 점유·생성(기종 + OS)을 끝까지, 라이트 모드 화면, NOVA 로 주 흐름(R15)
 - 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `Corgi.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
 - 범용 도구 → NOVA 레포(xb3-client)와 분리해 별도 프로젝트로 만든다
