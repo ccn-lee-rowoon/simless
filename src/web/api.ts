@@ -7,7 +7,8 @@ function readToken(): string | null {
   try {
     if (fromHash) {
       sessionStorage.setItem(TOKEN_KEY, fromHash);
-      history.replaceState(null, "", location.pathname);
+      // 토큰(#…)만 지운다 — ?window=settings 같은 주소 값은 남겨야 설정 창이 설정을 그린다
+      history.replaceState(null, "", location.pathname + location.search);
       return fromHash;
     }
     return sessionStorage.getItem(TOKEN_KEY);
