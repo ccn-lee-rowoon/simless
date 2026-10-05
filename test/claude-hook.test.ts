@@ -69,7 +69,8 @@ describe("Claude Code 훅 설치 (P3)", () => {
     const env = home();
     installHook(["/bin/corgi"], env);
     uninstallHook(env);
-    expect(read(env).hooks.PreToolUse).toBeUndefined();
+    // 다른 훅이 없었으면 빈 "hooks" 도 남기지 않는다
+    expect(read(env).hooks).toBeUndefined();
     expect(hookStatus(["/bin/corgi"], env)).toBe("missing");
   });
 

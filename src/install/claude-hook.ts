@@ -94,8 +94,11 @@ export function uninstallHook(env: NodeJS.ProcessEnv = process.env): void {
     .filter((m) => m.hooks.length > 0);
   const { PreToolUse: _old, ...rest } = settings.hooks ?? {};
   const hooks = entries.length > 0 ? { ...rest, PreToolUse: entries } : rest;
+  // 훅이 하나도 안 남으면 빈 "hooks": {} 도 남기지 않는다
+  const { hooks: _hooks, ...others } = settings;
+  const next = Object.keys(hooks).length > 0 ? { ...others, hooks } : others;
   copyFileSync(path, `${path}.corgi-backup`);
-  writeFileSync(path, `${JSON.stringify({ ...settings, hooks }, null, 2)}\n`);
+  writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
 }
 
 export async function bundledRule(): Promise<string> {

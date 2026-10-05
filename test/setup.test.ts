@@ -133,6 +133,10 @@ describe("첫 실행 설정 (M14)", () => {
     const back = (await H("setup.skillScope", { kind: "global" })) as SetupAgents;
     expect(back.skillLocations.map((l) => l.location)).toEqual([{ kind: "global" }]);
     expect(existsSync(join(repo, ".claude", "skills", "corgi"))).toBe(false);
+    // 적어 둔 무시 줄도 지운다
+    expect(readFileSync(join(repo, ".git", "info", "exclude"), "utf8")).not.toContain(
+      "/.claude/skills/corgi/",
+    );
   });
 
   test("넣어 둔 스킬이 예전 것이면 status 가 알리고, 업데이트하면 꺼진다 (S9)", async () => {

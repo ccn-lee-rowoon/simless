@@ -21,6 +21,7 @@ import { run } from "../shared/exec.ts";
 const SKILL_DIR = join(".claude", "skills", "corgi");
 /** .git/info/exclude 에 넣는 줄 — 저장소 루트 기준 */
 const EXCLUDE_LINE = "/.claude/skills/corgi/";
+const EXCLUDE_COMMENT = "# Corgi 스킬 (이 Mac 에만)";
 
 const LocationsFile = z.object({
   locations: z.array(
@@ -129,20 +130,34 @@ export async function locationStatus(
 }
 
 /** 이 Mac 에서만 무시 — 저장소의 .gitignore 는 건드리지 않는다. 작업 트리가 같이 쓰는 git 폴더에 한 번 */
-async function excludeFromGit(root: string): Promise<void> {
+async function excludePath(root: string): Promise<string | undefined> {
   const common = await run(["git", "-C", root, "rev-parse", "--git-common-dir"], {
     timeoutMs: 10_000,
   });
-  if (common.code !== 0) return;
+  if (common.code !== 0) return undefined;
   const dir = common.stdout.trim();
-  const exclude = join(isAbsolute(dir) ? dir : join(root, dir), "info", "exclude");
+  return join(isAbsolute(dir) ? dir : join(root, dir), "info", "exclude");
+}
+
+async function excludeFromGit(root: string): Promise<void> {
+  const exclude = await excludePath(root);
+  if (!exclude) return;
   const text = existsSync(exclude) ? readFileSync(exclude, "utf8") : "";
   if (text.split("\n").some((line) => line.trim() === EXCLUDE_LINE)) return;
   mkdirSync(dirname(exclude), { recursive: true });
   appendFileSync(
     exclude,
-    `${text.length > 0 && !text.endsWith("\n") ? "\n" : ""}# Corgi 스킬 (이 Mac 에만)\n${EXCLUDE_LINE}\n`,
+    `${text.length > 0 && !text.endsWith("\n") ? "\n" : ""}${EXCLUDE_COMMENT}\n${EXCLUDE_LINE}\n`,
   );
+}
+
+/** excludeFromGit 이 적은 두 줄(설명·경로)만 지운다 — 사람이 적은 줄은 그대로 */
+async function unexcludeFromGit(root: string): Promise<void> {
+  const exclude = await excludePath(root);
+  if (!exclude || !existsSync(exclude)) return;
+  const lines = readFileSync(exclude, "utf8").split("\n");
+  const kept = lines.filter((line) => line.trim() !== EXCLUDE_LINE && line !== EXCLUDE_COMMENT);
+  if (kept.length !== lines.length) writeFileSync(exclude, kept.join("\n"));
 }
 
 /** 그 위치에 넣는다 — 넣은 파일들 */
@@ -166,8 +181,12 @@ export async function uninstallSkillAt(
   location: SkillLocation,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<void> {
-  for (const target of await targetsOf(location, env))
-    rmSync(dirname(target), { recursive: true, force: true });
+  const targets = await targetsOf(location, env);
+  for (const target of targets) rmSync(dirname(target), { recursive: true, force: true });
+  if (location.kind === "project") {
+    for (const target of targets)
+      await unexcludeFromGit(dirname(dirname(dirname(dirname(target)))));
+  }
 }
 
 /** 사람에게 보일 위치 — 홈 폴더는 ~ 로 */
