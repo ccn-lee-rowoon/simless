@@ -22,8 +22,9 @@
 - **3단계(웹 UI + `Corgi.app`) 완료** — 순서를 앞당겼다(훅은 4단계로). 웹 UI(`corgi ui`·메뉴바 «대시보드 열기»): 만든 디바이스 목록(All·Android·iOS 탭), 생성(+)은 iOS 시뮬레이터·Android 대표 프로필·직접 입력, 같은 크기 여러 대 허용(이름만 안 겹치게), 슬림 수치와 슬림 전후 비교(만들 때 기준값 측정). `Corgi.app` 은 메뉴바 앱(단색 웰시코기 아이콘)
 - **2026-10-05 사양 변경** — 레이아웃 확인 전용 → 이 Mac 의 디바이스 전부를 중개(R20). 용도별 **그룹**·**기본 디바이스**(Android·iOS 1대씩)·디바이스 메모, 만들 때 슬림 선택(슬림만 `corgi` 접두사), 그룹 점유는 에이전트가 판단(R23), «사용 안 함» 제거, 슬림은 자동 재적용 + `SLIM` 배지, 화면은 `Corgi.app` 창(WKWebView), 귀엽지 않은 디자인, 한국어·영어(설정에서 선택). 이름 변경은 나중에(Q17 — SimPool 은 bitomule/simpool 과 겹침)
 - **4단계(사양 변경) 완료** — Corgi 목록(만든 것 + 이 Mac 에서 추가한 것, 레지스트리 v2 — Corgi 가 붙인 정보만, v1 은 읽어서 옮기고 처음 만든 것을 기본으로), 왼쪽 메뉴(디바이스·그룹·세션 — 세션은 점유·대기와 기록), 설정은 새 창, 기종 + OS 생성·슬림 선택·ⓘ, 그룹·기본 디바이스·메모, 그룹 점유(all·available·대기·교착 검사), 한국어·영어(설정), 새 화면(디바이스·그룹·설정), `Corgi.app` 창(WKWebView)·새 아이콘, 영어 스킬. 실제 서버에 적용해 확인함(기존 `bakw`·`8rav` 가 그대로 기본 디바이스로)
-- **5단계(보호) 구현** — `corgi hook claude pre-tool-use`(Corgi 목록 디바이스를 점유하지 않은 argent·adb·simctl 호출을 막음, 서버가 꺼지면 managed-index 로 막음), 규칙 `~/.claude/rules/corgi.md`, `corgi install`·`doctor` 연동. **설치는 보류**(사용자 결정 2026-10-05 — 다른 세션이 쓰는 iPhone 17 Pro 가 Corgi 목록·iOS 기본이라 그 세션이 막힐 수 있음). 재설치할 때는 `corgi install --no-hook`
-- **6단계(MCP) 완료** — `corgi mcp`. 등록은 사용자 결정: `claude mcp add --scope user corgi -- <corgi 절대 경로> mcp`
+- **5단계(보호) 구현** — `corgi hook claude pre-tool-use`(Corgi 목록 디바이스를 점유하지 않은 argent·adb·simctl 호출을 막음, 서버가 꺼지면 managed-index 로 막음), 규칙 `~/.claude/rules/corgi.md`, `corgi install`·`doctor` 연동. **설치는 보류**(사용자 결정 2026-10-05 — 다른 세션이 쓰는 iPhone 17 Pro 가 Corgi 목록·iOS 기본이라 그 세션이 막힐 수 있음). 이제 `corgi install` 은 훅을 기본으로 넣지 않는다(`--hook` 일 때만)
+- **6단계(MCP) 완료** — `corgi mcp`. 등록은 사용자 결정: 첫 실행 설정 창의 «MCP 도구» 또는 `corgi install --mcp`
+- **첫 실행 설정 창(M14) 완료** (2026-10-05) — 앱을 처음 열면 «Corgi 시작하기» 창: 이 Mac 점검 → 에이전트 연결(스킬·보호·MCP 를 버튼으로) → 기본 디바이스. 서버 `setup.*`, 끝내면 `…/Corgi/setup.json`. 이 Mac 에서는 아직 «완료» 안 누름(창이 열려 있음)
 - 남은 것: 다른 에이전트 훅 어댑터 조사(Q16), U단계(GitHub 리모트가 생긴 뒤), NOVA 로 주 흐름(R15) 확인
 - 남은 확인: 실제 기기로 그룹 점유·생성(기종 + OS)을 끝까지, 라이트 모드 화면, NOVA 로 주 흐름(R15)
 - 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `Corgi.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
