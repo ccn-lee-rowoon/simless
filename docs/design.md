@@ -1,4 +1,4 @@
-# Corgi 설계안 (v0.2 — 검토 중)
+# Corgi 설계안 (v0.3 — 2026-10-05 사양 변경 반영)
 
 > `requirements.md` 가 «무엇을», 이 문서가 «어떻게» 다. 둘이 충돌하면 `requirements.md` 가 이긴다.
 > 설계를 바꾸면 이 문서를 고치고, 이유가 있는 결정은 맨 아래 «설계 결정 기록» 에 남긴다.
@@ -12,10 +12,11 @@
  에이전트의 실행 전 훅 ───── corgi hook <에이전트> ──┤
                                                      ▼
                   corgi serve  (launchd 가 띄우고, 죽으면 다시 살림)
-                  ├─ 디바이스 레지스트리 (만든 것만)
+                  ├─ 디바이스 목록 (이 Mac 전부 — 드라이버에서 읽음) + 레지스트리 (Corgi 가 붙인 정보)
+                  ├─ 그룹·기본 디바이스
                   ├─ 점유·대기 관리
                   ├─ 드라이버 — Android: emulator·adb·avdslim / iOS: simctl·simslim
-                  └─ HTTP 127.0.0.1 ── 웹 UI (브라우저) · (나중) 메뉴바 아이콘
+                  └─ HTTP 127.0.0.1 ── 웹 화면 (Corgi.app 창 · 브라우저) · 메뉴바
                                    ▼
                   에뮬레이터 · 시뮬레이터  ◀── 화면 안 조작·스크린샷은 argent (S6)
 ```
@@ -34,10 +35,11 @@
 | 검증·타입 | `zod` 4 | 설정·소켓 메시지·저장 파일 스키마를 한 곳에서 정의하고 타입도 뽑는다. MCP SDK 도 쓴다 |
 | 프로세스 정보 | `bun:ffi` 로 macOS libproc(`proc_pidinfo`·`proc_pidpath`) 호출 | 세션 찾기(§7)·종료 감지. `ps` 는 한 번에 20~80ms, FFI 는 약 3ms(실측) — 훅이 Bash 마다 돌기 때문 |
 | MCP | `@modelcontextprotocol/sdk` (5단계) | stdio |
-| 웹 UI | React + Bun 내장 번들러(HTML import) | Vite 없이 `Bun.serve` 가 서빙 |
+| 웹 화면 | React + Bun 내장 번들러(HTML import) | Vite 없이 `Bun.serve` 가 서빙. `Corgi.app` 창(WKWebView)과 브라우저가 같은 화면을 연다 |
+| 현지화 | 의존 없이 `src/shared/i18n/` 의 사전(`ko`·`en`) | 웹 화면·CLI 가 같은 사전을 쓴다. 메뉴바(Swift)는 문구가 적어 Swift 안에 따로 둔다 |
 | 테스트 | `bun test` | |
 | 포맷·린트·타입 | Biome · `tsc --noEmit` | |
-| 메뉴바 (6단계, 선택) | Swift 소스 1개를 바이너리에 넣고 `corgi install` 때 `xcrun swiftc` 로 컴파일해 `Corgi.app` 에 넣는다 | 서명·공증 불필요 |
+| 메뉴바·앱 창 | Swift 소스(AppKit + WKWebView)를 바이너리에 넣고 `corgi install` 때 `xcrun swiftc` 로 컴파일해 `Corgi.app` 에 넣는다 | 서명·공증 불필요 |
 
 외부 의존은 위 목록으로 제한하고, 늘릴 때는 이 표에 이유를 적는다.
 
@@ -51,10 +53,10 @@ corgi/
 ├── bin/corgi.ts             `#!/usr/bin/env bun` — 개발용 진입점(`bun link` 가 가리킴), src/main.ts 로
 ├── src/
 │   ├── main.ts              진입점 — 서브커맨드별로 필요한 모듈만 동적 import (훅이 빨리 끝나게)
-│   ├── shared/              모델·메시지 스키마(zod)·경로·설정 로딩·소켓 클라이언트
+│   ├── shared/              모델·메시지 스키마(zod)·경로·설정 로딩·소켓 클라이언트·i18n(문구 사전 ko·en)
 │   ├── server/
 │   │   ├── index.ts         corgi serve — 소켓·HTTP 서버 시작
-│   │   ├── registry.ts      만든 디바이스 목록
+│   │   ├── registry.ts      디바이스에 붙인 정보(메모·슬림·만든 여부)·그룹·기본 디바이스
 │   │   ├── leases.ts        점유·대기·자동 해제
 │   │   ├── sessions.ts      세션 식별·프로세스 감시
 │   │   ├── drivers/android.ts · drivers/ios.ts
@@ -63,8 +65,8 @@ corgi/
 │   ├── cli/                 명령마다 파일 하나 (use.ts, create.ts …)
 │   ├── hook/                훅 — 대상 추출(순수 함수) + 판정 + 서버 꺼짐 처리
 │   ├── mcp/                 (5단계) MCP 서버
-│   └── web/                 웹 UI — index.html · App.tsx …
-├── tray/CorgiTray.swift     (6단계) 메뉴바 아이콘
+│   └── web/                 웹 화면 — index.html · App.tsx …
+├── tray/CorgiTray.swift     메뉴바 아이콘 + 앱 창(WKWebView)
 ├── test/                    *.test.ts — 드라이버는 가짜로 바꿔 점유·대기·훅 판정을 검증
 ├── integrations/            이 Mac 의 다른 도구에 설치하는 것
 │   ├── skill/corgi/SKILL.md          → ~/.claude/skills/corgi
@@ -89,7 +91,7 @@ corgi/
 | (배포) | `dist/corgi` 를 `~/.local/share/corgi/versions/<버전>/corgi` 에 두고 `~/.local/bin/corgi` 를 그 파일로 링크한다(§19). 혼자 쓸 땐 저장소에서 `bun link`. 동료와는 **프라이빗 GitHub Release** 에 올리고, 설치 스크립트가 `gh release download`(또는 `curl`)로 받아 배치 → `corgi install` 까지 한다. 브라우저로 받으면 격리 속성 때문에 실행이 막히므로 스크립트로 받는다 |
 | `corgi install` | LaunchAgent(`~/Library/LaunchAgents/corgi.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`corgi`·Android SDK 경로를 절대 경로로** 적는다. 훅 명령도 절대 경로로 등록한다. `~/Applications/Corgi.app` 생성. 스킬·훅·argent 규칙 설치(각각 묻고, `--yes` 로 생략) |
 | `corgi uninstall` | 위를 되돌린다. 만든 디바이스는 지우지 않는다 |
-| `Corgi.app` | `Contents/MacOS/corgi`(실행 파일 링크) + `Info.plist`(`LSUIElement` — Dock 아이콘 없음) + 아이콘, ad-hoc 서명. **인자 없이 앱 번들 안에서 실행되면 앱 모드**: 서버가 꺼져 있으면 켜고 웹 UI 를 브라우저로 연 뒤 끝난다. 더블클릭·Spotlight·Launchpad 에서 연다. 6단계에서 같은 앱이 메뉴바 앱이 된다 |
+| `Corgi.app` | 메뉴바 앱 + 앱 창(§14). `tray/CorgiTray.swift` 를 컴파일한 실행 파일 + `Info.plist`(`LSUIElement` — 평소엔 Dock 아이콘 없음) + 아이콘, ad-hoc 서명. 더블클릭·Spotlight·Launchpad 에서 연다. Xcode 가 없어 컴파일을 못 하면 브라우저로 웹 화면을 여는 스크립트로 대신한다 |
 | 로그인 항목 이름 | macOS 로그인 항목(«앱 백그라운드 활동»)에는 실행 파일 서명자 이름이 보인다 — 개발 모드는 bun 의 «Jarred Sumner». `Corgi.app` 을 만들 때(3단계) plist 에 `AssociatedBundleIdentifiers` 로 앱을 연결해 «Corgi» 로 보이게 한다. 사용자가 이 항목을 끄면 launchd 가 서버를 띄우지 않으므로 `corgi doctor` 가 확인한다 |
 | 서버 자동 시작 (Q10) | CLI·MCP 는 소켓이 없으면 `launchctl kickstart` 로 켜고 몇 초 기다린다. 훅은 켜지 않는다 |
 | 업데이트 | `corgi update` — 확인·알림·교체·되돌리기는 §19. 클라이언트·서버 버전이 다르면 `hello` 에서 알려 준다 |
@@ -98,42 +100,53 @@ corgi/
 
 | 경로 | 내용 | 쓰는 쪽 |
 | --- | --- | --- |
-| `~/Library/Application Support/Corgi/registry.json` | 만든 디바이스 목록 (영속) | 서버 |
+| `~/Library/Application Support/Corgi/registry.json` | 디바이스에 Corgi 가 붙인 정보(메모·슬림·만든 여부·기준값), 그룹, 기본 디바이스 (영속). 기기 자체 목록은 저장하지 않는다(§6) | 서버 |
 | `…/Corgi/leases.json` | 점유·대기열 — 서버를 다시 켜도 복원 | 서버 |
-| `…/Corgi/managed-index.json` | 관리 디바이스 식별자(UDID·AVD ID·마지막 시리얼). **서버가 꺼졌을 때 훅이 읽는다** | 서버 쓰기 / 훅 읽기 |
+| `…/Corgi/managed-index.json` | 이 Mac 디바이스 식별자(UDID·AVD ID·마지막 시리얼). **서버가 꺼졌을 때 훅이 읽는다** | 서버 쓰기 / 훅 읽기 |
 | `…/Corgi/corgi.sock` | 소켓 (권한 0600) | 서버 |
-| `…/Corgi/web-token` | 웹 UI 요청 토큰 (0600) | 서버 |
+| `…/Corgi/web-token` | 웹 화면 요청 토큰 (0600) | 서버 |
 | `…/Corgi/update.json` | 마지막 확인 시각·최신 버전·알림 보낸 버전 | 서버 |
 | `~/Library/Logs/Corgi/` | 서버 로그 | 서버 |
 | `~/.local/share/corgi/versions/<버전>/corgi` · `~/.local/bin/corgi`(링크) | 설치된 버전들과 지금 쓰는 버전 (§19) | `corgi update` |
-| `~/.config/corgi/config.json` | 사용자 설정 — 자동 해제 시간(기본 30분), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로 | 사람·서버 |
+| `~/.config/corgi/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`), 자동 해제 시간(기본 30분), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다 | 사람·서버 |
 | `~/.config/corgi/apps/<name>.json` | 앱별 설정 (Q8) | 사람 |
-| `~/.android/avd/corgi_<id>.avd` · `.ini` | Android 디바이스 본체 | 서버 |
-| CoreSimulator 기본 device set | iOS 디바이스 본체 | 서버(simctl) |
+| `~/.android/avd/<AVD ID>.avd` · `.ini` | Android 디바이스 본체 — Corgi 가 만든 것은 `corgi_<id>` | Android Studio·서버 |
+| CoreSimulator 기본 device set | iOS 디바이스 본체 | Xcode·서버(simctl) |
 
 ## 6. 모델
 
-**Device** (registry 에 저장)
+**디바이스 목록은 저장하지 않는다** (R20). 이 Mac 의 디바이스는 서버가 드라이버에서 그때그때 읽고(Android `~/.android/avd/*.ini`, iOS `simctl list devices available`), 레지스트리에는 **Corgi 가 붙인 정보만** 둔다. Xcode·Android Studio 에서 기기를 지우거나 만들어도 바로 맞는다.
 
-| 필드 | 설명 |
-| --- | --- |
-| `id` | Corgi 가 붙이는 짧은 ID(예: `k3f9`). **절대 안 바뀐다** (R4) |
-| `name` | 표시 이름. 바꿀 수 있다 (R3) |
-| `platform` | `android` / `ios` |
-| `native` | Android `avdId = corgi_<id>` · iOS `udid` — 둘 다 이름을 바꿔도 그대로 |
-| `spec` | Android `widthDp·heightDp·density` (px 은 계산) · iOS `deviceType·runtime` + 프로필에서 읽은 `widthPt·heightPt·scale` |
-| `enabled` | 사용 안 함이면 `false` — 일괄 동작에서 빠진다 (R6) |
-| `slim` | `none`·`applying`·`applied`·`drifted`(풀림)·`failed` (M6) |
-| `source` | 복제한 원본 — `{ name, native }` (표시용, 원본이 지워져도 상관없다) |
+**Device** (서버가 합쳐서 보여 주는 값)
+
+| 필드 | 출처 | 설명 |
+| --- | --- | --- |
+| `id` | 레지스트리 | Corgi 가 붙이는 짧은 ID(예: `k3f9`). 처음 본 기기에 붙이고 **절대 안 바뀐다** (R4). 그룹·점유·메모는 이 ID 를 가리킨다 |
+| `platform` | 드라이버 | `android` / `ios` |
+| `native` | 드라이버 | Android AVD ID · iOS UDID — 이름을 바꿔도 그대로. 레지스트리는 이 값으로 기기와 `id` 를 잇는다 |
+| `name` | 드라이버 | 표시 이름 (Android `avd.ini.displayname`, iOS 시뮬레이터 이름) |
+| `spec` | 드라이버 | Android `widthPx·heightPx·density·systemImage` · iOS `deviceType·runtime·widthPt·heightPt·scale` |
+| `createdByCorgi` | 레지스트리 | Corgi 가 만든 기기 — 삭제·슬림 켜고 끄기는 이것만 (M7·M8·N5) |
+| `slim` | 레지스트리 | `none`·`applying`·`applied`·`failed` (+ `slimError`). 풀림은 켤 때 자동 재적용하므로 따로 두지 않는다 (M6) |
+| `slimBaseline` | 레지스트리 | 슬림 전 메모리 기준값 (M10) |
+| `memo` | 레지스트리 | 디바이스 메모 (R24) |
+| `default` | 레지스트리(설정) | 이 플랫폼의 기본 디바이스인지 (R22) |
+| `groups` | 레지스트리(그룹) | 든 그룹 ID 목록 (R21) |
+
+- 레지스트리에서 기기가 사라지면(밖에서 지움) 그 `id` 의 정보는 남겨 두고 목록에서만 뺀다 — 같은 `native` 가 다시 보이면 되살린다. 그룹 화면에는 «없는 디바이스» 로 표시하고 빼도록 안내한다.
+- Android AVD ID 는 Corgi 가 만든 것만 `corgi_<id>` 다. 표시 이름은 슬림이면 `corgi …` 접두사(R5), 슬림을 나중에 켜고 꺼도 이름은 그대로.
+- 이름 변경 시 Android `avd.ini.displayname`, iOS `simctl rename` 을 바꿔 에뮬레이터 창·Simulator 창에서도 알아보게 한다. 원래 있던 기기의 이름도 바꿀 수 있다.
+- iOS 폭(pt) = `/Library/Developer/CoreSimulator/Profiles/DeviceTypes/<종류>.simdevicetype/Contents/Resources/profile.plist` 의 `mainScreenWidth ÷ mainScreenScale` (확인: iPhone 17 → 1206 ÷ 3 = 402pt). M2 의 «폭 맨 앞» 에 쓴다.
+
+**Group** (R21) — `id`, `name`(겹치지 않게), `description`(에이전트도 읽음, «모두 필요» 같은 힌트), `deviceIds[]`, `updatedBy`(마지막으로 고친 세션 — `human` 또는 에이전트 이름), `updatedAt`. 한 디바이스가 여러 그룹에 들 수 있다.
+
+**기본 디바이스** (R22) — `{ android?: deviceId, ios?: deviceId }`. 정하지 않았으면 «기본 디바이스를 정하세요» 로 실패한다.
 
 실행 중 값(켜짐 여부, Android 시리얼)은 저장하지 않고 서버가 들고 있다.
 
-- 이름 변경 시 Android `avd.ini.displayname`, iOS `simctl rename` 도 같이 바꿔 에뮬레이터 창·Simulator 창에서도 알아보게 한다.
-- iOS 폭(pt) = `/Library/Developer/CoreSimulator/Profiles/DeviceTypes/<종류>.simdevicetype/Contents/Resources/profile.plist` 의 `mainScreenWidth ÷ mainScreenScale` (확인: iPhone 17 → 1206 ÷ 3 = 402pt). M2 의 «폭 맨 앞» 에 쓴다.
-
 **Session** — `id`(§7 세션 키), `agent`(표시용 — `claude-code`·`codex`·`gemini`·…·`human`·`unknown`), `pid`·`pidStartedAt`, `agentSessionId`(어댑터가 주면), `cwd`(표시용), `lastUsedAt`
 
-**Lease** — `deviceId → sessionId, acquiredAt` · **대기열** — `[{sessionId, deviceIds, enqueuedAt}]` (FIFO)
+**Lease** — `deviceId → sessionId, acquiredAt` · **대기열** — `[{sessionId, deviceIds, enqueuedAt}]` (디바이스마다 FIFO)
 
 ## 7. 세션 구분 (R13·R18)
 
@@ -156,39 +169,52 @@ corgi/
 - 보조 세션 ID: Claude Code 는 CLI 에 `CLAUDE_CODE_SESSION_ID`, 훅 입력에 `session_id` 를 준다. 기록해 두고, **같은 프로세스에서 값이 바뀌면**(`/clear` 등) 새 세션으로 보고 이전 점유를 푼다 — 새 대화는 자기가 점유했다는 걸 모르기 때문.
 - 실행 직전 훅: §13.
 
-**사람·웹 UI** — `human` 세션은 프로세스 기준 해제를 하지 않고 30분 규칙만 적용한다. 웹 UI 는 항상 `human`.
+**사람·앱 창** — `human` 세션은 프로세스 기준 해제를 하지 않고 30분 규칙만 적용한다. 앱 창·브라우저의 웹 화면은 항상 `human`.
 
 **한계** — 여러 대화가 프로세스 하나를 같이 쓰는 에이전트(IDE 안 에이전트 등)는 대화가 아니라 프로세스·터미널 단위로 구분된다. 필요하면 1번으로 보완한다.
 
-## 8. 점유·대기 (R13·R14·R17)
+## 8. 점유·대기 (R13·R14·R17·R23)
 
-- **단위는 디바이스**. 한 요청이 여러 대를 잡을 땐 **전부 아니면 전무** — 일부만 잡고 서로 기다리는 교착을 막는다.
+- **단위는 디바이스**. 요청은 디바이스(ID·이름), 그룹(`--group`), 기본 디바이스(`--default [android|ios]`)로 한다. 그룹·기본은 서버가 디바이스 목록으로 풀어서 같은 방식으로 처리한다.
 - 같은 세션이 다시 요청하면 그대로 통과(재진입).
-- **기본: 바쁘면 바로 실패**하고 누가·언제부터·어느 디바이스를 쓰는지 돌려준다 (CLI 종료 코드 3).
+- **응답에 기기마다 상태**를 싣는다: `held`(이 세션이 잡음) · `free` · `busy`(누가·언제부터) · `queued`(대기 순번). 에이전트는 이걸 보고 판단한다 (R23).
+- **모드** — 여러 대를 요청할 때 무엇을 잡을지는 에이전트가 고른다
+
+  | 모드 | CLI | 동작 | 쓰는 예 |
+  | --- | --- | --- | --- |
+  | `all` (기본) | — | 전부 비어 있을 때만 전부 잡는다. 하나라도 바쁘면 아무것도 안 잡고 실패(종료 코드 3) | DM 확인 (2대가 다 있어야 함) |
+  | `available` | `--available` | 비어 있는 것만 잡고, 바쁜 것은 상태만 알려 준다 | 레이아웃 체크 (있는 것부터) |
+  | `available` + 대기 | `--available --wait` | 비어 있는 것을 잡고, 나머지는 대기열에 넣어 풀리면 서버가 잡아 준다 | 레이아웃 체크 (나머지도 곧 필요) |
+  | `all` + 대기 | `--wait` | 전부 빌 때까지 기다렸다가 한 번에 잡는다 | DM 확인을 기다려서라도 |
+
+- **교착 막기**: `available + 대기` 는 일부를 쥔 채 나머지를 기다린다. 두 세션이 서로 상대가 쥔 기기를 기다리면 서버가 대기 관계에서 순환을 찾아 **나중에 대기한 쪽에 `DEADLOCK`** 을 돌려준다 — 그 세션은 쥔 것을 놓거나 그대로 쓰고 기다리기를 그만둔다. `all + 대기` 는 아무것도 쥐지 않고 기다리므로 교착을 만들지 않는다.
 - **`--wait`**: 대기열에 넣고, 차례가 오면 **서버가 알아서 점유**해 준다. 대기 항목은 연결이 아니라 **세션**에 붙는다 → CLI 가 Bash 시간 제한으로 끊겨도 순번이 유지되고, 다시 `--wait` 하면 이어서 기다린다. MCP 의 «대기 중 → 다시 호출» 도 같은 방식이다.
 - 대기는 **디바이스마다 먼저 온 순서** — 같은 디바이스를 먼저 기다리는 세션이 있으면, 그 디바이스가 비어 있어도 뒤에 온 세션(기다리기 없는 요청 포함)이 새치기하지 못한다. 겹치지 않는 디바이스는 대기열과 상관없이 잡는다.
 - **자동 해제**
   1. 세션 프로세스 종료 → 바로. 2초 간격으로 PID 생존과 시작 시각(PID 재사용 거르기)을 확인한다. 대기열에서도 뺀다.
   2. `lastUsedAt` 후 30분(설정) 지나고 **대기열에 누가 있을 때만**.
 - `lastUsedAt` 갱신: 그 세션의 CLI 요청, MCP 요청, 훅이 통과시킨 호출(argent 포함).
-- **강제 해제**: 웹 UI, 또는 CLI `release --force` (확인 질문). 스킬에는 «에이전트는 쓰지 않는다» 로 적는다.
+- **사람(앱 창)** 은 점유 없이 켜고 끈다. 다른 세션이 잡고 있으면 막는다.
+- **강제 해제**: 앱 창, 또는 CLI `release --force` (확인 질문). 스킬에는 «에이전트는 쓰지 않는다» 로 적는다.
 
 ## 9. 디바이스 수명주기 (드라이버)
 
 | 단계 | Android | iOS |
 | --- | --- | --- |
-| 생성 (iOS 만 원본 복제) | (Android 는 이 Mac 의 AVD 를 원본으로 쓰지 않는다 — 대표 프로필·직접 입력, 아래 줄) | 원본과 같은 기기 종류·런타임으로 `simctl create <이름> <종류> <런타임>` → UDID. `simctl clone` 은 원본의 앱·데이터가 따라오고 원본이 꺼져 있어야 해 쓰지 않는다 |
-| 생성 (대표 프로필·직접 입력, Android 만) | 크기(`hw.lcd.width/height/density`)와 시스템 이미지(기본: 설치된 것 중 4KB 페이지·API 높은 순)로 `config.ini` 를 새로 쓴다. 대표 프로필은 Android Studio 의 기기 정의를 본떠 코드에 넣어 둔다(`src/server/drivers/android-profiles.ts`) | (iOS 는 기기 종류가 크기를 정해 해당 없음) |
-| 슬림화 (R5) | `avdslim` — **명령 미확인**(미설치) | `simslim on <udid> --profile <공용 프로필>` |
-| 슬림 확인 (M6) | `avdslim` 상태 조회 (미확인) | `simslim verify <udid> --profile` — 켜진 기기만 가능 |
-| 켜기 | `emulator -avd corgi_<id> -port <빈 포트> -no-snapshot-save` 를 서버와 분리(detached)해 실행. `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
+| 목록 (R20) | `~/.android/avd/*.ini` + 각 `config.ini` 를 읽는다 | `simctl list devices available -j` + 기기 종류 profile.plist(폭) |
+| 생성 — 고를 것 (M1) | 기종: 대표 프로필(`src/server/drivers/android-profiles.ts`, Android Studio 기기 정의를 본뜸) 또는 직접 입력(폭·높이·밀도). OS: 설치된 시스템 이미지(추천: 4KB 페이지·API 높은 순) | 기종: `simctl list devicetypes` 중 설치된 런타임이 지원하는 것. OS: 설치된 런타임(기본: 최신) |
+| 생성 — 만들기 | `corgi_<id>.ini` + `.avd/config.ini` 를 새로 쓴다(`hw.lcd.width/height/density`, `image.sysdir.1`) | `simctl create <이름> <종류> <런타임>` → UDID. `simctl clone` 은 앱·데이터가 따라와 쓰지 않는다 |
+| 슬림화 (R5) | `avdslim tune-avd` + 켠 뒤 `avdslim on <시리얼>` | `simslim on <udid> --preserve-boot-state` |
+| 슬림화하면 안 되는 기능 (M4 ⓘ) | avdslim 프로필이 끄는 패키지 목록(`avdslim profiles`)을 사람이 읽을 이름으로 묶어 보여 준다 | simslim 프로필이 끄는 서비스 목록을 묶어 보여 준다(Siri·Spotlight·iCloud·Wallet …) |
+| 슬림 확인 (M6) | 프로필 패키지 중 꺼진 비율 ≥ 50% | `simslim verify` — 켜진 기기만 가능 |
+| 켜기 | `emulator -avd <AVD ID> -port <빈 포트> -no-snapshot-save` 를 서버와 분리(detached)해 실행. `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
 | 끄기 | `adb -s <시리얼> emu kill` | `simctl shutdown` |
 | 이름 변경 | `avd.ini.displayname` | `simctl rename` |
-| 삭제 (M8) | 끄고 `.avd`·`.ini` 삭제 | 끄고 `simctl delete` |
+| 삭제 (M8, Corgi 가 만든 것만) | 끄고 `.avd`·`.ini` 삭제 | 끄고 `simctl delete` |
 
 - **Android 시리얼을 서버가 정한다**: `-port` 로 켜면 시리얼이 `emulator-<port>` 로 정해진다. 밖에서 켠 경우는 `adb -s <시리얼> emu avd name` 으로 역조회한다.
 - 에뮬레이터·시뮬레이터는 서버의 자식으로 묶지 않는다 — 서버가 재시작해도 디바이스는 계속 돈다.
-- 슬림 확인 시점: 서버 시작(켜진 기기만), 디바이스 켤 때(항상). 풀림이면 다시 적용한다.
+- **슬림 확인과 자동 재적용** (M6): 슬림한 기기를 켤 때마다(서버 시작 시엔 켜진 것) 확인하고, 풀렸으면 바로 다시 적용한다. 실패하면 `slim: failed` + 이유를 남겨 `SLIM ⚠` 로 보인다. 원래 있던 기기(`createdByCorgi: false`)는 슬림화하지 않는다 (N5).
 - 생성·슬림화는 멱등 — 이미 맞으면 아무것도 안 한다.
 
 ## 10. 앱 설치·실행·같은 화면 이동 (R8·R9·R10) — argent 로
@@ -203,7 +229,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | 화면 확인 | `screenshot` | 크기 라벨을 붙여 보고 |
 
 - Metro 는 띄우지 않는다. 앱 쪽 세션이 띄운 것을 같이 쓴다 (S7).
-- 점유한 디바이스만 argent 로 다룬다 — 3단계 훅이 지킨다 (P1·P8).
+- 점유한 디바이스만 argent 로 다룬다 — 5단계 훅이 지킨다 (P1·P8).
 
 **나중에(L1~L3) 만들 때 참고** — 2단계에서 한 번 만들다 되돌린 내용이다.
 
@@ -225,40 +251,44 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 - 요청 `{"v":1,"id":"r1","method":"lease.acquire","session":{…},"params":{…}}`
 - 응답 `{"id":"r1","ok":true,"result":{…}}` / `{"id":"r1","ok":false,"error":{"code":"BUSY","message":"…","holder":{…}}}`
 - 긴 작업(부팅·설치)은 응답 전에 `{"id":"r1","event":"progress","data":{…}}` 를 여러 번 보낸다.
-- 메서드: `status` · `source.list` · `device.create|list|rename|setEnabled|slim|delete|up|down` · `lease.acquire|release|who` · `hook.check`
-- 오류 코드: `BUSY` · `NOT_HELD` · `NOT_FOUND` · `INVALID` · `TOOL_MISSING`(avdslim 등 없음) · `FAILED` · (클라이언트 쪽) `SERVER_DOWN`
+- 메서드: `status` · `catalog`(생성 화면의 기종·OS 목록, 슬림화하면 안 되는 기능) · `device.create|list|rename|setMemo|setDefault|slim|delete|up|down` · `group.list|create|update|delete` · `lease.acquire|release|who` · `settings.get|set` · `hook.check`
+- 오류 코드: `BUSY` · `NOT_HELD` · `NOT_FOUND` · `INVALID` · `NOT_ALLOWED`(원래 있던 기기 삭제·기본 디바이스 삭제 등) · `DEADLOCK` · `NO_DEFAULT` · `TOOL_MISSING`(avdslim 등 없음) · `FAILED` · (클라이언트 쪽) `SERVER_DOWN`
+- **현지화 (R25)**: 오류·진행 메시지는 문장 대신 `{code, key, params}` 로 보낸다(예: `{code:"BUSY", key:"lease.busy", params:{device:"…", holder:"claude-code"}}`). CLI·웹 화면이 `src/shared/i18n` 사전으로 설정 언어의 문장을 만든다. 사전에 없는 키를 대비해 영어 `message` 도 함께 싣는다. 에이전트는 `code` 로 판단한다
 
-**HTTP** — 웹 UI·메뉴바
+**HTTP** — 웹 화면(앱 창·브라우저)·메뉴바
 
 - `127.0.0.1:<포트>`(기본 8791, 설정)에만 연다.
-- `GET /api/status`, `GET /api/events`(SSE — 점유·켜짐·슬림 변화), 웹 UI 의 조작은 `POST /api/…` 가 소켓과 같은 메서드를 부른다(세션은 `human`).
-- 보안(다른 웹사이트가 localhost 로 요청하는 공격 대비): `Host` 가 `127.0.0.1`·`localhost` 가 아니면 거부(DNS rebinding), `POST` 는 `Origin` 검사 + `web-token` 헤더 필수. 토큰은 `corgi ui` 가 여는 URL 로 전달한다.
+- `GET /api/status`, `GET /api/events`(SSE — 점유·켜짐·슬림·그룹 변화), 웹 화면의 조작은 `POST /api/…` 가 소켓과 같은 메서드를 부른다(세션은 `human`).
+- 보안(다른 웹사이트가 localhost 로 요청하는 공격 대비): `Host` 가 `127.0.0.1`·`localhost` 가 아니면 거부(DNS rebinding), `POST` 는 `Origin` 검사 + `web-token` 헤더 필수. 토큰은 앱 창·`corgi ui` 가 여는 URL 로 전달한다.
 
 ## 12. CLI
 
-모든 명령에 `--json`. 디바이스는 ID 나 이름으로 가리킨다. 지정하지 않으면 «사용 중인 디바이스 전부».
+모든 명령에 `--json`. 디바이스는 ID 나 이름으로 가리킨다. 지정하지 않으면 «사용 중인 디바이스 전부». 문구는 설정 언어를 따른다(R25), `--json` 은 언어와 상관없이 같다.
 
 | 명령 | 하는 일 | 요구사항 |
 | --- | --- | --- |
-| `corgi status` | 서버 연결, 디바이스, 점유·대기 한눈에 | S2·R13 |
-| `corgi doctor [--fix]` | 서버·launchd·Android SDK·시스템 이미지·avdslim·Xcode·simslim·argent(여러 버전)·스킬 점검과 고치는 방법. `--fix` 는 launchd·스킬만 고친다. 훅 점검은 3단계 | S1·S2 |
-| `corgi install [--no-launchd] [--no-skill]` · `uninstall` | launchd 등록 + 스킬 설치 (§4) | S1 |
-| `corgi ui` | 웹 UI 를 브라우저로 연다 | R11 |
-| `corgi list --all [--platform]` | **전체 목록** — 이 Mac 의 모든 에뮬레이터·시뮬레이터(원본). 폭 먼저, Corgi 것·«생성됨» 표시 | M1~M3·M9 |
-| `corgi create <원본> [--name] [--no-slim]` | 원본(이름·UDID·AVD ID)과 같은 크기로 `corgi …` 복제본을 만들고 슬림화 | R1~R3·R5·M4 |
-| `corgi list` | 만든 디바이스 — 켜짐·슬림·점유 세션·사용 안 함·argent ID | M5 |
-| `corgi rename <dev> <name>` · `enable` · `disable` · `delete` | 관리 | M7·M8·R6 |
-| `corgi slim [<dev>…] [--off] [--check]` | 슬림 적용·해제·확인 | M6·M7 |
-| `corgi acquire [<dev>…] [--wait] [--timeout 10m]` | 점유 | R14 |
+| `corgi status` | 서버 연결, 디바이스, 그룹, 점유·대기 한눈에 | S2·R13 |
+| `corgi doctor [--fix]` | 서버·launchd·Android SDK·시스템 이미지·avdslim·Xcode·simslim·argent(여러 버전)·스킬 점검과 고치는 방법. `--fix` 는 launchd·스킬만 고친다. 훅 점검은 5단계 | S1·S2 |
+| `corgi install [--no-launchd] [--no-skill] [--no-app]` · `uninstall` | launchd 등록 + 스킬 + `Corgi.app` (§4) | S1 |
+| `corgi ui` | 웹 화면을 브라우저로 연다 (앱 창은 `Corgi.app`) | R11 |
+| `corgi list [--platform] [--group <그룹>] [--created]` | **이 Mac 의 디바이스 전부** — 폭·이름·켜짐·SLIM·기본·그룹·메모·사용 중인 세션·argent ID | M5·R20 |
+| `corgi catalog [--platform]` | 만들 수 있는 기종·OS 목록 | M1 |
+| `corgi create <기종> [--os] [--name] [--no-slim] [--no-baseline]` · `corgi create --width --height --density [--os]` | 새로 만들기. 슬림이면 `corgi …` 이름 | R1~R3·R5·M4 |
+| `corgi rename <dev> <name>` · `memo <dev> [<text>]` · `default <dev>` · `delete <dev>` | 관리. 삭제는 Corgi 가 만든 것만 | M7·M8·R22·R24 |
+| `corgi slim [<dev>…] [--off] [--check]` | 슬림 적용·해제·확인 (Corgi 가 만든 것만) | M6·M7 |
+| `corgi group list` · `show <그룹>` · `create <이름> [--desc] [<dev>…]` · `edit <그룹> [--name] [--desc] [--add <dev>…] [--remove <dev>…]` · `delete <그룹>` | 그룹 관리 — 사람·에이전트 모두 | R21·S10 |
+| `corgi acquire [<dev>… \| --group <그룹> \| --default [android\|ios]] [--available] [--wait] [--timeout 10m]` | 점유 (모드는 §8) | R14·R22·R23 |
 | `corgi release [<dev>…] [--force]` | 점유 해제 | R17·S8 |
 | `corgi who [<udid·시리얼·dev>]` | 누가 쓰는지 | R13 |
 | `corgi up` · `corgi down` | 점유한 디바이스 켜기·끄기 | R7 |
-| **`corgi use [<dev>…] [--wait]`** | **acquire + up 한 번에** — 주 흐름의 첫 단계 | R15 |
+| **`corgi use [<dev>… \| --group … \| --default …] [--available] [--wait]`** | **acquire + up 한 번에** — 주 흐름의 첫 단계 | R15 |
+| `corgi config [get\|set <키> <값>]` | 설정 (언어 등) — 앱 창 설정 화면과 같은 값 | M11·R25 |
 | `corgi update [--check] [--rollback]` | 새 버전 확인·업데이트·이전 버전으로 되돌리기 | R19 |
 | `corgi serve` · `corgi hook <에이전트> pre-tool-use` · `corgi mcp` | 서버·훅·MCP 진입점 (사람이 직접 쓰지 않음) | — |
 
-- 종료 코드: `0` 성공 · `1` 실패 · `2` 사용법 오류 · `3` 다른 세션이 사용 중 · `4` 서버에 연결 못 함
+- 종료 코드: `0` 성공 · `1` 실패 · `2` 사용법 오류 · `3` 다른 세션이 사용 중(`--available` 이면 하나도 못 잡았을 때만) · `4` 서버에 연결 못 함
 - `up`·`down` 은 점유가 있어야 한다. 없으면 실패하고 `corgi use` 를 안내한다.
+- 없앤 것: `enable`·`disable`(사용 안 함, R6), `list --all`(목록이 처음부터 전부).
 - 일괄 설치·실행·딥링크(`install-app`·`launch`·`open`)는 «나중에» (L1~L3, §10).
 
 ## 13. 훅 (P3~P9)
@@ -274,7 +304,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 1. 어댑터가 stdin 입력을 공통 형식으로 바꾼다. 세션은 §7 방식(훅 프로세스의 부모 체인)으로 찾고, 입력에 세션 ID 가 있으면 보조로 쓴다.
 2. **빠른 통과**: Bash 명령에 `adb`·`simctl`·`emulator`·`simslim`·`avdslim` 이 없고, argent 도구에 기기 인자가 없으면 바로 통과한다(소켓 안 엶). `main.ts` 는 이 경로에서 서버·웹 코드를 불러오지 않는다.
 3. 대상 디바이스를 뽑아 서버에 `hook.check` → 허용/차단 + 사유. 허용이면 서버가 같은 요청으로 `lastUsedAt` 을 갱신한다.
-4. **서버가 꺼져 있으면** `managed-index.json` 으로 관리 디바이스인지만 본다. 맞으면(또는 시리얼을 판정 못 하면) 차단하고 «`corgi status` 로 서버를 켜세요» 를 알려 준다 (P9).
+4. **서버가 꺼져 있으면** `managed-index.json` 으로 이 Mac 의 디바이스인지만 본다. 맞으면(또는 시리얼을 판정 못 하면) 차단하고 «`corgi status` 로 서버를 켜세요» 를 알려 준다 (P9).
 5. 차단은 `permissionDecision: "deny"` JSON 으로 돌려주고, 사유에 **누가 쓰는 중인지와 점유 방법**(`corgi use …`)을 넣는다 (P5).
 
 **대상 판정**
@@ -283,32 +313,49 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | --- | --- |
 | argent 도구의 `udid`·`device_id`·`avdName` 인자 | 그 값 |
 | argent `list-devices` 등 기기 인자 없는 도구 | 없음 → 통과 (P6) |
-| argent `boot-device` · Bash `emulator -avd corgi_…` 로 관리 디바이스 켜기 | 점유와 상관없이 **차단** → `corgi up` 안내 (S6 «켜기는 Corgi 로») |
-| Bash 명령 문자열 안에 관리 디바이스 식별자(UDID·AVD ID·현재 시리얼)가 보임 | 그 디바이스 — 명령을 파싱하지 않고 **문자열 포함**으로 본다. `&&`·`$(…)`·변수 등으로 우회되기 어렵다 |
-| `adb` 를 기기 지정 없이 기기 명령에 씀(`adb shell` 등, `ANDROID_SERIAL` 미지정) | 켜진 관리 Android 전부 |
-| `simctl … booted` | 켜진 관리 iOS 전부 |
+| argent `boot-device` · Bash `emulator -avd …` 로 디바이스 켜기 | 점유와 상관없이 **차단** → `corgi up` 안내 (S6 «켜기는 Corgi 로») |
+| Bash 명령 문자열 안에 디바이스 식별자(UDID·AVD ID·현재 시리얼)가 보임 | 그 디바이스 — 명령을 파싱하지 않고 **문자열 포함**으로 본다. `&&`·`$(…)`·변수 등으로 우회되기 어렵다 |
+| `adb` 를 기기 지정 없이 기기 명령에 씀(`adb shell` 등, `ANDROID_SERIAL` 미지정) | 켜진 Android 전부 |
+| `simctl … booted` | 켜진 iOS 전부 |
 | `adb devices`·`emulator -list-avds`·`simctl list` 등 목록 조회 | 없음 → 통과 (P6) |
 
 **argent 규칙에 붙일 문구 (P2)** — `integrations/rules/argent-corgi.md`. `corgi install` 이 에이전트별 전역 규칙 위치(Claude Code `~/.claude/rules/argent.md`, 다른 에이전트는 조사)에 붙인다.
 
-> Corgi 가 관리하는 레이아웃 체크용 디바이스(`corgi list` 에 있는 것, AVD 는 `corgi_` 로 시작)는 `corgi use` 로 점유한 뒤에만 조작한다. 켜기·끄기는 argent `boot-device` 가 아니라 `corgi up`·`corgi down` 으로 한다.
+> 이 Mac 의 에뮬레이터·시뮬레이터(`corgi list` 에 있는 것 전부)는 `corgi use` 로 점유한 뒤에만 조작한다. 켜기·끄기는 argent `boot-device` 가 아니라 `corgi up`·`corgi down` 으로 한다.
 
-## 14. 웹 UI (M1~M8)
+## 14. 앱 창·웹 화면 (R11·M1~M12)
 
-- **메인 화면** (M9): 만든 디바이스 목록 하나 — 위에 **All · Android · iOS 탭**(마지막에 고른 탭을 기억). 한 줄에 `폭 · 이름 · 켜짐 · 슬림 상태(꺼진 항목 수·메모리) · 사용 중인 세션 · 사용 안 함`. 켜기·끄기는 점유 없이(사람), 다른 세션이 쓰는 중이면 막는다. SSE 로 바로 반영된다.
-- **생성(+)** (M1~M4): iOS 는 이 Mac 의 시뮬레이터, Android 는 대표 프로필(폭 순, 보조로 해상도·밀도·런타임). Android 는 «직접 입력…»(폭·높이·밀도·이미지)도 있다. 같은 크기로 만든 것이 있으면 «만든 것 있음» 으로 알려만 주고 막지 않는다. 하나 고르면 이름 기본값 `corgi <원본 이름>`(겹치면 번호) → 만들기 + 슬림화 진행 표시. 앱은 설치하지 않는다.
-- **행 메뉴** (M7·M8): 이름 변경 · 사용 안 함 · 슬림 해제/다시 적용 · 점유 강제 해제 · 삭제(확인 창, 다른 세션이 쓰는 중이면 막고 누가 쓰는지 표시, 켜져 있으면 끄고 지움).
-- **설정**: 자동 해제 시간, Android 시스템 이미지·RAM, simslim 프로필.
-- 나중에 **스크린샷 모아 보기**(R10)를 같은 화면에 탭으로 붙인다.
+**앱 창** — `Corgi.app` 이 자기 창(NSWindow + WKWebView)에 웹 화면(`http://127.0.0.1:<포트>/#token=…`)을 띄운다. 메뉴바 «대시보드 열기»·앱 다시 열기·Dock 클릭이 이 창을 연다. 창이 열려 있는 동안만 Dock 아이콘을 보이고(`setActivationPolicy(.regular)`), 닫으면 메뉴바 앱으로 돌아간다. 창 크기·위치를 기억하고 ⌘W·⌘Q 가 앱처럼 동작한다. 같은 화면을 브라우저로도 연다(`corgi ui`) — 개발 중엔 argent(Chromium)로 화면을 눌러 확인한다.
 
-**메뉴바 앱 (`Corgi.app`, 앞당겨 만듦)**: `corgi install` 이 `tray/CorgiTray.swift` 를 그 Mac 에서 `xcrun swiftc` 로 컴파일해 `Corgi.app` 에 넣고, 로그인 시 메뉴바에 뜨게 등록한다(launchd `corgi.menubar`, `open -a`). 메뉴바 아이콘(웰시코기 얼굴 — 끝이 둥근 큰 귀·웃는 입, 단색 템플릿, 숫자 없음) → 메뉴: 서버 상태·만든 디바이스(크기·이름·켜짐·누가 쓰는 중)·«대시보드 열기»(웹 UI)·서버가 꺼져 있으면 «서버 켜기»·종료. 이미 떠 있는데 앱을 다시 열면 메뉴를 연다. 서버 HTTP API(토큰은 파일에서)만 읽고 로직은 없다. Xcode 가 없어 컴파일을 못 하면 앱을 열 때 웹 UI 가 바로 열리는 스크립트로 대신한다.
+**메인 화면** (M5·M9)
+- 디바이스 목록 하나 — 위에 **All · Android · iOS 탭**(마지막 탭 기억)과 그룹 거르기, 검색.
+- 한 줄에 `폭 · 이름 · 켜짐 · SLIM 배지 · 태그(기본 Android/iOS, 그룹들) · 메모 · 사용 중인 세션`.
+- 정렬: 켜진 것 → 기본 → 그룹에 든 것 → Corgi 가 만든 것. 나머지(Xcode 가 만들어 둔 시뮬레이터 등)는 «이 Mac 의 다른 디바이스» 로 접어 둔다.
+- `SLIM` 배지에 마우스를 올리면 꺼진 항목 수·메모리·슬림 전후(«7.8GB → 1.6GB (−79%)», M10). 재적용 실패는 `SLIM ⚠` + 이유.
+- 켜기·끄기는 점유 없이(사람), 다른 세션이 쓰는 중이면 막는다. SSE 로 바로 반영된다.
 
-## 15. 스킬 (S1~S9)
+**생성(+)** (M1·M4) — 플랫폼 → 기종(iOS 기기 종류 / Android 대표 프로필·직접 입력) → OS(런타임·시스템 이미지, 기본값 미리 골라 둠) → 이름(기본값 `corgi <기종>` 또는 `<기종>`, 겹치면 번호)·**슬림**(기본 켜짐, 옆 ⓘ 에 슬림화하면 안 되는 기능)·슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다.
 
-`integrations/skill/corgi/SKILL.md` → `~/.claude/skills/corgi` (S9). 2단계에서 쓴다. 스킬 형식을 읽는 다른 에이전트(Codex 등)는 `corgi install --agent <이름>` 으로 그 에이전트 위치에도 설치한다.
+**행 메뉴** (M7·M8) — 이름 변경 · 메모 · 그룹에 넣기/빼기 · 기본 디바이스로 · 슬림 켜기/끄기(Corgi 가 만든 것만) · 점유 강제 해제 · 삭제(Corgi 가 만든 것만, 확인 창. 기본 디바이스·켜짐·사용 중이면 이유와 함께 막음). 바깥을 누르거나 Esc 로 닫힌다.
 
-- description 에 S3 의 반응 프롬프트, S4 의 비반응(기기 한 대·단순 스크린샷 → argent 스킬)을 넣는다.
-- 본문 순서(S5): `corgi status` → `corgi use [--wait]` (바쁘면 사용자에게 묻기, S7) → `corgi list --json` 으로 기기별 `targetId`·`label` 받기 → 기기마다 argent: 앱 설치(`reinstall-app`)·실행(`launch-app`, Android 는 먼저 `adb reverse`)·같은 화면(`open-url` 또는 argent 흐름)·`screenshot` → 크기 라벨을 붙여 보고 → `corgi release` → 끌지 묻기(S8).
+**그룹 화면** (M9·R21) — 그룹 목록(이름·설명·디바이스 수·마지막으로 고친 사람/에이전트), 만들기·고치기(이름·설명·디바이스 고르기 — 목록에서 체크), 삭제. 없는 디바이스(밖에서 지워짐)는 표시하고 빼게 한다.
+
+**설정** (M11) — 언어(시스템 따름·한국어·English, R25) · 자동 해제 시간 · Android RAM·시스템 이미지 · simslim 프로필. `config.json` 에 쓰고 서버가 바로 반영한다.
+
+**디자인** (M12) — 귀엽지 않고 단정하게. 촘촘한 표 형태 목록, 시스템 글꼴, 숫자(폭·해상도·메모리)는 고정폭, 강조색 하나. 아이콘은 겹친 기기 프레임 같은 추상적 단색 모양(메뉴바는 템플릿 이미지). **구현 전에 시안을 보고 정한다.**
+
+**메뉴바** — 아이콘(단색 템플릿, 숫자 없음) → 메뉴: 서버 상태 · 켜진 디바이스와 사용 중인 세션 · «대시보드 열기»(앱 창) · 서버가 꺼져 있으면 «서버 켜기» · 종료. 문구는 설정 언어를 따른다(Swift 안의 작은 사전, 언어는 `status` 응답으로 받음). 서버 HTTP API(토큰은 파일에서)만 읽고 로직은 없다. 로그인 시 뜨게 등록한다(launchd `corgi.menubar`, `open -a`).
+
+나중에 **스크린샷 모아 보기**(R10)를 같은 화면에 탭으로 붙인다.
+
+## 15. 스킬 (S1~S10)
+
+`integrations/skill/corgi/SKILL.md` → `~/.claude/skills/corgi` (S9). **영어로 쓴다**(R25 — 읽는 쪽이 에이전트). 스킬 형식을 읽는 다른 에이전트(Codex 등)는 `corgi install --agent <이름>` 으로 그 에이전트 위치에도 설치한다.
+
+- description 에 S3 의 반응 프롬프트(디바이스가 필요한 작업 전부), S4 의 비반응(디바이스를 쓰지 않는 작업)을 넣는다. 테스트하는 앱의 «그룹» 기능과 헷갈리지 않게 «device group» 이라고 쓴다.
+- 본문 순서(S5): `corgi status` → **용도 고르기**: `corgi group list --json`(설명)·`corgi list --json`(메모)을 보고 맞는 그룹, 없으면 `--default` → `corgi use … [--available] [--wait]` — 일부가 사용 중이면 R23 기준(그룹 설명의 «모두 필요», 작업에 몇 대가 꼭 필요한지)으로 판단, 애매하면 사용자에게 묻기(S7) → `corgi list --json` 으로 기기별 `targetId`·`label` 받기 → 기기마다 argent: 앱 설치(`reinstall-app`)·실행(`launch-app`, Android 는 먼저 `adb reverse`)·같은 화면(`open-url` 또는 argent 흐름)·`screenshot` → 크기 라벨을 붙여 보고 → `corgi release` → 끌지 묻기(S8).
+- 그룹 만들기·고치기(S10): 사용자가 요청할 때만 `corgi group create|edit`. 요청 없이 남이 만든 그룹을 바꾸지 않는다.
+- 오류는 `code` 로 판단한다(`BUSY`·`DEADLOCK`·`NO_DEFAULT` …). `DEADLOCK` 이면 쥔 것으로 진행할지 놓을지 정한다.
 - 설치·연결 문제는 `corgi doctor` 결과를 따른다 (S1·S2).
 - `corgi status --json` 에 `update` 가 있으면 사용자에게 알리기만 하고 **직접 업데이트하지 않는다** (R19).
 
@@ -322,10 +369,11 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | 1 ✅ | 서버 + CLI 코어 — 레지스트리, Android·iOS 드라이버(생성·목록·이름·사용 안 함·삭제·켜기·끄기·슬림), 점유·대기·자동 해제, 소켓, launchd, `protocol.md`. **실제 디바이스로 확인**: iOS 생성+슬림 2분 22초, Android·iOS 동시 켜기 29초. 남은 확인은 §17 | CLI 로 크기별 디바이스를 만들고 점유해서 켠다 |
 | 2 ✅ | `doctor` + 스킬 — 설치·연결 점검(S1·S2), 스킬(S3~S8 — 앱 설치·실행·화면 이동은 argent 로 안내), `corgi install` 이 스킬도 설치. **남은 확인**: 실제 앱(NOVA)으로 «코기로 확인해 줘» 흐름을 처음부터 끝까지 돌려 보기 | «코기로 확인해 줘» 로 주 흐름(R15)이 돈다 |
 | 3 ✅ | 웹 UI + `Corgi.app` (앞당김 — 사람이 직접 보고 확인하려고) — HTTP API·SSE·토큰, 메인 목록(All·Android·iOS 탭), 생성(+)(iOS 시뮬레이터·Android 대표 프로필·직접 입력), 슬림 수치와 슬림 전후 비교, 메뉴바 앱(단색 아이콘·«대시보드 열기»), `corgi ui` | 사람이 메뉴바·브라우저로 전부 관리한다 |
-| 4 | 보호 — 훅, argent 규칙, 서버 꺼짐 처리 | 다른 세션이 남의 디바이스를 못 건드린다 |
-| 5 | MCP 래퍼 | 에이전트가 사용법 없이 바로 쓴다 |
-| U | 업데이트 — `scripts/release.ts`, 확인·알림, `corgi update`·되돌리기 (§19). **리모트·첫 Release 가 생긴 뒤**, 4단계 이후 아무 때나 | 새 버전을 알림 받고 명령 한 번으로 올린다 |
-| 나중 | 스크린샷 모아 보기 (웹 UI 탭) · 일괄 설치·실행·딥링크 (L1~L3) · 슬림된 디바이스를 원본으로 복제 (L4) — 필요하면 | — |
+| 4 | **사양 변경 (2026-10-05)** — ① 시안(디자인 M12)으로 화면 확정 ② 이 Mac 디바이스 전부 목록·레지스트리 재구성(R20, 사용 안 함 제거) ③ 생성: 기종 + OS, 슬림 선택·ⓘ(M1·M4) ④ 메모·기본 디바이스·그룹(R21·R22·R24) ⑤ 그룹 점유 모드·교착(R23, §8) ⑥ 슬림 자동 재적용·`SLIM` 배지(M6) ⑦ 오류 코드·현지화·설정(R25·M11) ⑧ 앱 창(WKWebView, R11) ⑨ 스킬 영어로 다시 쓰기. 항목마다 커밋 | 용도별 그룹·기본 디바이스로 요청하고, 앱 창에서 전부 관리한다 |
+| 5 | 보호 — 훅, argent 규칙, 서버 꺼짐 처리 (대상: 이 Mac 디바이스 전부, P1) | 다른 세션이 남의 디바이스를 못 건드린다 |
+| 6 | MCP 래퍼 | 에이전트가 사용법 없이 바로 쓴다 |
+| U | 업데이트 — `scripts/release.ts`, 확인·알림, `corgi update`·되돌리기 (§19). **리모트·첫 Release 가 생긴 뒤**, 5단계 이후 아무 때나 | 새 버전을 알림 받고 명령 한 번으로 올린다 |
+| 나중 | 스크린샷 모아 보기 (화면 탭) · 일괄 설치·실행·딥링크 (L1~L3) · 슬림된 디바이스 복제 (L4) · 이름 변경 (Q17) — 필요하면 | — |
 
 ## 17. 구현 전에 실측할 것
 
@@ -337,15 +385,16 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | simslim 0.8 → 0.11 변경점. 0.8 에서 확인함: `on --preserve-boot-state` 로 꺼진 기기도 슬림화(잠시 켬), `verify` 는 켜진 기기만, `list --json` 의 `managedDisabled` 는 켜진 기기만 나온다 | M6 | 업데이트 시 |
 | ✅ 컴파일한 바이너리에 웹 UI·파일이 잘 들어가는지, 훅 경로 시작 시간 — **확인됨(0단계)**: `with { type: "file" }` 는 `/$bunfs/root/…` 경로로 들어가 `Bun.file` 로 읽히고, HTML import 는 TSX 까지 번들돼 `Bun.serve` 로 서빙된다(`--bytecode` 포함, 다른 폴더로 옮겨도 동작). 훅 경로 약 21ms | §2·§3·§13 | 0단계 |
 | ✅ launchd 로 띄운 서버가 `emulator`·`xcrun` 을 PATH·권한 문제 없이 실행하는지 — **확인됨(2단계 전)**: `corgi install` 로 등록한 서버가 Android·iOS 를 만들고 함께 켰다(1분 16초, 슬림 없이). 등록하면 macOS 가 «백그라운드 항목 추가됨» 알림을 띄우고, 로그인 항목에 실행 파일 서명자 이름(개발 모드는 bun 의 «Jarred Sumner»)이 보인다 | launchd 는 로그인 셸 환경을 안 받는다 | 2단계 전 |
-| 에이전트별 MCP 서버의 부모가 에이전트 프로세스인지 (Claude Code 는 확인됨) | §7 | 5단계 |
-| argent 두 버전(homebrew 0.17.0 이 PATH 우선, mise 0.26.0) 정리 | 훅이 보는 argent 도구 인자가 버전마다 다를 수 있다 | 3단계 전 |
-| 다른 에이전트의 실행 직전 훅 지원 여부·설정 위치·입력 형식, 전역 규칙·스킬 위치 | §13 어댑터·P2·S9 | 3단계 전 |
+| 에이전트별 MCP 서버의 부모가 에이전트 프로세스인지 (Claude Code 는 확인됨) | §7 | 6단계 |
+| argent 두 버전(homebrew 0.17.0 이 PATH 우선, mise 0.26.0) 정리 | 훅이 보는 argent 도구 인자가 버전마다 다를 수 있다 | 5단계 전 |
+| 다른 에이전트의 실행 직전 훅 지원 여부·설정 위치·입력 형식, 전역 규칙·스킬 위치 | §13 어댑터·P2·S9 | 5단계 전 |
+| avdslim·simslim 이 끄는 항목을 사람이 읽을 이름으로 묶는 방법 (`avdslim profiles`·simslim 프로필 JSON) | M4 ⓘ | 4단계 ③ 전 |
+| `simctl list devicetypes`·`runtimes` 의 지원 관계(`supportedDeviceTypes`) | M1 iOS 기종·OS 고르기 | 4단계 ③ 전 |
 
 ## 18. 미결정 질문(Q)에 대한 설계 쪽 제안
 
 | Q | 제안 |
 | --- | --- |
-| Q9 묶어서 켜기 | `use`·`up` 은 플랫폼 구분 없이 지정한 것 전부. `--platform android` 로 좁힐 수 있게 |
 | Q16 훅 없는 에이전트 | 규칙 + CLI 의 BUSY 응답으로 보호. 훅을 지원하면 어댑터를 붙인다(§13) |
 
 ## 19. 업데이트 (R19)
@@ -358,7 +407,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 
 | 받는 쪽 | 방식 |
 | --- | --- |
-| 사람 | 새 버전마다 **macOS 알림 한 번**(`update.json` 에 보낸 버전 기록). 웹 UI 상단 배너 + «업데이트» 버튼. 메뉴바가 생기면 아이콘 표시 |
+| 사람 | 새 버전마다 **macOS 알림 한 번**(`update.json` 에 보낸 버전 기록). 앱 창 상단 배너 + «업데이트» 버튼. 메뉴바 아이콘 표시 |
 | 터미널 CLI | 하루 한 번 stderr 에 한 줄 — «corgi 0.3.0 이 있습니다 — `corgi update`». `--json` 출력에는 섞지 않는다 |
 | 에이전트 | `corgi status --json`·MCP 응답의 `update: {current, latest}` 필드. 스킬은 «알리기만, 직접 업데이트하지 않음» (§15) |
 
@@ -376,16 +425,19 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 
 ## 설계 결정 기록
 
-> 구조 수준의 결정(웹 UI · TS · 단일 실행 파일 · `Corgi.app` · 메뉴바 방식)은 `requirements.md` «결정 기록» 에 있다. 여기에는 구현 수준의 결정만 둔다.
+> 구조 수준의 결정(앱 창·웹 화면 · TS · 단일 실행 파일 · `Corgi.app` · 그룹 · 현지화)은 `requirements.md` «결정 기록» 에 있다. 여기에는 구현 수준의 결정만 둔다.
 
 | 결정 | 이유 | 버린 대안 |
 | --- | --- | --- |
-| **상태를 바꾸는 요청은 Unix 소켓으로만**, HTTP 는 웹 UI·메뉴바용 | 소켓은 파일 권한(0600)으로 이 사용자만 접근한다. localhost HTTP 는 브라우저를 통한 공격 경로가 있어 토큰·Origin 검사를 따로 둔다 | HTTP 하나로 통일 (simfleet 방식 — 훅·CLI 까지 웹 공격면에 노출) |
+| **상태를 바꾸는 요청은 Unix 소켓으로만**, HTTP 는 웹 화면·메뉴바용 | 소켓은 파일 권한(0600)으로 이 사용자만 접근한다. localhost HTTP 는 브라우저를 통한 공격 경로가 있어 토큰·Origin 검사를 따로 둔다 | HTTP 하나로 통일 (simfleet 방식 — 훅·CLI 까지 웹 공격면에 노출) |
 | **대기 항목은 세션에 붙인다** | CLI 는 Bash 시간 제한(최대 10분)에 끊길 수 있고, MCP 는 호출 시간 제한 때문에 «다시 호출» 해야 한다. 연결에 붙이면 끊길 때마다 순번을 잃는다 | 연결 기준 대기 (끊기면 순번 잃음) |
-| **훅은 명령 파싱 대신 식별자 문자열 포함으로 판정** | 셸 문법(`&&`·`$(…)`·변수)을 다 파싱할 수 없고, 파싱 누락이 곧 보호 구멍이다. 관리 디바이스 식별자는 충분히 고유하다 | 셸 파서로 `-s` 인자 추출 (우회 쉬움) |
+| **훅은 명령 파싱 대신 식별자 문자열 포함으로 판정** | 셸 문법(`&&`·`$(…)`·변수)을 다 파싱할 수 없고, 파싱 누락이 곧 보호 구멍이다. 디바이스 식별자(UDID·AVD ID·시리얼)는 충분히 고유하다 | 셸 파서로 `-s` 인자 추출 (우회 쉬움) |
 | **Android 시리얼은 `-port` 로 서버가 정한다** | 시리얼이 켤 때마다 바뀌는 문제를 대부분 없앤다. 밖에서 켠 경우만 역조회 | 매번 `adb devices` + 역조회 (느리고 훅에서 부담) |
 | **`main.ts` 에서 서브커맨드별 동적 import** | 훅은 Bash 호출마다 돈다. 서버·웹 코드를 불러오지 않아야 빠르다 | 진입점에서 전부 import |
 | **패키지 하나** (모노레포 아님) | 결과물이 실행 파일 하나다. 경계는 폴더와 import 규칙(§3)으로 지킨다 | workspaces 로 shared·server·cli·web 분리 (설정만 늘어남) |
 | **공용 호스트 아래에서는 터미널 탭(셸) 단위로 세션을 나눈다** (§7) | IDE·터미널 앱·tmux 는 여러 사람·에이전트 작업이 한 프로세스 아래 모인다. 호스트를 세션으로 보면 서로 다른 작업이 한 세션이 된다 | 호스트 프로세스를 세션으로 (전부 한 세션), 바로 위 셸을 세션으로 (에이전트가 명령마다 새 셸을 띄우면 매번 다른 세션) |
 | **업데이트 확인에 `gh` 인증을 그대로 쓴다** (§19) | 저장소가 프라이빗이라 인증이 필요한데, 토큰을 따로 받아 저장하면 관리할 비밀이 생긴다. 개발자 Mac 에는 `gh` 가 이미 로그인돼 있다 | Corgi 전용 토큰 저장 (비밀 관리 부담), 공개 저장소 (프라이빗 요구와 충돌) |
-| **원본 목록은 서버가 그때그때 읽는다** (M1·M9) | 원본은 Corgi 가 관리하지 않는다(Q7). Xcode·Android Studio 에서 바뀌어도 바로 맞도록 저장하지 않는다. Corgi 가 만든 것(`corgi_` AVD·레지스트리의 UDID)은 «전체 목록» 에 표시만 하고 원본 후보에서는 뺀다 | 원본도 레지스트리에 등록 (관리 대상이 아닌데 상태를 맞춰야 함) |
+| **디바이스 목록은 드라이버에서 그때그때 읽고, 레지스트리엔 Corgi 가 붙인 정보만** (R20·§6) | Xcode·Android Studio 에서 기기가 바뀌어도 바로 맞는다. 붙인 정보(메모·그룹·기본·슬림)는 `native`(UDID·AVD ID)로 잇는다. 기기가 사라져도 정보는 남겨 두었다가 다시 보이면 되살린다 | 기기 목록을 레지스트리에 저장 (밖의 변경과 맞추는 일이 생김) |
+| **그룹 점유 모드는 `all` 기본 + `--available`, 교착은 서버가 감지** (§8·R23) | 판단은 에이전트가 하되(R23), 기본은 가장 안전한 «전부 아니면 전무». `available + 대기` 만 일부를 쥔 채 기다리므로 그때만 대기 관계 순환을 검사하면 된다 | 교착을 막으려고 일부 점유 + 대기 금지 (레이아웃 체크에서 나머지를 기다릴 수 없음), 감지 없음 (서로 영원히 기다림 — 30분 규칙으로만 풀림) |
+| **오류는 코드 + 키 + 값, 문장은 창구가 만든다** (§11·R25) | 창구마다 언어 설정이 다를 수 있고, 에이전트는 문장이 아니라 코드로 판단해야 한다. 영어 `message` 를 함께 실어 사전에 없는 키도 읽힌다 | 서버가 설정 언어로 문장 생성 (CLI·화면 언어가 다르면 섞임) |
+| **앱 창은 Swift 껍데기 + WKWebView, 화면은 웹 하나** (§14·R11) | 화면을 한 번만 만들고 브라우저·argent 로 확인한다. Dock 아이콘은 창이 열린 동안만 보여 메뉴바 앱의 가벼움을 유지한다 | SwiftUI 로 화면 다시 작성 (두 벌 유지), 창을 늘 띄우는 일반 앱 (메뉴바 앱과 역할이 겹침) |

@@ -13,7 +13,7 @@ function isAgent(name: string | undefined): name is Agent {
 
 /**
  * 에이전트 훅 진입점 (`corgi hook <에이전트> <이벤트>`).
- * 지금은 입력을 읽고 모두 통과시킨다 — 판정은 3단계에서 붙인다 (P3~P9).
+ * 지금은 입력을 읽고 모두 통과시킨다 — 판정은 5단계에서 붙인다 (P3~P9).
  * 아무것도 출력하지 않고 0 으로 끝나면 에이전트는 평소대로 진행한다.
  */
 export async function runHook(

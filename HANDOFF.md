@@ -1,4 +1,4 @@
-# 인계 — Corgi (크기별 디바이스 레이아웃 확인 도구)
+# 인계 — Corgi (시뮬레이터·에뮬레이터 중개·관리 도구)
 
 > 2026-10-01~02, xb3-client(NOVA) 세션에서 정리한 내용. 이 폴더에서 새 세션을 시작할 때 **이 파일과 `requirements.md` 를 먼저 읽는다.**
 
@@ -9,7 +9,7 @@
 | `requirements.md` | 요구사항 정본 (기능 R · 앱 화면 M · 스킬 S · 보호 P · 미결정 Q · **결정 기록**) |
 | `reference-design-draft.md` | 요구사항 정리 **전** 첫 설계 초안 — **확정 아님, 참고용**. `requirements.md` 와 충돌하면 그쪽이 이긴다 |
 | `HANDOFF.md` | 이 파일 — 배경, 실측으로 확인한 사실, 지금 머신 상태, 시작 프롬프트 |
-| `docs/design.md` | 설계안 — 저장소 구조·기술 선택·점유·훅·CLI·단계 (**v0.2 검토 중**) |
+| `docs/design.md` | 설계안 — 저장소 구조·기술 선택·점유·훅·CLI·단계 (**v0.3**) |
 | `CLAUDE.md` | 작업 규칙 — 읽는 순서, 문서 규칙, **커밋 규칙** |
 
 ## 진행 상태
@@ -20,7 +20,8 @@
 - **1단계(서버 + CLI 코어) 완료** — `corgi serve`·`install`·`status`·`catalog`·`create`·`list`·`use`·`up`·`down`·`acquire`·`release`·`who` 등. 실제 Android·iOS 디바이스로 만들기·켜기·점유를 확인하고 시험 디바이스는 지웠다. 남은 확인(에이전트별 프로세스 트리)은 `docs/design.md` §17
 - **2단계(doctor + 스킬) 완료** — 앱 설치·실행·딥링크는 argent 로 하기로 하고 Corgi 일괄 기능은 «나중에»(L1~L3). 스킬은 `~/.claude/skills/corgi` 에 설치됨. 남은 확인: NOVA 로 «코기로 확인해 줘» 처음부터 끝까지
 - **3단계(웹 UI + `Corgi.app`) 완료** — 순서를 앞당겼다(훅은 4단계로). 웹 UI(`corgi ui`·메뉴바 «대시보드 열기»): 만든 디바이스 목록(All·Android·iOS 탭), 생성(+)은 iOS 시뮬레이터·Android 대표 프로필·직접 입력, 같은 크기 여러 대 허용(이름만 안 겹치게), 슬림 수치와 슬림 전후 비교(만들 때 기준값 측정). `Corgi.app` 은 메뉴바 앱(단색 웰시코기 아이콘)
-- 다음은 4단계(보호: 훅). 시작 전에 에이전트별 프로세스 트리·Claude 훅 세션 ID 실측(`docs/design.md` §17), argent 두 버전 정리
+- **2026-10-05 사양 변경** — 레이아웃 확인 전용 → 이 Mac 의 디바이스 전부를 중개(R20). 용도별 **그룹**·**기본 디바이스**(Android·iOS 1대씩)·디바이스 메모, 만들 때 슬림 선택(슬림만 `corgi` 접두사), 그룹 점유는 에이전트가 판단(R23), «사용 안 함» 제거, 슬림은 자동 재적용 + `SLIM` 배지, 화면은 `Corgi.app` 창(WKWebView), 귀엽지 않은 디자인, 한국어·영어(설정에서 선택). 이름 변경은 나중에(Q17 — SimPool 은 bitomule/simpool 과 겹침)
+- 다음은 **4단계(사양 변경 구현)** — 시안부터(`docs/design.md` §16). 그 뒤 5단계(보호: 훅) — 시작 전에 에이전트별 프로세스 트리·Claude 훅 세션 ID 실측(§17), argent 두 버전 정리
 - 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `Corgi.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
 - 범용 도구 → NOVA 레포(xb3-client)와 분리해 별도 프로젝트로 만든다
 

@@ -1,6 +1,6 @@
 # Corgi — 작업 규칙
 
-크기별 디바이스 레이아웃 확인 도구 — TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 로컬 MCP + 스킬. 단일 실행 파일로 배포하고, 개발 중에는 `bun link` 로 쓴다.
+시뮬레이터·에뮬레이터 중개·관리 도구(용도별 그룹·기본 디바이스·UI 테스트용 슬림 디바이스) — TypeScript(Bun) 상주 서버 + CLI + 웹 화면(`Corgi.app` 창) + 로컬 MCP + 스킬. 단일 실행 파일로 배포하고, 개발 중에는 `bun link` 로 쓴다.
 
 **기술 스택**: TypeScript 7 · Bun 1.3.6(`mise.toml`) · commander · zod 4 · `bun:ffi`(libproc) · Biome · `bun test`. 배포는 `bun build --compile` 단일 실행 파일. 자세한 표는 `docs/design.md` §2, 소켓 메시지는 `docs/protocol.md`.
 
