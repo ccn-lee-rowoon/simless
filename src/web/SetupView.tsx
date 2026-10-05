@@ -1,8 +1,10 @@
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import type {
   CheckId,
   CheckView,
+  FixId,
   InstallState,
+  JobView,
   SetupAgents,
   SetupItem,
   SetupStatus,
@@ -10,7 +12,7 @@ import type {
   StatusResult,
 } from "../shared/api.ts";
 import { type MessageKey, t } from "../shared/i18n.ts";
-import { call } from "./api.ts";
+import { call, subscribe } from "./api.ts";
 import { postToApp } from "./bridge.ts";
 import { PlatformIcon } from "./icons.tsx";
 import type { Act } from "./types.ts";
@@ -59,6 +61,60 @@ export function SetupView({
   }, []);
   useEffect(load, [load]);
 
+  // 바로 설치 (M14) — 서버가 돌리는 설치와 그 출력. 항목(fix)마다 마지막 실행 하나
+  const [jobs, setJobs] = useState<Partial<Record<FixId, JobView>>>({});
+  useEffect(() => {
+    call<JobView[]>("setup.jobs").then(
+      (list) => setJobs(Object.fromEntries(list.map((j) => [j.fix, j]))),
+      () => {},
+    );
+    return subscribe({
+      output: (id, line) =>
+        setJobs((all) => {
+          const job = Object.values(all).find((j) => j?.id === id);
+          return job ? { ...all, [job.fix]: { ...job, lines: [...job.lines, line] } } : all;
+        }),
+      job: (job) => {
+        setJobs((all) => ({
+          ...all,
+          [job.fix]: { ...job, lines: all[job.fix]?.lines ?? job.lines },
+        }));
+        // 끝나면 다시 확인한다 — 설치됐으면 ✓ 로 바뀐다
+        if (job.status === "done") load();
+      },
+    });
+  }, [load]);
+  const fixes: FixControls = {
+    jobs,
+    // 시작은 바로 돌아온다 — 결과는 출력 창에. 시작 못 하면 그 오류를 출력 창에
+    run: (fix) => {
+      void call<JobView>("setup.run", { fix }).then(
+        // 출력이 응답보다 먼저 올 수 있다 — 이미 받고 있는 같은 실행이면 덮어쓰지 않는다
+        (job) => setJobs((all) => (all[fix]?.id === job.id ? all : { ...all, [fix]: job })),
+        (error: unknown) =>
+          setJobs((all) => ({
+            ...all,
+            [fix]: {
+              id: `error-${fix}`,
+              fix,
+              status: "failed",
+              lines: [String((error as Error).message ?? error)],
+              command: "",
+              startedAt: Date.now(),
+              endedAt: Date.now(),
+            },
+          })),
+      );
+    },
+    cancel: (job) => act(t("web.setup.fix.cancel"), () => call("setup.cancel", { job: job.id })),
+    terminal: (fix) => act(t("web.setup.fix.terminal"), () => call("setup.openTerminal", { fix })),
+    hide: (fix) =>
+      setJobs((all) => {
+        const { [fix]: _gone, ...rest } = all;
+        return rest;
+      }),
+  };
+
   const index = STEPS.findIndex((s) => s.id === step);
   const finish = () =>
     act(t("web.setup.finish"), async () => {
@@ -101,7 +157,9 @@ export function SetupView({
       </ol>
 
       <section className="setup-body">
-        {step === "check" && <CheckStep setup={setup} checking={checking} onRecheck={load} />}
+        {step === "check" && (
+          <CheckStep setup={setup} checking={checking} onRecheck={load} fixes={fixes} />
+        )}
         {step === "agents" && (
           <AgentsStep
             agents={setup?.agents}
@@ -145,14 +203,25 @@ export function SetupView({
 
 const MARK: Record<CheckView["status"], string> = { ok: "✓", warn: "!", fail: "✕" };
 
+/** 바로 설치 — 항목마다 실행·취소·터미널·닫기 */
+interface FixControls {
+  jobs: Partial<Record<FixId, JobView>>;
+  run: (fix: FixId) => void;
+  cancel: (job: JobView) => void;
+  terminal: (fix: FixId) => void;
+  hide: (fix: FixId) => void;
+}
+
 function CheckStep({
   setup,
   checking,
   onRecheck,
+  fixes,
 }: {
   setup: SetupStatus | null;
   checking: boolean;
   onRecheck: () => void;
+  fixes: FixControls;
 }) {
   const byId = new Map((setup?.checks ?? []).map((c) => [c.id, c]));
   const shown = CHECK_SECTIONS.flatMap((s) => s.ids.flatMap((id) => byId.get(id) ?? []));
@@ -189,16 +258,7 @@ function CheckStep({
                 <h3>{t(section.label)}</h3>
                 <ul className="setup-checks">
                   {checks.map((c) => (
-                    <li key={c.id} className="setup-check">
-                      <span className={`setup-mark setup-mark-${c.status}`} aria-hidden="true">
-                        {MARK[c.status]}
-                      </span>
-                      <div className="setup-check-text">
-                        <span className="strong">{c.name}</span>
-                        <span className="sub">{c.detail}</span>
-                        {c.fix && <Command text={c.fix} />}
-                      </div>
-                    </li>
+                    <CheckRow key={c.id} check={c} fixes={fixes} />
                   ))}
                 </ul>
               </div>
@@ -207,6 +267,106 @@ function CheckStep({
         </>
       )}
     </>
+  );
+}
+
+const ACTION_LABEL: Record<NonNullable<CheckView["action"]>["kind"], MessageKey> = {
+  install: "web.setup.install",
+  update: "web.setup.update",
+  open: "web.setup.fix.open",
+};
+
+/** 점검 한 줄 — 고칠 수 있으면 버튼, 누르면 아래에 실행 출력 */
+function CheckRow({ check: c, fixes }: { check: CheckView; fixes: FixControls }) {
+  const action = c.action;
+  const job = action ? fixes.jobs[action.fix] : undefined;
+  const running = job?.status === "running";
+  return (
+    <li className="setup-check setup-check-row">
+      <span className={`setup-mark setup-mark-${c.status}`} aria-hidden="true">
+        {MARK[c.status]}
+      </span>
+      <div className="setup-check-text">
+        <span className="strong">{c.name}</span>
+        <span className="sub">{c.detail}</span>
+        {/* 버튼으로 못 고치는 것만 명령을 보여 준다(복사) */}
+        {c.fix && !action && <Command text={c.fix} />}
+        {action?.fix === "argent.install" && !job && (
+          <span className="notice-inline setup-fix-warn">{t("web.setup.fix.argentWarn")}</span>
+        )}
+        {job && action && <FixTerminal job={job} fixes={fixes} openOnly={action.kind === "open"} />}
+      </div>
+      {action && (
+        <button
+          type="button"
+          className={
+            action.kind === "open" ? "button button-small" : "button button-primary button-small"
+          }
+          disabled={running}
+          onClick={() => fixes.run(action.fix)}
+        >
+          {running ? t("web.setup.fix.running") : t(ACTION_LABEL[action.kind])}
+        </button>
+      )}
+    </li>
+  );
+}
+
+/** 설치 출력 — 터미널처럼 한 줄씩, 끝나면 결과와 버튼 */
+function FixTerminal({
+  job,
+  fixes,
+  openOnly,
+}: {
+  job: JobView;
+  fixes: FixControls;
+  openOnly: boolean;
+}) {
+  const box = useRef<HTMLPreElement>(null);
+  // 새 줄이 오면 맨 아래로
+  useEffect(() => {
+    void job.lines.length;
+    box.current?.scrollTo({ top: box.current.scrollHeight });
+  }, [job.lines.length]);
+  if (openOnly && job.status === "done") return null;
+  const seconds = job.endedAt ? Math.max(1, Math.round((job.endedAt - job.startedAt) / 1000)) : 0;
+  return (
+    <div className="setup-terminal-wrap">
+      <pre ref={box} className="setup-terminal mono">
+        {job.lines.join("\n")}
+      </pre>
+      <div className="setup-terminal-status">
+        <span className={`setup-job setup-job-${job.status}`}>
+          {job.status === "running"
+            ? t("web.setup.fix.running")
+            : job.status === "done"
+              ? t("web.setup.fix.done", { seconds })
+              : job.status === "canceled"
+                ? t("web.setup.fix.canceled")
+                : t("web.setup.fix.failed", { code: job.exitCode ?? "?" })}
+        </span>
+        <span className="spacer" />
+        {job.status === "running" ? (
+          <button type="button" className="button button-small" onClick={() => fixes.cancel(job)}>
+            {t("web.setup.fix.cancel")}
+          </button>
+        ) : (
+          <button type="button" className="button button-small" onClick={() => fixes.hide(job.fix)}>
+            {t("web.setup.fix.hide")}
+          </button>
+        )}
+        {job.status !== "done" && job.status !== "running" && (
+          <button
+            type="button"
+            className="button button-small"
+            title={t("web.setup.fix.inputHint")}
+            onClick={() => fixes.terminal(job.fix)}
+          >
+            {t("web.setup.fix.terminal")}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -127,6 +127,7 @@ export async function runChecks(
     status: sdkOk ? "ok" : "fail",
     detail: sdkOk ? sdk : t("doctor.sdk.missing", { path: sdk }),
     fix: sdkOk ? undefined : installHints().androidSdk,
+    action: sdkOk ? undefined : { fix: "androidStudio.open", kind: "open" },
   });
   const imagesDir = join(sdk, "system-images");
   const images = existsSync(imagesDir)
@@ -139,6 +140,7 @@ export async function runChecks(
     status: images.length > 0 ? "ok" : "fail",
     detail: images.length > 0 ? images.join(", ") : t("common.none"),
     fix: images.length > 0 ? undefined : installHints().systemImage,
+    action: images.length > 0 ? undefined : { fix: "androidStudio.open", kind: "open" },
   });
   const avdslim = which("avdslim");
   const avdslimVersion = avdslim ? await version([avdslim, "version"]) : undefined;
@@ -155,6 +157,11 @@ export async function runChecks(
       : outdated.has("avdslim")
         ? "brew upgrade avdslim"
         : undefined,
+    action: !avdslim
+      ? { fix: "avdslim.install", kind: "install" }
+      : outdated.has("avdslim")
+        ? { fix: "avdslim.upgrade", kind: "update" }
+        : undefined,
   });
 
   // iOS
@@ -169,6 +176,7 @@ export async function runChecks(
         ? ((await version(["xcodebuild", "-version"])) ?? t("doctor.present"))
         : t("common.none"),
     fix: simctl.code === 0 ? undefined : installHints().xcode,
+    action: simctl.code === 0 ? undefined : { fix: "xcode.open", kind: "open" },
   });
   const simslim = which("simslim");
   const simslimVersion = simslim ? await version([simslim, "version"]) : undefined;
@@ -184,6 +192,11 @@ export async function runChecks(
       ? installHints().simslim
       : outdated.has("simslim")
         ? "brew upgrade simslim"
+        : undefined,
+    action: !simslim
+      ? { fix: "simslim.install", kind: "install" }
+      : outdated.has("simslim")
+        ? { fix: "simslim.upgrade", kind: "update" }
         : undefined,
   });
 
@@ -216,6 +229,7 @@ export async function runChecks(
         : distinct.size > 1
           ? t("doctor.argent.fix")
           : undefined,
+    action: argents.length === 0 ? { fix: "argent.install", kind: "install" } : undefined,
   });
   const skillViews = await Promise.all(
     loadSkillLocations(ctx.paths.skills).map((l) => locationStatus(l)),

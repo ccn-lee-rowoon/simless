@@ -1,4 +1,13 @@
-import type { CheckView, DeviceView, HolderView, SlimStats, StatusResult } from "../shared/api.ts";
+import type { Fix } from "../install/fixes.ts";
+import type {
+  CheckView,
+  DeviceView,
+  FixId,
+  HolderView,
+  JobView,
+  SlimStats,
+  StatusResult,
+} from "../shared/api.ts";
 import type { Config } from "../shared/config.ts";
 import { type Lang, resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
 import { type Device, layoutHeight, layoutWidth, sizeLabel } from "../shared/model.ts";
@@ -32,6 +41,8 @@ export interface ServerDeps {
   selfCommand?: string[];
   /** 설정 창의 점검 — 기본은 corgi doctor 와 같은 점검. 테스트는 바꾼다 */
   setupChecks?: () => Promise<CheckView[]>;
+  /** 설정 창의 설치 명령 — 기본은 install/fixes.ts. 테스트는 가짜 명령으로 바꾼다 */
+  fixes?: Partial<Record<FixId, Fix>>;
   isAlive?: (pid: number, startedAt: number | undefined) => boolean;
 }
 
@@ -54,9 +65,15 @@ const READ_ONLY = new Set([
   "lease.sessions",
   "settings.get",
   "hook.check",
+  "setup.jobs",
 ]);
 
-export type ServerEvent = { type: "changed" } | { type: "progress"; message: string };
+export type ServerEvent =
+  | { type: "changed" }
+  | { type: "progress"; message: string }
+  /** 설정 창의 설치 — 출력 한 줄, 상태가 바뀜 (M14) */
+  | { type: "output"; job: string; line: string }
+  | { type: "job"; job: JobView };
 
 export class CorgiServer {
   readonly registry: Registry;
@@ -165,7 +182,7 @@ export class CorgiServer {
   }
 
   /** 첫 실행 설정 창이 쓰는 것 (M14) */
-  get setupDeps(): Pick<ServerDeps, "env" | "selfCommand" | "setupChecks"> {
+  get setupDeps(): Pick<ServerDeps, "env" | "selfCommand" | "setupChecks" | "fixes"> {
     return this.deps;
   }
 

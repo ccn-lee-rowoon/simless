@@ -17,6 +17,7 @@ import {
   mcpStatus,
   uninstallMcp,
 } from "../install/claude-mcp.ts";
+import { FIXES, type Fix, fixCommandLine } from "../install/fixes.ts";
 import { selfCommand } from "../install/launchd.ts";
 import {
   combineStates,
@@ -27,11 +28,13 @@ import {
   saveSkillLocations,
   uninstallSkillAt,
 } from "../install/skill.ts";
-import type { SetupAgents, SetupStatus, SkillLocation } from "../shared/api.ts";
+import type { FixId, SetupAgents, SetupStatus, SkillLocation } from "../shared/api.ts";
+import { run } from "../shared/exec.ts";
 import { t } from "../shared/i18n.ts";
 import type { Paths } from "../shared/paths.ts";
 import { VERSION } from "../shared/version.ts";
 import type { CorgiServer } from "./app.ts";
+import { isFixId, Jobs } from "./jobs.ts";
 import { parse } from "./params.ts";
 import { HandlerError } from "./socket.ts";
 import { readJson, writeJson } from "./store.ts";
@@ -48,6 +51,9 @@ const ScopeParams = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("global") }),
   z.object({ kind: z.literal("project"), paths: z.array(z.string().min(1)).min(1) }),
 ]);
+
+const FixParams = z.object({ fix: z.string() });
+const JobParams = z.object({ job: z.string() });
 
 const ApplyParams = z.object({
   item: z.enum(["skill", "mcp", "protection"]),
@@ -159,6 +165,33 @@ export function registerSetupMethods(server: CorgiServer): void {
     saveSkillLocations(server.paths.skills, next);
     await checkSkillUpdate();
     return agents();
+  });
+
+  // --- 바로 설치 (M14) — 정해 둔 명령만, 뒤에서 돌리고 출력을 SSE 로 ---
+  const fixes = { ...FIXES, ...deps.fixes } as Record<FixId, Fix>;
+  const jobs = new Jobs(
+    (event) => server.publish(event),
+    () => env,
+  );
+  const fixOf = (id: string): Fix => {
+    if (!isFixId(id, fixes)) throw new HandlerError("INVALID", t("setup.unknownFix", { fix: id }));
+    return fixes[id];
+  };
+
+  server.addMethod("setup.run", async (p) => jobs.start(fixOf(parse(FixParams, p).fix)));
+  server.addMethod("setup.jobs", async () => jobs.list());
+  server.addMethod("setup.cancel", async (p) => {
+    const job = jobs.cancel(parse(JobParams, p).job);
+    if (!job) throw new HandlerError("NOT_FOUND", parse(JobParams, p).job);
+    return job;
+  });
+  /** 창에서 안 될 때(입력이 필요할 때) — 터미널 앱에 같은 명령을 띄운다 */
+  server.addMethod("setup.openTerminal", async (p) => {
+    const line = fixCommandLine(fixOf(parse(FixParams, p).fix));
+    const script = `tell application "Terminal"\nactivate\ndo script "${line.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"\nend tell`;
+    const result = await run(["osascript", "-e", script], { timeoutMs: 10_000 });
+    if (result.code !== 0) throw new HandlerError("FAILED", result.stderr.trim() || "osascript");
+    return { opened: true };
   });
 
   server.addMethod("setup.finish", async () => {

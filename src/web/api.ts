@@ -1,3 +1,5 @@
+import type { JobView } from "../shared/api.ts";
+
 // 서버 HTTP API 클라이언트 — 토큰은 corgi ui 가 주소의 #token= 으로 넘긴다.
 
 const TOKEN_KEY = "corgi-token";
@@ -43,18 +45,26 @@ export async function call<T>(method: string, params: unknown = {}): Promise<T> 
 }
 
 export function subscribe(handlers: {
-  changed: () => void;
-  progress: (message: string) => void;
-  connection: (online: boolean) => void;
+  changed?: () => void;
+  progress?: (message: string) => void;
+  connection?: (online: boolean) => void;
+  /** 설정 창의 설치 — 출력 한 줄 (M14) */
+  output?: (job: string, line: string) => void;
+  /** 설치 상태가 바뀜 */
+  job?: (job: JobView) => void;
 }): () => void {
   const source = new EventSource(`/api/events?token=${encodeURIComponent(token ?? "")}`);
-  source.addEventListener("hello", () => handlers.connection(true));
-  source.addEventListener("changed", () => handlers.changed());
-  source.addEventListener("progress", (event) => {
-    handlers.progress(
-      (JSON.parse((event as MessageEvent<string>).data) as { message: string }).message,
-    );
+  const data = <T>(event: Event) => JSON.parse((event as MessageEvent<string>).data) as T;
+  source.addEventListener("hello", () => handlers.connection?.(true));
+  source.addEventListener("changed", () => handlers.changed?.());
+  source.addEventListener("progress", (event) =>
+    handlers.progress?.(data<{ message: string }>(event).message),
+  );
+  source.addEventListener("output", (event) => {
+    const { job, line } = data<{ job: string; line: string }>(event);
+    handlers.output?.(job, line);
   });
-  source.onerror = () => handlers.connection(false);
+  source.addEventListener("job", (event) => handlers.job?.(data<{ job: JobView }>(event).job));
+  source.onerror = () => handlers.connection?.(false);
   return () => source.close();
 }

@@ -4,7 +4,13 @@ import { join } from "node:path";
 import { mcpAddArgs, mcpStatus } from "../src/install/claude-mcp.ts";
 import { CorgiServer } from "../src/server/app.ts";
 import { listen } from "../src/server/socket.ts";
-import type { CheckView, SetupAgents, SetupStatus, StatusResult } from "../src/shared/api.ts";
+import type {
+  CheckView,
+  JobView,
+  SetupAgents,
+  SetupStatus,
+  StatusResult,
+} from "../src/shared/api.ts";
 import { call } from "../src/shared/client.ts";
 import { VERSION } from "../src/shared/version.ts";
 import { fakeDriver, session, tempEnv, testServers } from "./helpers.ts";
@@ -213,5 +219,104 @@ describe("Claude Code MCP 등록", () => {
     expect(mcpStatus(COMMAND, env.env)).toBe("current");
     write("/old/corgi", ["mcp"]);
     expect(mcpStatus(COMMAND, env.env)).toBe("outdated");
+  });
+});
+
+describe("설정 창에서 바로 설치 (M14)", () => {
+  const startJobs = testServers();
+  const sh = (script: string) => ["/bin/sh", "-c", script];
+  const start = () =>
+    startJobs({
+      deps: (env) => ({
+        env: { ...env.env, PATH: "/usr/bin:/bin" },
+        setupChecks: async () => CHECKS,
+        fixes: {
+          "simslim.install": {
+            id: "simslim.install",
+            kind: "run",
+            steps: [{ command: sh("echo one; echo two 1>&2") }, { command: sh("echo three") }],
+          },
+          // 처음에는 «trust» 를 요구하고, 믿는다고 하면 된다 — avdslim tap 과 같은 모양
+          "avdslim.install": {
+            id: "avdslim.install",
+            kind: "run",
+            steps: [
+              {
+                command: sh(
+                  '[ -f "$HOME/trusted" ] && echo installed || { echo "please trust"; exit 1; }',
+                ),
+                retryWhen: /trust/,
+                retry: sh('touch "$HOME/trusted"'),
+              },
+            ],
+          },
+          "argent.install": {
+            id: "argent.install",
+            kind: "run",
+            steps: [{ command: sh("echo slow; sleep 5") }],
+          },
+          "simslim.upgrade": {
+            id: "simslim.upgrade",
+            kind: "run",
+            steps: [{ command: sh("exit 3") }],
+          },
+        },
+      }),
+    });
+
+  /** 끝날 때까지 기다린다 */
+  async function finished(H: (m: string, p?: unknown) => Promise<JobView[]>, fix: string) {
+    for (let i = 0; i < 100; i++) {
+      const job = (await H("setup.jobs")).find((j) => j.fix === fix);
+      if (job && job.status !== "running") return job;
+      await Bun.sleep(20);
+    }
+    throw new Error(`${fix} 이 끝나지 않음`);
+  }
+
+  test("정해 둔 명령을 단계대로 돌리고 출력을 줄마다 남긴다", async () => {
+    const { H, server } = await start();
+    const events: string[] = [];
+    server.subscribe((e) => {
+      if (e.type === "output") events.push(e.line);
+    });
+    const started = (await H("setup.run", { fix: "simslim.install" })) as JobView;
+    expect(started.status).toBe("running");
+    const job = await finished(H, "simslim.install");
+    expect(job.status).toBe("done");
+    expect(job.exitCode).toBe(0);
+    expect(job.lines).toEqual([
+      "$ /bin/sh -c echo one; echo two 1>&2",
+      "one",
+      "two",
+      "$ /bin/sh -c echo three",
+      "three",
+    ]);
+    expect(events).toEqual(job.lines);
+  });
+
+  test("출력에 정해 둔 글이 있으면 고치는 명령을 돌리고 한 번 더 한다", async () => {
+    const { H } = await start();
+    await H("setup.run", { fix: "avdslim.install" });
+    const job = await finished(H, "avdslim.install");
+    expect(job.status).toBe("done");
+    expect(job.lines).toContain("please trust");
+    expect(job.lines.at(-1)).toBe("installed");
+  });
+
+  test("실패하면 종료 코드, 돌던 것은 취소할 수 있다", async () => {
+    const { H } = await start();
+    await H("setup.run", { fix: "simslim.upgrade" });
+    expect(await finished(H, "simslim.upgrade")).toMatchObject({ status: "failed", exitCode: 3 });
+
+    const slow = (await H("setup.run", { fix: "argent.install" })) as JobView;
+    // 같은 항목을 또 누르면 돌던 것을 그대로 준다
+    expect(((await H("setup.run", { fix: "argent.install" })) as JobView).id).toBe(slow.id);
+    expect(((await H("setup.cancel", { job: slow.id })) as JobView).status).toBe("canceled");
+  });
+
+  test("정해 두지 않은 항목은 실행하지 않는다", async () => {
+    const { H } = await start();
+    expect((await H("setup.run", { fix: "rm -rf /" })).code).toBe("INVALID");
   });
 });

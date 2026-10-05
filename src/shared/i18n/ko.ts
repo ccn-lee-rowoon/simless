@@ -547,4 +547,16 @@ export const ko = {
   "web.skillUpdate.desc":
     "넣어 둔 스킬이 이 Corgi 와 다릅니다. 업데이트하면 새로 시작하는 에이전트 세션부터 새 사용법을 따릅니다.",
   "web.skillUpdate.action": "스킬 업데이트",
+  "setup.unknownFix": "실행할 수 없는 항목입니다: {fix}",
+  "web.setup.fix.open": "열기",
+  "web.setup.fix.running": "실행 중…",
+  "web.setup.fix.done": "끝 ({seconds}초) — 다시 확인했습니다",
+  "web.setup.fix.failed": "실패 (종료 코드 {code})",
+  "web.setup.fix.canceled": "취소했습니다",
+  "web.setup.fix.cancel": "취소",
+  "web.setup.fix.terminal": "터미널에서 열기",
+  "web.setup.fix.hide": "닫기",
+  "web.setup.fix.argentWarn":
+    "argent 설치 프로그램은 Claude Code 같은 에이전트 설정(MCP·규칙)도 함께 고칩니다.",
+  "web.setup.fix.inputHint": "관리자 암호나 확인 입력이 필요하면 «터미널에서 열기» 로 실행하세요.",
 } as const;

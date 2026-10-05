@@ -77,6 +77,10 @@
 | `setup.status` | `{}` | `{ needed, finishedAt?, checks: CheckView[], agents: { claude, skill, skillLocations: [{ location, state, targets }], mcp, hook, rule } }` | 첫 실행 설정 창 (M14). `checks` 는 `corgi doctor` 와 같은 점검(항목마다 `id` — `server`·`launchd`·`xcode`·`simslim`·`androidSdk`·`images`·`avdslim`·`argent`·…). `agents` 는 설치 상태 `missing`·`outdated`·`current`, `claude` 는 claude 명령이 있는지. 점검에 몇 초 걸린다 |
 | `setup.skillScope` | `{ kind: "global" }` · `{ kind: "project", paths: [폴더] }` | `agents` | 스킬을 넣는 곳 바꾸기 (S9) — 빠진 곳은 지우고 새 곳에 넣는다. 프로젝트는 작업 트리마다 넣고 `.git/info/exclude` 에 적는다. 없는 폴더는 `INVALID` |
 | `setup.apply` | `{ item: "skill" \| "mcp" \| "protection", enabled }` | `agents` (위와 같음) | 켜면 설치·끄면 제거. `protection` = 훅 + 규칙. `mcp` 는 `claude mcp add --scope user corgi -- <corgi> mcp` — claude 가 없으면 `TOOL_MISSING` |
+| `setup.run` | `{ fix }` | `JobView` — `{ id, fix, status: running·done·failed·canceled, lines, command, startedAt, endedAt?, exitCode? }` | 바로 설치 (M14). `fix` 는 정해 둔 항목(`simslim.install`·`simslim.upgrade`·`avdslim.install`·`avdslim.upgrade`·`argent.install`·`xcode.open`·`androidStudio.open`)만, 그 밖은 `INVALID`. 바로 돌려주고 뒤에서 돈다 — 출력은 SSE `output { job, line }`, 상태는 `job { job }`. 같은 항목이 돌고 있으면 그것을 준다 |
+| `setup.jobs` | `{}` | `JobView[]` | 돌고 있거나 끝난 설치 (항목마다 마지막 하나) |
+| `setup.cancel` | `{ job }` | `JobView` | 돌던 것을 멈춘다 |
+| `setup.openTerminal` | `{ fix }` | `{ opened }` | 입력이 필요할 때 — Terminal 앱에 같은 명령을 띄운다 |
 | `setup.finish` | `{}` | `{ finished: true }` | `…/Corgi/setup.json` 에 끝낸 시각을 남긴다 — 앱이 다시 띄우지 않는다 |
 | `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, historyRetentionDays, androidRamMb, simslimProfile? }` | 설정 화면·`corgi config` (M11) |
 | `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·기록 보관 일수(1~3650)·Android RAM·simslim 프로필 (R25) |

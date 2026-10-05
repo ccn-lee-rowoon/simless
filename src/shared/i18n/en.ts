@@ -540,4 +540,17 @@ export const en: Record<keyof typeof ko, string> = {
   "web.skillUpdate.desc":
     "The installed skill differs from this Corgi. After updating, new agent sessions follow the new instructions.",
   "web.skillUpdate.action": "Skill update",
+  "setup.unknownFix": "Can't run this: {fix}",
+  "web.setup.fix.open": "Open",
+  "web.setup.fix.running": "Running…",
+  "web.setup.fix.done": "Done ({seconds}s) — checked again",
+  "web.setup.fix.failed": "Failed (exit code {code})",
+  "web.setup.fix.canceled": "Canceled",
+  "web.setup.fix.cancel": "Cancel",
+  "web.setup.fix.terminal": "Open in Terminal",
+  "web.setup.fix.hide": "Hide",
+  "web.setup.fix.argentWarn":
+    "argent's installer also changes agent settings (MCP, rules) for Claude Code and others.",
+  "web.setup.fix.inputHint":
+    "If it needs your password or an answer, run it with «Open in Terminal».",
 };

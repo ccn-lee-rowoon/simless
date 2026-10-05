@@ -258,6 +258,32 @@ export interface CheckView {
   fix?: string;
   /** corgi doctor --fix 가 고칠 수 있는 것 */
   autofix?: "launchd" | "skill" | "app" | "hook";
+  /** 설정 창에서 바로 고치는 버튼 (M14) — install·update 는 명령 실행, open 은 앱·페이지 열기 */
+  action?: { fix: FixId; kind: "install" | "update" | "open" };
+}
+
+/** 설정 창이 서버에 실행을 부탁할 수 있는 것 — 서버는 정해 둔 명령만 실행한다 (install/fixes.ts) */
+export type FixId =
+  | "simslim.install"
+  | "simslim.upgrade"
+  | "avdslim.install"
+  | "avdslim.upgrade"
+  | "argent.install"
+  | "xcode.open"
+  | "androidStudio.open";
+
+/** 실행 중이거나 끝난 설치 한 건 — 출력은 SSE «output» 으로 한 줄씩 온다 */
+export interface JobView {
+  id: string;
+  fix: FixId;
+  status: "running" | "done" | "failed" | "canceled";
+  /** 지금까지의 출력 (최근 400줄) */
+  lines: string[];
+  /** 실행한 명령 — 화면에 «$ …» 로 */
+  command: string;
+  startedAt: number;
+  endedAt?: number;
+  exitCode?: number;
 }
 
 /** 설치 상태 — missing = 없음, outdated = 들어 있는 것과 다름, current = 같음 */
