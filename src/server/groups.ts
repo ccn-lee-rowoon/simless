@@ -3,6 +3,7 @@ import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
 import type { CorgiServer } from "./app.ts";
+import { parse } from "./params.ts";
 import { HandlerError } from "./socket.ts";
 
 // 그룹 — 용도별 디바이스 묶음 (R21). 사람은 앱에서, 에이전트는 CLI·MCP 로 만들고 고친다.
@@ -21,12 +22,6 @@ const UpdateParams = GroupRef.extend({
   add: z.array(z.string()).default([]),
   remove: z.array(z.string()).default([]),
 });
-
-function parse<T extends z.ZodType>(schema: T, params: unknown): z.infer<T> {
-  const parsed = schema.safeParse(params ?? {});
-  if (!parsed.success) throw new HandlerError("INVALID", z.prettifyError(parsed.error));
-  return parsed.data;
-}
 
 /** 마지막으로 고친 쪽 — 화면에 «사람» 또는 에이전트 이름으로 보인다 */
 function editor(session: SessionInfo): string {

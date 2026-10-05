@@ -1,16 +1,5 @@
-import { z } from "zod";
-import type {
-  AcquireResult,
-  BusyData,
-  CheckView,
-  DeviceView,
-  HolderView,
-  LeaseItem,
-  SettingsResult,
-  SlimStats,
-  StatusResult,
-} from "../shared/api.ts";
-import { type Config, saveSettings } from "../shared/config.ts";
+import type { CheckView, DeviceView, HolderView, SlimStats, StatusResult } from "../shared/api.ts";
+import type { Config } from "../shared/config.ts";
 import { type Lang, resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
 import { type Device, layoutHeight, layoutWidth, sizeLabel } from "../shared/model.ts";
 import type { Paths } from "../shared/paths.ts";
@@ -22,8 +11,10 @@ import type { Discovered, Driver, RuntimeState } from "./drivers/types.ts";
 import { registerGroupMethods } from "./groups.ts";
 import { History } from "./history.ts";
 import { registerHookMethods } from "./hook.ts";
+import { registerLeaseMethods } from "./lease-methods.ts";
 import { EMPTY_LEASE_STATE, type Holder, LeaseManager, LeaseStateSchema } from "./leases.ts";
 import { Registry } from "./registry.ts";
+import { registerSettingsMethods } from "./settings.ts";
 import { registerSetupMethods, setupNeeded } from "./setup.ts";
 import { type Connection, type Handler, HandlerError } from "./socket.ts";
 import { readJson, writeJson } from "./store.ts";
@@ -51,42 +42,6 @@ export interface InventoryProblem {
   message: string;
 }
 
-const AcquireParams = z.object({
-  devices: z.array(z.string()).default([]),
-  /** 그룹의 디바이스 전부 (R21) */
-  group: z.string().optional(),
-  /** 기본 디바이스 — 플랫폼 하나 또는 둘 다 (R22) */
-  default: z.enum(["android", "ios", "both"]).optional(),
-  /** 기본 디바이스를 달라는데 그 플랫폼에 디바이스가 하나도 없으면 추천 기종을 슬림으로 만든다 (R22) */
-  create: z.boolean().default(false),
-  /** all = 전부 아니면 아무것도, available = 비어 있는 것만 (R23) */
-  mode: z.enum(["all", "available"]).default("all"),
-  wait: z.boolean().default(false),
-  /** 기다리기의 이번 호출 최대 시간 — 지나면 «아직 대기 중» 으로 돌려준다 */
-  timeoutMs: z.number().int().positive().max(3_600_000).default(600_000),
-});
-const ReleaseParams = z.object({ devices: z.array(z.string()).optional() });
-const WhoParams = z.object({ target: z.string().optional() });
-const ForceParams = z.object({ device: z.string() });
-const HistoryParams = z.object({
-  limit: z.number().int().positive().max(5000).default(100),
-  session: z.string().optional(),
-});
-const SessionsParams = z.object({
-  limit: z.number().int().positive().max(1000).default(200),
-});
-const SettingsParams = z.object({
-  language: z.enum(["system", "ko", "en"]).optional(),
-  idleReleaseMinutes: z
-    .number()
-    .positive()
-    .max(24 * 60)
-    .optional(),
-  historyRetentionDays: z.number().int().min(1).max(3650).optional(),
-  androidRamMb: z.number().int().min(1024).max(16384).optional(),
-  simslimProfile: z.string().nullable().optional(),
-});
-
 /** 화면 갱신 알림이 필요 없는 메서드 */
 const READ_ONLY = new Set([
   "status",
@@ -102,12 +57,6 @@ const READ_ONLY = new Set([
 ]);
 
 export type ServerEvent = { type: "changed" } | { type: "progress"; message: string };
-
-function parse<T extends z.ZodType>(schema: T, params: unknown): z.infer<T> {
-  const parsed = schema.safeParse(params ?? {});
-  if (!parsed.success) throw new HandlerError("INVALID", z.prettifyError(parsed.error));
-  return parsed.data;
-}
 
 export class CorgiServer {
   readonly registry: Registry;
@@ -140,25 +89,14 @@ export class CorgiServer {
     );
     this.methods = {
       status: (_p, session) => this.status(session),
-      "lease.acquire": (p, session, connection) =>
-        this.acquire(parse(AcquireParams, p), session, connection),
-      "lease.release": (p, session) => this.release(parse(ReleaseParams, p), session),
-      "lease.who": (p) => this.who(parse(WhoParams, p)),
-      "lease.forceRelease": (p, session) => this.forceRelease(parse(ForceParams, p), session),
-      "lease.history": async (p) => {
-        const params = parse(HistoryParams, p);
-        return this.history.list({ limit: params.limit, sessionKey: params.session });
-      },
-      "lease.sessions": async (p) =>
-        this.history.sessions({ limit: parse(SessionsParams, p).limit }),
-      "settings.get": async () => this.settings(),
-      "settings.set": async (p) => this.setSettings(parse(SettingsParams, p)),
     };
     this.applyLanguage();
     registerDeviceMethods(this);
     registerGroupMethods(this);
     registerHookMethods(this);
     registerSetupMethods(this);
+    registerLeaseMethods(this);
+    registerSettingsMethods(this);
   }
 
   /** 다른 모듈(드라이버 명령 등)이 메서드를 붙인다 */
@@ -236,34 +174,9 @@ export class CorgiServer {
     return resolveLanguage(this.deps.config.language, this.deps.systemLanguages?.() ?? []);
   }
 
-  private applyLanguage(): void {
+  /** 설정 언어를 서버 문장(오류·진행)에 적용한다 */
+  applyLanguage(): void {
     setLanguage(this.lang);
-  }
-
-  private settings(): SettingsResult {
-    const { config } = this.deps;
-    return {
-      language: config.language,
-      idleReleaseMinutes: config.idleReleaseMinutes,
-      historyRetentionDays: config.historyRetentionDays,
-      androidRamMb: config.android.ramMb,
-      simslimProfile: config.ios.simslimProfile,
-    };
-  }
-
-  /** 설정 파일에 쓰고 바로 반영한다 — 드라이버는 같은 설정 객체를 보므로 값만 바꾼다 */
-  private setSettings(patch: z.infer<typeof SettingsParams>): SettingsResult {
-    const next = saveSettings(this.deps.paths.config, patch);
-    const { config } = this.deps;
-    config.language = next.language;
-    config.idleReleaseMinutes = next.idleReleaseMinutes;
-    config.historyRetentionDays = next.historyRetentionDays;
-    this.history.setRetentionDays(next.historyRetentionDays);
-    config.android.ramMb = next.android.ramMb;
-    config.ios.simslimProfile = next.ios.simslimProfile;
-    this.leases.setIdleMs(next.idleReleaseMinutes * 60_000);
-    this.applyLanguage();
-    return this.settings();
   }
 
   driverOrUndefined(platform: Device["spec"]["platform"]): Driver | undefined {
@@ -548,161 +461,15 @@ export class CorgiServer {
     };
   }
 
-  private holdersData(holders: Holder[]): BusyData["holders"] {
-    return holders.flatMap((h) => {
-      const view = this.holderView(h);
-      return view ? [{ ...view, deviceId: h.deviceId }] : [];
-    });
-  }
-
   /** 다른 메서드를 안에서 부른다 — 기본 디바이스를 만들 때 device.create 를 그대로 쓴다 */
-  private invoke(name: string, params: unknown, session: SessionInfo, connection: Connection) {
+  invoke(name: string, params: unknown, session: SessionInfo, connection: Connection) {
     const method = this.methods[name];
     if (!method) throw new HandlerError("INVALID", t("err.unknownMethod", { method: name }));
     return method(params, session, connection);
   }
 
-  /** 디바이스가 하나도 없을 때 만들 기종 — Android 는 Medium Phone, iOS 는 가장 새 기본 iPhone */
-  private async recommendedModel(platform: Device["platform"]): Promise<string> {
-    const { models } = await this.driver(platform).catalog();
-    const phones = models.filter((m) => m.form === "phone");
-    if (platform === "android") {
-      const model = phones.find((m) => m.id === "medium-phone") ?? phones[0];
-      if (!model) throw new HandlerError("TOOL_MISSING", t("err.noModel", { model: "phone" }));
-      return model.id;
-    }
-    const plain = phones
-      .map((m) => ({ m, n: Number(/^iPhone (\d+)$/.exec(m.name)?.[1]) }))
-      .filter((x) => Number.isFinite(x.n))
-      .sort((a, b) => b.n - a.n);
-    const model = plain[0]?.m ?? phones.at(-1);
-    if (!model) throw new HandlerError("TOOL_MISSING", t("err.noModel", { model: "iPhone" }));
-    return model.id;
-  }
-
-  /** 디바이스·그룹·기본 디바이스를 디바이스 목록으로 푼다 */
-  private async targets(
-    params: z.infer<typeof AcquireParams>,
-    session: SessionInfo,
-    connection: Connection,
-  ): Promise<Device[]> {
-    const refs = [...params.devices];
-    if (params.group) {
-      const group = this.registry.findGroup(params.group);
-      if (!group) throw new HandlerError("NOT_FOUND", t("err.noGroup", { ref: params.group }));
-      if (group.deviceIds.length === 0)
-        throw new HandlerError("INVALID", t("err.emptyGroup", { name: group.name }));
-      refs.push(...group.deviceIds);
-    }
-    if (params.default) {
-      const platforms =
-        params.default === "both" ? (["android", "ios"] as const) : [params.default];
-      const listed = await this.devices();
-      const missing = platforms.filter((p) => !this.registry.defaults()[p]);
-      // 디바이스가 하나도 없는 플랫폼만 만든다 — 있는데 기본이 없으면 사람이 고른다
-      const creatable = missing.filter((p) => !listed.some((d) => d.spec.platform === p));
-      if (params.create) {
-        for (const platform of creatable) {
-          await this.invoke(
-            "device.create",
-            { platform, model: await this.recommendedModel(platform), slim: true, baseline: false },
-            session,
-            connection,
-          );
-        }
-      }
-      const defaults = this.registry.defaults();
-      const ids = platforms.map((p) => defaults[p]).filter((id): id is string => id !== undefined);
-      // both 는 있는 쪽만 줘도 된다 — 하나도 없을 때만 실패
-      if (ids.length === 0 || (params.default !== "both" && ids.length < platforms.length)) {
-        const left = platforms.filter((p) => !defaults[p]);
-        throw new HandlerError("NO_DEFAULT", t("err.noDefault"), {
-          missing: left.map((platform) => ({
-            platform,
-            devices: listed.filter((d) => d.spec.platform === platform).length,
-          })),
-        });
-      }
-      refs.push(...ids);
-    }
-    if (refs.length === 0) throw new HandlerError("INVALID", t("err.noTarget"));
-    const devices = await this.resolve(refs);
-    return [...new Map(devices.map((d) => [d.id, d])).values()];
-  }
-
-  /** 요청한 디바이스마다 지금 상태 (R23) */
-  private leaseItems(session: SessionInfo, devices: Device[]): LeaseItem[] {
-    const held = new Set(this.leases.heldBy(session.key));
-    const queued = new Set(this.leases.queuedFor(session.key));
-    return devices.map((device) => {
-      if (held.has(device.id)) return { deviceId: device.id, name: device.name, state: "held" };
-      const [blocker] = this.leases.blockers(session.key, [device.id]);
-      if (!blocker) return { deviceId: device.id, name: device.name, state: "free" };
-      return {
-        deviceId: device.id,
-        name: device.name,
-        state: queued.has(device.id) ? "queued" : "busy",
-        holder: this.holderView(blocker),
-      };
-    });
-  }
-
-  private async acquire(
-    params: z.infer<typeof AcquireParams>,
-    session: SessionInfo,
-    connection: Connection,
-  ): Promise<AcquireResult> {
-    const devices = await this.targets(params, session, connection);
-    const ids = devices.map((d) => d.id);
-    const items = () => this.leaseItems(session, devices);
-    const options = { wait: params.wait, mode: params.mode };
-
-    const result = this.leases.acquire(session, ids, options);
-    if (result.status === "granted") return { ...result, devices: items() };
-    if (result.status === "partial")
-      return {
-        status: "partial",
-        deviceIds: result.deviceIds,
-        devices: items(),
-        queued: result.queued,
-      };
-    if (result.status === "busy") {
-      const data: BusyData = { holders: this.holdersData(result.holders), devices: items() };
-      throw new HandlerError("BUSY", t("err.busy"), data);
-    }
-    if (result.status === "deadlock") {
-      const cycle = result.cycle.map((key) => this.leases.session(key)?.agent ?? key);
-      const data: BusyData = { holders: this.holdersData(result.holders), devices: items(), cycle };
-      throw new HandlerError("DEADLOCK", t("err.deadlock", { cycle: cycle.join(" → ") }), data);
-    }
-
-    connection.emit("queued", {
-      position: result.position,
-      holders: this.holdersData(result.holders),
-    });
-    await this.waitForGrant(session.key, params.timeoutMs, connection);
-
-    const held = new Set(this.leases.heldBy(session.key));
-    if (ids.every((id) => held.has(id)))
-      return { status: "granted", deviceIds: ids, devices: items() };
-    if (params.mode === "available" && ids.some((id) => held.has(id))) {
-      const got = ids.filter((id) => held.has(id));
-      return { status: "partial", deviceIds: got, devices: items(), queued: true };
-    }
-    const position = this.leases.queuePosition(session.key);
-    return {
-      status: "queued",
-      position: position ?? 0,
-      holders: this.holdersData(this.leases.blockers(session.key, ids)),
-      devices: items(),
-    };
-  }
-
-  private waitForGrant(
-    sessionKey: string,
-    timeoutMs: number,
-    connection: Connection,
-  ): Promise<void> {
+  /** 대기열에 넣은 세션의 차례가 오거나 시간이 지나거나 연결이 끊길 때까지 기다린다 */
+  waitForGrant(sessionKey: string, timeoutMs: number, connection: Connection): Promise<void> {
     return new Promise((resolve) => {
       const done = () => {
         clearTimeout(timer);
@@ -719,54 +486,5 @@ export class CorgiServer {
 
   private wake(sessionKey: string): void {
     for (const done of [...(this.waiters.get(sessionKey) ?? [])]) done();
-  }
-
-  private async release(params: z.infer<typeof ReleaseParams>, session: SessionInfo) {
-    const ids = params.devices ? (await this.resolve(params.devices)).map((d) => d.id) : undefined;
-    return { released: this.leases.release(session.key, ids) };
-  }
-
-  /** 강제 해제 — 사람(웹 UI·CLI --force)만 (docs/design.md §8) */
-  private async forceRelease(params: z.infer<typeof ForceParams>, session: SessionInfo) {
-    if (!session.human) throw new HandlerError("INVALID", t("err.forceHumanOnly"));
-    const [device] = await this.resolve([params.device]);
-    const holder = device ? this.leases.holderOf(device.id) : undefined;
-    if (!device || !holder) return { released: [] };
-    return { released: this.leases.release(holder.key, [device.id], "forced") };
-  }
-
-  private async who(params: z.infer<typeof WhoParams>) {
-    const snapshot = this.leases.snapshot();
-    let devices = await this.devices();
-    if (params.target) {
-      const target = params.target;
-      const states = await this.runtimeStates(devices);
-      devices = devices.filter(
-        (d) =>
-          d.id === target ||
-          d.name === target ||
-          d.native === target ||
-          states.get(d.id)?.targetId === target,
-      );
-      if (devices.length === 0)
-        throw new HandlerError("NOT_FOUND", t("err.notThisMac", { target }));
-    }
-    return devices.map((device) => {
-      const lease = snapshot.leases.find((l) => l.deviceId === device.id);
-      const session = lease ? this.leases.session(lease.sessionKey) : undefined;
-      return {
-        deviceId: device.id,
-        name: device.name,
-        holder:
-          lease && session
-            ? this.holderView({
-                deviceId: device.id,
-                session,
-                since: lease.acquiredAt,
-                reason: "held",
-              })
-            : undefined,
-      };
-    });
   }
 }

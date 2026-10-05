@@ -5,6 +5,7 @@ import type { Device, DeviceSpec, Platform } from "../shared/model.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
 import type { CorgiServer } from "./app.ts";
 import type { Progress, RuntimeState } from "./drivers/types.ts";
+import { parse } from "./params.ts";
 import { type Connection, HandlerError } from "./socket.ts";
 
 // 디바이스 만들기·관리·켜기 (R1~R7, M1~M8). 메서드를 CorgiServer 에 붙인다.
@@ -40,12 +41,6 @@ const MemoParams = DeviceRef.extend({ memo: z.string().max(500) });
 const DevicesParams = z.object({ devices: z.array(z.string()).default([]) });
 const SlimParams = DevicesParams.extend({ mode: z.enum(["on", "off", "check"]).default("on") });
 const CatalogParams = z.object({ platform: z.enum(["android", "ios"]).optional() });
-
-function parse<T extends z.ZodType>(schema: T, params: unknown): z.infer<T> {
-  const parsed = schema.safeParse(params ?? {});
-  if (!parsed.success) throw new HandlerError("INVALID", z.prettifyError(parsed.error));
-  return parsed.data;
-}
 
 /** 기본 이름 — 슬림이면 `corgi <기종>`, 아니면 `<기종>` (R5·M4) */
 function defaultName(modelName: string, slim: boolean): string {

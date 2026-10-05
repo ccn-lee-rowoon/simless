@@ -32,6 +32,7 @@ import { t } from "../shared/i18n.ts";
 import type { Paths } from "../shared/paths.ts";
 import { VERSION } from "../shared/version.ts";
 import type { CorgiServer } from "./app.ts";
+import { parse } from "./params.ts";
 import { HandlerError } from "./socket.ts";
 import { readJson, writeJson } from "./store.ts";
 
@@ -56,12 +57,6 @@ const ApplyParams = z.object({
 /** 설정을 한 번도 안 끝냈으면 true — 앱이 처음 뜰 때 설정 창을 연다 */
 export function setupNeeded(paths: Paths): boolean {
   return !existsSync(paths.setup);
-}
-
-function parse<T extends z.ZodType>(schema: T, params: unknown): z.infer<T> {
-  const parsed = schema.safeParse(params ?? {});
-  if (!parsed.success) throw new HandlerError("INVALID", z.prettifyError(parsed.error));
-  return parsed.data;
 }
 
 export function registerSetupMethods(server: CorgiServer): void {
