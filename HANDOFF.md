@@ -38,7 +38,7 @@
 - Android SDK `~/Library/Android/sdk` — `emulator`·`adb` 있음, **cmdline-tools(`avdmanager`) 없음**
 - 시스템 이미지: `android-37.1/google_apis_playstore_ps16k/arm64-v8a`, `android-36/google_apis_playstore`
 - iOS 런타임: 18.6 · 26.0 · 26.2 · 26.5
-- 설치됨: simslim **0.8.0**(최신 0.11.0) · scrcpy 4.1 · Bun · argent 0.26.0 · simfleet 0.1.1(안 쓰기로 함)
+- 설치됨: simslim **0.8.0**(최신 0.11.0) · scrcpy 4.1 · Bun · argent 0.26.0
 - **avdslim 1.0.15 설치됨** (2026-10-02) — `brew install kdbhalala/avdslim/avdslim` 가 `brew trust` 없이 설치됐다(전에는 비공식 tap 이라 거부한다고 봤음 — brew 버전에 따라 다를 수 있어 `corgi doctor` 는 둘 다 안내)
 - baguette 미설치 (iOS 화면 스트리밍용, 지금 범위 밖)
 
@@ -61,16 +61,12 @@
 
 **화면 확인 관련**
 - NOVA 는 `FLAG_SECURE` 가 켜진 화면이 있어 scrcpy·녹화 스트림에 검게 나온다. `adb exec-out screencap` 도 막힐 수 있음 — 스크린샷 방식은 앱마다 확인 필요
-- scrcpy 4.x 는 3.x 와 스트림 헤더가 달라 3.x 기준 파서는 깨진다(simfleet 에서 겪음). 스트리밍을 만들게 되면 버전 확인
+- scrcpy 4.x 는 3.x 와 스트림 헤더가 달라 3.x 기준 파서는 깨진다. 스트리밍을 만들게 되면 버전 확인
 
 **세션 구분**
 - Claude Code 는 Bash 환경에 `CLAUDE_CODE_SESSION_ID` 를 준다 (확인됨)
 - PreToolUse 훅은 입력 JSON 에 `session_id` 를 받는다
 - 로컬 MCP 프로세스가 세션 ID 를 받는지는 **미확인**
-
-**simfleet 을 안 쓰는 이유**
-- 0.1.1 기준 크기별 생성·일괄 설치·같은 화면 이동이 없고, lane 하나가 워크트리 하나를 독점해 같은 브랜치를 여러 기기에 못 띄운다. 로드맵·이슈에도 없음
-- 점유(claim)는 기록일 뿐 입력을 막지 않는다
 
 ## 지금 머신에 남아 있는 것 (정리 필요)
 
@@ -78,8 +74,6 @@
 | --- | --- | --- |
 | Android 에뮬레이터 3대 | 켜져 있음 (`Size_Small_360dp`·`Size_Large_412dp`·`Size_Tablet_800dp`) | `adb -s <serial> emu kill` |
 | AVD 3개 | `~/.android/avd/Size_*.avd` + `.ini` (약 7GB) | 필요 없으면 폴더·ini 삭제 |
-| `simfleet serve` | **멈춤** (2026-10-05) | 필요 없으면 `bun remove -g simfleet` |
-| simfleet 상태 | `~/Library/Application Support/nova-size-check Sim Fleet` | 삭제 |
 | scrcpy 4.1 | brew 설치 | 필요 없으면 `brew uninstall scrcpy` |
 | brew tap · avdslim | `kdbhalala/avdslim` tap + avdslim 1.0.15 설치됨 | Corgi 가 쓰므로 유지 |
 | Corgi launchd 등록 | `~/Library/LaunchAgents/corgi.server.plist` (개발 모드: bun + 이 저장소의 `bin/corgi.ts`) | Corgi 를 쓰는 동안 유지. 지우려면 `corgi uninstall` |
