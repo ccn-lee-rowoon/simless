@@ -78,7 +78,7 @@
 | --- | --- | --- |
 | Android 에뮬레이터 3대 | 켜져 있음 (`Size_Small_360dp`·`Size_Large_412dp`·`Size_Tablet_800dp`) | `adb -s <serial> emu kill` |
 | AVD 3개 | `~/.android/avd/Size_*.avd` + `.ini` (약 7GB) | 필요 없으면 폴더·ini 삭제 |
-| `simfleet serve` | 실행 중 (127.0.0.1:8790) | `pkill -f "simfleet serve"`, 필요 없으면 `bun remove -g simfleet` |
+| `simfleet serve` | **멈춤** (2026-10-05) | 필요 없으면 `bun remove -g simfleet` |
 | simfleet 상태 | `~/Library/Application Support/nova-size-check Sim Fleet` | 삭제 |
 | scrcpy 4.1 | brew 설치 | 필요 없으면 `brew uninstall scrcpy` |
 | brew tap · avdslim | `kdbhalala/avdslim` tap + avdslim 1.0.15 설치됨 | Corgi 가 쓰므로 유지 |
