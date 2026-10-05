@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { infoPlist, launcherScript, menubarAgentPlist } from "../src/cli/app-bundle.ts";
+import { infoPlist, launcherScript, menubarAgentPlist } from "../src/install/app-bundle.ts";
 
 describe("Corgi.app (R11)", () => {
   test("Info.plist — Dock 아이콘 없는 앱, 아이콘·번들 ID·실행 파일", async () => {

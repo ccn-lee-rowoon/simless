@@ -46,7 +46,7 @@
 
 ## 3. 저장소 구조
 
-결과물이 실행 파일 하나라 **패키지도 하나**다(모노레포로 나누지 않는다).
+결과물이 실행 파일 하나라 **패키지도 하나**다(모노레포로 나누지 않는다). 무엇을 고칠 때 어디를 보는지는 `docs/development.md`.
 
 ```
 corgi/
@@ -54,34 +54,53 @@ corgi/
 ├── bin/corgi.ts             `#!/usr/bin/env bun` — 개발용 진입점(`bun link` 가 가리킴), src/main.ts 로
 ├── src/
 │   ├── main.ts              진입점 — 서브커맨드별로 필요한 모듈만 동적 import (훅이 빨리 끝나게)
-│   ├── shared/              모델·메시지 스키마(zod)·경로·설정 로딩·소켓 클라이언트·i18n(문구 사전 ko·en)
-│   ├── server/
-│   │   ├── index.ts         corgi serve — 소켓·HTTP 서버 시작
-│   │   ├── registry.ts      디바이스에 붙인 정보(메모·슬림·만든 여부)·그룹·기본 디바이스
-│   │   ├── leases.ts        점유·대기·자동 해제
-│   │   ├── sessions.ts      세션 식별·프로세스 감시
-│   │   ├── drivers/android.ts · drivers/ios.ts
-│   │   ├── socket.ts · http.ts
-│   │   └── launchd.ts       LaunchAgent 등록·재시작
-│   ├── cli/                 명령마다 파일 하나 (use.ts, create.ts …)
-│   ├── hook/                훅 — 대상 추출(순수 함수) + 판정 + 서버 꺼짐 처리
-│   ├── mcp/                 (5단계) MCP 서버
-│   └── web/                 웹 화면 — index.html · App.tsx …
-├── tray/CorgiTray.swift     메뉴바 아이콘 + 앱 창(WKWebView)
-├── test/                    *.test.ts — 드라이버는 가짜로 바꿔 점유·대기·훅 판정을 검증
+│   ├── shared/              모두가 쓰는 것 — 모델(model)·메시지 모양(api·protocol)·경로(paths)·설정(config)·
+│   │                        소켓 클라이언트(client)·세션 찾기(session)·외부 명령(exec)·i18n(ko 정본, en)
+│   ├── install/             설치·점검 — CLI 와 서버(첫 실행 설정 창)가 같이 쓴다
+│   │   ├── launchd.ts       서버 LaunchAgent 등록·kickstart
+│   │   ├── app-bundle.ts    Corgi.app 만들기(Swift 컴파일·서명·로그인 항목)
+│   │   ├── skill.ts         스킬 설치 위치(전역·프로젝트)·상태 (S9)
+│   │   ├── claude-hook.ts   Claude Code 훅·규칙 (P2·P3)
+│   │   ├── claude-mcp.ts    Claude Code MCP 등록 (R12)
+│   │   └── checks.ts        점검 — corgi doctor 와 설정 창의 «이 Mac 점검» (S1·S2)
+│   ├── server/              상주 서버 — 상태를 갖는 유일한 곳
+│   │   ├── index.ts         corgi serve — 소켓·HTTP 시작, 2초 tick
+│   │   ├── app.ts           CorgiServer — 디바이스 목록(드라이버 + 레지스트리)·status·알림·메서드 표
+│   │   ├── devices.ts · groups.ts · lease-methods.ts · settings.ts · setup.ts · hook.ts
+│   │   │                    메서드 묶음 — 각자 registerXMethods(server) 로 붙는다
+│   │   ├── leases.ts        점유·대기열·교착·자동 해제 (순수 로직, 저장은 콜백)
+│   │   ├── registry.ts      Corgi 가 붙인 정보(슬림·만든 여부)·그룹·기본 디바이스 — JSON
+│   │   ├── history.ts       점유 기록 — SQLite
+│   │   ├── drivers/         android.ts · ios.ts · types.ts(Driver) · android-profiles.ts
+│   │   ├── socket.ts · http.ts · params.ts(매개변수 검사) · store.ts(JSON 읽고 쓰기)
+│   ├── cli/                 corgi 명령 — index.ts(commander) + commands/*.ts, 서버와는 소켓으로만
+│   ├── hook/                훅 — 대상 추출(targets.ts, 순수 함수) + 판정 요청 + 서버 꺼짐 처리
+│   ├── mcp/                 MCP 서버(stdio) — 소켓으로 서버 메서드를 부른다
+│   └── web/                 웹 화면(React) — main.tsx(창 고르기) · *View.tsx · ui.tsx · styles.css
+├── tray/CorgiTray.swift     메뉴바 아이콘 + 앱 창(WKWebView) — 로직 없음, HTTP 로 status 만 읽는다
+├── test/                    *.test.ts — 가짜 드라이버(helpers.ts)로 서버를 띄워 시나리오를 검증
 ├── integrations/            이 Mac 의 다른 도구에 설치하는 것
-│   ├── skill/corgi/SKILL.md          → ~/.claude/skills/corgi
+│   ├── skill/corgi/SKILL.md          → ~/.claude/skills/corgi (또는 프로젝트)
 │   └── rules/corgi.md                전역 규칙 (P2) → ~/.claude/rules/corgi.md
-├── scripts/build.ts         단일 실행 파일 빌드 → dist/corgi
-├── examples/apps/nova.json
-├── docs/
-│   ├── design.md            이 문서
-│   └── protocol.md          소켓·HTTP 메시지 상세 (1단계에서 작성)
-├── requirements.md · HANDOFF.md · reference-design-draft.md
+├── scripts/                 build.ts(단일 실행 파일 → dist/corgi) · trace.ts(요구사항 ↔ 테스트) · icon.sh
+├── docs/                    design.md(이 문서) · protocol.md(메시지) · development.md(개발 가이드) ·
+│                            agent-integrations.md(다른 에이전트 조사)
+├── README.md                처음 보는 사람용 — 무엇을 하나·설치·쓰는 법
+├── requirements.md · HANDOFF.md
 └── CLAUDE.md                작업 규칙 (커밋 규칙 포함)
 ```
 
-- `shared` 만 모두가 import 한다. `cli`·`hook`·`mcp`·`web` 은 `server` 를 import 하지 않고 소켓·HTTP 로만 대화한다 — 경계가 코드로 지켜지게.
+**폴더 경계** — `test/architecture.test.ts` 가 지킨다.
+
+| 폴더 | import 해도 되는 것 |
+| --- | --- |
+| `shared` | (없음) |
+| `install` | `shared` |
+| `server` | `shared` · `install` (예외: `http.ts` 가 웹 화면 묶음 `web/index.html`) |
+| `cli` | `shared` · `install` (예외: `corgi serve` 가 `server/index.ts`) — 나머지는 소켓으로만 |
+| `hook` · `web` | `shared` |
+| `mcp` | `shared` · `install`(서버를 켜려고 `launchd`) |
+
 - `integrations/`·`tray/`·웹 UI·`Info.plist` 틀은 **실행 파일 안에 넣는다**. 코드에서 파일을 경로로 찾지 말고 `import … with { type: "file" }`·HTML import 로 불러온다 — 그래야 `bun link`(개발)와 단일 실행 파일(배포)에서 같은 코드가 돈다. `corgi install` 이 꺼내 설치한다.
 
 ## 4. 설치·실행

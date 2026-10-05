@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { mcpAddArgs, mcpStatus } from "../src/cli/claude-mcp.ts";
+import { mcpAddArgs, mcpStatus } from "../src/install/claude-mcp.ts";
 import { CorgiServer } from "../src/server/app.ts";
 import { listen } from "../src/server/socket.ts";
 import type { CheckView, SetupAgents, SetupStatus, StatusResult } from "../src/shared/api.ts";

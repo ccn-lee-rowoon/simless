@@ -85,30 +85,30 @@ export async function runCli(argv: string[]): Promise<number> {
         ) => {
           const done: Record<string, string> = {};
           if (o.launchd) {
-            const { install } = await import("./launchd.ts");
+            const { install } = await import("../install/launchd.ts");
             await install(ctx.paths);
             done.launchd = ctx.paths.launchAgent;
           }
           if (o.skill) {
-            const { installSkillAt, loadSkillLocations } = await import("./skill.ts");
+            const { installSkillAt, loadSkillLocations } = await import("../install/skill.ts");
             const files: string[] = [];
             for (const l of loadSkillLocations(ctx.paths.skills))
               files.push(...(await installSkillAt(l)));
             done.skill = files.join(", ");
           }
           if (o.hook) {
-            const { installHook, installRule } = await import("./claude-hook.ts");
-            const { selfCommand } = await import("./launchd.ts");
+            const { installHook, installRule } = await import("../install/claude-hook.ts");
+            const { selfCommand } = await import("../install/launchd.ts");
             done.hook = installHook(selfCommand());
             done.rule = await installRule();
           }
           if (o.mcp) {
-            const { installMcp } = await import("./claude-mcp.ts");
-            const { selfCommand } = await import("./launchd.ts");
+            const { installMcp } = await import("../install/claude-mcp.ts");
+            const { selfCommand } = await import("../install/launchd.ts");
             done.mcp = await installMcp(selfCommand());
           }
           if (o.app) {
-            const { installApp } = await import("./app-bundle.ts");
+            const { installApp } = await import("../install/app-bundle.ts");
             const app = await installApp(ctx.paths, ctx.config);
             done.app = app.menubar ? t("cli.install.menubar", { path: app.path }) : app.path;
             if (app.warning) console.error(app.warning);
@@ -127,13 +127,13 @@ export async function runCli(argv: string[]): Promise<number> {
     .description(t("cli.uninstall"))
     .action(
       run(async (ctx) => {
-        const { uninstall } = await import("./launchd.ts");
+        const { uninstall } = await import("../install/launchd.ts");
         await uninstall(ctx.paths);
-        await (await import("./app-bundle.ts")).uninstallApp(ctx.paths);
-        const { uninstallHook, uninstallRule } = await import("./claude-hook.ts");
+        await (await import("../install/app-bundle.ts")).uninstallApp(ctx.paths);
+        const { uninstallHook, uninstallRule } = await import("../install/claude-hook.ts");
         uninstallHook();
         uninstallRule();
-        await (await import("./claude-mcp.ts")).uninstallMcp();
+        await (await import("../install/claude-mcp.ts")).uninstallMcp();
         output(ctx, { uninstalled: ctx.paths.launchAgent }, () => t("cli.uninstall.done"));
       }),
     );

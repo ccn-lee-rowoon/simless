@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { bundledSkill, installSkill, skillStatus, skillTarget } from "../src/cli/skill.ts";
+import { bundledSkill, installSkill, skillStatus, skillTarget } from "../src/install/skill.ts";
 
 const dirs: string[] = [];
 afterEach(() => {

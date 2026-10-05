@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
+import { runChecks } from "../install/checks.ts";
 import {
   hookStatus,
   installHook,
@@ -8,16 +9,15 @@ import {
   ruleStatus,
   uninstallHook,
   uninstallRule,
-} from "../cli/claude-hook.ts";
+} from "../install/claude-hook.ts";
 import {
   claudeBinary,
   installMcp,
   McpInstallError,
   mcpStatus,
   uninstallMcp,
-} from "../cli/claude-mcp.ts";
-import { runChecks } from "../cli/commands/doctor.ts";
-import { selfCommand } from "../cli/launchd.ts";
+} from "../install/claude-mcp.ts";
+import { selfCommand } from "../install/launchd.ts";
 import {
   combineStates,
   installSkillAt,
@@ -26,7 +26,7 @@ import {
   sameLocation,
   saveSkillLocations,
   uninstallSkillAt,
-} from "../cli/skill.ts";
+} from "../install/skill.ts";
 import type { SetupAgents, SetupStatus, SkillLocation } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Paths } from "../shared/paths.ts";

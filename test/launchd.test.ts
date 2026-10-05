@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { plist } from "../src/cli/launchd.ts";
+import { plist } from "../src/install/launchd.ts";
 import { resolvePaths } from "../src/shared/paths.ts";
 
 describe("launchd plist", () => {

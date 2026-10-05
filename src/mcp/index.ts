@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { kickstart } from "../cli/launchd.ts";
+import { kickstart } from "../install/launchd.ts";
 import type {
   AcquireResult,
   CatalogResult,

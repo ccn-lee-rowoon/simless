@@ -11,7 +11,7 @@ import {
   ruleStatus,
   settingsPath,
   uninstallHook,
-} from "../src/cli/claude-hook.ts";
+} from "../src/install/claude-hook.ts";
 
 const dirs: string[] = [];
 afterEach(() => {

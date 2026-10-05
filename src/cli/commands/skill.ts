@@ -2,26 +2,21 @@ import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import type { Command } from "commander";
-import type { SkillLocation } from "../../shared/api.ts";
-import { ExitCode } from "../../shared/exit-codes.ts";
-import { t } from "../../shared/i18n.ts";
-import { CliError, output, type Run } from "../context.ts";
 import {
   installSkillAt,
   loadSkillLocations,
   locationStatus,
+  locationText,
   sameLocation,
   saveSkillLocations,
   uninstallSkillAt,
-} from "../skill.ts";
+} from "../../install/skill.ts";
+import type { SkillLocation } from "../../shared/api.ts";
+import { ExitCode } from "../../shared/exit-codes.ts";
+import { t } from "../../shared/i18n.ts";
+import { CliError, output, type Run } from "../context.ts";
 
 // corgi skill — 스킬을 넣는 곳(전역·프로젝트)과 상태 (S9). 서버 없이 돈다.
-
-export function locationText(location: SkillLocation): string {
-  if (location.kind === "global") return "~/.claude/skills/corgi";
-  const home = homedir();
-  return location.path.startsWith(home) ? `~${location.path.slice(home.length)}` : location.path;
-}
 
 function projectLocation(path: string): SkillLocation {
   const absolute = resolve(path.replace(/^~(?=\/|$)/, homedir()));

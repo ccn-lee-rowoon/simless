@@ -169,3 +169,10 @@ export async function uninstallSkillAt(
   for (const target of await targetsOf(location, env))
     rmSync(dirname(target), { recursive: true, force: true });
 }
+
+/** 사람에게 보일 위치 — 홈 폴더는 ~ 로 */
+export function locationText(location: SkillLocation): string {
+  if (location.kind === "global") return "~/.claude/skills/corgi";
+  const home = homedir();
+  return location.path.startsWith(home) ? `~${location.path.slice(home.length)}` : location.path;
+}

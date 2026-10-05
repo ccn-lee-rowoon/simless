@@ -1,3 +1,4 @@
+import { kickstart } from "../install/launchd.ts";
 import type { BusyData } from "../shared/api.ts";
 import { call, RemoteError, ServerDownError } from "../shared/client.ts";
 import { type Config, loadConfig } from "../shared/config.ts";
@@ -8,7 +9,6 @@ import type { SessionInfo } from "../shared/protocol.ts";
 import { detectSession } from "../shared/session.ts";
 import { VERSION } from "../shared/version.ts";
 import { formatHolder } from "./format.ts";
-import { kickstart } from "./launchd.ts";
 
 /** 메시지와 종료 코드를 가진 CLI 오류 — runCli 가 출력하고 끝낸다 */
 export class CliError extends Error {
