@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import type {
   CheckId,
   CheckView,
@@ -6,6 +6,7 @@ import type {
   SetupAgents,
   SetupItem,
   SetupStatus,
+  SkillLocation,
   StatusResult,
 } from "../shared/api.ts";
 import { type MessageKey, t } from "../shared/i18n.ts";
@@ -288,10 +289,12 @@ function AgentsStep({
         title={t("web.setup.skill.title")}
         badge={t("web.setup.recommended")}
         description={t("web.setup.skill.desc")}
-        path="~/.claude/skills/corgi"
+        path={agents.skillLocations.map((l) => locationText(l.location)).join(" · ")}
         state={agents.skill}
         onApply={(enabled) => apply("skill", enabled, t("web.setup.skill.title"))}
-      />
+      >
+        <SkillScope agents={agents} onChanged={onChanged} act={act} />
+      </Integration>
       <Integration
         title={t("web.setup.protect.title")}
         badge={t("web.setup.recommended")}
@@ -324,7 +327,9 @@ function Integration({
   warning,
   disabled,
   onApply,
+  children,
 }: {
+  children?: ReactNode;
   title: string;
   badge: string;
   description: string;
@@ -352,6 +357,7 @@ function Integration({
       <p className="sub mono">{path}</p>
       {warning && <p className="notice-inline">{warning}</p>}
       {disabled && state === "missing" && <p className="notice-inline">{disabled}</p>}
+      {children}
       <div className="setup-actions">
         {state !== "current" && (
           <button
@@ -442,5 +448,125 @@ function DevicesStep({
       </div>
       <p className="sub">{t("web.setup.devices.later")}</p>
     </>
+  );
+}
+
+/** 스킬 위치를 사람에게 — 홈 폴더는 ~ 로 */
+function locationText(location: SkillLocation): string {
+  return location.kind === "global" ? "~/.claude/skills/corgi" : location.path;
+}
+
+/** 스킬을 넣는 곳 (S9) — 전역(기본) 또는 고른 프로젝트 폴더들 */
+function SkillScope({
+  agents,
+  onChanged,
+  act,
+}: {
+  agents: SetupAgents;
+  onChanged: (agents: SetupAgents) => void;
+  act: Act;
+}) {
+  const projects = agents.skillLocations.flatMap((l) =>
+    l.location.kind === "project" ? [{ path: l.location.path, targets: l.targets }] : [],
+  );
+  const [mode, setMode] = useState<"global" | "project">(
+    projects.length > 0 ? "project" : "global",
+  );
+  const [paths, setPaths] = useState<string[]>(projects.map((p) => p.path));
+  const [input, setInput] = useState("");
+  const targets = new Map(projects.map((p) => [p.path, p.targets]));
+
+  const save = (scope: { kind: "global" } | { kind: "project"; paths: string[] }) =>
+    act(t("web.setup.skill.title"), async () => {
+      onChanged(await call<SetupAgents>("setup.skillScope", scope));
+    });
+
+  const add = () => {
+    const path = input.trim();
+    if (path && !paths.includes(path)) setPaths([...paths, path]);
+    setInput("");
+  };
+  const changed = JSON.stringify(paths) !== JSON.stringify(projects.map((p) => p.path));
+
+  return (
+    <fieldset className="radio-list setup-scope">
+      <legend className="sub">{t("web.setup.skill.scope")}</legend>
+      <label className="check">
+        <input
+          type="radio"
+          name="skill-scope"
+          checked={mode === "global"}
+          onChange={() => {
+            setMode("global");
+            if (projects.length > 0) void save({ kind: "global" });
+          }}
+        />
+        <span>
+          {t("web.setup.skill.scopeGlobal")}
+          <span className="sub"> — {t("web.setup.skill.scopeGlobalHint")}</span>
+        </span>
+      </label>
+      <label className="check">
+        <input
+          type="radio"
+          name="skill-scope"
+          checked={mode === "project"}
+          onChange={() => setMode("project")}
+        />
+        <span>
+          {t("web.setup.skill.scopeProject")}
+          <span className="sub"> — {t("web.setup.skill.scopeProjectHint")}</span>
+        </span>
+      </label>
+      {mode === "project" && (
+        <div className="setup-projects">
+          {paths.map((path) => (
+            <div key={path} className="setup-project">
+              <span className="mono">{path}</span>
+              {targets.has(path) && (
+                <span className="sub">
+                  {t("web.setup.skill.worktrees", { count: targets.get(path) ?? 0 })}
+                </span>
+              )}
+              <span className="spacer" />
+              <button
+                type="button"
+                className="button button-small"
+                onClick={() => setPaths(paths.filter((p) => p !== path))}
+              >
+                {t("web.setup.remove")}
+              </button>
+            </div>
+          ))}
+          <div className="setup-project">
+            <input
+              className="setup-input mono"
+              value={input}
+              placeholder={t("web.setup.skill.projectPlaceholder")}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  add();
+                }
+              }}
+            />
+            <button type="button" className="button button-small" onClick={add}>
+              {t("web.setup.skill.add")}
+            </button>
+          </div>
+          <div className="setup-actions">
+            <button
+              type="button"
+              className="button button-primary button-small"
+              disabled={paths.length === 0 || !changed}
+              onClick={() => save({ kind: "project", paths })}
+            >
+              {t("web.setup.skill.applyScope")}
+            </button>
+          </div>
+        </div>
+      )}
+    </fieldset>
   );
 }

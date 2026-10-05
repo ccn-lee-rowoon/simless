@@ -10,6 +10,7 @@ import { registerDevices } from "./commands/devices.ts";
 import { registerDoctor } from "./commands/doctor.ts";
 import { registerGroups } from "./commands/groups.ts";
 import { registerLease } from "./commands/lease.ts";
+import { registerSkill } from "./commands/skill.ts";
 import { registerStatus } from "./commands/status.ts";
 import { CliError, makeContext, output, type Run } from "./context.ts";
 
@@ -89,8 +90,11 @@ export async function runCli(argv: string[]): Promise<number> {
             done.launchd = ctx.paths.launchAgent;
           }
           if (o.skill) {
-            const { installSkill } = await import("./skill.ts");
-            done.skill = await installSkill();
+            const { installSkillAt, loadSkillLocations } = await import("./skill.ts");
+            const files: string[] = [];
+            for (const l of loadSkillLocations(ctx.paths.skills))
+              files.push(...(await installSkillAt(l)));
+            done.skill = files.join(", ");
           }
           if (o.hook) {
             const { installHook, installRule } = await import("./claude-hook.ts");
@@ -154,6 +158,7 @@ export async function runCli(argv: string[]): Promise<number> {
   registerGroups(program, run);
   registerConfig(program, run);
   registerDoctor(program, run);
+  registerSkill(program, run);
 
   try {
     await program.parseAsync(argv, { from: "user" });

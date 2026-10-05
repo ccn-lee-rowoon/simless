@@ -524,4 +524,23 @@ export const ko = {
   "web.settings.retentionHint": "세션 화면의 점유 기록을 이 기간만큼 남기고, 지난 것은 지웁니다.",
   "cli.opt.create":
     "--default 인데 그 플랫폼에 디바이스가 하나도 없으면 추천 기종을 슬림으로 만들어 쓴다 (몇 분 걸림)",
+  "setup.noFolder": "폴더가 없습니다: {path}",
+  "cli.skill": "에이전트 스킬 — 넣는 곳(전역·프로젝트)과 상태 (S9)",
+  "cli.skill.status": "스킬을 넣은 곳마다 상태",
+  "cli.skill.install": "스킬을 넣는다 (옵션이 없으면 기억해 둔 곳에 다시)",
+  "cli.skill.project": "이 프로젝트 폴더들에만 — 작업 트리마다 넣고 .git/info/exclude 에 적는다",
+  "cli.skill.global": "전역(~/.claude/skills)으로",
+  "cli.skill.uninstall": "넣은 곳에서 스킬을 지운다",
+  "cli.skill.removed": "스킬을 지웠습니다",
+  "cli.skill.worktrees": "작업 트리 {count}개",
+  "web.setup.skill.scope": "넣는 곳",
+  "web.setup.skill.scopeGlobal": "전역 (권장)",
+  "web.setup.skill.scopeGlobalHint": "이 Mac 의 모든 프로젝트. 모바일 앱 작업일 때만 반응합니다",
+  "web.setup.skill.scopeProject": "프로젝트",
+  "web.setup.skill.scopeProjectHint":
+    "고른 폴더에서만. 작업 트리마다 넣고, 저장소에는 흔적을 남기지 않습니다(.git/info/exclude)",
+  "web.setup.skill.projectPlaceholder": "예: ~/Projects/xb3-client",
+  "web.setup.skill.add": "추가",
+  "web.setup.skill.applyScope": "프로젝트에 넣기",
+  "web.setup.skill.worktrees": "작업 트리 {count}개",
 } as const;

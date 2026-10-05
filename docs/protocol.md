@@ -74,7 +74,8 @@
 | 메서드 | params | result | 비고 |
 | --- | --- | --- | --- |
 | `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en)·시스템 언어 `systemLanguage`, 첫 실행 설정을 안 끝냈는지 `setupNeeded`(M14), 이 세션, 점유·대기 순번, `DeviceView[]`(Corgi 목록), 그룹 `groups`, 세션마다 점유·대기 `sessions`(점유하거나 기다리는 세션만 — `{ sessionKey, agentSessionId?, agent, cwd, human, lastUsedAt, held: [{deviceId, since}], queued, queuePosition? }`, M13), 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
-| `setup.status` | `{}` | `{ needed, finishedAt?, checks: CheckView[], agents: { claude, skill, mcp, hook, rule } }` | 첫 실행 설정 창 (M14). `checks` 는 `corgi doctor` 와 같은 점검(항목마다 `id` — `server`·`launchd`·`xcode`·`simslim`·`androidSdk`·`images`·`avdslim`·`argent`·…). `agents` 는 설치 상태 `missing`·`outdated`·`current`, `claude` 는 claude 명령이 있는지. 점검에 몇 초 걸린다 |
+| `setup.status` | `{}` | `{ needed, finishedAt?, checks: CheckView[], agents: { claude, skill, skillLocations: [{ location, state, targets }], mcp, hook, rule } }` | 첫 실행 설정 창 (M14). `checks` 는 `corgi doctor` 와 같은 점검(항목마다 `id` — `server`·`launchd`·`xcode`·`simslim`·`androidSdk`·`images`·`avdslim`·`argent`·…). `agents` 는 설치 상태 `missing`·`outdated`·`current`, `claude` 는 claude 명령이 있는지. 점검에 몇 초 걸린다 |
+| `setup.skillScope` | `{ kind: "global" }` · `{ kind: "project", paths: [폴더] }` | `agents` | 스킬을 넣는 곳 바꾸기 (S9) — 빠진 곳은 지우고 새 곳에 넣는다. 프로젝트는 작업 트리마다 넣고 `.git/info/exclude` 에 적는다. 없는 폴더는 `INVALID` |
 | `setup.apply` | `{ item: "skill" \| "mcp" \| "protection", enabled }` | `agents` (위와 같음) | 켜면 설치·끄면 제거. `protection` = 훅 + 규칙. `mcp` 는 `claude mcp add --scope user corgi -- <corgi> mcp` — claude 가 없으면 `TOOL_MISSING` |
 | `setup.finish` | `{}` | `{ finished: true }` | `…/Corgi/setup.json` 에 끝낸 시각을 남긴다 — 앱이 다시 띄우지 않는다 |
 | `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, historyRetentionDays, androidRamMb, simslimProfile? }` | 설정 화면·`corgi config` (M11) |

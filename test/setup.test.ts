@@ -78,6 +78,7 @@ describe("첫 실행 설정 (M14)", () => {
     expect(setup.agents).toEqual({
       claude: false,
       skill: "missing",
+      skillLocations: [{ location: { kind: "global" }, state: "missing", targets: 1 }],
       mcp: "missing",
       hook: "missing",
       rule: "missing",
@@ -101,6 +102,43 @@ describe("첫 실행 설정 (M14)", () => {
     expect(agents.rule).toBe("missing");
     agents = (await H("setup.apply", { item: "skill", enabled: false })) as SetupAgents;
     expect(agents.skill).toBe("missing");
+  });
+
+  test("스킬을 프로젝트로 옮기면 전역에서 빼고, 작업 트리마다 넣고, git 에서는 이 Mac 에서만 무시한다 (S9)", async () => {
+    const { H, home } = await start();
+    await H("setup.apply", { item: "skill", enabled: true });
+    const repo = join(home, "app");
+    mkdirSync(repo);
+    const git = (...args: string[]) =>
+      Bun.spawnSync(["git", "-C", repo, ...args], { env: { ...process.env, HOME: home } });
+    git("init", "-q");
+    git("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "init");
+    git("worktree", "add", "-q", join(home, "app-wt"));
+
+    const agents = (await H("setup.skillScope", { kind: "project", paths: [repo] })) as SetupAgents;
+    expect(agents.skill).toBe("current");
+    expect(agents.skillLocations).toEqual([
+      { location: { kind: "project", path: repo }, state: "current", targets: 2 },
+    ]);
+    expect(existsSync(join(home, ".claude", "skills", "corgi"))).toBe(false);
+    expect(existsSync(join(repo, ".claude", "skills", "corgi", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(home, "app-wt", ".claude", "skills", "corgi", "SKILL.md"))).toBe(true);
+    expect(readFileSync(join(repo, ".git", "info", "exclude"), "utf8")).toContain(
+      "/.claude/skills/corgi/",
+    );
+    // 저장소에는 새 파일로 보이지 않는다
+    expect(new TextDecoder().decode(git("status", "--porcelain").stdout).trim()).toBe("");
+
+    // 다시 전역으로
+    const back = (await H("setup.skillScope", { kind: "global" })) as SetupAgents;
+    expect(back.skillLocations.map((l) => l.location)).toEqual([{ kind: "global" }]);
+    expect(existsSync(join(repo, ".claude", "skills", "corgi"))).toBe(false);
+  });
+
+  test("없는 폴더는 INVALID", async () => {
+    const { H } = await start();
+    const error = await H("setup.skillScope", { kind: "project", paths: ["/no/such/dir"] });
+    expect(error.code).toBe("INVALID");
   });
 
   test("claude 가 없으면 MCP 등록은 TOOL_MISSING", async () => {

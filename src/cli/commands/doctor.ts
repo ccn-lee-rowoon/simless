@@ -13,7 +13,8 @@ import { isAppInstalled } from "../app-bundle.ts";
 import { hookStatus, ruleStatus, ruleTarget, settingsPath } from "../claude-hook.ts";
 import { CliError, type Context, output, type Run } from "../context.ts";
 import { isInstalled, selfCommand } from "../launchd.ts";
-import { skillStatus } from "../skill.ts";
+import { combineStates, loadSkillLocations, locationStatus } from "../skill.ts";
+import { locationText } from "./skill.ts";
 
 // 설치 안내·연결 확인 (S1·S2). 서버가 꺼져 있어도 돌아야 하므로 서버 코드 없이 직접 본다.
 
@@ -219,7 +220,10 @@ export async function runChecks(
           ? t("doctor.argent.fix")
           : undefined,
   });
-  const skill = await skillStatus();
+  const skillViews = await Promise.all(
+    loadSkillLocations(ctx.paths.skills).map((l) => locationStatus(l)),
+  );
+  const skill = combineStates(skillViews.map((v) => v.state));
   add({
     id: "skill",
     group: t("doctor.group.agents"),
@@ -227,11 +231,11 @@ export async function runChecks(
     status: skill === "current" ? "ok" : "warn",
     detail:
       skill === "current"
-        ? "~/.claude/skills/corgi"
+        ? skillViews.map((v) => locationText(v.location)).join(" · ")
         : skill === "missing"
           ? t("doctor.skill.missing")
           : t("doctor.skill.outdated"),
-    fix: skill === "current" ? undefined : "corgi install --no-launchd",
+    fix: skill === "current" ? undefined : "corgi skill install",
     autofix: skill === "current" ? undefined : "skill",
   });
 
@@ -310,7 +314,10 @@ export function registerDoctor(program: Command, run: Run) {
         if (o.fix) {
           const needs = new Set(checks.flatMap((c) => (c.autofix ? [c.autofix] : [])));
           if (needs.has("launchd")) await (await import("../launchd.ts")).install(ctx.paths);
-          if (needs.has("skill")) await (await import("../skill.ts")).installSkill();
+          if (needs.has("skill")) {
+            const { installSkillAt } = await import("../skill.ts");
+            for (const l of loadSkillLocations(ctx.paths.skills)) await installSkillAt(l);
+          }
           if (needs.has("hook")) {
             const { installHook, installRule } = await import("../claude-hook.ts");
             installHook(selfCommand());

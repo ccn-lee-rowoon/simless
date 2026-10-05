@@ -1,4 +1,5 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { z } from "zod";
 import {
   hookStatus,
@@ -17,8 +18,16 @@ import {
 } from "../cli/claude-mcp.ts";
 import { runChecks } from "../cli/commands/doctor.ts";
 import { selfCommand } from "../cli/launchd.ts";
-import { installSkill, skillStatus, uninstallSkill } from "../cli/skill.ts";
-import type { SetupAgents, SetupStatus } from "../shared/api.ts";
+import {
+  combineStates,
+  installSkillAt,
+  loadSkillLocations,
+  locationStatus,
+  sameLocation,
+  saveSkillLocations,
+  uninstallSkillAt,
+} from "../cli/skill.ts";
+import type { SetupAgents, SetupStatus, SkillLocation } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Paths } from "../shared/paths.ts";
 import { VERSION } from "../shared/version.ts";
@@ -30,6 +39,11 @@ import { readJson, writeJson } from "./store.ts";
 // 설치 자체는 CLI(`corgi install`)와 같은 함수를 쓴다. 서버가 하므로 창은 버튼만 누르면 된다.
 
 const SetupFile = z.object({ finishedAt: z.number(), version: z.string() });
+
+const ScopeParams = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("global") }),
+  z.object({ kind: z.literal("project"), paths: z.array(z.string().min(1)).min(1) }),
+]);
 
 const ApplyParams = z.object({
   item: z.enum(["skill", "mcp", "protection"]),
@@ -52,13 +66,20 @@ export function registerSetupMethods(server: CorgiServer): void {
   const env = deps.env ?? process.env;
   const command = () => deps.selfCommand ?? selfCommand();
 
-  const agents = async (): Promise<SetupAgents> => ({
-    claude: claudeBinary(env) !== undefined,
-    skill: await skillStatus(env),
-    mcp: mcpStatus(command(), env),
-    hook: hookStatus(command(), env),
-    rule: await ruleStatus(env),
-  });
+  const locations = () => loadSkillLocations(server.paths.skills);
+  const skillLocations = () => Promise.all(locations().map((l) => locationStatus(l, env)));
+
+  const agents = async (): Promise<SetupAgents> => {
+    const views = await skillLocations();
+    return {
+      claude: claudeBinary(env) !== undefined,
+      skill: combineStates(views.map((v) => v.state)),
+      skillLocations: views,
+      mcp: mcpStatus(command(), env),
+      hook: hookStatus(command(), env),
+      rule: await ruleStatus(env),
+    };
+  };
 
   const checks = () =>
     deps.setupChecks?.() ??
@@ -85,8 +106,10 @@ export function registerSetupMethods(server: CorgiServer): void {
     const { item, enabled } = parse(ApplyParams, p);
     try {
       if (item === "skill") {
-        if (enabled) await installSkill(env);
-        else uninstallSkill(env);
+        for (const location of locations()) {
+          if (enabled) await installSkillAt(location, env);
+          else await uninstallSkillAt(location, env);
+        }
       } else if (item === "mcp") {
         if (enabled) await installMcp(command(), env);
         else await uninstallMcp(env);
@@ -104,6 +127,25 @@ export function registerSetupMethods(server: CorgiServer): void {
       }
       throw error;
     }
+    return agents();
+  });
+
+  /** 스킬을 넣을 곳 바꾸기 (S9) — 전역 하나, 또는 프로젝트 여러 개. 빠진 곳은 지우고 새 곳에 넣는다 */
+  server.addMethod("setup.skillScope", async (p) => {
+    const params = parse(ScopeParams, p);
+    const next: SkillLocation[] =
+      params.kind === "global"
+        ? [{ kind: "global" }]
+        : params.paths.map((path) => {
+            const absolute = resolve(path.replace(/^~(?=\/|$)/, env.HOME ?? ""));
+            if (!existsSync(absolute) || !statSync(absolute).isDirectory())
+              throw new HandlerError("INVALID", t("setup.noFolder", { path }));
+            return { kind: "project", path: absolute };
+          });
+    for (const old of locations())
+      if (!next.some((l) => sameLocation(l, old))) await uninstallSkillAt(old, env);
+    for (const location of next) await installSkillAt(location, env);
+    saveSkillLocations(server.paths.skills, next);
     return agents();
   });
 

@@ -261,11 +261,23 @@ export interface CheckView {
 /** 설치 상태 — missing = 없음, outdated = 들어 있는 것과 다름, current = 같음 */
 export type InstallState = "missing" | "outdated" | "current";
 
+/** 스킬을 넣는 곳 (S9) — 전역 또는 프로젝트 폴더 */
+export type SkillLocation = { kind: "global" } | { kind: "project"; path: string };
+
+export interface SkillLocationView {
+  location: SkillLocation;
+  state: InstallState;
+  /** 설치 대상 수 — 프로젝트면 작업 트리 수 */
+  targets: number;
+}
+
 /** 에이전트 연결 — 첫 실행 설정 창에서 켜고 끈다 (M14) */
 export interface SetupAgents {
   /** claude 명령이 있는지 — 없으면 MCP 등록을 못 한다 */
   claude: boolean;
+  /** 모든 위치를 합친 상태 */
   skill: InstallState;
+  skillLocations: SkillLocationView[];
   mcp: InstallState;
   /** 보호 = 훅 + 규칙 (P2·P3) */
   hook: InstallState;

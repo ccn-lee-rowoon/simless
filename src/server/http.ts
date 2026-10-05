@@ -20,6 +20,7 @@ const WEB_METHODS = new Set([
   "status",
   "setup.status",
   "setup.apply",
+  "setup.skillScope",
   "setup.finish",
   "device.list",
   "catalog",

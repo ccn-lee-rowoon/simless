@@ -1633,6 +1633,34 @@ summary:focus-visible {
   gap: 8px;
 }
 
+.setup-scope {
+  gap: 8px;
+}
+
+.setup-projects {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: 24px;
+}
+
+.setup-project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setup-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
 .setup-select {
   padding: 4px 8px;
   border: 1px solid var(--border);

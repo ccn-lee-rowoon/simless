@@ -21,6 +21,8 @@ export interface Paths {
   managedIndex: string;
   /** 첫 실행 설정을 끝낸 시각 (M14) — 없으면 앱이 설정 창을 띄운다 */
   setup: string;
+  /** 스킬을 넣은 위치 (S9) — Corgi 가 바뀌면 모두 고친다 */
+  skills: string;
   /** 웹 UI 요청 토큰 (0600) — corgi ui 가 읽어 브라우저에 넘긴다 */
   webToken: string;
   config: string;
@@ -49,6 +51,7 @@ export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
     legacyHistory: join(stateDir, "history.json"),
     managedIndex: join(stateDir, "managed-index.json"),
     setup: join(stateDir, "setup.json"),
+    skills: join(stateDir, "skills.json"),
     webToken: join(stateDir, "web-token"),
     config: join(configDir, "config.json"),
     appsDir: join(configDir, "apps"),

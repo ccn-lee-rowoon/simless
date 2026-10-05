@@ -515,4 +515,25 @@ export const en: Record<keyof typeof ko, string> = {
     "Lease history in the Sessions view is kept this long; older entries are deleted.",
   "cli.opt.create":
     "With --default: if the platform has no devices at all, create a slim recommended one and use it (takes a few minutes)",
+  "setup.noFolder": "Folder not found: {path}",
+  "cli.skill": "The agent skill — where it is installed (global or project) and its state (S9)",
+  "cli.skill.status": "State of the skill in each place it is installed",
+  "cli.skill.install": "Install the skill (with no option, again where it was installed)",
+  "cli.skill.project":
+    "Only in these project folders — one copy per worktree, listed in .git/info/exclude",
+  "cli.skill.global": "Globally (~/.claude/skills)",
+  "cli.skill.uninstall": "Remove the skill from where it is installed",
+  "cli.skill.removed": "Removed the skill",
+  "cli.skill.worktrees": "{count} worktree(s)",
+  "web.setup.skill.scope": "Where",
+  "web.setup.skill.scopeGlobal": "Global (recommended)",
+  "web.setup.skill.scopeGlobalHint":
+    "Every project on this Mac. It only kicks in for mobile app work",
+  "web.setup.skill.scopeProject": "Projects",
+  "web.setup.skill.scopeProjectHint":
+    "Only in the folders you pick. One copy per worktree, and nothing shows up in the repository (.git/info/exclude)",
+  "web.setup.skill.projectPlaceholder": "e.g. ~/Projects/xb3-client",
+  "web.setup.skill.add": "Add",
+  "web.setup.skill.applyScope": "Install in these projects",
+  "web.setup.skill.worktrees": "{count} worktree(s)",
 };
