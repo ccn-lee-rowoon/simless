@@ -1,6 +1,6 @@
 ---
 name: corgi
-description: Use whenever a task needs an iOS simulator or Android emulator on this Mac — testing an app, checking a screen, checking layout across screen sizes, or anything else that drives a device. Corgi (the `corgi` CLI) brokers the devices between sessions — acquire a device group, the default device, or specific devices, then drive screens with argent. Triggers — "시뮬레이터로 확인해 줘", "에뮬레이터에서 테스트", "기본 디바이스로 테스트", "DM 확인 그룹으로 봐 줘", "여러 해상도로 확인", "레이아웃 크기별로 봐 줘", "320·375·414 에서 확인", "작은 폰에서 깨지는지", "태블릿에서도 봐 줘", "코기로 확인해 줘", "test on the simulator", "check layout on multiple screen sizes". Even for a single device, acquire it through Corgi first; argent skills (argent-device-interact etc.) then do the on-screen work. Not for tasks that don't touch a device.
+description: Use when testing or checking a **mobile app** (React Native, Expo, native iOS or Android) on an iOS simulator or Android emulator on this Mac — running the app, checking a screen, checking its layout across device sizes, or anything else that drives a simulator or emulator. Also use when the user explicitly asks for a simulator, emulator or Corgi, in any project. Corgi (the `corgi` CLI) brokers the devices between sessions — acquire a device group, the default device, or specific devices, then drive screens with argent. Triggers in a mobile app project — "시뮬레이터로 확인해 줘", "에뮬레이터에서 테스트", "기본 디바이스로 테스트", "DM 확인 그룹으로 봐 줘", "여러 해상도로 확인", "레이아웃 크기별로 봐 줘", "320·375·414 에서 확인", "작은 폰에서 깨지는지", "태블릿에서도 봐 줘"; anywhere — "코기로 확인해 줘", "시뮬레이터에서 봐 줘", "test on the simulator". Even for a single device, acquire it through Corgi first; argent skills (argent-device-interact etc.) then do the on-screen work. **Not for web projects**: checking a website's responsive layout at phone or tablet widths is done in a browser (resize, device emulation), not here — unless the user asks for a simulator or emulator by name (e.g. mobile Safari on an iOS simulator). Not for tasks that don't touch a device.
 ---
 
 # Corgi — device broker
@@ -23,6 +23,8 @@ Corgi lets several agent sessions and people share this Mac's simulators and emu
 ## Steps
 
 ### 1. Check and pick what to use
+
+First make sure this really is device work: the project is a mobile app (`package.json` with `react-native` or `expo`, an `ios/`·`android/` project, Xcode or Gradle files), or the user asked for a simulator, emulator or Corgi by name. A web project's «check it at phone widths» belongs in the browser — stop here and use browser tools instead.
 
 ```sh
 corgi --json status          # server, devices, groups, defaults, who holds what
