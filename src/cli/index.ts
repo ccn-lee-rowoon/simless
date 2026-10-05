@@ -74,8 +74,9 @@ export async function runCli(argv: string[]): Promise<number> {
     .option("--no-launchd", t("cli.install.noLaunchd"))
     .option("--no-skill", t("cli.install.noSkill"))
     .option("--no-app", t("cli.install.noApp"))
+    .option("--no-hook", t("cli.install.noHook"))
     .action(
-      run(async (ctx, o: { launchd: boolean; skill: boolean; app: boolean }) => {
+      run(async (ctx, o: { launchd: boolean; skill: boolean; app: boolean; hook: boolean }) => {
         const done: Record<string, string> = {};
         if (o.launchd) {
           const { install } = await import("./launchd.ts");
@@ -85,6 +86,12 @@ export async function runCli(argv: string[]): Promise<number> {
         if (o.skill) {
           const { installSkill } = await import("./skill.ts");
           done.skill = await installSkill();
+        }
+        if (o.hook) {
+          const { installHook, installRule } = await import("./claude-hook.ts");
+          const { selfCommand } = await import("./launchd.ts");
+          done.hook = installHook(selfCommand());
+          done.rule = await installRule();
         }
         if (o.app) {
           const { installApp } = await import("./app-bundle.ts");
@@ -108,6 +115,9 @@ export async function runCli(argv: string[]): Promise<number> {
         const { uninstall } = await import("./launchd.ts");
         await uninstall(ctx.paths);
         await (await import("./app-bundle.ts")).uninstallApp(ctx.paths);
+        const { uninstallHook, uninstallRule } = await import("./claude-hook.ts");
+        uninstallHook();
+        uninstallRule();
         output(ctx, { uninstalled: ctx.paths.launchAgent }, () => t("cli.uninstall.done"));
       }),
     );

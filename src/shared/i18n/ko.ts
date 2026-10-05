@@ -95,13 +95,14 @@ export const ko = {
   "cli.busyHint": "\n  기다리려면 --wait, 비어 있는 것만 쓰려면 --available",
   "cli.serve": "상주 서버를 띄운다 (보통 launchd 가 실행)",
   "cli.install":
-    "서버를 launchd 에 등록하고(로그인 시 자동 실행), 에이전트 스킬을 설치하고, Corgi.app 을 만든다",
+    "서버를 launchd 에 등록하고(로그인 시 자동 실행), 에이전트 스킬·Claude Code 훅·규칙을 설치하고, Corgi.app 을 만든다",
   "cli.install.noLaunchd": "launchd 등록은 건너뛴다",
   "cli.install.noSkill": "스킬 설치는 건너뛴다",
   "cli.install.noApp": "Corgi.app 만들기는 건너뛴다",
   "cli.install.menubar": "{path} (메뉴바 앱)",
   "cli.install.done": "설치했습니다 ({what}): {path}",
-  "cli.uninstall": "launchd 등록과 Corgi.app 을 지운다 — 만든 디바이스·스킬은 지우지 않는다",
+  "cli.uninstall":
+    "launchd 등록·Corgi.app·Claude Code 훅·규칙을 지운다 — 만든 디바이스·스킬은 지우지 않는다",
   "cli.uninstall.done": "등록을 지웠습니다",
   "cli.ui": "웹 화면을 브라우저로 연다 (서버가 꺼져 있으면 켠다)",
   "cli.ui.print": "열지 않고 주소만 출력",
@@ -259,7 +260,7 @@ export const ko = {
   "cli.config.set": "{key} = {value}",
   // CLI — doctor (S1·S2)
   "doctor.description": "설치·연결을 점검하고 고치는 방법을 알려 준다 (S1·S2)",
-  "doctor.fix": "corgi install 로 고칠 수 있는 것(launchd 등록·스킬·Corgi.app)은 고친다",
+  "doctor.fix": "corgi install 로 고칠 수 있는 것(launchd 등록·스킬·훅·규칙·Corgi.app)은 고친다",
   "doctor.group.server": "서버",
   "doctor.group.agents": "에이전트 연동",
   "doctor.server": "서버 연결",
@@ -286,7 +287,7 @@ export const ko = {
   "doctor.allGood": "모두 정상입니다.",
   "doctor.summary": "문제 {fails}개 · 주의 {warns}개",
   "doctor.canFix":
-    "corgi doctor --fix 로 고칠 수 있는 항목이 있습니다 (launchd 등록·스킬·Corgi.app).",
+    "corgi doctor --fix 로 고칠 수 있는 항목이 있습니다 (launchd 등록·스킬·훅·규칙·Corgi.app).",
   "doctor.failed": "고쳐야 할 항목이 있습니다",
   "hint.avdslimTrust": "(비공식 tap 이라 거부되면 brew trust kdbhalala/avdslim 뒤 다시)",
   "hint.androidSdk":
@@ -452,4 +453,11 @@ export const ko = {
     "{name} 은 Corgi 가 관리하는 디바이스라 점유한 뒤에만 쓸 수 있습니다 — corgi use {id}",
   "hook.serverDown":
     "Corgi 서버가 꺼져 있어 이 디바이스({name})를 누가 쓰는지 알 수 없습니다 — corgi status 로 서버를 켠 뒤 다시 하세요",
+  "cli.install.noHook":
+    "Claude Code 훅(~/.claude/settings.json)·규칙(~/.claude/rules/corgi.md) 설치는 건너뛴다",
+  "doctor.hook": "Claude Code 훅",
+  "doctor.hook.missing":
+    "없음 — 에이전트가 점유하지 않은 디바이스를 argent·adb 로 직접 건드려도 막지 못한다 (P3)",
+  "doctor.hook.outdated": "다른 corgi 를 가리킴 (옮겼거나 개발·배포가 바뀜)",
+  "doctor.rule": "Corgi 규칙",
 } as const;

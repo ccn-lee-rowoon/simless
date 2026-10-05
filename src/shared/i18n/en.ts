@@ -89,13 +89,14 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.busyHint": "\n  To wait, add --wait; to take only free devices, add --available",
   "cli.serve": "Run the resident server (usually started by launchd)",
   "cli.install":
-    "Register the server with launchd (starts at login), install the agent skill, and build Corgi.app",
+    "Register the server with launchd (starts at login), install the agent skill, Claude Code hook and rule, and build Corgi.app",
   "cli.install.noLaunchd": "Skip launchd registration",
   "cli.install.noSkill": "Skip installing the skill",
   "cli.install.noApp": "Skip building Corgi.app",
   "cli.install.menubar": "{path} (menu bar app)",
   "cli.install.done": "Installed ({what}): {path}",
-  "cli.uninstall": "Remove the launchd registration and Corgi.app — devices and the skill stay",
+  "cli.uninstall":
+    "Remove the launchd registration, Corgi.app, and the Claude Code hook and rule — devices and the skill stay",
   "cli.uninstall.done": "Registration removed",
   "cli.ui": "Open the web view in a browser (starts the server if needed)",
   "cli.ui.print": "Print the address instead of opening it",
@@ -246,7 +247,8 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.config.set": "{key} = {value}",
   "doctor.description":
     "Check the installation and connections, and explain how to fix problems (S1·S2)",
-  "doctor.fix": "Fix what corgi install can fix (launchd registration, skill, Corgi.app)",
+  "doctor.fix":
+    "Fix what corgi install can fix (launchd registration, skill, hook, rule, Corgi.app)",
   "doctor.group.server": "Server",
   "doctor.group.agents": "Agent integration",
   "doctor.server": "Server connection",
@@ -274,7 +276,7 @@ export const en: Record<keyof typeof ko, string> = {
   "doctor.allGood": "Everything looks good.",
   "doctor.summary": "{fails} problems · {warns} warnings",
   "doctor.canFix":
-    "corgi doctor --fix can fix some of these (launchd registration, skill, Corgi.app).",
+    "corgi doctor --fix can fix some of these (launchd registration, skill, hook, rule, Corgi.app).",
   "doctor.failed": "Some items need fixing",
   "hint.avdslimTrust":
     "(if brew refuses the unofficial tap, run brew trust kdbhalala/avdslim and retry)",
@@ -440,4 +442,12 @@ export const en: Record<keyof typeof ko, string> = {
     "{name} is managed by Corgi and can only be used after acquiring it — corgi use {id}",
   "hook.serverDown":
     "The Corgi server is down, so it's unknown who is using {name} — start it with corgi status, then try again",
+  "cli.install.noHook":
+    "Skip the Claude Code hook (~/.claude/settings.json) and rule (~/.claude/rules/corgi.md)",
+  "doctor.hook": "Claude Code hook",
+  "doctor.hook.missing":
+    "missing — agents can touch devices they don't hold through argent or adb directly (P3)",
+  "doctor.hook.outdated":
+    "points to a different corgi (moved, or switched between development and release)",
+  "doctor.rule": "Corgi rule",
 };

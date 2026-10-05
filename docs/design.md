@@ -322,7 +322,9 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | `simctl … booted` | 켜진 iOS 전부 |
 | `adb devices`·`emulator -list-avds`·`simctl list` 등 목록 조회 | 없음 → 통과 (P6) |
 
-**argent 규칙에 붙일 문구 (P2)** — `integrations/rules/argent-corgi.md`. `corgi install` 이 에이전트별 전역 규칙 위치(Claude Code `~/.claude/rules/argent.md`, 다른 에이전트는 조사)에 붙인다.
+**규칙 (P2)** — `integrations/rules/corgi.md` 를 `corgi install` 이 `~/.claude/rules/corgi.md` 로 따로 설치한다(argent 의 `argent.md` 에 붙이면 argent 업데이트가 덮어쓴다). 다른 에이전트의 전역 규칙 위치는 조사 후.
+
+**설치** — `corgi install` 이 `~/.claude/settings.json` 의 `hooks.PreToolUse` 에 matcher `Bash|mcp__argent__.*`, 명령 `<corgi 절대 경로> hook claude pre-tool-use` 한 줄을 넣는다. 다른 설정·훅은 그대로 두고, 예전 Corgi 훅(명령이 ` hook claude pre-tool-use` 로 끝남)은 바꾸며, 쓰기 전에 `settings.json.corgi-backup` 을 남긴다. `--no-hook` 으로 건너뛰고, `corgi uninstall` 이 지운다. `corgi doctor` 가 훅·규칙을 점검한다.
 
 > 이 Mac 의 에뮬레이터·시뮬레이터(`corgi list` 에 있는 것 전부)는 `corgi use` 로 점유한 뒤에만 조작한다. 켜기·끄기는 argent `boot-device` 가 아니라 `corgi up`·`corgi down` 으로 한다.
 

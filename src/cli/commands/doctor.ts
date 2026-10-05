@@ -10,8 +10,9 @@ import { LAUNCH_LABEL } from "../../shared/paths.ts";
 import { androidSdk, installHints } from "../../shared/tools.ts";
 import { VERSION } from "../../shared/version.ts";
 import { isAppInstalled } from "../app-bundle.ts";
+import { hookStatus, ruleStatus, ruleTarget, settingsPath } from "../claude-hook.ts";
 import { CliError, type Context, output, type Run } from "../context.ts";
-import { isInstalled } from "../launchd.ts";
+import { isInstalled, selfCommand } from "../launchd.ts";
 import { skillStatus } from "../skill.ts";
 
 // 설치 안내·연결 확인 (S1·S2). 서버가 꺼져 있어도 돌아야 하므로 서버 코드 없이 직접 본다.
@@ -26,7 +27,7 @@ export interface Check {
   /** 고치는 방법 — 사람이 실행할 명령 */
   fix?: string;
   /** corgi doctor --fix 가 고칠 수 있는 것 */
-  autofix?: "launchd" | "skill" | "app";
+  autofix?: "launchd" | "skill" | "app" | "hook";
 }
 
 const MARK: Record<Status, string> = { ok: "✓", warn: "!", fail: "✗" };
@@ -225,6 +226,35 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
     autofix: skill === "current" ? undefined : "skill",
   });
 
+  const hook = hookStatus(selfCommand());
+  add({
+    group: t("doctor.group.agents"),
+    name: t("doctor.hook"),
+    status: hook === "current" ? "ok" : "warn",
+    detail:
+      hook === "current"
+        ? settingsPath()
+        : hook === "missing"
+          ? t("doctor.hook.missing")
+          : t("doctor.hook.outdated"),
+    fix: hook === "current" ? undefined : "corgi install --no-launchd --no-app",
+    autofix: hook === "current" ? undefined : "hook",
+  });
+  const rule = await ruleStatus();
+  add({
+    group: t("doctor.group.agents"),
+    name: t("doctor.rule"),
+    status: rule === "current" ? "ok" : "warn",
+    detail:
+      rule === "current"
+        ? ruleTarget()
+        : rule === "missing"
+          ? t("doctor.skill.missing")
+          : t("doctor.skill.outdated"),
+    fix: rule === "current" ? undefined : "corgi install --no-launchd --no-app",
+    autofix: rule === "current" ? undefined : "hook",
+  });
+
   const app = isAppInstalled(ctx.paths);
   add({
     group: t("doctor.group.agents"),
@@ -268,6 +298,11 @@ export function registerDoctor(program: Command, run: Run) {
           const needs = new Set(checks.flatMap((c) => (c.autofix ? [c.autofix] : [])));
           if (needs.has("launchd")) await (await import("../launchd.ts")).install(ctx.paths);
           if (needs.has("skill")) await (await import("../skill.ts")).installSkill();
+          if (needs.has("hook")) {
+            const { installHook, installRule } = await import("../claude-hook.ts");
+            installHook(selfCommand());
+            await installRule();
+          }
           if (needs.has("app"))
             await (await import("../app-bundle.ts")).installApp(ctx.paths, ctx.config);
           if (needs.size > 0) checks = await runChecks(ctx);
