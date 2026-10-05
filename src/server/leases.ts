@@ -337,6 +337,7 @@ export class LeaseManager {
       at: this.now(),
       kind,
       sessionKey,
+      agentSessionId: session?.agentSessionId,
       agent: session?.agent ?? "unknown",
       cwd: session?.cwd ?? "",
       human: session?.human ?? false,

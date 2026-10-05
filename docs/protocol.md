@@ -73,7 +73,7 @@
 
 | 메서드 | params | result | 비고 |
 | --- | --- | --- | --- |
-| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en)·시스템 언어 `systemLanguage`, 이 세션, 점유·대기 순번, `DeviceView[]`(Corgi 목록), 그룹 `groups`, 세션마다 점유·대기 `sessions`(점유하거나 기다리는 세션만 — `{ sessionKey, agent, cwd, human, lastUsedAt, held: [{deviceId, since}], queued, queuePosition? }`, M13), 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
+| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en)·시스템 언어 `systemLanguage`, 이 세션, 점유·대기 순번, `DeviceView[]`(Corgi 목록), 그룹 `groups`, 세션마다 점유·대기 `sessions`(점유하거나 기다리는 세션만 — `{ sessionKey, agentSessionId?, agent, cwd, human, lastUsedAt, held: [{deviceId, since}], queued, queuePosition? }`, M13), 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
 | `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, androidRamMb, simslimProfile? }` | 설정 화면·`corgi config` (M11) |
 | `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·Android RAM·simslim 프로필 (R25) |
 | `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff`)·남는 것(`slimKeeps`) (M1·M4) |
@@ -95,7 +95,7 @@
 | `group.delete` | `{ group }` | `{ deleted }` | 디바이스는 그대로 |
 | `lease.acquire` | `{ devices?, group?, default?: "android" \| "ios" \| "both", mode = "all" \| "available", wait = false, timeoutMs = 600000 }` | `{ status: "granted", deviceIds, devices }` · `{ status: "partial", deviceIds, devices, queued }` · `{ status: "queued", position, holders, devices }` | 디바이스·그룹·기본 디바이스를 합쳐 요청한다. `devices` 는 기기마다 `{ deviceId, name, state: held·queued·busy·free, holder? }` (R23). `all` 은 전부 아니면 아무것도 — 바쁘면 `BUSY`(data 에 `devices`), `available` 은 비어 있는 것만 잡는다(하나도 없으면 `BUSY`). `wait` 면 대기열에 넣는다 — `all` 은 전부 빌 때까지 기다리고, `available` 은 비어 있던 것을 잡고 바로 돌아오며 나머지는 빌 때마다 서버가 잡아 준다(비어 있던 게 없으면 처음 잡힐 때까지 기다린다). 대기열에 넣으면 교착이 생기는 요청은 `DEADLOCK` |
 | `lease.release` | `{ devices? }` | `{ released }` | 안 주면 이 세션의 점유·대기 전부 |
-| `lease.history` | `{ limit = 100, session? }` | `[{ at, kind, sessionKey, agent, cwd, human, deviceIds }]` — 최근 것부터 | `kind`: `acquired` 바로 점유 · `queued` 대기 등록 · `granted` 기다려서 점유 · `released` 스스로 해제 · `forced` 강제 해제됨 · `ended` 세션 종료로 해제 · `idle` 오래 안 써서 해제 · `deadlock` 교착이라 대기 거절 (M13) |
+| `lease.history` | `{ limit = 100, session? }` | `[{ at, kind, sessionKey, agentSessionId?, agent, cwd, human, deviceIds }]` — 최근 것부터 | `kind`: `acquired` 바로 점유 · `queued` 대기 등록 · `granted` 기다려서 점유 · `released` 스스로 해제 · `forced` 강제 해제됨 · `ended` 세션 종료로 해제 · `idle` 오래 안 써서 해제 · `deadlock` 교착이라 대기 거절 (M13) |
 | `lease.who` | `{ target? }` | `[{ deviceId, name, holder? }]` | `target` 은 ID·이름·AVD ID·UDID·시리얼 |
 
 - 여러 대 작업(`slim`·`up`·`down`)은 하나가 실패해도 나머지를 계속하고 `results: [{ id, name, ok, error? }]` 로 대마다 알려 준다.

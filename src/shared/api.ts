@@ -47,6 +47,8 @@ export interface DeviceView extends Device {
 /** 세션 화면 한 줄 (M13) */
 export interface SessionView {
   sessionKey: string;
+  /** 에이전트가 주는 세션 ID */
+  agentSessionId?: string;
   agent: string;
   cwd: string;
   human: boolean;
@@ -204,6 +206,8 @@ export interface HistoryEvent {
   at: number;
   kind: HistoryKind;
   sessionKey: string;
+  /** 에이전트가 주는 세션 ID (Claude Code 의 CLAUDE_CODE_SESSION_ID 등) */
+  agentSessionId?: string;
   agent: string;
   cwd: string;
   human: boolean;

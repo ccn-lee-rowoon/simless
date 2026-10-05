@@ -477,6 +477,7 @@ export class CorgiServer {
         )
         .map((s) => ({
           sessionKey: s.key,
+          agentSessionId: s.agentSessionId,
           agent: s.agent,
           cwd: s.cwd,
           human: s.human,

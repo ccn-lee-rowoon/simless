@@ -19,6 +19,7 @@ const Event = z.object({
     "deadlock",
   ]),
   sessionKey: z.string(),
+  agentSessionId: z.string().optional(),
   agent: z.string(),
   cwd: z.string(),
   human: z.boolean(),

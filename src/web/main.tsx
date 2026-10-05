@@ -7,15 +7,17 @@ import { CreateDialog } from "./CreateDialog.tsx";
 import { DevicesView } from "./DevicesView.tsx";
 import { GroupsView } from "./GroupsView.tsx";
 import { DevicesIcon, ExternalIcon, GroupsIcon, SessionsIcon, SettingsIcon } from "./icons.tsx";
-import { SessionsView } from "./SessionsView.tsx";
+import { SessionsView, SessionWindow } from "./SessionsView.tsx";
 import { SettingsView } from "./SettingsView.tsx";
 import type { Act, LogLine } from "./types.ts";
 import { Logo, useMenuDismiss } from "./ui.tsx";
 
 type View = "devices" | "groups" | "sessions";
 
-/** 설정은 새 창으로 연다 (M11) — 주소에 ?window=settings 면 설정만 그린다 */
-const SETTINGS_WINDOW = new URLSearchParams(location.search).get("window") === "settings";
+/** 새 창 — ?window=settings 면 설정(M11)만, ?window=session&key=… 면 그 세션의 기록(M13)만 그린다 */
+const PARAMS = new URLSearchParams(location.search);
+const SETTINGS_WINDOW = PARAMS.get("window") === "settings";
+const SESSION_WINDOW = PARAMS.get("window") === "session" ? PARAMS.get("key") : null;
 
 /** 설정 창 열기 — 앱(Corgi.app)이면 Swift 에 알려 별도 창, 브라우저면 새 창 */
 function openSettings(): void {
@@ -148,6 +150,14 @@ function App() {
         <h1>Corgi</h1>
         <p>{t("web.noToken")}</p>
       </main>
+    );
+  }
+
+  if (SESSION_WINDOW) {
+    return status ? (
+      <SessionWindow status={status} sessionKey={SESSION_WINDOW} />
+    ) : (
+      <p className="sub">{t("web.loading")}</p>
     );
   }
 
