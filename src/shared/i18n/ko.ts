@@ -444,4 +444,12 @@ export const ko = {
   "web.sessions.stateActive": "사용 중",
   "web.sessions.stateEnded": "끝남",
   "web.sessions.range": "{from} 부터 기록 {count}건 — 최근 것부터",
+  "hook.bootViaCorgi":
+    "Corgi 가 관리하는 디바이스({name})는 Corgi 로 켭니다 — corgi use {id} (점유하고 켜기)",
+  "hook.heldByOther":
+    "{name} 은 다른 세션({who})이 사용 중입니다 — 기다리려면 corgi use {id} --wait, 아니면 사용자에게 물어보세요",
+  "hook.notHeld":
+    "{name} 은 Corgi 가 관리하는 디바이스라 점유한 뒤에만 쓸 수 있습니다 — corgi use {id}",
+  "hook.serverDown":
+    "Corgi 서버가 꺼져 있어 이 디바이스({name})를 누가 쓰는지 알 수 없습니다 — corgi status 로 서버를 켠 뒤 다시 하세요",
 } as const;

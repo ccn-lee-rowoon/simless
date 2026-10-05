@@ -432,4 +432,12 @@ export const en: Record<keyof typeof ko, string> = {
   "web.sessions.stateActive": "Active",
   "web.sessions.stateEnded": "Ended",
   "web.sessions.range": "{count} events since {from} — newest first",
+  "hook.bootViaCorgi":
+    "{name} is managed by Corgi, so boot it with Corgi — corgi use {id} (acquire and boot)",
+  "hook.heldByOther":
+    "{name} is in use by another session ({who}) — to wait, run corgi use {id} --wait, or ask the user",
+  "hook.notHeld":
+    "{name} is managed by Corgi and can only be used after acquiring it — corgi use {id}",
+  "hook.serverDown":
+    "The Corgi server is down, so it's unknown who is using {name} — start it with corgi status, then try again",
 };

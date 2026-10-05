@@ -20,6 +20,7 @@ import { registerDeviceMethods } from "./devices.ts";
 import type { Discovered, Driver, RuntimeState } from "./drivers/types.ts";
 import { registerGroupMethods } from "./groups.ts";
 import { History } from "./history.ts";
+import { registerHookMethods } from "./hook.ts";
 import { EMPTY_LEASE_STATE, type Holder, LeaseManager, LeaseStateSchema } from "./leases.ts";
 import { Registry } from "./registry.ts";
 import { type Connection, type Handler, HandlerError } from "./socket.ts";
@@ -82,6 +83,7 @@ const READ_ONLY = new Set([
   "lease.who",
   "lease.history",
   "settings.get",
+  "hook.check",
 ]);
 
 export type ServerEvent = { type: "changed" } | { type: "progress"; message: string };
@@ -134,6 +136,7 @@ export class CorgiServer {
     this.applyLanguage();
     registerDeviceMethods(this);
     registerGroupMethods(this);
+    registerHookMethods(this);
   }
 
   /** 다른 모듈(드라이버 명령 등)이 메서드를 붙인다 */
@@ -237,9 +240,17 @@ export class CorgiServer {
 
   private inventoryCache?: { at: number; devices: Device[]; problems: InventoryProblem[] };
 
-  /** 목록을 바꾸는 작업(만들기·이름 변경·삭제) 뒤에 부른다 */
+  private readonly invalidators: (() => void)[] = [];
+
+  /** 목록·켜짐이 바뀌는 작업(만들기·이름 변경·삭제·켜기·끄기) 뒤에 부른다 */
   invalidate(): void {
     this.inventoryCache = undefined;
+    for (const fn of this.invalidators) fn();
+  }
+
+  /** invalidate 때 함께 버릴 기억 */
+  onInvalidate(fn: () => void): void {
+    this.invalidators.push(fn);
   }
 
   /**

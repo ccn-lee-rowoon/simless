@@ -306,9 +306,9 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 **흐름**
 1. 어댑터가 stdin 입력을 공통 형식으로 바꾼다. 세션은 §7 방식(훅 프로세스의 부모 체인)으로 찾고, 입력에 세션 ID 가 있으면 보조로 쓴다.
 2. **빠른 통과**: Bash 명령에 `adb`·`simctl`·`emulator`·`simslim`·`avdslim` 이 없고, argent 도구에 기기 인자가 없으면 바로 통과한다(소켓 안 엶). `main.ts` 는 이 경로에서 서버·웹 코드를 불러오지 않는다.
-3. 대상 디바이스를 뽑아 서버에 `hook.check` → 허용/차단 + 사유. 허용이면 서버가 같은 요청으로 `lastUsedAt` 을 갱신한다.
+3. 대상(`src/hook/targets.ts` — 순수 함수)을 뽑아 서버에 `hook.check` → 허용/차단 + 사유. 대상은 **Corgi 목록의 디바이스**만(P1) — AVD ID·UDID·지금 시리얼로 잇는다(Corgi ID 는 흔한 낱말과 겹칠 수 있어 빼고). 켜짐 상태(시리얼)를 읽는 데 0.5초쯤 걸려 서버가 10초 기억하고, 상태를 바꾸는 요청이 오면 버린다. 허용이면 서버가 같은 요청으로 `lastUsedAt` 을 갱신한다. 실측: 빠른 통과 약 20ms, 판정 약 30ms(기억이 없을 때 0.6초).
 4. **서버가 꺼져 있으면** `managed-index.json` 으로 이 Mac 의 디바이스인지만 본다. 맞으면(또는 시리얼을 판정 못 하면) 차단하고 «`corgi status` 로 서버를 켜세요» 를 알려 준다 (P9).
-5. 차단은 `permissionDecision: "deny"` JSON 으로 돌려주고, 사유에 **누가 쓰는 중인지와 점유 방법**(`corgi use …`)을 넣는다 (P5).
+5. 차단은 `permissionDecision: "deny"` JSON 으로 돌려주고, 사유에 **누가 쓰는 중인지와 점유 방법**(`corgi use …`)을 넣는다 (P5). 서버가 이상한 답(모르는 메서드 등)을 하면 막지 않는다 — 훅 때문에 에이전트가 멈추지 않게.
 
 **대상 판정**
 
@@ -387,7 +387,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | 항목 | 왜 | 언제 |
 | --- | --- | --- |
 | 에이전트별 프로세스 트리 — codex·gemini·cursor-agent·opencode·copilot 이 명령·MCP 를 자식 프로세스로 실행하는지, `AI_AGENT` 같은 표시 변수를 주는지 (각 에이전트에 `ps` 를 실행시켜 확인 — 그 에이전트 사용량이 든다) | §7 판정표·호스트 목록 | 1단계 |
-| Claude 어댑터 — CLI 의 `CLAUDE_CODE_SESSION_ID` 와 훅 입력 `session_id` 가 같은 값인지, `/clear`·`--resume` 시 어떻게 바뀌는지 | §7 보조 세션 ID | 1단계 |
+| ✅ Claude 어댑터 — CLI 의 `CLAUDE_CODE_SESSION_ID` 와 훅 입력 `session_id` 가 같은 값인지 — **같다**(2026-10-05: 세션 화면의 ID 와 대화 기록 파일 이름이 같음). `/clear`·`--resume` 때 바뀌는지는 아직 | §7 보조 세션 ID | 1단계 |
 | ✅ avdslim — 1.0.15 설치·확인(2단계 전). 명령: `tune-avd <avd>`(호스트 설정, config.ini 를 다시 씀 — AvdId·크기·이름은 유지됨)·`on <serial>`·`off <serial>`·`profiles`. **상태 조회 명령이 없어** 슬림 확인은 «기기에 설치된 프로필 패키지 중 꺼진 비율 ≥ 50%» 로 한다(표준 프리셋이 Chrome·Play 스토어 등은 남겨 실측 52개 중 49개). 풀림 → 켤 때 재적용까지 실제로 확인 | §9 Android 슬림·M6 | 2단계 전 |
 | simslim 0.8 → 0.11 변경점. 0.8 에서 확인함: `on --preserve-boot-state` 로 꺼진 기기도 슬림화(잠시 켬), `verify` 는 켜진 기기만, `list --json` 의 `managedDisabled` 는 켜진 기기만 나온다 | M6 | 업데이트 시 |
 | ✅ 컴파일한 바이너리에 웹 UI·파일이 잘 들어가는지, 훅 경로 시작 시간 — **확인됨(0단계)**: `with { type: "file" }` 는 `/$bunfs/root/…` 경로로 들어가 `Bun.file` 로 읽히고, HTML import 는 TSX 까지 번들돼 `Bun.serve` 로 서빙된다(`--bytecode` 포함, 다른 폴더로 옮겨도 동작). 훅 경로 약 21ms | §2·§3·§13 | 0단계 |
