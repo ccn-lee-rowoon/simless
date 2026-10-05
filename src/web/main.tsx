@@ -6,7 +6,14 @@ import { ApiError, call, subscribe, token } from "./api.ts";
 import { CreateDialog } from "./CreateDialog.tsx";
 import { DevicesView } from "./DevicesView.tsx";
 import { GroupsView } from "./GroupsView.tsx";
-import { DevicesIcon, ExternalIcon, GroupsIcon, SessionsIcon, SettingsIcon } from "./icons.tsx";
+import {
+  DevicesIcon,
+  ExternalIcon,
+  GroupsIcon,
+  PlusIcon,
+  SessionsIcon,
+  SettingsIcon,
+} from "./icons.tsx";
 import { SessionsView, SessionWindow } from "./SessionsView.tsx";
 import { SettingsView } from "./SettingsView.tsx";
 import type { Act, LogLine } from "./types.ts";
@@ -64,6 +71,8 @@ function App() {
   const [log, setLog] = useState<LogLine[]>([]);
   const [showLog, setShowLog] = useState(true);
   const [creating, setCreating] = useState(false);
+  /** 머리의 «새 그룹» 을 누를 때마다 늘어난다 — 그룹 화면이 만들기 창을 연다 */
+  const [newGroup, setNewGroup] = useState(0);
   const [, setLang] = useState(language());
   useMenuDismiss();
 
@@ -264,15 +273,18 @@ function App() {
               className="button button-primary"
               onClick={() => setCreating(true)}
             >
-              <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
-                <path
-                  d="M7 2v10M2 7h10"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <PlusIcon />
               {t("web.create")}
+            </button>
+          )}
+          {view === "groups" && (
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => setNewGroup((n) => n + 1)}
+            >
+              <PlusIcon />
+              {t("web.groups.new")}
             </button>
           )}
         </header>
@@ -281,7 +293,7 @@ function App() {
         ) : view === "devices" ? (
           <DevicesView status={status} act={act} onCreate={() => setCreating(true)} />
         ) : view === "groups" ? (
-          <GroupsView status={status} act={act} />
+          <GroupsView status={status} act={act} newRequest={newGroup} />
         ) : (
           <SessionsView status={status} act={act} />
         )}

@@ -86,3 +86,12 @@ export function PlatformIcon({ platform }: { platform: "android" | "ios" }) {
     </svg>
   );
 }
+
+/** 더하기 — 만들기 버튼 */
+export function PlusIcon() {
+  return (
+    <svg width={13} height={13} viewBox="0 0 14 14" aria-hidden="true">
+      <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}

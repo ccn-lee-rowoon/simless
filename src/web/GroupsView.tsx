@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { DeviceView, StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
@@ -9,8 +9,23 @@ import type { Act } from "./types.ts";
 import { ago, Dialog, osText, widthText } from "./ui.tsx";
 
 /** 그룹 화면 — 용도별 디바이스 묶음을 만들고 고친다 (R21·M9) */
-export function GroupsView({ status, act }: { status: StatusResult; act: Act }) {
+export function GroupsView({
+  status,
+  act,
+  newRequest,
+}: {
+  status: StatusResult;
+  act: Act;
+  /** 머리의 «새 그룹» 을 누를 때마다 늘어난다 */
+  newRequest: number;
+}) {
   const [editing, setEditing] = useState<Group | "new" | null>(null);
+  // 화면을 다시 열었을 때 지난 요청으로 창이 뜨지 않게 — 처음 본 값과 달라질 때만
+  const seenRequest = useRef(newRequest);
+  useEffect(() => {
+    if (newRequest !== seenRequest.current) setEditing("new");
+    seenRequest.current = newRequest;
+  }, [newRequest]);
   const [deleting, setDeleting] = useState<Group | null>(null);
   const byId = useMemo(() => new Map(status.devices.map((d) => [d.id, d])), [status.devices]);
 
@@ -18,10 +33,6 @@ export function GroupsView({ status, act }: { status: StatusResult; act: Act }) 
     <>
       <div className="toolbar">
         <p className="sub view-intro">{t("web.groups.intro")}</p>
-        <span className="spacer" />
-        <button type="button" className="button button-primary" onClick={() => setEditing("new")}>
-          {t("web.groups.new")}
-        </button>
       </div>
 
       {status.groups.length === 0 ? (
