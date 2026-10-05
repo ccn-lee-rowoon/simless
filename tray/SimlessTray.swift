@@ -1,4 +1,4 @@
-// simless 메뉴바 앱 + 앱 창 — simless install 이 이 Mac 에서 `xcrun swiftc` 로 컴파일해 simless.app 에 넣는다.
+// simless 메뉴바 앱 + 앱 창 — simless install 이 이 Mac 에서 `xcrun swiftc` 로 컴파일해 Simless.app 에 넣는다.
 // 로직은 없다: 서버 HTTP API(127.0.0.1)의 status 를 읽어 메뉴에 보여 주고, 웹 화면을 자기 창(WKWebView)에 띄운다.
 // 설정은 Info.plist 의 SimlessHTTPPort·SimlessTokenPath·SimlessLaunchLabel 에서 읽는다 (docs/design.md §14).
 
@@ -17,7 +17,7 @@ enum Strings {
 
   static func get(_ key: String) -> String {
     let table: [String: (String, String)] = [
-      "connected": ("simless — 서버 연결됨 (%@)", "simless — server connected (%@)"),
+      "connected": ("Simless — 서버 연결됨 (%@)", "Simless — server connected (%@)"),
       "noToken": ("서버 토큰이 없습니다 — 서버를 켜세요", "No server token — start the server"),
       "serverDown": ("서버가 꺼져 있습니다", "The server is not running"),
       "badResponse": ("서버 응답을 읽지 못했습니다", "Couldn't read the server's answer"),
@@ -28,7 +28,7 @@ enum Strings {
       "using": ("%@ 사용 중", "in use by %@"),
       "human": ("사람", "person"),
       "dashboard": ("대시보드 열기", "Open Dashboard"),
-      "quitMenubar": ("simless 종료", "Quit simless"),
+      "quitMenubar": ("Simless 종료", "Quit Simless"),
       "close": ("창 닫기", "Close Window"),
       "minimize": ("최소화", "Minimize"),
       "edit": ("편집", "Edit"),
@@ -42,10 +42,10 @@ enum Strings {
       "reload": ("새로 고침", "Reload"),
       "view": ("보기", "View"),
       "settings": ("설정…", "Settings…"),
-      "settingsTitle": ("simless 설정", "simless Settings"),
-      "setupTitle": ("simless 시작하기", "Get started with simless"),
+      "settingsTitle": ("Simless 설정", "Simless Settings"),
+      "setupTitle": ("Simless 시작하기", "Get started with Simless"),
       "skillUpdate": ("스킬 업데이트 있음 — 업데이트", "Skill update available — Update"),
-      "skillUpdated": ("simless 스킬을 업데이트했습니다", "Updated the simless skill"),
+      "skillUpdated": ("Simless 스킬을 업데이트했습니다", "Updated the Simless skill"),
     ]
     guard let pair = table[key] else { return key }
     return lang == "ko" ? pair.0 : pair.1
@@ -119,7 +119,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     super.init()
     if let button = statusItem.button {
       button.image = devicesTemplate(size: 18)
-      button.toolTip = "simless"
+      button.toolTip = "Simless"
     }
     menu.delegate = self
     statusItem.menu = menu
@@ -201,7 +201,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     if let version = serverVersion {
       menu.addItem(disabled(String(format: Strings.get("connected"), version)))
     } else {
-      menu.addItem(disabled("simless — \(lastError ?? Strings.get("connecting"))"))
+      menu.addItem(disabled("Simless — \(lastError ?? Strings.get("connecting"))"))
       menu.addItem(action(Strings.get("startServer"), #selector(startServer)))
     }
     menu.addItem(.separator())
@@ -345,7 +345,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     if sessionWindows[key] == nil {
       let query = "window=session&key=" + (key.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? key)
       sessionWindows[key] = makeAuxWindow(
-        title: "simless — \(key)", query: query, size: NSSize(width: 820, height: 700),
+        title: "Simless — \(key)", query: query, size: NSSize(width: 820, height: 700),
         autosave: "SimlessSession")
     }
     show(sessionWindows[key])
@@ -379,7 +379,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
       contentRect: NSRect(x: 0, y: 0, width: 1280, height: 820),
       styleMask: [.titled, .closable, .miniaturizable, .resizable],
       backing: .buffered, defer: false)
-    window.title = "simless"
+    window.title = "Simless"
     window.minSize = NSSize(width: 880, height: 560)
     window.contentView = web
     window.isReleasedWhenClosed = false

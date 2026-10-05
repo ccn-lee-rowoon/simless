@@ -17,9 +17,9 @@ export const ko = {
   "err.noDevice": "없는 디바이스: {ref}",
   "err.notListed":
     "simless 목록에 없는 디바이스: {ref} — 생성 화면의 «이 Mac 의 디바이스» 나 simless add 로 먼저 추가하세요",
-  "err.alreadyListed": "이미 simless 목록에 있습니다: {ref}",
+  "err.alreadyListed": "이미 Simless 목록에 있습니다: {ref}",
   "err.unlistCreated":
-    "{name} 은 simless 가 만든 디바이스라 목록에서 뺄 수 없습니다 — 지우려면 삭제하세요",
+    "{name} 은 Simless 가 만든 디바이스라 목록에서 뺄 수 없습니다 — 지우려면 삭제하세요",
   "err.ambiguousDevice": "이름이 같은 디바이스가 여럿입니다 — ID 로 고르세요:\n{list}",
   "err.noGroup": "없는 그룹: {ref}",
   "err.emptyGroup": "그룹에 디바이스가 없습니다: {name}",
@@ -35,9 +35,9 @@ export const ko = {
     "강제 해제는 사람만 할 수 있습니다 — 에이전트는 기다리거나 사용자에게 물으세요",
   "err.notThisMac": "이 Mac 의 디바이스가 아닙니다: {target}",
   "err.preexistingDelete":
-    "{name} 은 이 Mac 에 원래 있던 디바이스라 지울 수 없습니다 — simless 가 만든 디바이스만 됩니다",
+    "{name} 은 이 Mac 에 원래 있던 디바이스라 지울 수 없습니다 — Simless 가 만든 디바이스만 됩니다",
   "err.preexistingSlim":
-    "{name} 은 이 Mac 에 원래 있던 디바이스라 슬림 설정을 바꿀 수 없습니다 — simless 가 만든 디바이스만 됩니다",
+    "{name} 은 이 Mac 에 원래 있던 디바이스라 슬림 설정을 바꿀 수 없습니다 — Simless 가 만든 디바이스만 됩니다",
   "err.deleteDefault": "{name} 은 기본 디바이스입니다 — 다른 디바이스를 기본으로 정한 뒤 지우세요",
   "err.notHeldAny": "점유한 디바이스가 없습니다 — simless use 로 점유하고 켜세요",
   "err.notHeld": "점유하지 않은 디바이스: {names} — simless use 로 점유하세요",
@@ -95,14 +95,14 @@ export const ko = {
   "cli.busyHint": "\n  기다리려면 --wait, 비어 있는 것만 쓰려면 --available",
   "cli.serve": "상주 서버를 띄운다 (보통 launchd 가 실행)",
   "cli.install":
-    "서버를 launchd 에 등록하고(로그인 시 자동 실행), 에이전트 스킬을 설치하고, simless.app 을 만든다. 보호(훅·규칙)와 MCP 는 앱의 첫 실행 설정에서 고르거나 --hook·--mcp 로",
+    "서버를 launchd 에 등록하고(로그인 시 자동 실행), 에이전트 스킬을 설치하고, Simless.app 을 만든다. 보호(훅·규칙)와 MCP 는 앱의 첫 실행 설정에서 고르거나 --hook·--mcp 로",
   "cli.install.noLaunchd": "launchd 등록은 건너뛴다",
   "cli.install.noSkill": "스킬 설치는 건너뛴다",
-  "cli.install.noApp": "simless.app 만들기는 건너뛴다",
+  "cli.install.noApp": "Simless.app 만들기는 건너뛴다",
   "cli.install.menubar": "{path} (메뉴바 앱)",
   "cli.install.done": "설치했습니다 ({what}): {path}",
   "cli.uninstall":
-    "launchd 등록·simless.app·훅·규칙·MCP 등록(모든 에이전트)을 지운다 — 만든 디바이스·스킬은 지우지 않는다",
+    "launchd 등록·Simless.app·훅·규칙·MCP 등록(모든 에이전트)을 지운다 — 만든 디바이스·스킬은 지우지 않는다",
   "cli.uninstall.done": "등록을 지웠습니다",
   "cli.ui": "웹 화면을 브라우저로 연다 (서버가 꺼져 있으면 켠다)",
   "cli.ui.print": "열지 않고 주소만 출력",
@@ -153,10 +153,10 @@ export const ko = {
   "cli.opt.platform": "android 또는 ios",
   "cli.opt.created": "simless 가 만든 디바이스만",
   "cli.list.available": "simless 목록에 없는 이 Mac 의 디바이스 — simless add 로 추가할 수 있는 것",
-  "cli.add": "이 Mac 의 디바이스를 simless 목록에 추가한다 — 만들지도 슬림화하지도 않는다",
+  "cli.add": "이 Mac 의 디바이스를 Simless 목록에 추가한다 — 만들지도 슬림화하지도 않는다",
   "cli.add.device": "디바이스 이름·UDID·AVD ID — simless list --available",
   "cli.unlist":
-    "추가한 디바이스를 simless 목록에서 뺀다 — 기기는 그대로, 점유·그룹·기본 지정은 풀린다",
+    "추가한 디바이스를 Simless 목록에서 뺀다 — 기기는 그대로, 점유·그룹·기본 지정은 풀린다",
   "cli.unlisted": "목록에서 뺐습니다: {id}",
   "cli.catalog": "만들 수 있는 기종·OS 와 슬림화하면 꺼지는 것",
   "cli.create":
@@ -167,7 +167,7 @@ export const ko = {
   "cli.create.width": "직접 입력(Android) — 폭 dp",
   "cli.create.height": "직접 입력(Android) — 높이 dp",
   "cli.create.density": "직접 입력(Android) — 밀도 (예: 320, 420)",
-  "cli.create.name": "표시 이름 (기본: 슬림이면 simless <기종>, 아니면 <기종>)",
+  "cli.create.name": "표시 이름 (기본: 슬림이면 `simless <기종>`, 아니면 <기종>)",
   "cli.create.noSlim": "슬림화하지 않는다 — 일반 디바이스",
   "cli.create.noBaseline": "슬림 전 기준값(메모리)을 재지 않는다 — 1~2분 빨라진다",
   "cli.create.bothGiven": "기종과 직접 입력(--width 등)은 함께 줄 수 없습니다",
@@ -187,7 +187,7 @@ export const ko = {
   "cli.delete.cancelled": "지우지 않았습니다 (확인 없이 지우려면 --yes)",
   "cli.deleted": "지웠습니다: {id}",
   "cli.slim": "슬림화 — 적용(기본)·해제(--off)·확인(--check)",
-  "cli.slim.devices": "디바이스 ID 또는 이름 (기본: simless 가 만든 것 전부)",
+  "cli.slim.devices": "디바이스 ID 또는 이름 (기본: Simless 가 만든 것 전부)",
   "cli.slim.off": "슬림 해제",
   "cli.slim.check": "슬림 상태만 확인",
   "cli.up": "점유한 디바이스를 켠다",
@@ -261,7 +261,7 @@ export const ko = {
   // CLI — doctor (S1·S2)
   "doctor.description": "설치·연결을 점검하고 고치는 방법을 알려 준다",
   "doctor.fix":
-    "simless install 로 고칠 수 있는 것(launchd 등록·스킬·simless.app, 설치된 훅·규칙의 예전 버전)은 고친다",
+    "simless install 로 고칠 수 있는 것(launchd 등록·스킬·Simless.app, 설치된 훅·규칙의 예전 버전)은 고친다",
   "doctor.group.server": "서버",
   "doctor.group.agents": "에이전트 연동",
   "doctor.server": "서버 연결",
@@ -283,12 +283,12 @@ export const ko = {
   "doctor.argent.fix": "하나만 남기고 지우거나 PATH 순서를 정리",
   "doctor.skill": "simless 스킬",
   "doctor.skill.missing": "설치 안 됨",
-  "doctor.skill.outdated": "이 simless 에 든 스킬과 다름 (예전 버전)",
+  "doctor.skill.outdated": "이 Simless 에 든 스킬과 다름 (예전 버전)",
   "doctor.app.missing": "없음 — 더블클릭·Spotlight 로 앱 창을 열 수 없다 (simless ui 는 된다)",
   "doctor.allGood": "모두 정상입니다.",
   "doctor.summary": "문제 {fails}개 · 주의 {warns}개",
   "doctor.canFix":
-    "simless doctor --fix 로 고칠 수 있는 항목이 있습니다 (launchd 등록·스킬·훅·규칙·simless.app).",
+    "simless doctor --fix 로 고칠 수 있는 항목이 있습니다 (launchd 등록·스킬·훅·규칙·Simless.app).",
   "doctor.failed": "고쳐야 할 항목이 있습니다",
   "hint.avdslimTrust": "(비공식 tap 이라 거부되면 brew trust kdbhalala/avdslim 뒤 다시)",
   "hint.androidSdk":
@@ -310,7 +310,7 @@ export const ko = {
   "web.done": "{label} — 완료",
   "web.failed": "{label} — 실패: {message}",
   "web.created": "만들었습니다: {name}",
-  "web.noToken": "터미널에서 simless ui 로 열거나, simless 앱을 실행하세요.",
+  "web.noToken": "터미널에서 simless ui 로 열거나, Simless 앱을 실행하세요.",
   "web.nav": "화면",
   "web.nav.devices": "디바이스",
   "web.nav.groups": "그룹",
@@ -447,11 +447,11 @@ export const ko = {
   "web.sessions.stateEnded": "끝남",
   "web.sessions.range": "{from} 부터 기록 {count}건 — 최근 것부터",
   "hook.bootViaSimless":
-    "simless 가 관리하는 디바이스({name})는 simless 로 켭니다 — simless use {id} (점유하고 켜기)",
+    "simless 가 관리하는 디바이스({name})는 Simless 로 켭니다 — simless use {id} (점유하고 켜기)",
   "hook.heldByOther":
     "{name} 은 다른 세션({who})이 사용 중입니다 — 기다리려면 simless use {id} --wait, 아니면 사용자에게 물어보세요",
   "hook.notHeld":
-    "{name} 은 simless 가 관리하는 디바이스라 점유한 뒤에만 쓸 수 있습니다 — simless use {id}",
+    "{name} 은 Simless 가 관리하는 디바이스라 점유한 뒤에만 쓸 수 있습니다 — simless use {id}",
   "hook.serverDown":
     "simless 서버가 꺼져 있어 이 디바이스({name})를 누가 쓰는지 알 수 없습니다 — simless status 로 서버를 켠 뒤 다시 하세요",
   "cli.install.hook":
@@ -459,7 +459,7 @@ export const ko = {
   "doctor.hook": "Claude Code 훅",
   "doctor.hook.missing":
     "없음 — 에이전트가 점유하지 않은 디바이스를 argent·adb 로 직접 건드려도 막지 못한다 (P3)",
-  "doctor.hook.outdated": "다른 simless 를 가리킴 (옮겼거나 개발·배포가 바뀜)",
+  "doctor.hook.outdated": "다른 Simless 를 가리킴 (옮겼거나 개발·배포가 바뀜)",
   "doctor.rule": "simless 규칙",
   "cli.install.mcp": "Claude Code 에 simless mcp 를 등록한다 (사용자 범위, R12)",
   "setup.noClaude": "claude 명령을 찾지 못했습니다 — Claude Code 를 설치한 뒤 다시 하세요",
@@ -484,12 +484,12 @@ export const ko = {
   "web.setup.copy": "복사",
   "web.setup.copied": "복사함",
   "web.setup.agents.intro":
-    "AI 에이전트가 simless 로 디바이스를 빌려 쓰게 합니다. 아래는 Claude Code, 그 아래는 다른 에이전트입니다.",
+    "AI 에이전트가 Simless 로 디바이스를 빌려 쓰게 합니다. 아래는 Claude Code, 그 아래는 다른 에이전트입니다.",
   "web.setup.recommended": "권장",
   "web.setup.optional": "선택",
   "web.setup.skill.title": "simless 스킬",
   "web.setup.skill.desc":
-    "디바이스가 필요할 때 simless 로 점유하고, 쓰고, 해제하는 방법을 에이전트에게 알려 줍니다.",
+    "디바이스가 필요할 때 Simless 로 점유하고, 쓰고, 해제하는 방법을 에이전트에게 알려 줍니다.",
   "web.setup.mcp.title": "MCP 도구",
   "web.setup.mcp.desc":
     "simless_status·simless_use 같은 도구를 Claude Code 에 등록합니다. 이 Mac 의 모든 Claude Code 세션에 생기고, 새로 시작한 세션부터 보입니다.",
@@ -499,7 +499,7 @@ export const ko = {
   "web.setup.protect.desc":
     "simless 목록의 디바이스를 점유하지 않은 세션이 adb·simctl·argent 로 건드리면 막고, 점유하는 명령을 알려 줍니다. 도구 호출마다 약 20ms 가 더 걸립니다.",
   "web.setup.protect.warn":
-    "simless 없이 이미 쓰고 있는 디바이스가 simless 목록에 있으면 그 세션도 막힙니다. 그 디바이스를 목록에서 빼거나 작업이 끝난 뒤 켜세요.",
+    "simless 없이 이미 쓰고 있는 디바이스가 Simless 목록에 있으면 그 세션도 막힙니다. 그 디바이스를 목록에서 빼거나 작업이 끝난 뒤 켜세요.",
   "web.setup.state.current": "설치됨",
   "web.setup.state.outdated": "업데이트 필요",
   "web.setup.state.missing": "설치 안 됨",
@@ -544,7 +544,7 @@ export const ko = {
   "web.setup.skill.worktrees": "작업 트리 {count}개",
   "web.skillUpdate.title": "simless 스킬 업데이트가 있습니다",
   "web.skillUpdate.desc":
-    "넣어 둔 스킬이 이 simless 와 다릅니다. 업데이트하면 새로 시작하는 에이전트 세션부터 새 사용법을 따릅니다.",
+    "넣어 둔 스킬이 이 Simless 와 다릅니다. 업데이트하면 새로 시작하는 에이전트 세션부터 새 사용법을 따릅니다.",
   "web.skillUpdate.action": "스킬 업데이트",
   "setup.unknownFix": "실행할 수 없는 항목입니다: {fix}",
   "web.setup.fix.open": "열기",
@@ -562,10 +562,10 @@ export const ko = {
     "에이전트 설정을 고치지 못했습니다(읽을 수 없는 파일이거나 명령 실패) — 건드리지 않았습니다: {detail}",
   "web.setup.agents.othersTitle": "다른 에이전트",
   "web.setup.agents.othersIntro":
-    "스킬은 위의 simless 스킬을 같이 씁니다(~/.agents/skills). 에이전트마다 보호와 MCP 를 켭니다. 설정은 새로 시작하는 세션부터 적용됩니다.",
+    "스킬은 위의 Simless 스킬을 같이 씁니다(~/.agents/skills). 에이전트마다 보호와 MCP 를 켭니다. 설정은 새로 시작하는 세션부터 적용됩니다.",
   "web.setup.agents.notInstalled": "설치 안 됨",
   "web.setup.agents.note.codex":
-    "Codex 는 새 훅을 한 번 승인해야 돌립니다 — Codex 에서 /hooks 를 열어 simless 훅을 허락하세요.",
+    "Codex 는 새 훅을 한 번 승인해야 돌립니다 — Codex 에서 /hooks 를 열어 Simless 훅을 허락하세요.",
   "web.setup.agents.note.cursor": "Cursor IDE 와 cursor-agent 가 같은 설정(~/.cursor)을 씁니다.",
   "web.setup.agents.note.gemini":
     "훅은 신뢰한 폴더에서만 돕니다 — 작업 폴더에서 /trust 를 하세요. 셸 명령에 세션 ID 가 없어 세션은 프로세스로 구분합니다.",
@@ -573,5 +573,5 @@ export const ko = {
     "--hook·--mcp 를 붙일 에이전트 (쉼표로): claude, copilot, codex, cursor, gemini",
   "web.slogan": "Make simulator management seamless.",
   "cli.helpAgents":
-    '\n에이전트(AI)용:\n  - 항상 --json 을 붙인다. 결과는 stdout 의 JSON, 오류는 {"error": {code, message, data}}\n  - 종료 코드: 0 성공 · 1 실패 · 2 사용법 오류 · 3 다른 세션이 쓰는 중·아직 대기 중·교착 · 4 서버에 연결 못 함\n  - 오류 코드로 판단한다 (메시지는 사용자 언어): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - 기기를 건드리기 전에 점유한다 — 순서 전체는 simless 스킬(~/.claude/skills/simless, ~/.agents/skills/simless)\n\n예:\n  simless --json status                          디바이스·그룹·기본·누가 쓰는지\n  simless --json use --default ios               iOS 기본 디바이스를 점유하고 켠다 (없으면 --create)\n  simless --json use --group "two accounts" --wait  그룹 전부, 쓰는 중이면 기다린다\n  simless --json use --group "layout" --available  비어 있는 것부터\n  simless --json list                            argent 에 넘길 targetId·크기 라벨\n  simless release                                다 쓰면 돌려준다\n  simless doctor                                 설치·연결 문제',
+    '\n에이전트(AI)용:\n  - 항상 --json 을 붙인다. 결과는 stdout 의 JSON, 오류는 {"error": {code, message, data}}\n  - 종료 코드: 0 성공 · 1 실패 · 2 사용법 오류 · 3 다른 세션이 쓰는 중·아직 대기 중·교착 · 4 서버에 연결 못 함\n  - 오류 코드로 판단한다 (메시지는 사용자 언어): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - 기기를 건드리기 전에 점유한다 — 순서 전체는 Simless 스킬(~/.claude/skills/simless, ~/.agents/skills/simless)\n\n예:\n  simless --json status                          디바이스·그룹·기본·누가 쓰는지\n  simless --json use --default ios               iOS 기본 디바이스를 점유하고 켠다 (없으면 --create)\n  simless --json use --group "two accounts" --wait  그룹 전부, 쓰는 중이면 기다린다\n  simless --json use --group "layout" --available  비어 있는 것부터\n  simless --json list                            argent 에 넘길 targetId·크기 라벨\n  simless release                                다 쓰면 돌려준다\n  simless doctor                                 설치·연결 문제',
 } as const;

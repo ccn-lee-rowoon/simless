@@ -1,4 +1,4 @@
-# simless
+# Simless
 
 **Make simulator management seamless.** — simulator + seamless
 
@@ -12,15 +12,15 @@
 - **차례·교착** — 먼저 온 순서대로, 서로 기다리다 멈추는 요청은 미리 거절한다
 - **보호(선택)** — 점유하지 않은 세션이 argent·adb·simctl 로 기기를 건드리면 실행 직전에 막는다
 
-화면 안 조작(탭·스크린샷·앱 실행)은 [argent](https://argent.swmansion.com) 가 하고, simless 는 기기를 만들고·관리하고·빌려준다.
+화면 안 조작(탭·스크린샷·앱 실행)은 [argent](https://argent.swmansion.com) 가 하고, Simless 는 기기를 만들고·관리하고·빌려준다.
 
 ## 설치
 
 ```sh
-simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·simless.app
+simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·Simless.app
 ```
 
-`simless.app` 을 처음 열면 **«simless 시작하기»** 창이 뜬다.
+`Simless.app` 을 처음 열면 **«Simless 시작하기»** 창이 뜬다.
 
 1. **이 Mac 점검** — Xcode·simslim·Android SDK·avdslim·argent. 빠진 것은 설치 명령을 보여 준다
 2. **에이전트 연결** — 스킬(권장, 전역 또는 프로젝트) · 보호(권장) · MCP 도구(선택)
@@ -36,7 +36,7 @@ simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·
 
 웹 프로젝트의 반응형 확인에는 반응하지 않는다(브라우저로 한다). 시뮬레이터를 직접 말하면 반응한다.
 
-**사람은** `simless.app` — 디바이스(만들기·추가·이름·슬림·그룹·기본) · 그룹 · 세션(누가 무엇을 쓰는지, 기록) · 설정.
+**사람은** `Simless.app` — 디바이스(만들기·추가·이름·슬림·그룹·기본) · 그룹 · 세션(누가 무엇을 쓰는지, 기록) · 설정.
 
 **CLI**
 
@@ -61,7 +61,7 @@ simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·
 
 ## 보호가 막는 것과 못 막는 것
 
-막는 것: 점유하지 않은 세션의 argent 도구 호출(스크린샷 같은 읽기 포함), 기기 ID 가 든 `adb`·`simctl`·`emulator` 명령, 기기를 지정하지 않은 `adb shell`·`simctl … booted`, simless 밖에서 켜기.
+막는 것: 점유하지 않은 세션의 argent 도구 호출(스크린샷 같은 읽기 포함), 기기 ID 가 든 `adb`·`simctl`·`emulator` 명령, 기기를 지정하지 않은 `adb shell`·`simctl … booted`, Simless 밖에서 켜기.
 
 못 막는 것: 사람이 Xcode·Simulator·Android Studio 로 직접 조작, 명령 안에서 간접으로 부르는 경우(`npx react-native run-android`·`xcodebuild`·Gradle 등), 변수로 넘긴 기기 ID, argent 가 아닌 기기 조작 MCP. 보안 경계가 아니라 **실수로 남의 기기를 건드리지 않게 하는 안전장치**다.
 

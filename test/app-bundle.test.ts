@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { infoPlist, launcherScript, menubarAgentPlist } from "../src/install/app-bundle.ts";
 
-describe("simless.app (R11)", () => {
+describe("Simless.app (R11)", () => {
   test("Info.plist — Dock 아이콘 없는 앱, 아이콘·번들 ID·실행 파일", async () => {
     const xml = infoPlist("simless-menubar", { port: 8791, tokenPath: "/Users/me/web-token" });
     expect(xml).toContain("<key>LSUIElement</key>\n  <true/>");
@@ -22,9 +22,9 @@ describe("simless.app (R11)", () => {
 
 describe("메뉴바 로그인 항목", () => {
   test("로그인 시 open -a 로 앱을 한 번 띄운다 (KeepAlive 없음)", () => {
-    const xml = menubarAgentPlist("/Users/me/Applications/simless.app");
+    const xml = menubarAgentPlist("/Users/me/Applications/Simless.app");
     expect(xml).toContain(
-      "<string>/usr/bin/open</string>\n    <string>-a</string>\n    <string>/Users/me/Applications/simless.app</string>",
+      "<string>/usr/bin/open</string>\n    <string>-a</string>\n    <string>/Users/me/Applications/Simless.app</string>",
     );
     expect(xml).not.toContain("KeepAlive");
     expect(Bun.spawnSync(["plutil", "-lint", "-"], { stdin: new Blob([xml]) }).exitCode).toBe(0);

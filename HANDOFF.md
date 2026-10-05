@@ -1,4 +1,4 @@
-# 인계 — simless (시뮬레이터·에뮬레이터 중개·관리 도구)
+# 인계 — Simless (시뮬레이터·에뮬레이터 중개·관리 도구)
 
 > 2026-10-01~02, xb3-client(NOVA) 세션에서 정리한 내용. 이 폴더에서 새 세션을 시작할 때 **이 파일과 `requirements.md` 를 먼저 읽는다.**
 
@@ -18,19 +18,19 @@
 - 설계안 v0.2 작성(`docs/design.md`)
 - **0단계(저장소 뼈대) 완료** — `bun link` 로 `simless` 등록됨(`~/.bun/bin/simless` → 이 저장소). 다음은 1단계(서버 + CLI 코어), 세션 구분은 에이전트 무관(프로세스 트리) — 에이전트별 실측 항목은 `docs/design.md` §17
 - **1단계(서버 + CLI 코어) 완료** — `simless serve`·`install`·`status`·`catalog`·`create`·`list`·`use`·`up`·`down`·`acquire`·`release`·`who` 등. 실제 Android·iOS 디바이스로 만들기·켜기·점유를 확인하고 시험 디바이스는 지웠다. 남은 확인(에이전트별 프로세스 트리)은 `docs/design.md` §17
-- **2단계(doctor + 스킬) 완료** — 앱 설치·실행·딥링크는 argent 로 하기로 하고 simless 일괄 기능은 «나중에»(L1~L3). 스킬은 `~/.claude/skills/simless` 에 설치됨. 남은 확인: NOVA 로 «심리스로 확인해 줘» 처음부터 끝까지
-- **3단계(웹 UI + `simless.app`) 완료** — 순서를 앞당겼다(훅은 4단계로). 웹 UI(`simless ui`·메뉴바 «대시보드 열기»): 만든 디바이스 목록(All·Android·iOS 탭), 생성(+)은 iOS 시뮬레이터·Android 대표 프로필·직접 입력, 같은 크기 여러 대 허용(이름만 안 겹치게), 슬림 수치와 슬림 전후 비교(만들 때 기준값 측정). `simless.app` 은 메뉴바 앱(지금 아이콘은 폰에 눈·입을 살짝 넣은 모양 — M12)
-- **2026-10-05 사양 변경** — 레이아웃 확인 전용 → 이 Mac 의 디바이스 전부를 중개(R20). 용도별 **그룹**·**기본 디바이스**(Android·iOS 1대씩)·디바이스 메모, 만들 때 슬림 선택(슬림만 `simless` 접두사), 그룹 점유는 에이전트가 판단(R23), «사용 안 함» 제거, 슬림은 자동 재적용 + `SLIM` 배지, 화면은 `simless.app` 창(WKWebView), 귀엽지 않은 디자인, 한국어·영어(설정에서 선택). 이름 변경은 나중에(Q17 — SimPool 은 bitomule/simpool 과 겹침)
-- **4단계(사양 변경) 완료** — simless 목록(만든 것 + 이 Mac 에서 추가한 것, 레지스트리 v2 — simless 가 붙인 정보만, v1 은 읽어서 옮기고 처음 만든 것을 기본으로), 왼쪽 메뉴(디바이스·그룹·세션 — 세션은 점유·대기와 기록), 설정은 새 창, 기종 + OS 생성·슬림 선택·ⓘ, 그룹·기본 디바이스·메모, 그룹 점유(all·available·대기·교착 검사), 한국어·영어(설정), 새 화면(디바이스·그룹·설정), `simless.app` 창(WKWebView)·새 아이콘, 영어 스킬. 실제 서버에 적용해 확인함(기존 `bakw`·`8rav` 가 그대로 기본 디바이스로)
-- **5단계(보호) 완료** — `simless hook <에이전트> …`(simless 목록 디바이스를 점유하지 않은 argent·adb·simctl 호출을 막음, 서버가 꺼지면 managed-index 로 막음), 규칙 `~/.claude/rules/simless.md`. **이 Mac 의 Claude Code 에는 켜져 있다**(2026-10-05 20:16 첫 실행 설정 창에서 켠 것으로 보이고, 이름 변경 때 새 이름으로 옮김 — 사용자 확인 대기). 다른 세션이 simless 없이 쓰는 iPhone 17 Pro(`zx7w`)가 목록·iOS 기본이라 그 세션이 막힐 수 있다
+- **2단계(doctor + 스킬) 완료** — 앱 설치·실행·딥링크는 argent 로 하기로 하고 Simless 일괄 기능은 «나중에»(L1~L3). 스킬은 `~/.claude/skills/simless` 에 설치됨. 남은 확인: NOVA 로 «심리스로 확인해 줘» 처음부터 끝까지
+- **3단계(웹 UI + `Simless.app`) 완료** — 순서를 앞당겼다(훅은 4단계로). 웹 UI(`simless ui`·메뉴바 «대시보드 열기»): 만든 디바이스 목록(All·Android·iOS 탭), 생성(+)은 iOS 시뮬레이터·Android 대표 프로필·직접 입력, 같은 크기 여러 대 허용(이름만 안 겹치게), 슬림 수치와 슬림 전후 비교(만들 때 기준값 측정). `Simless.app` 은 메뉴바 앱(지금 아이콘은 폰에 눈·입을 살짝 넣은 모양 — M12)
+- **2026-10-05 사양 변경** — 레이아웃 확인 전용 → 이 Mac 의 디바이스 전부를 중개(R20). 용도별 **그룹**·**기본 디바이스**(Android·iOS 1대씩)·디바이스 메모, 만들 때 슬림 선택(슬림만 `simless` 접두사), 그룹 점유는 에이전트가 판단(R23), «사용 안 함» 제거, 슬림은 자동 재적용 + `SLIM` 배지, 화면은 `Simless.app` 창(WKWebView), 귀엽지 않은 디자인, 한국어·영어(설정에서 선택). 이름 변경은 나중에(Q17 — SimPool 은 bitomule/simpool 과 겹침)
+- **4단계(사양 변경) 완료** — Simless 목록(만든 것 + 이 Mac 에서 추가한 것, 레지스트리 v2 — Simless 가 붙인 정보만, v1 은 읽어서 옮기고 처음 만든 것을 기본으로), 왼쪽 메뉴(디바이스·그룹·세션 — 세션은 점유·대기와 기록), 설정은 새 창, 기종 + OS 생성·슬림 선택·ⓘ, 그룹·기본 디바이스·메모, 그룹 점유(all·available·대기·교착 검사), 한국어·영어(설정), 새 화면(디바이스·그룹·설정), `Simless.app` 창(WKWebView)·새 아이콘, 영어 스킬. 실제 서버에 적용해 확인함(기존 `bakw`·`8rav` 가 그대로 기본 디바이스로)
+- **5단계(보호) 완료** — `simless hook <에이전트> …`(simless 목록 디바이스를 점유하지 않은 argent·adb·simctl 호출을 막음, 서버가 꺼지면 managed-index 로 막음), 규칙 `~/.claude/rules/simless.md`. **이 Mac 의 Claude Code 에는 켜져 있다**(2026-10-05 20:16 첫 실행 설정 창에서 켠 것으로 보이고, 이름 변경 때 새 이름으로 옮김 — 사용자 확인 대기). 다른 세션이 Simless 없이 쓰는 iPhone 17 Pro(`zx7w`)가 목록·iOS 기본이라 그 세션이 막힐 수 있다
 - **6단계(MCP) 완료** — `simless mcp`. 이 Mac 의 Claude Code 에 사용자 범위로 등록돼 있다(보호와 같이 확인 대기)
-- **첫 실행 설정 창(M14) 완료** (2026-10-05) — 앱을 처음 열면 «simless 시작하기» 창: 이 Mac 점검 → 에이전트 연결(스킬·보호·MCP 를 버튼으로) → 기본 디바이스. 서버 `setup.*`, 끝내면 `…/simless/setup.json`. 이 Mac 에서는 아직 «완료» 안 누름(창이 열려 있음)
-- **2026-10-05 이름 변경** — Corgi → **simless**(simulator + seamless, «Make simulator management seamless.»). 이 Mac 은 `simless install` 로 옮김: 예전 서버·메뉴바·앱 내림, 데이터 폴더 `~/Library/Application Support/simless`·`~/.config/simless`·`~/Library/Logs/simless` 로 이동, 스킬·규칙·훅·MCP 를 새 이름으로. 예전 상태 백업은 세션 스크래치패드에만 있었다. 저장소 폴더는 `…/corgi` 그대로
+- **첫 실행 설정 창(M14) 완료** (2026-10-05) — 앱을 처음 열면 «Simless 시작하기» 창: 이 Mac 점검 → 에이전트 연결(스킬·보호·MCP 를 버튼으로) → 기본 디바이스. 서버 `setup.*`, 끝내면 `…/simless/setup.json`. 이 Mac 에서는 아직 «완료» 안 누름(창이 열려 있음)
+- **2026-10-05 이름 변경** — Corgi → **Simless**(simulator + seamless, «Make simulator management seamless.»). 이 Mac 은 `simless install` 로 옮김: 예전 서버·메뉴바·앱 내림, 데이터 폴더 `~/Library/Application Support/simless`·`~/.config/simless`·`~/Library/Logs/simless` 로 이동, 스킬·규칙·훅·MCP 를 새 이름으로. 예전 상태 백업은 세션 스크래치패드에만 있었다. 저장소 폴더는 `…/corgi` 그대로
 - **2026-10-05 추가** — 점유 기록 SQLite(90일 보관), 스킬: 모바일 앱 작업에서만 반응·세션마다 자기 Metro(S11)·설치 범위(기본 전역, 프로젝트 선택 — `simless skill`)·업데이트 알림(대시보드 띠·메뉴바), 기본 디바이스가 없으면 만들어서 빌려주기(`--create`)
 - **다른 에이전트 연결 구현** (2026-10-05) — Copilot CLI·Codex·Cursor·Gemini CLI: 세션 ID 로 세션 묶기, 훅 어댑터, 보호·MCP 설치(설정 창 «다른 에이전트», `simless install --agents`), 스킬은 `~/.agents/skills` 에도. **실제 에이전트로는 아직 확인 안 함**, 이 Mac 의 다른 에이전트 설정은 아무것도 켜지 않음. OpenCode 는 당분간 다루지 않는다(사용자 결정 2026-10-05). 조사는 `docs/agent-integrations.md`
 - 남은 것: U단계(배포·업데이트 — GitHub 리모트가 생긴 뒤), 다른 에이전트 실측, NOVA 로 주 흐름(R15), 차별점 후보(그룹 안 역할·결과 나란히 보기 R10·그룹에 앱·화면 정보), 병렬 개발용 «빈 기기 아무거나» 요청, 네이티브 빌드 캐시(조사만 — NOVA 쪽 A 방법 추천)
 - 남은 확인: 실제 기기로 그룹 점유·생성(기종 + OS)을 끝까지, 라이트 모드 화면, simslim 0.11.0 에서 슬림 적용·확인(정보 읽기는 확인함), 설정 창 바로 설치 중 avdslim·argent(simslim 업데이트는 됨), 웹 화면 자동 테스트 없음(`bun run trace --missing`)
-- 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `simless.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
+- 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `Simless.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
 - 범용 도구 → NOVA 레포(xb3-client)와 분리해 별도 프로젝트로 만든다
 
 ## 실측으로 확인한 사실 (이 머신)
@@ -77,12 +77,12 @@
 | Android 에뮬레이터 3대 | 켜져 있음 (`Size_Small_360dp`·`Size_Large_412dp`·`Size_Tablet_800dp`) | `adb -s <serial> emu kill` |
 | AVD 3개 | `~/.android/avd/Size_*.avd` + `.ini` (약 7GB) | 필요 없으면 폴더·ini 삭제 |
 | scrcpy 4.1 | brew 설치 | 필요 없으면 `brew uninstall scrcpy` |
-| brew tap · avdslim | `kdbhalala/avdslim` tap + avdslim 1.0.15 설치됨 | simless 가 쓰므로 유지 |
-| simless launchd 등록 | `~/Library/LaunchAgents/simless.server.plist` (개발 모드: bun + 이 저장소의 `bin/simless.ts`) | simless 를 쓰는 동안 유지. 지우려면 `simless uninstall` |
+| brew tap · avdslim | `kdbhalala/avdslim` tap + avdslim 1.0.15 설치됨 | Simless 가 쓰므로 유지 |
+| Simless launchd 등록 | `~/Library/LaunchAgents/simless.server.plist` (개발 모드: bun + 이 저장소의 `bin/simless.ts`) | Simless 를 쓰는 동안 유지. 지우려면 `simless uninstall` |
 | `simless` 명령 | `~/.bun/bin/simless` → 이 저장소 (`bun link`) | 유지 |
-| simless.app (메뉴바 앱 + 앱 창) | `~/Applications/simless.app` + 로그인 항목 `~/Library/LaunchAgents/simless.menubar.plist` | 유지. 지우려면 `simless uninstall`. Swift 를 고치면 `simless install --no-launchd --no-skill` |
-| simless 디바이스 | 웹 UI 에서 만든 `simless Small 360x760dp`(`bakw`, Android 기본)·`simless iPhone SE (3rd generation)`(`8rav`, iOS 기본), 그 밖에 `simless_rddv`(simless Medium Tablet) AVD 가 있음 | 사용자가 만든 것 — 필요 없으면 화면에서 삭제(기본은 다른 기기를 기본으로 정한 뒤) |
-| simless 스킬 | `~/.claude/skills/simless/SKILL.md` (`simless install` 이 씀) | 유지. 스킬을 고치면 `simless install --no-launchd` 로 다시 설치 |
+| Simless.app (메뉴바 앱 + 앱 창) | `~/Applications/Simless.app` + 로그인 항목 `~/Library/LaunchAgents/simless.menubar.plist` | 유지. 지우려면 `simless uninstall`. Swift 를 고치면 `simless install --no-launchd --no-skill` |
+| Simless 디바이스 | 웹 UI 에서 만든 `simless Small 360x760dp`(`bakw`, Android 기본)·`simless iPhone SE (3rd generation)`(`8rav`, iOS 기본), 그 밖에 `simless_rddv`(simless Medium Tablet) AVD 가 있음 | 사용자가 만든 것 — 필요 없으면 화면에서 삭제(기본은 다른 기기를 기본으로 정한 뒤) |
+| Simless 스킬 | `~/.claude/skills/simless/SKILL.md` (`simless install` 이 씀) | 유지. 스킬을 고치면 `simless install --no-launchd` 로 다시 설치 |
 | avdslim | brew 1.0.15 | 유지 |
 | 기존 `Pixel_6a` AVD·기존 iOS 시뮬레이터 | 건드리지 않음 | — |
 | NOVA alpha APK | 위 3대 AVD 에 설치됨 | AVD 삭제 시 함께 사라짐 |

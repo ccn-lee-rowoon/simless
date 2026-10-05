@@ -1,4 +1,4 @@
-# simless 설계안 (v0.3 — 2026-10-05 사양 변경 반영)
+# Simless 설계안 (v0.3 — 2026-10-05 사양 변경 반영)
 
 > `requirements.md` 가 «무엇을», 이 문서가 «어떻게» 다. 둘이 충돌하면 `requirements.md` 가 이긴다.
 > 설계를 바꾸면 이 문서를 고치고, 이유가 있는 결정은 맨 아래 «설계 결정 기록» 에 남긴다.
@@ -16,12 +16,12 @@
                   ├─ 그룹·기본 디바이스
                   ├─ 점유·대기 관리
                   ├─ 드라이버 — Android: emulator·adb·avdslim / iOS: simctl·simslim
-                  └─ HTTP 127.0.0.1 ── 웹 화면 (simless.app 창 · 브라우저) · 메뉴바
+                  └─ HTTP 127.0.0.1 ── 웹 화면 (Simless.app 창 · 브라우저) · 메뉴바
                                    ▼
                   에뮬레이터 · 시뮬레이터  ◀── 화면 안 조작·스크린샷은 argent (S6)
 ```
 
-- 실행 파일은 **`simless` 하나**다. `serve`·`hook`·`mcp`·나머지 CLI 명령이 모두 서브커맨드고, 사람이 여는 `simless.app` 도 같은 파일을 담은 껍데기다(§4).
+- 실행 파일은 **`simless` 하나**다. `serve`·`hook`·`mcp`·나머지 CLI 명령이 모두 서브커맨드고, 사람이 여는 `Simless.app` 도 같은 파일을 담은 껍데기다(§4).
 - 상태는 **서버 하나만** 갖는다. 나머지는 요청을 보내는 창구라 상태가 없다(구조 전제).
 
 ## 2. 기술 선택
@@ -35,12 +35,12 @@
 | 프로세스 정보 | `bun:ffi` 로 macOS libproc(`proc_pidinfo`·`proc_pidpath`) 호출 | 세션 찾기(§7)·종료 감지. `ps` 는 한 번에 20~80ms, FFI 는 약 3ms(실측) — 훅이 Bash 마다 돌기 때문 |
 | 기록 저장 | `bun:sqlite` | macOS 에 든 SQLite 를 Bun 이 쓴다 — 단일 실행 파일에 더할 것이 없고, Bun 이 없는 환경에서도 돈다(실측). 기록만 SQLite, 설정·레지스트리·점유는 JSON(«결정 기록») |
 | MCP | `@modelcontextprotocol/sdk` (6단계) | stdio. zod 4 를 그대로 받는다. 단일 실행 파일이 약 3.4MB 커졌다(65→68MB) |
-| 웹 화면 | React + Bun 내장 번들러(HTML import) | Vite 없이 `Bun.serve` 가 서빙. `simless.app` 창(WKWebView)과 브라우저가 같은 화면을 연다 |
+| 웹 화면 | React + Bun 내장 번들러(HTML import) | Vite 없이 `Bun.serve` 가 서빙. `Simless.app` 창(WKWebView)과 브라우저가 같은 화면을 연다 |
 | 플랫폼 로고 | `simple-icons` (CC0) | 애플·안드로이드 로고 경로 두 개만 쓴다(번들에도 그 둘만 들어간다). 손으로 그리면 모양이 어긋난다 |
 | 현지화 | 의존 없이 `src/shared/i18n/` 의 사전(`ko`·`en`) | 웹 화면·CLI 가 같은 사전을 쓴다. 메뉴바(Swift)는 문구가 적어 Swift 안에 따로 둔다 |
 | 테스트 | `bun test` | |
 | 포맷·린트·타입 | Biome · `tsc --noEmit` | |
-| 메뉴바·앱 창 | Swift 소스(AppKit + WKWebView)를 바이너리에 넣고 `simless install` 때 `xcrun swiftc` 로 컴파일해 `simless.app` 에 넣는다 | 서명·공증 불필요 |
+| 메뉴바·앱 창 | Swift 소스(AppKit + WKWebView)를 바이너리에 넣고 `simless install` 때 `xcrun swiftc` 로 컴파일해 `Simless.app` 에 넣는다 | 서명·공증 불필요 |
 
 외부 의존은 위 목록으로 제한하고, 늘릴 때는 이 표에 이유를 적는다.
 
@@ -58,7 +58,7 @@ simless/
 │   │                        소켓 클라이언트(client)·세션 찾기(session)·외부 명령(exec)·i18n(ko 정본, en)
 │   ├── install/             설치·점검 — CLI 와 서버(첫 실행 설정 창)가 같이 쓴다
 │   │   ├── launchd.ts       서버 LaunchAgent 등록·kickstart
-│   │   ├── app-bundle.ts    simless.app 만들기(Swift 컴파일·서명·로그인 항목)
+│   │   ├── app-bundle.ts    Simless.app 만들기(Swift 컴파일·서명·로그인 항목)
 │   │   ├── skill.ts         스킬 설치 위치(전역·프로젝트)·상태 (S9)
 │   │   ├── claude-hook.ts   Claude Code 훅·규칙 (P2·P3)
 │   │   ├── claude-mcp.ts    Claude Code MCP 등록 (R12)
@@ -69,11 +69,11 @@ simless/
 │   │   ├── devices.ts · groups.ts · lease-methods.ts · settings.ts · setup.ts · hook.ts
 │   │   │                    메서드 묶음 — 각자 registerXMethods(server) 로 붙는다
 │   │   ├── leases.ts        점유·대기열·교착·자동 해제 (순수 로직, 저장은 콜백)
-│   │   ├── registry.ts      simless 가 붙인 정보(슬림·만든 여부)·그룹·기본 디바이스 — JSON
+│   │   ├── registry.ts      Simless 가 붙인 정보(슬림·만든 여부)·그룹·기본 디바이스 — JSON
 │   │   ├── history.ts       점유 기록 — SQLite
 │   │   ├── drivers/         android.ts · ios.ts · types.ts(Driver) · android-profiles.ts
 │   │   ├── socket.ts · http.ts · params.ts(매개변수 검사) · store.ts(JSON 읽고 쓰기)
-│   ├── cli/                 simless 명령 — index.ts(commander) + commands/*.ts, 서버와는 소켓으로만
+│   ├── cli/                 Simless 명령 — index.ts(commander) + commands/*.ts, 서버와는 소켓으로만
 │   ├── hook/                훅 — 대상 추출(targets.ts, 순수 함수) + 판정 요청 + 서버 꺼짐 처리
 │   ├── mcp/                 MCP 서버(stdio) — 소켓으로 서버 메서드를 부른다
 │   └── web/                 웹 화면(React) — main.tsx(창 고르기) · *View.tsx · ui.tsx · styles.css
@@ -109,11 +109,11 @@ simless/
 | 명령 | 하는 일 |
 | --- | --- |
 | (배포) | `dist/simless` 를 `~/.local/share/simless/versions/<버전>/simless` 에 두고 `~/.local/bin/simless` 를 그 파일로 링크한다(§19). 혼자 쓸 땐 저장소에서 `bun link`. 동료와는 **프라이빗 GitHub Release** 에 올리고, 설치 스크립트가 `gh release download`(또는 `curl`)로 받아 배치 → `simless install` 까지 한다. 브라우저로 받으면 격리 속성 때문에 실행이 막히므로 스크립트로 받는다 |
-| `simless install` | LaunchAgent(`~/Library/LaunchAgents/simless.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`simless`·Android SDK 경로를 절대 경로로** 적는다. 스킬 설치, `~/Applications/simless.app` 생성 → 앱을 띄우면 **첫 실행 설정 창**(M14)이 뜬다. 보호(훅·규칙)와 MCP 는 그 창에서 고른다 — 터미널만 쓸 때는 `--hook`·`--mcp`. 훅·MCP 명령은 절대 경로로 적는다 |
+| `simless install` | LaunchAgent(`~/Library/LaunchAgents/simless.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`simless`·Android SDK 경로를 절대 경로로** 적는다. 스킬 설치, `~/Applications/Simless.app` 생성 → 앱을 띄우면 **첫 실행 설정 창**(M14)이 뜬다. 보호(훅·규칙)와 MCP 는 그 창에서 고른다 — 터미널만 쓸 때는 `--hook`·`--mcp`. 훅·MCP 명령은 절대 경로로 적는다 |
 | `simless uninstall` | 위를 되돌린다(훅·규칙·MCP 등록 포함). 만든 디바이스는 지우지 않는다 |
 | 첫 실행 설정 (M14) | 앱이 뜰 때 `status.setupNeeded` 면 설정 창(`?window=setup`)을 연다 — ① 이 Mac 점검(`simless doctor` 와 같은 점검. 점검 결과의 `action` 이 있으면 «설치·업데이트·열기» 버튼 — `setup.run` 이 `install/fixes.ts` 에 정해 둔 명령만 뒤에서 돌리고(`server/jobs.ts`, 묻지 않는 모드 `NONINTERACTIVE=1`·`HOMEBREW_NO_AUTO_UPDATE=1`), 출력은 SSE `output` 으로 한 줄씩, 상태는 `job` 으로. 출력에 «trust» 가 있으면 `brew trust` 후 다시. 끝나면 다시 점검. 실패하면 «터미널에서 열기»(osascript 로 Terminal 에 같은 명령). 버튼으로 못 고치는 것만 복사 버튼) ② 에이전트 연결(스킬 권장 · 보호 권장 · MCP 선택 — 버튼 하나로 설치·제거, 서버가 한다) ③ 기본 디바이스(없으면 목록에서 고르거나 생성 창). «완료» 면 `setup.json` 을 남기고 대시보드를 연다. 끝내지 않고 닫으면 다음에 또 뜬다. 설정 창에서 다시 연다 |
-| `simless.app` | 메뉴바 앱 + 앱 창(§14). `tray/SimlessTray.swift` 를 컴파일한 실행 파일 + `Info.plist`(`LSUIElement` — 평소엔 Dock 아이콘 없음) + 아이콘, ad-hoc 서명. 더블클릭·Spotlight·Launchpad 에서 연다. Xcode 가 없어 컴파일을 못 하면 브라우저로 웹 화면을 여는 스크립트로 대신한다 |
-| 로그인 항목 이름 | macOS 로그인 항목(«앱 백그라운드 활동»)에는 실행 파일 서명자 이름이 보인다 — 개발 모드는 bun 의 «Jarred Sumner». `simless.app` 을 만들 때(3단계) plist 에 `AssociatedBundleIdentifiers` 로 앱을 연결해 «simless» 로 보이게 한다. 사용자가 이 항목을 끄면 launchd 가 서버를 띄우지 않으므로 `simless doctor` 가 확인한다 |
+| `Simless.app` | 메뉴바 앱 + 앱 창(§14). `tray/SimlessTray.swift` 를 컴파일한 실행 파일 + `Info.plist`(`LSUIElement` — 평소엔 Dock 아이콘 없음) + 아이콘, ad-hoc 서명. 더블클릭·Spotlight·Launchpad 에서 연다. Xcode 가 없어 컴파일을 못 하면 브라우저로 웹 화면을 여는 스크립트로 대신한다 |
+| 로그인 항목 이름 | macOS 로그인 항목(«앱 백그라운드 활동»)에는 실행 파일 서명자 이름이 보인다 — 개발 모드는 bun 의 «Jarred Sumner». `Simless.app` 을 만들 때(3단계) plist 에 `AssociatedBundleIdentifiers` 로 앱을 연결해 «Simless» 로 보이게 한다. 사용자가 이 항목을 끄면 launchd 가 서버를 띄우지 않으므로 `simless doctor` 가 확인한다 |
 | 서버 자동 시작 (Q10) | CLI·MCP 는 소켓이 없으면 `launchctl kickstart` 로 켜고 몇 초 기다린다. 훅은 켜지 않는다 |
 | 업데이트 | `simless update` — 확인·알림·교체·되돌리기는 §19. 클라이언트·서버 버전이 다르면 `hello` 에서 알려 준다 |
 
@@ -121,7 +121,7 @@ simless/
 
 | 경로 | 내용 | 쓰는 쪽 |
 | --- | --- | --- |
-| `~/Library/Application Support/simless/registry.json` | 디바이스에 simless 가 붙인 정보(메모·슬림·만든 여부·기준값), 그룹, 기본 디바이스 (영속). 기기 자체 목록은 저장하지 않는다(§6) | 서버 |
+| `~/Library/Application Support/simless/registry.json` | 디바이스에 Simless 가 붙인 정보(메모·슬림·만든 여부·기준값), 그룹, 기본 디바이스 (영속). 기기 자체 목록은 저장하지 않는다(§6) | 서버 |
 | `…/simless/leases.json` | 점유·대기열 — 서버를 다시 켜도 복원 | 서버 |
 | `…/simless/history.db` | 점유 기록 — SQLite(`bun:sqlite`, WAL). 사건마다 한 줄 덧붙이고, 보관 기간(`historyRetentionDays`, 기본 90일)이 지난 것은 서버가 한 시간마다 지운다 (M13). 예전 `history.json` 은 처음 켤 때 옮기고 `history.json.migrated` 로 남긴다 | 서버 |
 | `…/simless/managed-index.json` | 이 Mac 디바이스 식별자(UDID·AVD ID·마지막 시리얼). **서버가 꺼졌을 때 훅이 읽는다** | 서버 쓰기 / 훅 읽기 |
@@ -132,38 +132,38 @@ simless/
 | `~/.local/share/simless/versions/<버전>/simless` · `~/.local/bin/simless`(링크) | 설치된 버전들과 지금 쓰는 버전 (§19) | `simless update` |
 | `~/.config/simless/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`, 기본 `system`), 자동 해제 시간(기본 30분), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다 | 사람·서버 |
 | `~/.config/simless/apps/<name>.json` | 앱별 설정 (Q8) | 사람 |
-| `~/.android/avd/<AVD ID>.avd` · `.ini` | Android 디바이스 본체 — simless 가 만든 것은 `simless_<id>` | Android Studio·서버 |
+| `~/.android/avd/<AVD ID>.avd` · `.ini` | Android 디바이스 본체 — Simless 가 만든 것은 `simless_<id>` | Android Studio·서버 |
 | CoreSimulator 기본 device set | iOS 디바이스 본체 | Xcode·서버(simctl) |
 
 ## 6. 모델
 
-**디바이스 목록은 저장하지 않는다** (R20). 이 Mac 의 디바이스는 서버가 드라이버에서 그때그때 읽고(전부 — 생성 화면의 «이 Mac 의 디바이스» 에 쓴다), 메인 목록·점유·보호는 그중 `listed`(simless 목록)만 다룬다(Android `~/.android/avd/*.ini`, iOS `simctl list devices available`), 레지스트리에는 **simless 가 붙인 정보만** 둔다. Xcode·Android Studio 에서 기기를 지우거나 만들어도 바로 맞는다.
+**디바이스 목록은 저장하지 않는다** (R20). 이 Mac 의 디바이스는 서버가 드라이버에서 그때그때 읽고(전부 — 생성 화면의 «이 Mac 의 디바이스» 에 쓴다), 메인 목록·점유·보호는 그중 `listed`(simless 목록)만 다룬다(Android `~/.android/avd/*.ini`, iOS `simctl list devices available`), 레지스트리에는 **Simless 가 붙인 정보만** 둔다. Xcode·Android Studio 에서 기기를 지우거나 만들어도 바로 맞는다.
 
 **Device** (서버가 합쳐서 보여 주는 값)
 
 | 필드 | 출처 | 설명 |
 | --- | --- | --- |
-| `id` | 레지스트리 | simless 가 붙이는 짧은 ID(예: `k3f9`). 처음 본 기기에 붙이고 **절대 안 바뀐다** (R4). 그룹·점유·메모는 이 ID 를 가리킨다 |
+| `id` | 레지스트리 | Simless 가 붙이는 짧은 ID(예: `k3f9`). 처음 본 기기에 붙이고 **절대 안 바뀐다** (R4). 그룹·점유·메모는 이 ID 를 가리킨다 |
 | `platform` | 드라이버 | `android` / `ios` |
 | `native` | 드라이버 | Android AVD ID · iOS UDID — 이름을 바꿔도 그대로. 레지스트리는 이 값으로 기기와 `id` 를 잇는다 |
 | `name` | 드라이버 | 표시 이름 (Android `avd.ini.displayname`, iOS 시뮬레이터 이름) |
 | `spec` | 드라이버 | Android `widthPx·heightPx·density·systemImage` · iOS `deviceType·runtime·widthPt·heightPt·scale` |
-| `createdBySimless` | 레지스트리 | simless 가 만든 기기 — 삭제·슬림 켜고 끄기는 이것만 (M7·M8·N5) |
-| `listed` | 레지스트리 | simless 목록에 있는지 (R20). 만든 기기는 늘, 원래 있던 기기는 생성 화면에서 추가했을 때만. 값이 없으면(이전 형식) `createdBySimless` 와 같다. 빼면 그룹 소속·기본 지정·점유도 푼다 |
+| `createdBySimless` | 레지스트리 | Simless 가 만든 기기 — 삭제·슬림 켜고 끄기는 이것만 (M7·M8·N5) |
+| `listed` | 레지스트리 | Simless 목록에 있는지 (R20). 만든 기기는 늘, 원래 있던 기기는 생성 화면에서 추가했을 때만. 값이 없으면(이전 형식) `createdBySimless` 와 같다. 빼면 그룹 소속·기본 지정·점유도 푼다 |
 | `slim` | 레지스트리 | `none`·`applying`·`applied`·`failed` (+ `slimError`). 풀림은 켤 때 자동 재적용하므로 따로 두지 않는다 (M6) |
 | `slimBaseline` | 레지스트리 | 슬림 전 메모리 기준값 (M10) |
 | `memo` | 레지스트리 | 디바이스 메모 (R24) |
 | `default` | 레지스트리 | 이 플랫폼의 기본 디바이스인지 (R22) |
 | `groups` | 레지스트리(그룹) | 든 그룹 ID 목록 (R21) |
 
-- **기기가 사라지면 붙인 정보도 지운다** — simless 로 지웠을 때, 그리고 밖(Xcode·Android Studio)에서 지워 드라이버 목록에 없을 때 그 `id` 의 메모·슬림 정보·그룹 소속·기본 지정을 지운다. 밖에서 지운 경우는 **목록 읽기가 성공했을 때만** 지운다(`simctl` 오류로 빈 목록이 오면 지우지 않는다).
-- Android AVD ID 는 simless 가 만든 것만 `simless_<id>` 다. 표시 이름은 슬림이면 `simless …` 접두사(R5), 슬림을 나중에 켜고 꺼도 이름은 그대로.
+- **기기가 사라지면 붙인 정보도 지운다** — Simless 로 지웠을 때, 그리고 밖(Xcode·Android Studio)에서 지워 드라이버 목록에 없을 때 그 `id` 의 메모·슬림 정보·그룹 소속·기본 지정을 지운다. 밖에서 지운 경우는 **목록 읽기가 성공했을 때만** 지운다(`simctl` 오류로 빈 목록이 오면 지우지 않는다).
+- Android AVD ID 는 Simless 가 만든 것만 `simless_<id>` 다. 표시 이름은 슬림이면 `simless …` 접두사(R5), 슬림을 나중에 켜고 꺼도 이름은 그대로.
 - 이름 변경 시 Android `avd.ini.displayname`, iOS `simctl rename` 을 바꿔 에뮬레이터 창·Simulator 창에서도 알아보게 한다. 원래 있던 기기의 이름도 바꿀 수 있다.
 - iOS 폭(pt) = `/Library/Developer/CoreSimulator/Profiles/DeviceTypes/<종류>.simdevicetype/Contents/Resources/profile.plist` 의 `mainScreenWidth ÷ mainScreenScale` (확인: iPhone 17 → 1206 ÷ 3 = 402pt). M2 의 «폭 맨 앞» 에 쓴다.
 
 **Group** (R21) — `id`, `name`(겹치지 않게), `description`(에이전트도 읽음, «모두 필요» 같은 힌트), `deviceIds[]`, `updatedBy`(마지막으로 고친 세션 — `human` 또는 에이전트 이름), `updatedAt`. 한 디바이스가 여러 그룹에 들 수 있다.
 
-**기본 디바이스** (R22) — `{ android?: deviceId, ios?: deviceId }`. 그 플랫폼에 기본이 없을 때 simless 로 디바이스를 만들면 **그 디바이스가 자동으로 기본**이 된다. 사람·CLI 로 바꿀 수 있다. 기본이 없으면(만든 게 없거나 밖에서 지워짐) `NO_DEFAULT` 로 실패하고, data 에 플랫폼마다 디바이스 대수(`missing: [{platform, devices}]`)를 준다. 요청에 `create` 를 붙이면 **디바이스가 하나도 없는 플랫폼**만 추천 기종(Android `medium-phone`, iOS 가장 새 «iPhone N»)을 슬림으로 만들고(기준값 측정은 건너뜀) — 처음 만든 것이라 기본이 된다 — 이어서 점유한다. 디바이스가 있는데 기본이 없으면 사람이 고른다.
+**기본 디바이스** (R22) — `{ android?: deviceId, ios?: deviceId }`. 그 플랫폼에 기본이 없을 때 Simless 로 디바이스를 만들면 **그 디바이스가 자동으로 기본**이 된다. 사람·CLI 로 바꿀 수 있다. 기본이 없으면(만든 게 없거나 밖에서 지워짐) `NO_DEFAULT` 로 실패하고, data 에 플랫폼마다 디바이스 대수(`missing: [{platform, devices}]`)를 준다. 요청에 `create` 를 붙이면 **디바이스가 하나도 없는 플랫폼**만 추천 기종(Android `medium-phone`, iOS 가장 새 «iPhone N»)을 슬림으로 만들고(기준값 측정은 건너뜀) — 처음 만든 것이라 기본이 된다 — 이어서 점유한다. 디바이스가 있는데 기본이 없으면 사람이 고른다.
 
 실행 중 값(켜짐 여부, Android 시리얼)은 저장하지 않고 서버가 들고 있다.
 
@@ -234,7 +234,7 @@ simless/
 | 켜기 | `emulator -avd <AVD ID> -port <빈 포트> -no-snapshot-save` 를 서버와 분리(detached)해 실행. `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
 | 끄기 | `adb -s <시리얼> emu kill` | `simctl shutdown` |
 | 이름 변경 | `avd.ini.displayname` | `simctl rename` |
-| 삭제 (M8, simless 가 만든 것만) | 끄고 `.avd`·`.ini` 삭제 | 끄고 `simctl delete` |
+| 삭제 (M8, Simless 가 만든 것만) | 끄고 `.avd`·`.ini` 삭제 | 끄고 `simctl delete` |
 
 - **Android 시리얼을 서버가 정한다**: `-port` 로 켜면 시리얼이 `emulator-<port>` 로 정해진다. 밖에서 켠 경우는 `adb -s <시리얼> emu avd name` 으로 역조회한다.
 - 에뮬레이터·시뮬레이터는 서버의 자식으로 묶지 않는다 — 서버가 재시작해도 디바이스는 계속 돈다.
@@ -252,7 +252,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | 같은 화면 | `open-url <딥링크>`, 딥링크 없는 화면은 argent 흐름 재생 | |
 | 화면 확인 | `screenshot` | 크기 라벨을 붙여 보고 |
 
-- Metro 는 **세션마다 따로** 띄운다 (S11) — 8081부터 비어 있는 포트에 자기 작업 폴더의 Metro 를 띄우고, 점유한 기기만 그 포트를 보게 한다. Android 는 기기마다 `adb reverse` 라 다시 빌드할 필요가 없고, iOS 시뮬레이터는 Mac 의 localhost 를 같이 쓰므로 dev client 주소(Expo)나 빌드 때 포트(`RCT_METRO_PORT`)로 정한다. 포트는 simless 가 나눠 주지 않고 스킬이 비어 있는 것을 고른다 — 필요해지면 점유 대상으로 넣는다. 남의 Metro 는 끄지 않는다 (S7).
+- Metro 는 **세션마다 따로** 띄운다 (S11) — 8081부터 비어 있는 포트에 자기 작업 폴더의 Metro 를 띄우고, 점유한 기기만 그 포트를 보게 한다. Android 는 기기마다 `adb reverse` 라 다시 빌드할 필요가 없고, iOS 시뮬레이터는 Mac 의 localhost 를 같이 쓰므로 dev client 주소(Expo)나 빌드 때 포트(`RCT_METRO_PORT`)로 정한다. 포트는 Simless 가 나눠 주지 않고 스킬이 비어 있는 것을 고른다 — 필요해지면 점유 대상으로 넣는다. 남의 Metro 는 끄지 않는다 (S7).
 - 점유한 디바이스만 argent 로 다룬다 — 5단계 훅이 지킨다 (P1·P8).
 
 **나중에(L1~L3) 만들 때 참고** — 2단계에서 한 번 만들다 되돌린 내용이다.
@@ -293,12 +293,12 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | --- | --- | --- |
 | `simless status` | 서버 연결, 디바이스, 그룹, 점유·대기 한눈에 | S2·R13 |
 | `simless doctor [--fix]` | 서버·launchd·Android SDK·시스템 이미지·avdslim·Xcode·simslim·argent(여러 버전)·스킬 점검과 고치는 방법. `--fix` 는 launchd·스킬만 고친다. 훅 점검은 5단계 | S1·S2 |
-| `simless install [--no-launchd] [--no-skill] [--no-app]` · `uninstall` | launchd 등록 + 스킬 + `simless.app` (§4) | S1 |
-| `simless ui` | 웹 화면을 브라우저로 연다 (앱 창은 `simless.app`) | R11 |
+| `simless install [--no-launchd] [--no-skill] [--no-app]` · `uninstall` | launchd 등록 + 스킬 + `Simless.app` (§4) | S1 |
+| `simless ui` | 웹 화면을 브라우저로 연다 (앱 창은 `Simless.app`) | R11 |
 | `simless list [--platform] [--group <그룹>] [--created]` | **이 Mac 의 디바이스 전부** — 폭·이름·켜짐·SLIM·기본·그룹·메모·사용 중인 세션·argent ID | M5·R20 |
 | `simless catalog [--platform]` | 만들 수 있는 기종·OS 목록 | M1 |
 | `simless create <기종> [--os] [--name] [--no-slim] [--no-baseline]` · `simless create --width --height --density [--os]` | 새로 만들기. 슬림이면 `simless …` 이름 | R1~R3·R5·M4 |
-| `simless rename <dev> <name>` · `memo <dev> [<text>]` · `default <dev>` · `delete <dev>` | 관리. 삭제는 simless 가 만든 것만 | M7·M8·R22·R24 |
+| `simless rename <dev> <name>` · `memo <dev> [<text>]` · `default <dev>` · `delete <dev>` | 관리. 삭제는 Simless 가 만든 것만 | M7·M8·R22·R24 |
 | `simless slim [<dev>…] [--off] [--check]` | 슬림 적용·해제·확인 (simless 가 만든 것만) | M6·M7 |
 | `simless group list` · `show <그룹>` · `create <이름> [--desc] [<dev>…]` · `edit <그룹> [--name] [--desc] [--add <dev>…] [--remove <dev>…]` · `delete <그룹>` | 그룹 관리 — 사람·에이전트 모두 | R21·S10 |
 | `simless acquire [<dev>… \| --group <그룹> \| --default [android\|ios]] [--available] [--wait] [--timeout 10m]` | 점유 (모드는 §8) | R14·R22·R23 |
@@ -323,17 +323,17 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | --- | --- |
 | Claude Code | **먼저 만든다** — `~/.claude/settings.json` PreToolUse, matcher `Bash|mcp__argent__.*`, 명령 `simless hook claude pre-tool-use` |
 | Copilot CLI | `~/.copilot/hooks/simless.json`(simless 파일 하나, Claude 식 `PreToolUse`, matcher `Bash\|argent-.*`) → `simless hook copilot pre-tool-use`. MCP 이름 `argent-<도구>` 를 `mcp__argent__<도구>` 로 바꿔 판단, 막는 출력은 Claude 와 같다 |
-| Codex | `~/.codex/hooks.json` 의 `PreToolUse` 에 simless 항목 하나(matcher `^Bash$\|^mcp__argent__.*`) → `simless hook codex pre-tool-use`. 입력·출력이 Claude 와 같다. 새 훅은 사용자가 Codex 의 `/hooks` 에서 한 번 승인해야 돈다 |
+| Codex | `~/.codex/hooks.json` 의 `PreToolUse` 에 Simless 항목 하나(matcher `^Bash$\|^mcp__argent__.*`) → `simless hook codex pre-tool-use`. 입력·출력이 Claude 와 같다. 새 훅은 사용자가 Codex 의 `/hooks` 에서 한 번 승인해야 돈다 |
 | Cursor | `~/.cursor/hooks.json` 의 `beforeShellExecution`·`beforeMCPExecution` 에 하나씩 → `simless hook cursor before-shell`·`before-mcp`. MCP 는 `mcp_server_name` 이 argent 인 것만, `tool_input` 은 JSON 문자열. 막을 때 `{permission: deny, user_message, agent_message}`, 통과도 늘 `{permission: allow}`(빈 출력은 막힘). Cursor 가 가져오는 Claude 훅(입력에 `cursor_version`)은 통과시킨다 — Cursor 용 훅이 판단 |
-| Gemini CLI | `~/.gemini/settings.json` 의 `BeforeTool` 에 simless 항목(name `simless`, matcher `^run_shell_command$\|^mcp_argent_`, timeout 밀리초) → `simless hook gemini before-tool`. MCP 는 `mcp_context.server_name`, 막을 때 `{decision: deny, reason}`. 신뢰한 폴더에서만 돈다 |
+| Gemini CLI | `~/.gemini/settings.json` 의 `BeforeTool` 에 Simless 항목(name `simless`, matcher `^run_shell_command$\|^mcp_argent_`, timeout 밀리초) → `simless hook gemini before-tool`. MCP 는 `mcp_context.server_name`, 막을 때 `{decision: deny, reason}`. 신뢰한 폴더에서만 돈다 |
 | OpenCode | 뺐다(2026-10-05) — v2 플러그인에서 막기가 모델에게 어떻게 보이는지 확인한 뒤 |
 
-**다른 에이전트 설치** (`src/install/agents.ts`) — 보호 = 훅 + 규칙. 규칙은 전역 지시 파일에 `<!-- simless:start … -->` 블록 하나(Codex `~/.codex/AGENTS.md`, Copilot `~/.copilot/copilot-instructions.md`, Gemini `~/.gemini/GEMINI.md`), Cursor 는 `~/.cursor/rules/simless.mdc`. MCP 는 Copilot `~/.copilot/mcp-config.json`·Cursor `~/.cursor/mcp.json`·Gemini `~/.gemini/settings.json` 을 직접 고치고(Gemini 명령은 로그인 창을 열 수 있음), Codex 는 `codex mcp add`(TOML 이라). simless 항목만 넣고 빼며 고치기 전에 `.simless-backup`, 못 읽는 파일(주석 든 JSON 등)은 건드리지 않고 오류를 낸다. 설정 창 «에이전트 연결» 의 «다른 에이전트», `simless install --hook --mcp --agents codex,copilot,…` 로 넣고, `simless uninstall` 은 모두 뺀다. 실제 에이전트로는 아직 확인하지 않았다.
+**다른 에이전트 설치** (`src/install/agents.ts`) — 보호 = 훅 + 규칙. 규칙은 전역 지시 파일에 `<!-- simless:start … -->` 블록 하나(Codex `~/.codex/AGENTS.md`, Copilot `~/.copilot/copilot-instructions.md`, Gemini `~/.gemini/GEMINI.md`), Cursor 는 `~/.cursor/rules/simless.mdc`. MCP 는 Copilot `~/.copilot/mcp-config.json`·Cursor `~/.cursor/mcp.json`·Gemini `~/.gemini/settings.json` 을 직접 고치고(Gemini 명령은 로그인 창을 열 수 있음), Codex 는 `codex mcp add`(TOML 이라). Simless 항목만 넣고 빼며 고치기 전에 `.simless-backup`, 못 읽는 파일(주석 든 JSON 등)은 건드리지 않고 오류를 낸다. 설정 창 «에이전트 연결» 의 «다른 에이전트», `simless install --hook --mcp --agents codex,copilot,…` 로 넣고, `simless uninstall` 은 모두 뺀다. 실제 에이전트로는 아직 확인하지 않았다.
 
 **흐름**
 1. 어댑터가 stdin 입력을 공통 형식으로 바꾼다. 세션은 §7 방식(훅 프로세스의 부모 체인)으로 찾고, 입력에 세션 ID 가 있으면 보조로 쓴다.
 2. **빠른 통과**: Bash 명령에 `adb`·`simctl`·`emulator`·`simslim`·`avdslim` 이 없고, argent 도구에 기기 인자가 없으면 바로 통과한다(소켓 안 엶). `main.ts` 는 이 경로에서 서버·웹 코드를 불러오지 않는다.
-3. 대상(`src/hook/targets.ts` — 순수 함수)을 뽑아 서버에 `hook.check` → 허용/차단 + 사유. 대상은 **simless 목록의 디바이스**만(P1) — AVD ID·UDID·지금 시리얼로 잇는다(simless ID 는 흔한 낱말과 겹칠 수 있어 빼고). 켜짐 상태(시리얼)를 읽는 데 0.5초쯤 걸려 서버가 10초 기억하고, 상태를 바꾸는 요청이 오면 버린다. 허용이면 서버가 같은 요청으로 `lastUsedAt` 을 갱신한다. 실측: 빠른 통과 약 20ms, 판정 약 30ms(기억이 없을 때 0.6초).
+3. 대상(`src/hook/targets.ts` — 순수 함수)을 뽑아 서버에 `hook.check` → 허용/차단 + 사유. 대상은 **Simless 목록의 디바이스**만(P1) — AVD ID·UDID·지금 시리얼로 잇는다(simless ID 는 흔한 낱말과 겹칠 수 있어 빼고). 켜짐 상태(시리얼)를 읽는 데 0.5초쯤 걸려 서버가 10초 기억하고, 상태를 바꾸는 요청이 오면 버린다. 허용이면 서버가 같은 요청으로 `lastUsedAt` 을 갱신한다. 실측: 빠른 통과 약 20ms, 판정 약 30ms(기억이 없을 때 0.6초).
 4. **서버가 꺼져 있으면** `managed-index.json` 으로 이 Mac 의 디바이스인지만 본다. 맞으면(또는 시리얼을 판정 못 하면) 차단하고 «`simless status` 로 서버를 켜세요» 를 알려 준다 (P9).
 5. 차단은 `permissionDecision: "deny"` JSON 으로 돌려주고, 사유에 **누가 쓰는 중인지와 점유 방법**(`simless use …`)을 넣는다 (P5). 서버가 이상한 답(모르는 메서드 등)을 하면 막지 않는다 — 훅 때문에 에이전트가 멈추지 않게.
 
@@ -343,7 +343,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | --- | --- |
 | argent 도구의 `udid`·`device_id`·`avdName` 인자 | 그 값 |
 | argent `list-devices` 등 기기 인자 없는 도구 | 없음 → 통과 (P6) |
-| argent `boot-device` · Bash `emulator -avd …` 로 디바이스 켜기 | 점유와 상관없이 **차단** → `simless up` 안내 (S6 «켜기는 simless 로») |
+| argent `boot-device` · Bash `emulator -avd …` 로 디바이스 켜기 | 점유와 상관없이 **차단** → `simless up` 안내 (S6 «켜기는 Simless 로») |
 | Bash 명령 문자열 안에 디바이스 식별자(UDID·AVD ID·현재 시리얼)가 보임 | 그 디바이스 — 명령을 파싱하지 않고 **문자열 포함**으로 본다. `&&`·`$(…)`·변수 등으로 우회되기 어렵다 |
 | `adb` 를 기기 지정 없이 기기 명령에 씀(`adb shell` 등, `ANDROID_SERIAL` 미지정) | 켜진 Android 전부 |
 | `simctl … booted` | 켜진 iOS 전부 |
@@ -351,26 +351,26 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 **규칙 (P2)** — `integrations/rules/simless.md` 를 `simless install` 이 `~/.claude/rules/simless.md` 로 따로 설치한다(argent 의 `argent.md` 에 붙이면 argent 업데이트가 덮어쓴다). 다른 에이전트의 전역 규칙 위치는 조사 후.
 
-**설치** — 첫 실행 설정 창(M14)의 «보호» 또는 `simless install --hook` 이 `~/.claude/settings.json` 의 `hooks.PreToolUse` 에 matcher `Bash|mcp__argent__.*`, 명령 `<simless 절대 경로> hook claude pre-tool-use` 한 줄을 넣는다. 다른 설정·훅은 그대로 두고, 예전 simless 훅(명령이 ` hook claude pre-tool-use` 로 끝남)은 바꾸며, 쓰기 전에 `settings.json.simless-backup` 을 남긴다. 기본으로는 넣지 않는다 — 다른 세션이 simless 없이 쓰는 기기가 목록에 있으면 그 세션까지 막으므로 사람이 고른다. `simless uninstall` 이 지운다. `simless doctor` 가 훅·규칙을 점검하고, `--fix` 는 이미 넣은 것이 예전 것일 때만 고친다.
+**설치** — 첫 실행 설정 창(M14)의 «보호» 또는 `simless install --hook` 이 `~/.claude/settings.json` 의 `hooks.PreToolUse` 에 matcher `Bash|mcp__argent__.*`, 명령 `<simless 절대 경로> hook claude pre-tool-use` 한 줄을 넣는다. 다른 설정·훅은 그대로 두고, 예전 Simless 훅(명령이 ` hook claude pre-tool-use` 로 끝남)은 바꾸며, 쓰기 전에 `settings.json.simless-backup` 을 남긴다. 기본으로는 넣지 않는다 — 다른 세션이 Simless 없이 쓰는 기기가 목록에 있으면 그 세션까지 막으므로 사람이 고른다. `simless uninstall` 이 지운다. `simless doctor` 가 훅·규칙을 점검하고, `--fix` 는 이미 넣은 것이 예전 것일 때만 고친다.
 
-> simless 목록(`simless list`)의 시뮬레이터·에뮬레이터는 `simless use` 로 점유한 뒤에만 조작한다(스크린샷·describe 포함). 켜기·끄기는 argent `boot-device` 가 아니라 `simless use`·`simless down` 으로 한다. 전문은 `integrations/rules/simless.md`(영어).
+> Simless 목록(`simless list`)의 시뮬레이터·에뮬레이터는 `simless use` 로 점유한 뒤에만 조작한다(스크린샷·describe 포함). 켜기·끄기는 argent `boot-device` 가 아니라 `simless use`·`simless down` 으로 한다. 전문은 `integrations/rules/simless.md`(영어).
 
 ## 14. 앱 창·웹 화면 (R11·M1~M12)
 
-**앱 창** — `simless.app` 이 자기 창(NSWindow + WKWebView)에 웹 화면(`http://127.0.0.1:<포트>/#token=…`)을 띄운다. 메뉴바 «대시보드 열기»·앱 다시 열기·Dock 클릭이 이 창을 연다. 창이 열려 있는 동안만 Dock 아이콘을 보이고(`setActivationPolicy(.regular)`), 닫으면 메뉴바 앱으로 돌아간다. 창 크기·위치를 기억하고 ⌘W·⌘Q 가 앱처럼 동작한다. 같은 화면을 브라우저로도 연다(`simless ui`) — 개발 중엔 argent(Chromium)로 화면을 눌러 확인한다.
+**앱 창** — `Simless.app` 이 자기 창(NSWindow + WKWebView)에 웹 화면(`http://127.0.0.1:<포트>/#token=…`)을 띄운다. 메뉴바 «대시보드 열기»·앱 다시 열기·Dock 클릭이 이 창을 연다. 창이 열려 있는 동안만 Dock 아이콘을 보이고(`setActivationPolicy(.regular)`), 닫으면 메뉴바 앱으로 돌아간다. 창 크기·위치를 기억하고 ⌘W·⌘Q 가 앱처럼 동작한다. 같은 화면을 브라우저로도 연다(`simless ui`) — 개발 중엔 argent(Chromium)로 화면을 눌러 확인한다.
 
 **왼쪽 메뉴** (M9) — 디바이스 · 그룹 · 세션, 아래쪽에 설정(새 창 — 앱에서는 `window.webkit.messageHandlers.simless` 로 Swift 에 알려 별도 NSWindow, 브라우저에서는 `window.open`)과 서버 상태.
 
-**세션 화면** (M13) — `status.sessions`(지금 점유·대기)와 `lease.history`(기록)를 세션 키로 묶어 «지금 쓰는 세션 / 지난 세션» 카드로 보인다. 카드에 에이전트 아이콘(이름으로 종류를 가림 — 각 도구의 대표 색에 단순한 기호, 실제 로고는 쓰지 않음)·세션 ID(에이전트가 주는 `agentSessionId` 와 simless 세션 키)·작업 폴더·마지막 활동·기록 수. 지금 쓰는 세션은 점유한 디바이스(사람은 강제 해제)와 대기. 카드를 누르면 `?window=session&key=…` 를 새 창(앱은 Swift 별도 창, 브라우저는 `window.open`)으로 — 그 세션의 기록을 시간순 타임라인으로. 기록은 LeaseManager 가 점유·대기·해제가 일어날 때마다 남기는 사건(acquired·queued·granted·released·forced·ended·idle·deadlock, `agentSessionId` 포함)을 서버가 `…/simless/history.db`(SQLite)에 덧붙이고 90일 보관한다. 세션 목록은 서버가 세션마다 묶어 준다(`lease.sessions`). CLI `simless history`.
+**세션 화면** (M13) — `status.sessions`(지금 점유·대기)와 `lease.history`(기록)를 세션 키로 묶어 «지금 쓰는 세션 / 지난 세션» 카드로 보인다. 카드에 에이전트 아이콘(이름으로 종류를 가림 — 각 도구의 대표 색에 단순한 기호, 실제 로고는 쓰지 않음)·세션 ID(에이전트가 주는 `agentSessionId` 와 Simless 세션 키)·작업 폴더·마지막 활동·기록 수. 지금 쓰는 세션은 점유한 디바이스(사람은 강제 해제)와 대기. 카드를 누르면 `?window=session&key=…` 를 새 창(앱은 Swift 별도 창, 브라우저는 `window.open`)으로 — 그 세션의 기록을 시간순 타임라인으로. 기록은 LeaseManager 가 점유·대기·해제가 일어날 때마다 남기는 사건(acquired·queued·granted·released·forced·ended·idle·deadlock, `agentSessionId` 포함)을 서버가 `…/simless/history.db`(SQLite)에 덧붙이고 90일 보관한다. 세션 목록은 서버가 세션마다 묶어 준다(`lease.sessions`). CLI `simless history`.
 
 **메인 화면** (M5·M9)
-- simless 목록 — 위에 **All · Android · iOS 탭**(마지막 탭 기억)과 그룹 거르기, 검색.
+- Simless 목록 — 위에 **All · Android · iOS 탭**(마지막 탭 기억)과 그룹 거르기, 검색.
 - 한 줄에 `폭 · 이름 · 켜짐 · SLIM 배지 · 태그(기본 Android/iOS, 그룹들) · 메모 · 사용 중인 세션`.
 - 정렬: 켜진 것 → 기본 → 플랫폼 → 폭.
 - `SLIM` 배지에 마우스를 올리면 꺼진 항목 수·메모리·슬림 전후(«7.8GB → 1.6GB (−79%)», M10). 재적용 실패는 `SLIM ⚠` + 이유.
 - 켜기·끄기는 점유 없이(사람), 다른 세션이 쓰는 중이면 막는다. SSE 로 바로 반영된다.
 
-**생성(+)** (M1·M4) — 위에 «새로 만들기 · 이 Mac 의 디바이스» 탭. «이 Mac 의 디바이스» 는 simless 목록에 없는 기기(`device.available`)를 플랫폼·검색으로 거르고 «추가»(`device.add`). «새로 만들기» 는 플랫폼 → 기종(iOS 기기 종류 / Android 대표 프로필·직접 입력) → OS(런타임·시스템 이미지, 기본값 미리 골라 둠) → 이름(기본값 `simless <기종>` 또는 `<기종>`, 겹치면 번호)·**슬림**(기본 켜짐, 옆 ⓘ 에 슬림화하면 안 되는 기능)·슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다.
+**생성(+)** (M1·M4) — 위에 «새로 만들기 · 이 Mac 의 디바이스» 탭. «이 Mac 의 디바이스» 는 Simless 목록에 없는 기기(`device.available`)를 플랫폼·검색으로 거르고 «추가»(`device.add`). «새로 만들기» 는 플랫폼 → 기종(iOS 기기 종류 / Android 대표 프로필·직접 입력) → OS(런타임·시스템 이미지, 기본값 미리 골라 둠) → 이름(기본값 `simless <기종>` 또는 `<기종>`, 겹치면 번호)·**슬림**(기본 켜짐, 옆 ⓘ 에 슬림화하면 안 되는 기능)·슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다.
 
 **더보기(⋯) 메뉴** (M7·M8) — 이름 변경(원래 있던 디바이스도) · 메모 · 그룹에 넣기/빼기 · 기본 디바이스로 · 슬림 켜기/끄기(simless 가 만든 것만) · 점유 강제 해제 · 삭제(simless 가 만든 것만, 확인 창. 기본 디바이스·켜짐·사용 중이면 이유와 함께 막음). 바깥을 누르거나 Esc 로 닫힌다.
 
@@ -388,7 +388,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 ## 15. 스킬 (S1~S10)
 
-`integrations/skill/simless/SKILL.md` → 기본 `~/.claude/skills/simless`, 고르면 프로젝트 `<폴더>/.claude/skills/simless`(작업 트리마다, `git worktree list` 로 찾음 — git 공용 폴더의 `info/exclude` 에 `/.claude/skills/simless/` 를 적어 저장소에는 안 보이게) (S9). 넣은 곳은 `…/simless/skills.json` 에 기억하고, `simless install`·`simless skill install`·설정 창이 모든 곳을 같이 고친다. 위치를 바꾸면 빠진 곳의 스킬은 지운다. 서버는 켤 때·10분마다·설치를 바꿀 때 넣어 둔 곳을 다시 보고, 예전 스킬이 있으면 `status.skillUpdate` 를 켠다 → 대시보드 위 띠 «simless 스킬 업데이트가 있습니다 [업데이트]», 메뉴바 «스킬 업데이트 있음 — 업데이트». 누르면 `setup.apply { item: "skill" }` 로 모든 곳을 고친다. 새로 시작하는 에이전트 세션부터 새 스킬을 읽는다. **영어로 쓴다**(R25 — 읽는 쪽이 에이전트). 스킬 형식을 읽는 다른 에이전트(Codex 등)는 `simless install --agent <이름>` 으로 그 에이전트 위치에도 설치한다.
+`integrations/skill/simless/SKILL.md` → 기본 `~/.claude/skills/simless`, 고르면 프로젝트 `<폴더>/.claude/skills/simless`(작업 트리마다, `git worktree list` 로 찾음 — git 공용 폴더의 `info/exclude` 에 `/.claude/skills/simless/` 를 적어 저장소에는 안 보이게) (S9). 넣은 곳은 `…/simless/skills.json` 에 기억하고, `simless install`·`simless skill install`·설정 창이 모든 곳을 같이 고친다. 위치를 바꾸면 빠진 곳의 스킬은 지운다. 서버는 켤 때·10분마다·설치를 바꿀 때 넣어 둔 곳을 다시 보고, 예전 스킬이 있으면 `status.skillUpdate` 를 켠다 → 대시보드 위 띠 «Simless 스킬 업데이트가 있습니다 [업데이트]», 메뉴바 «스킬 업데이트 있음 — 업데이트». 누르면 `setup.apply { item: "skill" }` 로 모든 곳을 고친다. 새로 시작하는 에이전트 세션부터 새 스킬을 읽는다. **영어로 쓴다**(R25 — 읽는 쪽이 에이전트). 스킬 형식을 읽는 다른 에이전트(Codex 등)는 `simless install --agent <이름>` 으로 그 에이전트 위치에도 설치한다.
 
 - description 에 S3 의 반응 프롬프트(디바이스가 필요한 작업 전부), S4 의 비반응(디바이스를 쓰지 않는 작업)을 넣는다. 테스트하는 앱의 «그룹» 기능과 헷갈리지 않게 «device group» 이라고 쓴다.
 - 본문 순서(S5): `simless status` → **용도 고르기**: `simless group list --json`(설명)·`simless list --json`(메모)을 보고 맞는 그룹, 없으면 `--default` → `simless use … [--available] [--wait]` — 일부가 사용 중이면 R23 기준(그룹 설명의 «모두 필요», 작업에 몇 대가 꼭 필요한지)으로 판단, 애매하면 사용자에게 묻기(S7) → `simless list --json` 으로 기기별 `targetId`·`label` 받기 → 기기마다 argent: 앱 설치(`reinstall-app`)·실행(`launch-app`, Android 는 먼저 `adb reverse`)·같은 화면(`open-url` 또는 argent 흐름)·`screenshot` → 크기 라벨을 붙여 보고 → `simless release` → 끌지 묻기(S8).
@@ -406,9 +406,9 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | 0 ✅ | 저장소 뼈대 — `package.json`·`tsconfig`·Biome·`mise.toml`, `bin/simless.ts`·`main.ts` 서브커맨드 틀, `scripts/build.ts`, 검사 통과. **컴파일한 바이너리에서 파일 포함·훅 시작 시간 확인** | `bun link` 와 `dist/simless` 양쪽에서 `simless --version` 이 돈다 |
 | 1 ✅ | 서버 + CLI 코어 — 레지스트리, Android·iOS 드라이버(생성·목록·이름·사용 안 함·삭제·켜기·끄기·슬림), 점유·대기·자동 해제, 소켓, launchd, `protocol.md`. **실제 디바이스로 확인**: iOS 생성+슬림 2분 22초, Android·iOS 동시 켜기 29초. 남은 확인은 §17 | CLI 로 크기별 디바이스를 만들고 점유해서 켠다 |
 | 2 ✅ | `doctor` + 스킬 — 설치·연결 점검(S1·S2), 스킬(S3~S8 — 앱 설치·실행·화면 이동은 argent 로 안내), `simless install` 이 스킬도 설치. **남은 확인**: 실제 앱(NOVA)으로 «심리스로 확인해 줘» 흐름을 처음부터 끝까지 돌려 보기 | «심리스로 확인해 줘» 로 주 흐름(R15)이 돈다 |
-| 3 ✅ | 웹 UI + `simless.app` (앞당김 — 사람이 직접 보고 확인하려고) — HTTP API·SSE·토큰, 메인 목록(All·Android·iOS 탭), 생성(+)(iOS 시뮬레이터·Android 대표 프로필·직접 입력), 슬림 수치와 슬림 전후 비교, 메뉴바 앱(단색 아이콘·«대시보드 열기»), `simless ui` | 사람이 메뉴바·브라우저로 전부 관리한다 |
+| 3 ✅ | 웹 UI + `Simless.app` (앞당김 — 사람이 직접 보고 확인하려고) — HTTP API·SSE·토큰, 메인 목록(All·Android·iOS 탭), 생성(+)(iOS 시뮬레이터·Android 대표 프로필·직접 입력), 슬림 수치와 슬림 전후 비교, 메뉴바 앱(단색 아이콘·«대시보드 열기»), `simless ui` | 사람이 메뉴바·브라우저로 전부 관리한다 |
 | 4 ✅ | **사양 변경 (2026-10-05)** — ① 시안(디자인 M12)으로 화면 확정 (사용자 요청으로 건너뛰고 A안 — 라이트 그래파이트 + 파랑, 다크 잉크 + 민트 — 으로 바로 구현) ② 이 Mac 디바이스 전부 목록·레지스트리 재구성(R20, 사용 안 함 제거) ③ 생성: 기종 + OS, 슬림 선택·ⓘ(M1·M4) ④ 메모·기본 디바이스·그룹(R21·R22·R24) ⑤ 그룹 점유 모드·교착(R23, §8) ⑥ 슬림 자동 재적용·`SLIM` 배지(M6) ⑦ 오류 코드·현지화·설정(R25·M11) ⑧ 앱 창(WKWebView, R11) ⑨ 스킬 영어로 다시 쓰기. 항목마다 커밋 | 용도별 그룹·기본 디바이스로 요청하고, 앱 창에서 전부 관리한다 |
-| 5 (구현) | 보호 — Claude Code 훅(`simless hook claude pre-tool-use`), 규칙(`~/.claude/rules/simless.md`), 서버 꺼짐 처리, `simless install`·`doctor` 연동. 대상은 simless 목록의 디바이스(P1). **설치는 사용자 결정 대기** — 다른 세션이 쓰는 기기가 목록에 있으면 그 세션이 막히므로(2026-10-05 보류). 남은 것: 다른 에이전트 어댑터(조사 후, Q16) | 다른 세션이 남의 디바이스를 못 건드린다 |
+| 5 (구현) | 보호 — Claude Code 훅(`simless hook claude pre-tool-use`), 규칙(`~/.claude/rules/simless.md`), 서버 꺼짐 처리, `simless install`·`doctor` 연동. 대상은 Simless 목록의 디바이스(P1). **설치는 사용자 결정 대기** — 다른 세션이 쓰는 기기가 목록에 있으면 그 세션이 막히므로(2026-10-05 보류). 남은 것: 다른 에이전트 어댑터(조사 후, Q16) | 다른 세션이 남의 디바이스를 못 건드린다 |
 | 5.5 ✅ | 첫 실행 설정 창 (M14, 2026-10-05) — 앱을 처음 열면 점검 → 에이전트 연결(스킬·보호·MCP) → 기본 디바이스를 차례로. 서버 `setup.*`, `simless install` 은 보호·MCP 를 기본으로 넣지 않음(`--hook`·`--mcp`) | 터미널 없이 앱에서 설정을 끝낸다 |
 | 6 ✅ | MCP 래퍼 — `simless mcp`(stdio). 도구: `simless_status`·`simless_use`(디바이스·그룹·기본, all·available, 기다리기는 45초씩 나눠 «STILL_QUEUED → 다시 호출»)·`simless_release`·`simless_down`·`simless_catalog`·`simless_create`·`simless_group_save`. 오류는 코드부터(`BUSY: …`). 세션은 CLI 처럼 프로세스 트리, 서버가 꺼져 있으면 켠다. **등록은 사용자 결정** — 첫 실행 설정 창의 «MCP 도구» 또는 `simless install --mcp` | 에이전트가 사용법 없이 바로 쓴다 |
 | U | 업데이트 — `scripts/release.ts`, 확인·알림, `simless update`·되돌리기 (§19). **리모트·첫 Release 가 생긴 뒤**, 5단계 이후 아무 때나 | 새 버전을 알림 받고 명령 한 번으로 올린다 |
@@ -447,13 +447,13 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | 받는 쪽 | 방식 |
 | --- | --- |
 | 사람 | 새 버전마다 **macOS 알림 한 번**(`update.json` 에 보낸 버전 기록). 앱 창 상단 배너 + «업데이트» 버튼. 메뉴바 아이콘 표시 |
-| 터미널 CLI | 하루 한 번 stderr 에 한 줄 — «simless 0.3.0 이 있습니다 — `simless update`». `--json` 출력에는 섞지 않는다 |
+| 터미널 CLI | 하루 한 번 stderr 에 한 줄 — «Simless 0.3.0 이 있습니다 — `simless update`». `--json` 출력에는 섞지 않는다 |
 | 에이전트 | `simless status --json`·MCP 응답의 `update: {current, latest}` 필드. 스킬은 «알리기만, 직접 업데이트하지 않음» (§15) |
 
 **교체 — `simless update`**
 1. Release 에서 `simless-darwin-arm64.tar.gz` 와 `SHA256SUMS` 를 받아 **체크섬을 검증**한다.
 2. `~/.local/share/simless/versions/<버전>/simless` 에 풀고 `~/.local/bin/simless` 링크를 바꾼다 — Claude Code 와 같은 방식(이 Mac 의 `~/.local/share/claude/versions/` 확인).
-3. 서버 재시작 + `simless.app` 갱신(`simless install` 과 같은 경로). 점유·대기열은 파일에 있어 유지되고, 부팅·설치가 진행 중이면 끝난 뒤 재시작한다.
+3. 서버 재시작 + `Simless.app` 갱신(`simless install` 과 같은 경로). 점유·대기열은 파일에 있어 유지되고, 부팅·설치가 진행 중이면 끝난 뒤 재시작한다.
 4. `simless update --rollback` — 이전 버전으로 링크를 되돌린다. 버전 폴더는 최근 3개만 남긴다.
 
 - 자동 업데이트는 기본 꺼짐. `config.json` 의 `autoUpdate: true` 면 점유가 하나도 없을 때만 알아서 교체한다.
@@ -464,7 +464,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 ## 설계 결정 기록
 
-> 구조 수준의 결정(앱 창·웹 화면 · TS · 단일 실행 파일 · `simless.app` · 그룹 · 현지화)은 `requirements.md` «결정 기록» 에 있다. 여기에는 구현 수준의 결정만 둔다.
+> 구조 수준의 결정(앱 창·웹 화면 · TS · 단일 실행 파일 · `Simless.app` · 그룹 · 현지화)은 `requirements.md` «결정 기록» 에 있다. 여기에는 구현 수준의 결정만 둔다.
 
 | 결정 | 이유 | 버린 대안 |
 | --- | --- | --- |
@@ -475,8 +475,8 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | **`main.ts` 에서 서브커맨드별 동적 import** | 훅은 Bash 호출마다 돈다. 서버·웹 코드를 불러오지 않아야 빠르다 | 진입점에서 전부 import |
 | **패키지 하나** (모노레포 아님) | 결과물이 실행 파일 하나다. 경계는 폴더와 import 규칙(§3)으로 지킨다 | workspaces 로 shared·server·cli·web 분리 (설정만 늘어남) |
 | **공용 호스트 아래에서는 터미널 탭(셸) 단위로 세션을 나눈다** (§7) | IDE·터미널 앱·tmux 는 여러 사람·에이전트 작업이 한 프로세스 아래 모인다. 호스트를 세션으로 보면 서로 다른 작업이 한 세션이 된다 | 호스트 프로세스를 세션으로 (전부 한 세션), 바로 위 셸을 세션으로 (에이전트가 명령마다 새 셸을 띄우면 매번 다른 세션) |
-| **업데이트 확인에 `gh` 인증을 그대로 쓴다** (§19) | 저장소가 프라이빗이라 인증이 필요한데, 토큰을 따로 받아 저장하면 관리할 비밀이 생긴다. 개발자 Mac 에는 `gh` 가 이미 로그인돼 있다 | simless 전용 토큰 저장 (비밀 관리 부담), 공개 저장소 (프라이빗 요구와 충돌) |
-| **디바이스 목록은 드라이버에서 그때그때 읽고, 레지스트리엔 simless 가 붙인 정보만** (R20·§6) | Xcode·Android Studio 에서 기기가 바뀌어도 바로 맞는다. 붙인 정보(메모·그룹·기본·슬림)는 `native`(UDID·AVD ID)로 잇는다. 기기가 사라져도 정보는 남겨 두었다가 다시 보이면 되살린다 | 기기 목록을 레지스트리에 저장 (밖의 변경과 맞추는 일이 생김) |
+| **업데이트 확인에 `gh` 인증을 그대로 쓴다** (§19) | 저장소가 프라이빗이라 인증이 필요한데, 토큰을 따로 받아 저장하면 관리할 비밀이 생긴다. 개발자 Mac 에는 `gh` 가 이미 로그인돼 있다 | Simless 전용 토큰 저장 (비밀 관리 부담), 공개 저장소 (프라이빗 요구와 충돌) |
+| **디바이스 목록은 드라이버에서 그때그때 읽고, 레지스트리엔 Simless 가 붙인 정보만** (R20·§6) | Xcode·Android Studio 에서 기기가 바뀌어도 바로 맞는다. 붙인 정보(메모·그룹·기본·슬림)는 `native`(UDID·AVD ID)로 잇는다. 기기가 사라져도 정보는 남겨 두었다가 다시 보이면 되살린다 | 기기 목록을 레지스트리에 저장 (밖의 변경과 맞추는 일이 생김) |
 | **그룹 점유 모드는 `all` 기본 + `--available`, 교착은 대기열에 넣을 때 막는다** (§8·R23) | 판단은 에이전트가 하되(R23), 기본은 가장 안전한 «전부 아니면 전무». 일부를 쥔 채 기다릴 때만 순환이 생길 수 있으므로, 대기열에 넣는 순간 순환을 검사하면 교착이 아예 생기지 않는다 | 대기열만 (쥔 채 기다리는 두 세션의 교착을 못 막음), 일부 점유 + 대기 금지 (레이아웃 체크에서 나머지를 기다릴 수 없음), 생긴 뒤 감지 (이미 둘 다 멈춘 뒤라 한쪽을 깨워야 함) |
 | **서버·CLI·화면이 같은 설정 언어·같은 사전으로 문장을 만든다, 에이전트는 오류 코드로** (§11·R25) | 언어 설정이 하나(`config.json`)라 창구마다 언어가 달라질 일이 없다. 서버가 문장을 만들면 드라이버 깊은 곳의 오류도 한 곳에서 번역된다. 에이전트는 문장이 아니라 `code` 로 판단하므로 언어와 상관없다 | 오류를 키 + 값으로 보내고 창구가 번역 (모든 오류 경로에 키·값을 실어야 해 복잡하고, 언어 설정이 하나라 얻는 게 없음) |
 | **앱 창은 Swift 껍데기 + WKWebView, 화면은 웹 하나** (§14·R11) | 화면을 한 번만 만들고 브라우저·argent 로 확인한다. Dock 아이콘은 창이 열린 동안만 보여 메뉴바 앱의 가벼움을 유지한다 | SwiftUI 로 화면 다시 작성 (두 벌 유지), 창을 늘 띄우는 일반 앱 (메뉴바 앱과 역할이 겹침) |

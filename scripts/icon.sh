@@ -1,5 +1,5 @@
 #!/bin/sh
-# src/web/icon.svg → assets/simless.icns (simless.app 아이콘). SVG 를 고치면 다시 실행한다.
+# src/web/icon.svg → assets/simless.icns (Simless.app 아이콘). SVG 를 고치면 다시 실행한다.
 set -eu
 cd "$(dirname "$0")/.."
 work=$(mktemp -d)

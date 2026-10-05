@@ -1,6 +1,6 @@
-# simless — 작업 규칙 (모든 에이전트)
+# Simless — 작업 규칙 (모든 에이전트)
 
-**Make simulator management seamless.** — 시뮬레이터·에뮬레이터 중개·관리 도구(용도별 그룹·기본 디바이스·UI 테스트용 슬림 디바이스). TypeScript(Bun) 상주 서버 + CLI + 웹 화면(`simless.app` 창) + 로컬 MCP + 스킬. 단일 실행 파일로 배포하고, 개발 중에는 `bun link` 로 쓴다.
+**Make simulator management seamless.** — 시뮬레이터·에뮬레이터 중개·관리 도구(용도별 그룹·기본 디바이스·UI 테스트용 슬림 디바이스). TypeScript(Bun) 상주 서버 + CLI + 웹 화면(`Simless.app` 창) + 로컬 MCP + 스킬. 단일 실행 파일로 배포하고, 개발 중에는 `bun link` 로 쓴다.
 
 이 파일이 작업 규칙의 정본이다. Claude Code 는 `CLAUDE.md` 가 이 파일을 불러온다. 작업을 시작할 때마다 이 파일을 다시 본다.
 
@@ -28,7 +28,8 @@
 
 ## 3. 이름
 
-- 제품·CLI·앱·스킬·MCP 이름은 모두 소문자 **`simless`**(simulator + seamless). 슬로건 «Make simulator management seamless.»
+- 제품·앱 이름은 **Simless**(대문자로 시작 — `Simless.app`, 화면·문서의 제품 이름). 사람이나 에이전트가 **입력하는 것**은 소문자 **`simless`** — CLI 명령, 스킬 이름, MCP 이름(`simless_*` 도구), 패키지 이름, 서버 등록(`simless.server`), `~/.config/simless`. simulator + seamless, 슬로건 «Make simulator management seamless.»
+- 슬림 디바이스 이름 앞머리는 소문자 `simless …`(예: `simless iPhone 17`)
 - 예전 이름 **Corgi** 는 `src/install/legacy.ts`(예전 설치를 찾아 옮기기)와 «결정 기록» 에만 남긴다. 다른 곳에 새로 쓰지 않는다.
 - 저장소 폴더 이름(`…/corgi`)은 그대로다.
 
@@ -136,7 +137,7 @@ feat(server): 점유 대기열과 세션 종료 시 자동 해제 추가
 
 - 이 Mac 에는 다른 세션이 쓰는 에뮬레이터·시뮬레이터·Metro 가 있을 수 있다. **이 작업이 만든 것이 아니면 건드리지 않는다.**
 - 시험용 디바이스는 `simless_` 로 시작하는 이름으로 만들고, 작업이 끝나면 무엇을 남겼는지 알린다.
-- 기기는 simless 로 점유한 뒤에만 argent·adb·simctl 로 건드린다(스크린샷 같은 읽기도). 강제 해제(`simless release --force`)는 사람만.
+- 기기는 Simless 로 점유한 뒤에만 argent·adb·simctl 로 건드린다(스크린샷 같은 읽기도). 강제 해제(`simless release --force`)는 사람만.
 
 ## 9. 사용자와 일할 때
 

@@ -13,7 +13,7 @@ describe("launchd plist", () => {
     );
     expect(xml).toContain("<key>RunAtLoad</key>\n  <true/>");
     expect(xml).toContain("<key>KeepAlive</key>\n  <true/>");
-    expect(xml).toContain("/Users/me/Library/Logs/simless/server.log");
+    expect(xml).toContain("/Users/me/Library/Logs/Simless/server.log");
     expect(paths.launchAgent).toBe("/Users/me/Library/LaunchAgents/simless.server.plist");
   });
 

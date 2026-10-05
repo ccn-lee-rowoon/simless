@@ -24,7 +24,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 ```
 에이전트 ─ CLI·MCP·훅 ─┐            ┌─ 드라이버 ─ simctl·emulator·adb·simslim·avdslim
                       ├─ 소켓 ─ 서버 ┤
-사람 ─ simless.app·웹 ───┘   (HTTP)    └─ 상태 파일 ─ registry·leases(JSON), history(SQLite)
+사람 ─ Simless.app·웹 ───┘   (HTTP)    └─ 상태 파일 ─ registry·leases(JSON), history(SQLite)
 ```
 
 - **상태는 서버 하나만** 갖는다. CLI·MCP·훅·웹·메뉴바는 요청을 보내는 창구다.

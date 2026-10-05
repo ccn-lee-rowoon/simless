@@ -2,7 +2,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 export const LAUNCH_LABEL = "simless.server";
-/** simless.app 의 번들 ID — launchd 등록과 묶어 로그인 항목에 «simless» 로 보이게 한다 */
+/** Simless.app 의 번들 ID — launchd 등록과 묶어 로그인 항목에 «Simless» 로 보이게 한다 */
 export const APP_BUNDLE_ID = "local.simless.app";
 export const MENUBAR_LABEL = "simless.menubar";
 
@@ -37,12 +37,12 @@ export interface Paths {
 
 export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
   const home = env.HOME ?? homedir();
-  const stateDir = env.SIMLESS_STATE_DIR ?? join(home, "Library", "Application Support", "simless");
+  const stateDir = env.SIMLESS_STATE_DIR ?? join(home, "Library", "Application Support", "Simless");
   const configDir = env.SIMLESS_CONFIG_DIR ?? join(home, ".config", "simless");
   return {
     stateDir,
     configDir,
-    logDir: env.SIMLESS_LOG_DIR ?? join(home, "Library", "Logs", "simless"),
+    logDir: env.SIMLESS_LOG_DIR ?? join(home, "Library", "Logs", "Simless"),
     // Unix 소켓 경로는 104 바이트 제한이 있어 따로 바꿀 수 있게 한다.
     socket: env.SIMLESS_SOCKET ?? join(stateDir, "simless.sock"),
     registry: join(stateDir, "registry.json"),
@@ -56,7 +56,7 @@ export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
     config: join(configDir, "config.json"),
     appsDir: join(configDir, "apps"),
     launchAgent: join(home, "Library", "LaunchAgents", `${LAUNCH_LABEL}.plist`),
-    appBundle: join(home, "Applications", "simless.app"),
+    appBundle: join(home, "Applications", "Simless.app"),
     menubarAgent: join(home, "Library", "LaunchAgents", `${MENUBAR_LABEL}.plist`),
   };
 }

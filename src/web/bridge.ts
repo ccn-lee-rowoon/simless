@@ -1,4 +1,4 @@
-// simless.app 안이면 Swift 에 창 열기·닫기를 알린다 (window.webkit.messageHandlers.simless).
+// Simless.app 안이면 Swift 에 창 열기·닫기를 알린다 (window.webkit.messageHandlers.simless).
 // 브라우저에서 열었으면 false — 부르는 쪽이 window.open 등으로 대신한다.
 
 export type AppMessage =

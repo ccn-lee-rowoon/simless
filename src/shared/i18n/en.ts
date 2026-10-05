@@ -18,7 +18,7 @@ export const en: Record<keyof typeof ko, string> = {
     "Not in the simless list: {ref} — add it first from «Devices on this Mac» in the create window, or with simless add",
   "err.alreadyListed": "Already in the simless list: {ref}",
   "err.unlistCreated":
-    "{name} was created by simless, so it can't be taken off the list — delete it instead",
+    "{name} was created by Simless, so it can't be taken off the list — delete it instead",
   "err.ambiguousDevice": "Several devices have this name — pick one by ID:\n{list}",
   "err.noGroup": "No such group: {ref}",
   "err.emptyGroup": "The group has no devices: {name}",
@@ -33,9 +33,9 @@ export const en: Record<keyof typeof ko, string> = {
   "err.forceHumanOnly": "Only a person can force a release — agents should wait or ask the user",
   "err.notThisMac": "Not a device on this Mac: {target}",
   "err.preexistingDelete":
-    "{name} was already on this Mac, so it can't be deleted — only devices simless created can",
+    "{name} was already on this Mac, so it can't be deleted — only devices Simless created can",
   "err.preexistingSlim":
-    "{name} was already on this Mac, so its slim setting can't be changed — only devices simless created can",
+    "{name} was already on this Mac, so its slim setting can't be changed — only devices Simless created can",
   "err.deleteDefault": "{name} is a default device — make another device the default first",
   "err.notHeldAny": "You hold no devices — acquire and boot them with simless use",
   "err.notHeld": "Not acquired: {names} — acquire them with simless use",
@@ -60,7 +60,7 @@ export const en: Record<keyof typeof ko, string> = {
   "err.noRuntimeFor": "No installed runtime supports {model}",
   "err.runtimeUnsupported": "{runtime} doesn't support {model}",
   "err.toolNotFound": "{tool} not found",
-  "err.serverDown": "Can't connect to the simless server ({path})",
+  "err.serverDown": "Can't connect to the Simless server ({path})",
   "err.serverClosed": "The server closed the connection without answering",
   "progress.baselineBoot": "Measuring the pre-slim baseline — booting {name}",
   "progress.baselineSettle": "Waiting {seconds}s for background services to settle",
@@ -90,14 +90,14 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.busyHint": "\n  To wait, add --wait; to take only free devices, add --available",
   "cli.serve": "Run the resident server (usually started by launchd)",
   "cli.install":
-    "Register the server with launchd (starts at login), install the agent skill and build simless.app. Choose protection (hook + rule) and MCP in the app's first-run setup, or pass --hook / --mcp",
+    "Register the server with launchd (starts at login), install the agent skill and build Simless.app. Choose protection (hook + rule) and MCP in the app's first-run setup, or pass --hook / --mcp",
   "cli.install.noLaunchd": "Skip launchd registration",
   "cli.install.noSkill": "Skip installing the skill",
-  "cli.install.noApp": "Skip building simless.app",
+  "cli.install.noApp": "Skip building Simless.app",
   "cli.install.menubar": "{path} (menu bar app)",
   "cli.install.done": "Installed ({what}): {path}",
   "cli.uninstall":
-    "Remove the launchd registration, simless.app, hooks, rules and MCP registrations (all agents) — devices and the skill stay",
+    "Remove the launchd registration, Simless.app, hooks, rules and MCP registrations (all agents) — devices and the skill stay",
   "cli.uninstall.done": "Registration removed",
   "cli.ui": "Open the web view in a browser (starts the server if needed)",
   "cli.ui.print": "Print the address instead of opening it",
@@ -142,7 +142,7 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.holder.since": "{device}{who} · {cwd} · {what} since {ago}",
   "cli.list": "Devices in the simless list (created + added) — state, slim, lease, argent ID",
   "cli.opt.platform": "android or ios",
-  "cli.opt.created": "Only devices simless created",
+  "cli.opt.created": "Only devices Simless created",
   "cli.list.available":
     "Devices on this Mac that aren't in the simless list — the ones simless add can add",
   "cli.add": "Add a device on this Mac to the simless list — nothing is created or slimmed",
@@ -159,7 +159,7 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.create.width": "Custom size (Android) — width in dp",
   "cli.create.height": "Custom size (Android) — height in dp",
   "cli.create.density": "Custom size (Android) — density (e.g. 320, 420)",
-  "cli.create.name": "Display name (default: simless <model> when slim, otherwise <model>)",
+  "cli.create.name": "Display name (default: `simless <model>` when slim, otherwise <model>)",
   "cli.create.noSlim": "Don't slim — a regular device",
   "cli.create.noBaseline": "Don't measure the pre-slim baseline — 1–2 minutes faster",
   "cli.create.bothGiven": "Give either a model or a custom size (--width …), not both",
@@ -173,13 +173,13 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.default.none":
     "No default devices — the first device you create with simless create becomes the default",
   "cli.delete":
-    "Delete a device simless created — shuts it down first; blocked while another session uses it",
+    "Delete a device Simless created — shuts it down first; blocked while another session uses it",
   "cli.delete.yes": "Delete without asking",
   "cli.delete.confirm": "Delete {device}? This can't be undone.",
   "cli.delete.cancelled": "Not deleted (use --yes to skip the question)",
   "cli.deleted": "Deleted: {id}",
   "cli.slim": "Slim devices — apply (default), remove (--off), or check (--check)",
-  "cli.slim.devices": "Device IDs or names (default: every device simless created)",
+  "cli.slim.devices": "Device IDs or names (default: every device Simless created)",
   "cli.slim.off": "Remove slimming",
   "cli.slim.check": "Only check the slim state",
   "cli.up": "Boot the devices you hold",
@@ -247,7 +247,7 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.config.set": "{key} = {value}",
   "doctor.description": "Check the installation and connections, and explain how to fix problems",
   "doctor.fix":
-    "Fix what simless install can fix (launchd registration, skill, simless.app, and outdated copies of an installed hook or rule)",
+    "Fix what simless install can fix (launchd registration, skill, Simless.app, and outdated copies of an installed hook or rule)",
   "doctor.group.server": "Server",
   "doctor.group.agents": "Agent integration",
   "doctor.server": "Server connection",
@@ -269,13 +269,13 @@ export const en: Record<keyof typeof ko, string> = {
   "doctor.argent.fix": "Keep only one, or fix the PATH order",
   "doctor.skill": "simless skill",
   "doctor.skill.missing": "not installed",
-  "doctor.skill.outdated": "differs from the skill in this simless (older version)",
+  "doctor.skill.outdated": "differs from the skill in this Simless (older version)",
   "doctor.app.missing":
     "missing — you can't open the app window from Finder or Spotlight (simless ui still works)",
   "doctor.allGood": "Everything looks good.",
   "doctor.summary": "{fails} problems · {warns} warnings",
   "doctor.canFix":
-    "simless doctor --fix can fix some of these (launchd registration, skill, hook, rule, simless.app).",
+    "simless doctor --fix can fix some of these (launchd registration, skill, hook, rule, Simless.app).",
   "doctor.failed": "Some items need fixing",
   "hint.avdslimTrust":
     "(if brew refuses the unofficial tap, run brew trust kdbhalala/avdslim and retry)",
@@ -296,7 +296,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.done": "{label} — done",
   "web.failed": "{label} — failed: {message}",
   "web.created": "Created {name}",
-  "web.noToken": "Open this from the terminal with simless ui, or launch the simless app.",
+  "web.noToken": "Open this from the terminal with simless ui, or launch the Simless app.",
   "web.nav": "Screens",
   "web.nav.devices": "Devices",
   "web.nav.groups": "Groups",
@@ -314,7 +314,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.noMatch": "No matching devices",
   "web.empty.title": "The simless list is empty",
   "web.empty.body": "Use «New device» to create one, or pick a device on this Mac to add.",
-  "web.device.createdBySimless": "made by simless",
+  "web.device.createdBySimless": "made by Simless",
   "web.device.default": "Default · {platform}",
   "web.device.filterByGroup": "Show only this group",
   "web.device.mine": "This window",
@@ -435,32 +435,32 @@ export const en: Record<keyof typeof ko, string> = {
   "web.sessions.stateEnded": "Ended",
   "web.sessions.range": "{count} events since {from} — newest first",
   "hook.bootViaSimless":
-    "{name} is managed by simless, so boot it with simless — simless use {id} (acquire and boot)",
+    "{name} is managed by Simless, so boot it with Simless — simless use {id} (acquire and boot)",
   "hook.heldByOther":
     "{name} is in use by another session ({who}) — to wait, run simless use {id} --wait, or ask the user",
   "hook.notHeld":
-    "{name} is managed by simless and can only be used after acquiring it — simless use {id}",
+    "{name} is managed by Simless and can only be used after acquiring it — simless use {id}",
   "hook.serverDown":
-    "The simless server is down, so it's unknown who is using {name} — start it with simless status, then try again",
+    "The Simless server is down, so it's unknown who is using {name} — start it with simless status, then try again",
   "cli.install.hook":
     "Protection — also install the Claude Code hook (~/.claude/settings.json) and rule (~/.claude/rules/simless.md)",
   "doctor.hook": "Claude Code hook",
   "doctor.hook.missing":
     "missing — agents can touch devices they don't hold through argent or adb directly (P3)",
   "doctor.hook.outdated":
-    "points to a different simless (moved, or switched between development and release)",
+    "points to a different Simless (moved, or switched between development and release)",
   "doctor.rule": "simless rule",
   "cli.install.mcp": "Register simless mcp with Claude Code (user scope, R12)",
   "setup.noClaude": "Couldn't find the claude command — install Claude Code and try again",
   "setup.mcpFailed": "Couldn't register the MCP server: {error}",
-  "web.setup.title": "Get started with simless",
+  "web.setup.title": "Get started with Simless",
   "web.setup.intro":
     "simless checks what it needs, one step at a time. You can reopen this later from Settings.",
   "web.setup.steps.check": "Check this Mac",
   "web.setup.steps.agents": "Connect agents",
   "web.setup.steps.devices": "Default devices",
   "web.setup.check.intro":
-    "Tools simless uses to create and drive devices. You can use just iOS or just Android, and install anything missing later.",
+    "Tools Simless uses to create and drive devices. You can use just iOS or just Android, and install anything missing later.",
   "web.setup.check.server": "simless server",
   "web.setup.check.ios": "iOS simulators",
   "web.setup.check.android": "Android emulators",
@@ -478,7 +478,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.setup.optional": "Optional",
   "web.setup.skill.title": "simless skill",
   "web.setup.skill.desc":
-    "Teaches agents to acquire, use and release devices through simless when they need one.",
+    "Teaches agents to acquire, use and release devices through Simless when they need one.",
   "web.setup.mcp.title": "MCP tools",
   "web.setup.mcp.desc":
     "Registers tools such as simless_status and simless_use with Claude Code. They appear in every Claude Code session on this Mac, starting with new sessions.",
@@ -488,7 +488,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.setup.protect.desc":
     "Blocks sessions that touch a device in the simless list through adb, simctl or argent without holding it, and tells them how to acquire it. Adds about 20 ms to each tool call.",
   "web.setup.protect.warn":
-    "If a device in the simless list is already in use without simless, that session gets blocked too. Remove the device from the list first, or turn this on after that work is done.",
+    "If a device in the simless list is already in use without Simless, that session gets blocked too. Remove the device from the list first, or turn this on after that work is done.",
   "web.setup.state.current": "Installed",
   "web.setup.state.outdated": "Needs update",
   "web.setup.state.missing": "Not installed",

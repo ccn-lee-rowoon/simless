@@ -286,7 +286,7 @@ export async function runChecks(
   add({
     id: "app",
     group: t("doctor.group.agents"),
-    name: "simless.app",
+    name: "Simless.app",
     status: app ? "ok" : "warn",
     detail: app ? ctx.paths.appBundle : t("doctor.app.missing"),
     fix: app ? undefined : "simless install",
