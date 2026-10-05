@@ -37,8 +37,14 @@ const RegistryFile = z.union([RegistryV2, RegistryV1]);
 
 function migrate(file: z.infer<typeof RegistryFile>): RegistryV2 {
   if (file.version === 2) return file;
+  // 기본 디바이스(R22)가 생기기 전에 만든 것 — 플랫폼마다 처음 만든 것을 기본으로
+  const defaults: Defaults = {};
+  for (const d of [...file.devices].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+    defaults[d.spec.platform] ??= d.id;
+  }
   return {
     version: 2,
+    defaults,
     devices: file.devices.map((d) => ({
       id: d.id,
       platform: d.spec.platform,
@@ -50,7 +56,6 @@ function migrate(file: z.infer<typeof RegistryFile>): RegistryV2 {
       createdAt: d.createdAt,
     })),
     groups: [],
-    defaults: {},
   };
 }
 

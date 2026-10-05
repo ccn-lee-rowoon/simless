@@ -44,7 +44,7 @@ describe("Registry", () => {
     ).toEqual(["AVD", "KEEP"]);
   });
 
-  test("1~3단계 형식(만든 디바이스만, 이름·크기 포함)을 읽어 옮긴다", () => {
+  test("1~3단계 형식(만든 디바이스만, 이름·크기 포함)을 읽어 옮기고, 처음 만든 것을 기본으로", () => {
     const path = tempPath();
     writeFileSync(
       path,
@@ -69,7 +69,9 @@ describe("Registry", () => {
         ],
       }),
     );
-    expect(new Registry(path).list()).toEqual([
+    const registry = new Registry(path);
+    expect(registry.defaults()).toEqual({ android: "ab12" });
+    expect(registry.list()).toEqual([
       {
         id: "ab12",
         platform: "android",
