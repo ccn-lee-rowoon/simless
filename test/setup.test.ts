@@ -7,7 +7,7 @@ import { listen } from "../src/server/socket.ts";
 import type { CheckView, SetupAgents, SetupStatus, StatusResult } from "../src/shared/api.ts";
 import { call } from "../src/shared/client.ts";
 import { VERSION } from "../src/shared/version.ts";
-import { fakeDriver, session, tempEnv } from "./helpers.ts";
+import { fakeDriver, session, tempEnv, testServers } from "./helpers.ts";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -46,27 +46,21 @@ if [ "$2" = "remove" ]; then /bin/rm -f "$HOME/.claude.json"; fi
   return path;
 }
 
-async function start(options: { claude?: boolean } = {}) {
-  const env = tempEnv();
-  if (options.claude) fakeClaude(env.env.HOME);
-  // PATH 를 비워 이 Mac 의 진짜 claude 를 쓰지 않게 한다
-  const runEnv = { ...env.env, PATH: "" };
-  const server = new CorgiServer({
-    ...env,
-    drivers: [fakeDriver()],
-    env: runEnv,
-    selfCommand: COMMAND,
-    setupChecks: async () => CHECKS,
+const startServer = testServers();
+const start = async (options: { claude?: boolean } = {}) => {
+  const started = await startServer({
+    prepare: (env) => {
+      if (options.claude) fakeClaude(env.env.HOME);
+    },
+    // PATH 를 비워 이 Mac 의 진짜 claude 를 쓰지 않게 한다 — HOME 은 임시 폴더
+    deps: (env) => ({
+      env: { ...env.env, PATH: "" },
+      selfCommand: COMMAND,
+      setupChecks: async () => CHECKS,
+    }),
   });
-  const listener = await listen(env.paths.socket, VERSION, server.handle);
-  cleanups.push(() => listener.stop(), env.cleanup);
-  // biome-ignore lint/suspicious/noExplicitAny: 테스트 편의 — 결과와 오류를 같은 값으로 받는다
-  const H = (method: string, params: unknown = {}): Promise<any> =>
-    call(env.paths.socket, method, params, session("web", { human: true }))
-      .then((r) => r.result)
-      .catch((e: unknown) => e);
-  return { H, home: env.env.HOME, paths: env.paths };
-}
+  return { ...started, home: started.env.env.HOME, paths: started.env.paths };
+};
 
 describe("첫 실행 설정 (M14)", () => {
   test("처음에는 설정이 필요하고, 점검과 에이전트 연결 상태를 준다", async () => {

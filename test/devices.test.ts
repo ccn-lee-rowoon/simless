@@ -1,33 +1,9 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
-import { CorgiServer } from "../src/server/app.ts";
-import { listen } from "../src/server/socket.ts";
 import type { DeviceOpResult, DeviceView } from "../src/shared/api.ts";
-import { call } from "../src/shared/client.ts";
-import { VERSION } from "../src/shared/version.ts";
-import { fakeDriver, seedDevice, session, tempEnv } from "./helpers.ts";
+import { seedDevice, testServers } from "./helpers.ts";
 
-const cleanups: (() => void)[] = [];
-afterEach(() => {
-  for (const fn of cleanups.splice(0)) fn();
-});
-
-async function start() {
-  const env = tempEnv();
-  const driver = fakeDriver();
-  const server = new CorgiServer({ ...env, drivers: [driver] });
-  const listener = await listen(env.paths.socket, VERSION, server.handle);
-  cleanups.push(() => listener.stop(), env.cleanup);
-  /** 결과 또는 오류(code·message)를 그대로 돌려준다 — 테스트에서 둘 다 본다 */
-  const as =
-    (key: string, human = false) =>
-    // biome-ignore lint/suspicious/noExplicitAny: 테스트 편의 — 결과와 오류를 같은 값으로 받는다
-    (method: string, params: unknown = {}): Promise<any> =>
-      call(env.paths.socket, method, params, session(key, { human }))
-        .then((r) => r.result)
-        .catch((e: unknown) => e);
-  return { server, driver, env, A: as("A"), B: as("B"), H: as("web", true) };
-}
+const start = testServers();
 
 const android360 = { model: "Small 360" };
 

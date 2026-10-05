@@ -1,34 +1,16 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { CorgiServer } from "../src/server/app.ts";
-import { listen } from "../src/server/socket.ts";
+import { describe, expect, test } from "bun:test";
 import type { DeviceView, StatusResult } from "../src/shared/api.ts";
-import { call } from "../src/shared/client.ts";
 import type { Group } from "../src/shared/model.ts";
-import { VERSION } from "../src/shared/version.ts";
-import { fakeDriver, seedDevice, session, tempEnv } from "./helpers.ts";
+import { seedDevice, testServers } from "./helpers.ts";
 
-const cleanups: (() => void)[] = [];
-afterEach(() => {
-  for (const fn of cleanups.splice(0)) fn();
-});
-
-async function start() {
-  const env = tempEnv();
-  const driver = fakeDriver();
-  const server = new CorgiServer({ ...env, drivers: [driver] });
-  seedDevice(server, driver, "mod1", "Pixel 6a", false);
-  seedDevice(server, driver, "usr1", "iPhone 17 Pro", false);
-  const listener = await listen(env.paths.socket, VERSION, server.handle);
-  cleanups.push(() => listener.stop(), env.cleanup);
-  const as =
-    (key: string, human = false) =>
-    // biome-ignore lint/suspicious/noExplicitAny: 테스트 편의 — 결과와 오류를 같은 값으로 받는다
-    (method: string, params: unknown = {}): Promise<any> =>
-      call(env.paths.socket, method, params, session(key, { human }))
-        .then((r) => r.result)
-        .catch((e: unknown) => e);
-  return { server, driver, A: as("A"), B: as("B"), H: as("web", true) };
-}
+const startServer = testServers();
+const start = () =>
+  startServer({
+    seed: (server, driver) => {
+      seedDevice(server, driver, "mod1", "Pixel 6a", false);
+      seedDevice(server, driver, "usr1", "iPhone 17 Pro", false);
+    },
+  });
 
 describe("그룹 (R21)", () => {
   test("만들면 디바이스·설명·고친 쪽이 남고, 디바이스 목록에 그룹 ID 가 붙는다", async () => {

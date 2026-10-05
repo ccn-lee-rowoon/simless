@@ -4,23 +4,22 @@ import { listen } from "../src/server/socket.ts";
 import type { AcquireResult, StatusResult } from "../src/shared/api.ts";
 import { call, RemoteError, ServerDownError } from "../src/shared/client.ts";
 import { VERSION } from "../src/shared/version.ts";
-import { fakeDriver, seedDevice, session, tempEnv } from "./helpers.ts";
+import { fakeDriver, seedDevice, session, tempEnv, testServers } from "./helpers.ts";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
   for (const fn of cleanups.splice(0)) fn();
 });
 
-async function start(options: { isAlive?: (pid: number) => boolean } = {}) {
-  const env = tempEnv();
-  const driver = fakeDriver();
-  const server = new CorgiServer({ ...env, drivers: [driver], isAlive: options.isAlive });
-  seedDevice(server, driver, "aaaa", "Small");
-  seedDevice(server, driver, "bbbb", "Large");
-  const listener = await listen(env.paths.socket, VERSION, server.handle);
-  cleanups.push(() => listener.stop(), env.cleanup);
-  return { server, socket: env.paths.socket };
-}
+const startServer = testServers();
+const start = (options: { isAlive?: (pid: number) => boolean } = {}) =>
+  startServer({
+    deps: { isAlive: options.isAlive },
+    seed: (server, driver) => {
+      seedDevice(server, driver, "aaaa", "Small");
+      seedDevice(server, driver, "bbbb", "Large");
+    },
+  });
 
 describe("소켓 서버", () => {
   test("status — 디바이스와 이 세션의 점유를 돌려준다", async () => {

@@ -1,13 +1,17 @@
+import { afterEach } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { CorgiServer, type ServerDeps } from "../src/server/app.ts";
 import type { Discovered, Driver, RuntimeState } from "../src/server/drivers/types.ts";
 import type { Registry } from "../src/server/registry.ts";
-import { HandlerError } from "../src/server/socket.ts";
+import { HandlerError, listen } from "../src/server/socket.ts";
+import { call } from "../src/shared/client.ts";
 import { Config } from "../src/shared/config.ts";
 import type { Device } from "../src/shared/model.ts";
 import { resolvePaths } from "../src/shared/paths.ts";
 import type { SessionInfo } from "../src/shared/protocol.ts";
+import { VERSION } from "../src/shared/version.ts";
 
 /** 임시 상태 폴더와 짧은 소켓 경로(104바이트 제한) — 끝나면 cleanup() */
 export function tempEnv() {
@@ -176,4 +180,74 @@ export function seedDevice(
     slim: "none",
     createdAt: device.createdAt,
   });
+}
+
+/** 테스트에서 서버를 부르는 함수 — 결과 또는 오류(`code`·`message`·`data`)를 같은 값으로 돌려준다 */
+// biome-ignore lint/suspicious/noExplicitAny: 테스트 편의 — 결과와 오류를 같은 값으로 받는다
+export type Caller = (method: string, params?: unknown) => Promise<any>;
+
+export interface TestServer {
+  server: CorgiServer;
+  driver: FakeDriver;
+  env: ReturnType<typeof tempEnv>;
+  socket: string;
+  /** 세션 키로 부르는 함수 — human 이면 사람(웹 UI)으로 */
+  as: (key: string, human?: boolean) => Caller;
+  /** 에이전트 세션 A·B, 사람(웹 UI) H */
+  A: Caller;
+  B: Caller;
+  H: Caller;
+}
+
+export interface StartOptions {
+  /** CorgiServer 에 더 넘길 것 — env·selfCommand·setupChecks·isAlive·systemLanguages … (임시 폴더가 필요하면 함수로) */
+  deps?: Partial<ServerDeps> | ((env: ReturnType<typeof tempEnv>) => Partial<ServerDeps>);
+  /** 서버를 띄우기 전에 디바이스를 넣는다 */
+  seed?: (server: CorgiServer, driver: FakeDriver) => void;
+  /** 소켓을 열기 전에 임시 HOME 을 준비한다 (예: 가짜 claude) */
+  prepare?: (env: ReturnType<typeof tempEnv>) => void;
+}
+
+/**
+ * 테스트 파일 맨 위에서 한 번 부른다 — 그 파일의 테스트가 끝날 때마다 서버를 내리고 임시 폴더를 지운다.
+ * (afterEach 는 부른 파일에 걸린다. helpers.ts 맨 위에 두면 파일마다 걸리지 않는다)
+ *
+ *   const start = testServers();
+ *   const { A, B, server } = await start({ seed: (s, d) => seedDevice(s, d, "aaaa", "Small") });
+ */
+export function testServers(): (options?: StartOptions) => Promise<TestServer> {
+  const cleanups: (() => void)[] = [];
+  afterEach(() => {
+    for (const fn of cleanups.splice(0)) fn();
+  });
+  return async (options = {}) => {
+    const env = tempEnv();
+    options.prepare?.(env);
+    const driver = fakeDriver();
+    const deps = typeof options.deps === "function" ? options.deps(env) : options.deps;
+    const server = new CorgiServer({ ...env, drivers: [driver], ...deps });
+    options.seed?.(server, driver);
+    const listener = await listen(env.paths.socket, VERSION, server.handle);
+    cleanups.push(
+      () => listener.stop(),
+      () => server.history.close(),
+      env.cleanup,
+    );
+    const as =
+      (key: string, human = false): Caller =>
+      (method, params = {}) =>
+        call(env.paths.socket, method, params, session(key, { human }))
+          .then((r) => r.result)
+          .catch((e: unknown) => e);
+    return {
+      server,
+      driver,
+      env,
+      socket: env.paths.socket,
+      as,
+      A: as("A"),
+      B: as("B"),
+      H: as("web", true),
+    };
+  };
 }
