@@ -5,6 +5,8 @@ import type {
   FixId,
   InstallState,
   JobView,
+  OtherAgent,
+  OtherAgentView,
   SetupAgents,
   SetupItem,
   SetupStatus,
@@ -473,8 +475,87 @@ function AgentsStep({
         disabled={agents.claude ? undefined : t("web.setup.mcp.noClaude")}
         onApply={(enabled) => apply("mcp", enabled, t("web.setup.mcp.title"))}
       />
-      <p className="sub">{t("web.setup.agents.others")}</p>
+      <h3 className="setup-agents-title">{t("web.setup.agents.othersTitle")}</h3>
+      <p className="sub">{t("web.setup.agents.othersIntro")}</p>
+      {agents.others.map((other) => (
+        <OtherAgentCard key={other.agent} other={other} onChanged={onChanged} act={act} />
+      ))}
     </>
+  );
+}
+
+const AGENT_NOTE: Partial<Record<OtherAgent, MessageKey>> = {
+  codex: "web.setup.agents.note.codex",
+  cursor: "web.setup.agents.note.cursor",
+  gemini: "web.setup.agents.note.gemini",
+};
+
+/** 다른 에이전트 하나 — 보호(훅 + 규칙)와 MCP 를 켜고 끈다 (Q16) */
+function OtherAgentCard({
+  other,
+  onChanged,
+  act,
+}: {
+  other: OtherAgentView;
+  onChanged: (agents: SetupAgents) => void;
+  act: Act;
+}) {
+  const [busy, setBusy] = useState(false);
+  const protection: InstallState =
+    other.hook === "current" && other.rule === "current"
+      ? "current"
+      : other.hook === "missing" && other.rule === "missing"
+        ? "missing"
+        : "outdated";
+  const apply = (item: "protection" | "mcp", enabled: boolean) => {
+    setBusy(true);
+    void act(
+      `${other.label} — ${t(item === "mcp" ? "web.setup.mcp.title" : "web.setup.protect.title")}`,
+      async () => {
+        onChanged(await call<SetupAgents>("setup.apply", { item, enabled, agent: other.agent }));
+      },
+    ).finally(() => setBusy(false));
+  };
+  const note = AGENT_NOTE[other.agent];
+  const row = (item: "protection" | "mcp", state: InstallState) => (
+    <div className="setup-agent-row">
+      <span>{t(item === "mcp" ? "web.setup.mcp.title" : "web.setup.protect.title")}</span>
+      <span className={`setup-state setup-state-${state}`}>{t(STATE_LABEL[state])}</span>
+      <span className="spacer" />
+      {state !== "current" && (
+        <button
+          type="button"
+          className="button button-primary button-small"
+          disabled={busy || !other.installed}
+          onClick={() => apply(item, true)}
+        >
+          {state === "outdated" ? t("web.setup.update") : t("web.setup.install")}
+        </button>
+      )}
+      {state !== "missing" && (
+        <button
+          type="button"
+          className="button button-small"
+          disabled={busy}
+          onClick={() => apply(item, false)}
+        >
+          {t("web.setup.remove")}
+        </button>
+      )}
+    </div>
+  );
+  return (
+    <div
+      className={other.installed ? "panel setup-section" : "panel setup-section setup-agent-absent"}
+    >
+      <div className="setup-integration-head">
+        <h3>{other.label}</h3>
+        {!other.installed && <span className="chip">{t("web.setup.agents.notInstalled")}</span>}
+      </div>
+      {row("protection", protection)}
+      {row("mcp", other.mcp)}
+      {note && other.installed && <p className="sub">{t(note)}</p>}
+    </div>
   );
 }
 
@@ -613,7 +694,9 @@ function DevicesStep({
 
 /** 스킬 위치를 사람에게 — 홈 폴더는 ~ 로 */
 function locationText(location: SkillLocation): string {
-  return location.kind === "global" ? "~/.claude/skills/corgi" : location.path;
+  return location.kind === "global"
+    ? "~/.claude/skills/corgi · ~/.agents/skills/corgi"
+    : location.path;
 }
 
 /** 스킬을 넣는 곳 (S9) — 전역(기본) 또는 고른 프로젝트 폴더들 */

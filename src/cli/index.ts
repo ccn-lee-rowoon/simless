@@ -1,4 +1,5 @@
 import { Command, CommanderError } from "commander";
+import type { OtherAgent } from "../shared/api.ts";
 import { loadConfig } from "../shared/config.ts";
 import { ExitCode } from "../shared/exit-codes.ts";
 import { resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
@@ -77,11 +78,19 @@ export async function runCli(argv: string[]): Promise<number> {
     .option("--no-app", t("cli.install.noApp"))
     .option("--hook", t("cli.install.hook"))
     .option("--mcp", t("cli.install.mcp"))
+    .option("--agents <names>", t("cli.install.agents"), "claude")
     .action(
       run(
         async (
           ctx,
-          o: { launchd: boolean; skill: boolean; app: boolean; hook?: boolean; mcp?: boolean },
+          o: {
+            launchd: boolean;
+            skill: boolean;
+            app: boolean;
+            hook?: boolean;
+            mcp?: boolean;
+            agents: string;
+          },
         ) => {
           const done: Record<string, string> = {};
           if (o.launchd) {
@@ -96,16 +105,35 @@ export async function runCli(argv: string[]): Promise<number> {
               files.push(...(await installSkillAt(l)));
             done.skill = files.join(", ");
           }
+          // 보호·MCP 를 붙일 에이전트 — claude,codex,copilot,cursor,gemini (Q16)
+          const agents = o.agents
+            .split(",")
+            .map((a) => a.trim())
+            .filter(Boolean);
+          const { selfCommand } = await import("../install/launchd.ts");
+          const { integrationOf } = await import("../install/agents.ts");
+          const others = agents.filter((a) => a !== "claude") as OtherAgent[];
           if (o.hook) {
-            const { installHook, installRule } = await import("../install/claude-hook.ts");
-            const { selfCommand } = await import("../install/launchd.ts");
-            done.hook = installHook(selfCommand());
-            done.rule = await installRule();
+            if (agents.includes("claude")) {
+              const { installHook, installRule } = await import("../install/claude-hook.ts");
+              done.hook = installHook(selfCommand());
+              done.rule = await installRule();
+            }
+            for (const a of others) {
+              await integrationOf(a).installHook(selfCommand(), process.env);
+              await integrationOf(a).installRule(process.env);
+              done[`hook:${a}`] = integrationOf(a).label;
+            }
           }
           if (o.mcp) {
-            const { installMcp } = await import("../install/claude-mcp.ts");
-            const { selfCommand } = await import("../install/launchd.ts");
-            done.mcp = await installMcp(selfCommand());
+            if (agents.includes("claude")) {
+              const { installMcp } = await import("../install/claude-mcp.ts");
+              done.mcp = await installMcp(selfCommand());
+            }
+            for (const a of others) {
+              await integrationOf(a).installMcp(selfCommand(), process.env);
+              done[`mcp:${a}`] = integrationOf(a).label;
+            }
           }
           if (o.app) {
             const { installApp } = await import("../install/app-bundle.ts");
@@ -134,6 +162,13 @@ export async function runCli(argv: string[]): Promise<number> {
         uninstallHook();
         uninstallRule();
         await (await import("../install/claude-mcp.ts")).uninstallMcp();
+        // 다른 에이전트에 넣은 것도 — 읽지 못하는 설정 파일은 건드리지 않고 넘어간다
+        for (const a of (await import("../install/agents.ts")).AGENT_INTEGRATIONS) {
+          for (const step of [a.uninstallHook, a.uninstallRule, a.uninstallMcp])
+            await step(process.env).catch((e: unknown) =>
+              console.error(`${a.label}: ${String(e)}`),
+            );
+        }
         output(ctx, { uninstalled: ctx.paths.launchAgent }, () => t("cli.uninstall.done"));
       }),
     );

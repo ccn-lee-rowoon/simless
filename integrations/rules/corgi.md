@@ -6,4 +6,4 @@ The iOS simulators and Android emulators in the Corgi list (`corgi list`) are sh
 - Boot and shut down with `corgi use` / `corgi down`, not argent `boot-device`, `emulator -avd`, or `simctl boot`.
 - When a device is busy, Corgi says who holds it. Wait (`--wait`) or ask the user; never `corgi release --force`.
 - Release with `corgi release` when the task is done.
-- A PreToolUse hook blocks calls on Corgi devices this session doesn't hold. Follow the `corgi` skill for the full flow.
+- A hook blocks calls on Corgi devices this session doesn't hold. Follow the `corgi` skill for the full flow.

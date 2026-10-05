@@ -484,13 +484,12 @@ export const ko = {
   "web.setup.copy": "복사",
   "web.setup.copied": "복사함",
   "web.setup.agents.intro":
-    "AI 에이전트가 Corgi 로 디바이스를 빌려 쓰게 합니다. 지금은 Claude Code 를 지원합니다.",
-  "web.setup.agents.others": "Codex·Gemini CLI 등 다른 에이전트 연결은 준비 중입니다.",
+    "AI 에이전트가 Corgi 로 디바이스를 빌려 쓰게 합니다. 아래는 Claude Code, 그 아래는 다른 에이전트입니다.",
   "web.setup.recommended": "권장",
   "web.setup.optional": "선택",
   "web.setup.skill.title": "Corgi 스킬",
   "web.setup.skill.desc":
-    "디바이스가 필요할 때 Corgi 로 점유하고, 쓰고, 해제하는 방법을 Claude Code 에 알려 줍니다.",
+    "디바이스가 필요할 때 Corgi 로 점유하고, 쓰고, 해제하는 방법을 에이전트에게 알려 줍니다.",
   "web.setup.mcp.title": "MCP 도구",
   "web.setup.mcp.desc":
     "corgi_status·corgi_use 같은 도구를 Claude Code 에 등록합니다. 이 Mac 의 모든 Claude Code 세션에 생기고, 새로 시작한 세션부터 보입니다.",
@@ -559,4 +558,17 @@ export const ko = {
   "web.setup.fix.argentWarn":
     "argent 설치 프로그램은 Claude Code 같은 에이전트 설정(MCP·규칙)도 함께 고칩니다.",
   "web.setup.fix.inputHint": "관리자 암호나 확인 입력이 필요하면 «터미널에서 열기» 로 실행하세요.",
+  "setup.agentConfig":
+    "에이전트 설정을 고치지 못했습니다(읽을 수 없는 파일이거나 명령 실패) — 건드리지 않았습니다: {detail}",
+  "web.setup.agents.othersTitle": "다른 에이전트",
+  "web.setup.agents.othersIntro":
+    "스킬은 위의 Corgi 스킬을 같이 씁니다(~/.agents/skills). 에이전트마다 보호와 MCP 를 켭니다. 설정은 새로 시작하는 세션부터 적용됩니다.",
+  "web.setup.agents.notInstalled": "설치 안 됨",
+  "web.setup.agents.note.codex":
+    "Codex 는 새 훅을 한 번 승인해야 돌립니다 — Codex 에서 /hooks 를 열어 Corgi 훅을 허락하세요.",
+  "web.setup.agents.note.cursor": "Cursor IDE 와 cursor-agent 가 같은 설정(~/.cursor)을 씁니다.",
+  "web.setup.agents.note.gemini":
+    "훅은 신뢰한 폴더에서만 돕니다 — 작업 폴더에서 /trust 를 하세요. 셸 명령에 세션 ID 가 없어 세션은 프로세스로 구분합니다.",
+  "cli.install.agents":
+    "--hook·--mcp 를 붙일 에이전트 (쉼표로): claude, copilot, codex, cursor, gemini",
 } as const;

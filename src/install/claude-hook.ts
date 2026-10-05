@@ -30,6 +30,11 @@ export function hookCommand(command: string[]): string {
   return `${command.map(shellQuote).join(" ")}${HOOK_MARK}`;
 }
 
+/** 다른 에이전트의 훅 명령 — `<corgi> hook <에이전트> <이벤트>` (install/agents.ts) */
+export function hookCommandFor(command: string[], agent: string, event: string): string {
+  return `${command.map(shellQuote).join(" ")} hook ${agent} ${event}`;
+}
+
 interface HookEntry {
   type?: string;
   command?: string;

@@ -54,7 +54,8 @@ corgi install     # 서버(로그인 시 자동 실행)·에이전트 스킬·Co
 | 에이전트 | 지금 |
 | --- | --- |
 | Claude Code | 스킬 · 보호(훅) · MCP |
-| Copilot CLI · Codex · Cursor · OpenCode · Gemini CLI | 조사 끝, 연결 예정 (`docs/agent-integrations.md`) |
+| Copilot CLI · Codex · Cursor · Gemini CLI | 스킬 · 보호(훅) · MCP — 붙였지만 실제 에이전트로는 아직 확인 전. Codex 는 `/hooks` 승인, Gemini 는 작업 폴더 `/trust` 가 필요 |
+| OpenCode | 아직 (`docs/agent-integrations.md`) |
 
 ## 보호가 막는 것과 못 막는 것
 

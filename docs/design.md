@@ -188,6 +188,7 @@ corgi/
 **에이전트 종류** — 표시용, 판정에는 쓰지 않는다: `AI_AGENT` 환경 변수(확인: `claude-code_2-1-287_agent`) → 에이전트별 표시 변수(`CLAUDECODE` 등) → 프로세스 이름·명령줄 → `unknown`.
 
 **에이전트 어댑터** — 있으면 더 정확해지는 보조 정보. 없어도 위 방식만으로 동작한다.
+- 에이전트 세션 ID 로 키 만들기: Copilot CLI(`COPILOT_AGENT_SESSION_ID`)·Codex(`CODEX_THREAD_ID`)·Cursor(`CURSOR_CONVERSATION_ID`)는 셸 명령에 세션 ID 를 준다 — 이 값이 있으면 세션 키를 `s:<에이전트>:<ID>` 로 만들고(프로세스는 살아 있는지 보는 데만), 훅은 입력의 세션 ID 로 같은 키를 만든다(`hook/adapters.ts`). Codex 는 셸을 공용 데몬 아래에서 돌려 부모 프로세스로는 세션이 섞인다. Gemini CLI 는 셸에 주지 않아 프로세스로 찾는다.
 - 보조 세션 ID: Claude Code 는 CLI 에 `CLAUDE_CODE_SESSION_ID`, 훅 입력에 `session_id` 를 준다. 기록해 두고, **같은 프로세스에서 값이 바뀌면**(`/clear` 등) 새 세션으로 보고 이전 점유를 푼다 — 새 대화는 자기가 점유했다는 걸 모르기 때문.
 - 실행 직전 훅: §13.
 
@@ -320,7 +321,13 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | 에이전트 | 상태 |
 | --- | --- |
 | Claude Code | **먼저 만든다** — `~/.claude/settings.json` PreToolUse, matcher `Bash|mcp__argent__.*`, 명령 `corgi hook claude pre-tool-use` |
-| Codex · Gemini CLI · Cursor · OpenCode · Copilot CLI | 훅 지원·입력 형식을 조사해 어댑터를 붙인다(§17). 훅이 없으면 규칙 + CLI 의 BUSY 응답으로만 보호된다(Q16) |
+| Copilot CLI | `~/.copilot/hooks/corgi.json`(Corgi 파일 하나, Claude 식 `PreToolUse`, matcher `Bash\|argent-.*`) → `corgi hook copilot pre-tool-use`. MCP 이름 `argent-<도구>` 를 `mcp__argent__<도구>` 로 바꿔 판단, 막는 출력은 Claude 와 같다 |
+| Codex | `~/.codex/hooks.json` 의 `PreToolUse` 에 Corgi 항목 하나(matcher `^Bash$\|^mcp__argent__.*`) → `corgi hook codex pre-tool-use`. 입력·출력이 Claude 와 같다. 새 훅은 사용자가 Codex 의 `/hooks` 에서 한 번 승인해야 돈다 |
+| Cursor | `~/.cursor/hooks.json` 의 `beforeShellExecution`·`beforeMCPExecution` 에 하나씩 → `corgi hook cursor before-shell`·`before-mcp`. MCP 는 `mcp_server_name` 이 argent 인 것만, `tool_input` 은 JSON 문자열. 막을 때 `{permission: deny, user_message, agent_message}`, 통과도 늘 `{permission: allow}`(빈 출력은 막힘). Cursor 가 가져오는 Claude 훅(입력에 `cursor_version`)은 통과시킨다 — Cursor 용 훅이 판단 |
+| Gemini CLI | `~/.gemini/settings.json` 의 `BeforeTool` 에 Corgi 항목(name `corgi`, matcher `^run_shell_command$\|^mcp_argent_`, timeout 밀리초) → `corgi hook gemini before-tool`. MCP 는 `mcp_context.server_name`, 막을 때 `{decision: deny, reason}`. 신뢰한 폴더에서만 돈다 |
+| OpenCode | 뺐다(2026-10-05) — v2 플러그인에서 막기가 모델에게 어떻게 보이는지 확인한 뒤 |
+
+**다른 에이전트 설치** (`src/install/agents.ts`) — 보호 = 훅 + 규칙. 규칙은 전역 지시 파일에 `<!-- corgi:start … -->` 블록 하나(Codex `~/.codex/AGENTS.md`, Copilot `~/.copilot/copilot-instructions.md`, Gemini `~/.gemini/GEMINI.md`), Cursor 는 `~/.cursor/rules/corgi.mdc`. MCP 는 Copilot `~/.copilot/mcp-config.json`·Cursor `~/.cursor/mcp.json`·Gemini `~/.gemini/settings.json` 을 직접 고치고(Gemini 명령은 로그인 창을 열 수 있음), Codex 는 `codex mcp add`(TOML 이라). Corgi 항목만 넣고 빼며 고치기 전에 `.corgi-backup`, 못 읽는 파일(주석 든 JSON 등)은 건드리지 않고 오류를 낸다. 설정 창 «에이전트 연결» 의 «다른 에이전트», `corgi install --hook --mcp --agents codex,copilot,…` 로 넣고, `corgi uninstall` 은 모두 뺀다. 실제 에이전트로는 아직 확인하지 않았다.
 
 **흐름**
 1. 어댑터가 stdin 입력을 공통 형식으로 바꾼다. 세션은 §7 방식(훅 프로세스의 부모 체인)으로 찾고, 입력에 세션 ID 가 있으면 보조로 쓴다.

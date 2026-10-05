@@ -1,6 +1,12 @@
 import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
+import {
+  AGENT_INTEGRATIONS,
+  AgentConfigError,
+  integrationOf,
+  isAgentInstalled,
+} from "../install/agents.ts";
 import { runChecks } from "../install/checks.ts";
 import {
   hookStatus,
@@ -58,6 +64,8 @@ const JobParams = z.object({ job: z.string() });
 const ApplyParams = z.object({
   item: z.enum(["skill", "mcp", "protection"]),
   enabled: z.boolean(),
+  /** 보호·MCP 를 붙일 에이전트 — 기본은 Claude Code. 스킬은 모든 에이전트가 같이 쓴다 */
+  agent: z.enum(["claude", "copilot", "codex", "cursor", "gemini"]).default("claude"),
 });
 
 /** 설정을 한 번도 안 끝냈으면 true — 앱이 처음 뜰 때 설정 창을 연다 */
@@ -82,6 +90,16 @@ export function registerSetupMethods(server: CorgiServer): void {
       mcp: mcpStatus(command(), env),
       hook: hookStatus(command(), env),
       rule: await ruleStatus(env),
+      others: await Promise.all(
+        AGENT_INTEGRATIONS.map(async (a) => ({
+          agent: a.agent,
+          label: a.label,
+          installed: isAgentInstalled(a, env),
+          hook: await a.hookState(command(), env).catch(() => "missing" as const),
+          rule: await a.ruleState(env).catch(() => "missing" as const),
+          mcp: await a.mcpState(command(), env).catch(() => "missing" as const),
+        })),
+      ),
     };
   };
 
@@ -119,9 +137,22 @@ export function registerSetupMethods(server: CorgiServer): void {
   });
 
   server.addMethod("setup.apply", async (p) => {
-    const { item, enabled } = parse(ApplyParams, p);
+    const { item, enabled, agent } = parse(ApplyParams, p);
     try {
-      if (item === "skill") {
+      if (item !== "skill" && agent !== "claude") {
+        // 다른 에이전트 (Q16) — 보호 = 훅 + 규칙
+        const a = integrationOf(agent);
+        if (item === "mcp") {
+          if (enabled) await a.installMcp(command(), env);
+          else await a.uninstallMcp(env);
+        } else if (enabled) {
+          await a.installHook(command(), env);
+          await a.installRule(env);
+        } else {
+          await a.uninstallHook(env);
+          await a.uninstallRule(env);
+        }
+      } else if (item === "skill") {
         for (const location of locations()) {
           if (enabled) await installSkillAt(location, env);
           else await uninstallSkillAt(location, env);
@@ -138,6 +169,8 @@ export function registerSetupMethods(server: CorgiServer): void {
       }
       if (item === "skill") await checkSkillUpdate();
     } catch (error) {
+      if (error instanceof AgentConfigError)
+        throw new HandlerError("FAILED", t("setup.agentConfig", { detail: error.message }));
       if (error instanceof McpInstallError) {
         if (error.message === "claude") throw new HandlerError("TOOL_MISSING", t("setup.noClaude"));
         throw new HandlerError("FAILED", t("setup.mcpFailed", { error: error.message }));

@@ -299,6 +299,20 @@ export interface SkillLocationView {
   targets: number;
 }
 
+/** Claude Code 말고 연결할 수 있는 에이전트 (Q16) */
+export type OtherAgent = "copilot" | "codex" | "cursor" | "gemini";
+
+export interface OtherAgentView {
+  agent: OtherAgent;
+  label: string;
+  /** 이 Mac 에 설치돼 있는지 */
+  installed: boolean;
+  /** 보호 = 훅 + 규칙 */
+  hook: InstallState;
+  rule: InstallState;
+  mcp: InstallState;
+}
+
 /** 에이전트 연결 — 첫 실행 설정 창에서 켜고 끈다 (M14) */
 export interface SetupAgents {
   /** claude 명령이 있는지 — 없으면 MCP 등록을 못 한다 */
@@ -310,6 +324,8 @@ export interface SetupAgents {
   /** 보호 = 훅 + 규칙 (P2·P3) */
   hook: InstallState;
   rule: InstallState;
+  /** 다른 에이전트 — 스킬은 위의 것을 같이 쓴다(~/.agents/skills) */
+  others: OtherAgentView[];
 }
 
 export interface SetupStatus {

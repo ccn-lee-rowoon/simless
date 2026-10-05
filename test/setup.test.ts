@@ -75,10 +75,11 @@ describe("첫 실행 설정 (M14)", () => {
     const setup = (await H("setup.status")) as SetupStatus;
     expect(setup.needed).toBe(true);
     expect(setup.checks.map((c) => c.id)).toEqual(["xcode", "simslim"]);
-    expect(setup.agents).toEqual({
+    expect(setup.agents).toMatchObject({
       claude: false,
       skill: "missing",
-      skillLocations: [{ location: { kind: "global" }, state: "missing", targets: 1 }],
+      // 전역 한 곳에 두 벌 — ~/.claude/skills 와 ~/.agents/skills
+      skillLocations: [{ location: { kind: "global" }, state: "missing", targets: 2 }],
       mcp: "missing",
       hook: "missing",
       rule: "missing",
@@ -118,7 +119,8 @@ describe("첫 실행 설정 (M14)", () => {
     const agents = (await H("setup.skillScope", { kind: "project", paths: [repo] })) as SetupAgents;
     expect(agents.skill).toBe("current");
     expect(agents.skillLocations).toEqual([
-      { location: { kind: "project", path: repo }, state: "current", targets: 2 },
+      // 작업 트리 둘 × (.claude·.agents)
+      { location: { kind: "project", path: repo }, state: "current", targets: 4 },
     ]);
     expect(existsSync(join(home, ".claude", "skills", "corgi"))).toBe(false);
     expect(existsSync(join(repo, ".claude", "skills", "corgi", "SKILL.md"))).toBe(true);

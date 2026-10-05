@@ -6,25 +6,8 @@ import { resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
 import { resolvePaths } from "../shared/paths.ts";
 import { detectSession } from "../shared/session.ts";
 import { systemLanguages } from "../shared/system-language.ts";
+import { allowOutput, denyOutput, HOOK_EVENTS, isHookAgent, normalize } from "./adapters.ts";
 import { extractTargets, type Targets } from "./targets.ts";
-
-/** 실행 직전 훅을 붙인 에이전트 — 어댑터가 생길 때마다 늘린다 (docs/design.md §13). */
-const adapters = {
-  claude: ["pre-tool-use"],
-} as const satisfies Record<string, readonly string[]>;
-
-type Agent = keyof typeof adapters;
-
-function isAgent(name: string | undefined): name is Agent {
-  return name !== undefined && Object.hasOwn(adapters, name);
-}
-
-/** Claude Code PreToolUse 입력 중 쓰는 것 */
-interface ClaudeInput {
-  session_id?: string;
-  tool_name?: string;
-  tool_input?: unknown;
-}
 
 interface Decision {
   allow: boolean;
@@ -66,19 +49,6 @@ function readIndex(path: string): ManagedIndex | undefined {
   }
 }
 
-/** Claude Code 에 «막음» 을 알린다 — 이유는 에이전트에게 그대로 보인다 */
-function denyClaude(reason: string): void {
-  console.log(
-    JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: "PreToolUse",
-        permissionDecision: "deny",
-        permissionDecisionReason: `[Corgi] ${reason}`,
-      },
-    }),
-  );
-}
-
 /**
  * 에이전트 훅 진입점 (`corgi hook <에이전트> <이벤트>`, P3~P9).
  * 디바이스를 건드리지 않는 호출은 소켓도 열지 않고 바로 통과한다. 아무것도 출력하지 않고 0 으로
@@ -89,24 +59,29 @@ export async function runHook(
   event: string | undefined,
   stdin: Blob,
 ): Promise<number> {
-  if (!isAgent(agent)) {
+  if (!isHookAgent(agent)) {
     console.error(`unsupported agent: ${agent ?? "(none)"}`);
     return ExitCode.usage;
   }
-  const events: readonly string[] = adapters[agent];
-  if (event === undefined || !events.includes(event)) {
+  if (event === undefined || !HOOK_EVENTS[agent].includes(event)) {
     console.error(`unsupported ${agent} hook event: ${event ?? "(none)"}`);
     return ExitCode.usage;
   }
+  const allow = () => {
+    const text = allowOutput(agent);
+    if (text) console.log(text);
+    return ExitCode.ok;
+  };
 
-  let input: ClaudeInput;
+  let raw: Record<string, unknown>;
   try {
-    input = JSON.parse(await stdin.text()) as ClaudeInput;
+    raw = JSON.parse(await stdin.text()) as Record<string, unknown>;
   } catch {
-    return ExitCode.ok; // 읽을 수 없는 입력은 막지 않는다
+    return allow(); // 읽을 수 없는 입력은 막지 않는다
   }
-  const targets = extractTargets(input.tool_name ?? "", input.tool_input);
-  if (!targets) return ExitCode.ok; // 빠른 통과
+  const input = normalize(agent, event, raw);
+  const targets = input ? extractTargets(input.tool, input.input) : undefined;
+  if (!input || !targets) return allow(); // 빠른 통과
 
   const paths = resolvePaths();
   let config: ReturnType<typeof loadConfig> | undefined;
@@ -119,8 +94,13 @@ export async function runHook(
     extraShells: config?.session.extraShells,
     extraHosts: config?.session.extraHosts,
   });
-  // 훅 입력의 session_id 는 CLI 의 CLAUDE_CODE_SESSION_ID 와 같은 값이다 (§17 실측)
-  const session = { ...detected, agentSessionId: input.session_id ?? detected.agentSessionId };
+  // 훅 입력의 세션 ID 는 CLI 가 셸에서 받는 세션 ID 와 같은 값이다 (§17 실측 — Claude·Copilot)
+  const session = {
+    ...detected,
+    key: input.sessionKey ?? detected.key,
+    agentSessionId: input.sessionId ?? detected.agentSessionId,
+    human: input.sessionKey ? false : detected.human,
+  };
 
   let decision: Decision;
   try {
@@ -129,11 +109,12 @@ export async function runHook(
     if (!(error instanceof ServerDownError)) {
       // 서버가 이상한 답을 하면 막지 않는다 — 훅 때문에 에이전트가 멈추지 않게
       console.error(`corgi hook: ${error instanceof Error ? error.message : String(error)}`);
-      return ExitCode.ok;
+      return allow();
     }
     setLanguage(resolveLanguage(config?.language ?? "system", systemLanguages()));
     decision = offlineDecision(readIndex(paths.managedIndex), targets);
   }
-  if (!decision.allow) denyClaude(decision.reason ?? "");
+  if (decision.allow) return allow();
+  console.log(denyOutput(agent, decision.reason ?? ""));
   return ExitCode.ok;
 }

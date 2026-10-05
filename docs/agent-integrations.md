@@ -119,6 +119,5 @@ v2 에서 거의 다 바뀌었다. 바이너리 안의 코드를 읽어 확인�
 ## 남은 일
 
 - 실측: Codex `CODEX_THREAD_ID` = 훅 `session_id` 인지, Codex 샌드박스에서 소켓 접근, Cursor 훅이 CLI 에서 실제로 도는지, OpenCode v2 플러그인에서 막기가 모델에게 어떻게 보이는지.
-- 세션 묶기 설계 — CLI 가 에이전트 세션 ID 환경 변수를 읽고, 훅은 입력의 세션 ID 로 같은 세션을 찾게(§7·§13).
-- Gemini 를 쓰려면 작업 폴더 신뢰(`/trust`) 안내를 설정 창에 넣는다.
+- **구현함 (2026-10-05)** — Copilot CLI·Codex·Cursor·Gemini CLI: 세션 ID 로 세션 묶기(`shared/session.ts`), 훅 어댑터(`hook/adapters.ts`), 보호·MCP 설치(`install/agents.ts`), 스킬은 `~/.agents/skills` 에도, 설정 창 «다른 에이전트». **실제 에이전트로는 아직 확인하지 않았다.** OpenCode 는 뺐다.
 - 조사 중 생긴 것: Copilot 시험 세션 기록 4개(`~/.copilot/session-state/`, 2026-10-05 15:12~15:13), OpenCode `service status` 가 만든 `~/Library/Application Support/orca/opencode-hooks/shared/service.json`(17:26) — 지울지 사용자 결정.

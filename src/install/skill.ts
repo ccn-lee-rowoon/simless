@@ -19,8 +19,10 @@ import { run } from "../shared/exec.ts";
 // git 에는 이 Mac 에서만 무시하도록(.git/info/exclude) 적어 팀 저장소에 흔적을 남기지 않는다.
 
 const SKILL_DIR = join(".claude", "skills", "corgi");
+/** Codex·Copilot CLI·Cursor·Gemini CLI 가 같이 읽는 곳 (docs/agent-integrations.md) */
+const AGENTS_SKILL_DIR = join(".agents", "skills", "corgi");
 /** .git/info/exclude 에 넣는 줄 — 저장소 루트 기준 */
-const EXCLUDE_LINE = "/.claude/skills/corgi/";
+const EXCLUDE_LINES = ["/.claude/skills/corgi/", "/.agents/skills/corgi/"];
 const EXCLUDE_COMMENT = "# Corgi 스킬 (이 Mac 에만)";
 
 const LocationsFile = z.object({
@@ -108,9 +110,13 @@ export async function projectRoots(path: string): Promise<string[]> {
   return roots.length > 0 ? roots : [resolve(path)];
 }
 
+/** 한 곳에 두 벌 — Claude Code 용(.claude/skills)과 다른 에이전트용(.agents/skills) */
 async function targetsOf(location: SkillLocation, env: NodeJS.ProcessEnv): Promise<string[]> {
-  if (location.kind === "global") return [skillTarget(env)];
-  return (await projectRoots(location.path)).map((root) => join(root, SKILL_DIR, "SKILL.md"));
+  const roots = location.kind === "global" ? [home(env)] : await projectRoots(location.path);
+  return roots.flatMap((root) => [
+    join(root, SKILL_DIR, "SKILL.md"),
+    join(root, AGENTS_SKILL_DIR, "SKILL.md"),
+  ]);
 }
 
 export interface LocationStatus {
@@ -143,11 +149,13 @@ async function excludeFromGit(root: string): Promise<void> {
   const exclude = await excludePath(root);
   if (!exclude) return;
   const text = existsSync(exclude) ? readFileSync(exclude, "utf8") : "";
-  if (text.split("\n").some((line) => line.trim() === EXCLUDE_LINE)) return;
+  const have = new Set(text.split("\n").map((line) => line.trim()));
+  const missing = EXCLUDE_LINES.filter((line) => !have.has(line));
+  if (missing.length === 0) return;
   mkdirSync(dirname(exclude), { recursive: true });
   appendFileSync(
     exclude,
-    `${text.length > 0 && !text.endsWith("\n") ? "\n" : ""}${EXCLUDE_COMMENT}\n${EXCLUDE_LINE}\n`,
+    `${text.length > 0 && !text.endsWith("\n") ? "\n" : ""}${EXCLUDE_COMMENT}\n${missing.join("\n")}\n`,
   );
 }
 
@@ -156,7 +164,9 @@ async function unexcludeFromGit(root: string): Promise<void> {
   const exclude = await excludePath(root);
   if (!exclude || !existsSync(exclude)) return;
   const lines = readFileSync(exclude, "utf8").split("\n");
-  const kept = lines.filter((line) => line.trim() !== EXCLUDE_LINE && line !== EXCLUDE_COMMENT);
+  const kept = lines.filter(
+    (line) => !EXCLUDE_LINES.includes(line.trim()) && line !== EXCLUDE_COMMENT,
+  );
   if (kept.length !== lines.length) writeFileSync(exclude, kept.join("\n"));
 }
 
@@ -191,7 +201,7 @@ export async function uninstallSkillAt(
 
 /** 사람에게 보일 위치 — 홈 폴더는 ~ 로 */
 export function locationText(location: SkillLocation): string {
-  if (location.kind === "global") return "~/.claude/skills/corgi";
+  if (location.kind === "global") return "~/.claude/skills/corgi · ~/.agents/skills/corgi";
   const home = homedir();
   return location.path.startsWith(home) ? `~${location.path.slice(home.length)}` : location.path;
 }

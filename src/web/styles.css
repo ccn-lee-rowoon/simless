@@ -1773,3 +1773,19 @@ summary:focus-visible {
 .setup-job-canceled {
   color: var(--danger);
 }
+
+/* 다른 에이전트 (Q16) */
+.setup-agents-title {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.setup-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.setup-agent-absent {
+  opacity: 0.55;
+}

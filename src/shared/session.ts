@@ -44,8 +44,23 @@ const HOSTS = [
   "Electron",
 ];
 
-/** 에이전트가 세션 ID 를 주는 환경 변수 — 에이전트 어댑터 (§7) */
-const AGENT_SESSION_ENV = ["CLAUDE_CODE_SESSION_ID"];
+/**
+ * 에이전트가 셸 명령에 주는 세션 ID (§7, docs/agent-integrations.md).
+ * keyed 면 세션 키를 이 ID 로 만든다 — Codex(공용 데몬 아래에서 돎)·Cursor 처럼 부모 프로세스로는
+ * 세션을 가릴 수 없는 에이전트. 훅도 입력의 세션 ID 로 같은 키를 만든다(agentSessionKey).
+ * Claude Code 는 프로세스로 가려지므로 키는 그대로 두고 ID 만 기록한다. Gemini CLI 는 셸에 주지 않는다.
+ */
+const AGENT_SESSION_ENV: { env: string; agent: string; keyed: boolean }[] = [
+  { env: "CLAUDE_CODE_SESSION_ID", agent: "claude-code", keyed: false },
+  { env: "COPILOT_AGENT_SESSION_ID", agent: "copilot", keyed: true },
+  { env: "CODEX_THREAD_ID", agent: "codex", keyed: true },
+  { env: "CURSOR_CONVERSATION_ID", agent: "cursor-agent", keyed: true },
+];
+
+/** 에이전트 세션 ID 로 만든 세션 키 — CLI(환경 변수)와 훅(입력)이 같은 값을 만든다 */
+export function agentSessionKey(agent: string, id: string): string {
+  return `s:${agent}:${id}`;
+}
 
 /** 프로세스 경로·이름에 이 문자열이 있으면 그 에이전트로 표시한다 (표시용) */
 const AGENT_HINTS: [hint: string, agent: string][] = [
@@ -96,19 +111,35 @@ function agentFromProcess(p: ProcInfo): string {
   return AGENT_HINTS.find(([hint]) => haystack.includes(hint))?.[1] ?? (p.name || "unknown");
 }
 
-function agentSessionId(env: NodeJS.ProcessEnv): string | undefined {
-  for (const name of AGENT_SESSION_ENV) {
-    if (env[name]) return env[name];
+function agentSession(
+  env: NodeJS.ProcessEnv,
+): { id: string; agent: string; keyed: boolean } | undefined {
+  for (const entry of AGENT_SESSION_ENV) {
+    const id = env[entry.env];
+    if (id) return { id, agent: entry.agent, keyed: entry.keyed };
   }
   return undefined;
 }
 
 export function detectSession(options: DetectOptions = {}): SessionInfo {
+  const found = detectByProcess(options);
+  const agent = agentSession(options.env ?? process.env);
+  if (!agent?.keyed) return found;
+  // 프로세스는 살아 있는지 보는 데만 쓴다 — 세션은 에이전트가 준 ID 로 가린다
+  return {
+    ...found,
+    key: agentSessionKey(agent.agent, agent.id),
+    agent: found.human ? agent.agent : found.agent,
+    human: false,
+  };
+}
+
+function detectByProcess(options: DetectOptions): SessionInfo {
   const env = options.env ?? process.env;
   const read = options.read ?? readProc;
   const cwd = options.cwd ?? process.cwd();
   const envAgent = agentFromEnv(env);
-  const common = { cwd, agentSessionId: agentSessionId(env) };
+  const common = { cwd, agentSessionId: agentSession(env)?.id };
 
   // 1. 직접 준 세션
   if (env.CORGI_SESSION_ID) {

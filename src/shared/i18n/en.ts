@@ -473,14 +473,12 @@ export const en: Record<keyof typeof ko, string> = {
   "web.setup.copy": "Copy",
   "web.setup.copied": "Copied",
   "web.setup.agents.intro":
-    "Let AI agents borrow devices through Corgi. Claude Code is supported today.",
-  "web.setup.agents.others":
-    "Connections for other agents (Codex, Gemini CLI and others) are coming.",
+    "Let AI agents borrow devices through Corgi. Claude Code first, other agents below.",
   "web.setup.recommended": "Recommended",
   "web.setup.optional": "Optional",
   "web.setup.skill.title": "Corgi skill",
   "web.setup.skill.desc":
-    "Teaches Claude Code to acquire, use and release devices through Corgi when it needs one.",
+    "Teaches agents to acquire, use and release devices through Corgi when they need one.",
   "web.setup.mcp.title": "MCP tools",
   "web.setup.mcp.desc":
     "Registers tools such as corgi_status and corgi_use with Claude Code. They appear in every Claude Code session on this Mac, starting with new sessions.",
@@ -553,4 +551,18 @@ export const en: Record<keyof typeof ko, string> = {
     "argent's installer also changes agent settings (MCP, rules) for Claude Code and others.",
   "web.setup.fix.inputHint":
     "If it needs your password or an answer, run it with «Open in Terminal».",
+  "setup.agentConfig":
+    "Couldn't change the agent's settings (unreadable file or command failed) — left untouched: {detail}",
+  "web.setup.agents.othersTitle": "Other agents",
+  "web.setup.agents.othersIntro":
+    "They share the Corgi skill above (~/.agents/skills). Turn on protection and MCP per agent. Changes apply to new sessions.",
+  "web.setup.agents.notInstalled": "Not installed",
+  "web.setup.agents.note.codex":
+    "Codex runs a new hook only after you approve it once — open /hooks in Codex and allow the Corgi hook.",
+  "web.setup.agents.note.cursor":
+    "Cursor IDE and cursor-agent share the same settings (~/.cursor).",
+  "web.setup.agents.note.gemini":
+    "Hooks only run in trusted folders — run /trust in your project. Shell commands get no session ID, so sessions are told apart by process.",
+  "cli.install.agents":
+    "Agents for --hook and --mcp (comma-separated): claude, copilot, codex, cursor, gemini",
 };
