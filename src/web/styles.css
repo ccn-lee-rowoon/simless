@@ -1796,3 +1796,9 @@ summary:focus-visible {
   font-size: 13px;
   font-weight: 600;
 }
+
+/* 로고 — 앱 아이콘(icon.svg) 그대로 */
+.logo {
+  display: block;
+  flex: none;
+}

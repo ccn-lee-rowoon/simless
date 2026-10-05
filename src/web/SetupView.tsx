@@ -129,7 +129,7 @@ export function SetupView({
   return (
     <div className="setup">
       <header className="setup-head">
-        <Logo size={40} />
+        <Logo size={48} />
         <div>
           <h1 className="page-title">{t("web.setup.title")}</h1>
           <p className="setup-slogan">{t("web.slogan")}</p>

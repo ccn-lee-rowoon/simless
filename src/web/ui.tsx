@@ -1,6 +1,7 @@
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 import { type DeviceView, type HolderView, memoryChange, type SlimStats } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
+import iconUrl from "./icon.svg";
 
 export function ago(since: number): string {
   const minutes = Math.floor((Date.now() - since) / 60_000);
@@ -223,30 +224,9 @@ export function useMenuDismiss(): void {
 }
 
 /** 앱 아이콘 — 폭이 다른 기기 세 대 (M12) */
-/** 로고 — 폰 하나에 눈·입을 살짝 (icon.svg 와 같은 모양). 작으면 홈 바를 빼고 선을 굵게 */
+/** 로고 — 앱 아이콘(icon.svg)을 그대로. 앱 아이콘·탭 아이콘·화면 로고가 한 그림이다 (M12) */
 export function Logo({ size = 24 }: { size?: number }) {
-  const small = size < 40;
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="168 168 688 688"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="322" y="196" width="380" height="632" rx="86" strokeWidth={small ? 60 : 44} />
-      <path
-        d={small ? "M444 440v14M580 440v14" : "M444 430v34M580 430v34"}
-        strokeWidth={small ? 74 : 50}
-      />
-      <path
-        d={small ? "M452 572q60 52 120 0" : "M452 560q60 52 120 0"}
-        strokeWidth={small ? 58 : 38}
-      />
-      {!small && <path d="M472 744h80" strokeWidth={30} />}
-    </svg>
+    <img className="logo" src={iconUrl} width={size} height={size} alt="" aria-hidden="true" />
   );
 }
