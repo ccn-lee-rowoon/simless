@@ -5,6 +5,7 @@ import icnsPath from "../../assets/Corgi.icns" with { type: "file" };
 import traySource from "../../tray/CorgiTray.swift" with { type: "file" };
 import type { Config } from "../shared/config.ts";
 import { run } from "../shared/exec.ts";
+import { t } from "../shared/i18n.ts";
 import { APP_BUNDLE_ID, LAUNCH_LABEL, MENUBAR_LABEL, type Paths } from "../shared/paths.ts";
 import { VERSION } from "../shared/version.ts";
 import { selfCommand } from "./launchd.ts";
@@ -163,9 +164,7 @@ export async function installApp(paths: Paths, config: Config): Promise<AppInsta
   return {
     path: app,
     menubar: !failure,
-    warning: failure
-      ? `메뉴바 앱을 컴파일하지 못했습니다(Xcode 필요) — 앱을 열면 웹 UI 가 바로 열립니다:\n${failure}`
-      : undefined,
+    warning: failure ? t("app.compileFailed", { error: failure }) : undefined,
   };
 }
 

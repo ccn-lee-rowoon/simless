@@ -1,3 +1,4 @@
+import { t } from "./i18n.ts";
 import type { ErrorBody, ErrorCode, Request, ServerMessage, SessionInfo } from "./protocol.ts";
 import { isEvent, PROTOCOL_VERSION } from "./protocol.ts";
 import { VERSION } from "./version.ts";
@@ -81,7 +82,7 @@ export function call<T>(
           }
         },
         close() {
-          settle(() => reject(new Error("서버가 응답 없이 연결을 끊었습니다")));
+          settle(() => reject(new Error(t("err.serverClosed"))));
         },
         error(_socket, error) {
           settle(() => reject(error));
@@ -90,7 +91,7 @@ export function call<T>(
     }).catch((error: unknown) => {
       settle(() =>
         reject(
-          new ServerDownError(`Corgi 서버에 연결할 수 없습니다 (${socketPath}): ${String(error)}`),
+          new ServerDownError(`${t("err.serverDown", { path: socketPath })}: ${String(error)}`),
         ),
       );
     });

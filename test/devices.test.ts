@@ -228,7 +228,7 @@ describe("슬림 수치", () => {
     await H("device.list"); // 첫 목록이 뒤에서 읽기를 시작한다
     await Bun.sleep(20);
     const [view] = (await H("device.list")) as DeviceView[];
-    expect(view?.slimStats).toMatchObject({ disabled: 49, total: 52, unit: "패키지" });
+    expect(view?.slimStats).toMatchObject({ disabled: 49, total: 52, unit: "packages" });
   });
 });
 

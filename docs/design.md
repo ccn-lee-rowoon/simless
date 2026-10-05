@@ -108,7 +108,7 @@ corgi/
 | `…/Corgi/update.json` | 마지막 확인 시각·최신 버전·알림 보낸 버전 | 서버 |
 | `~/Library/Logs/Corgi/` | 서버 로그 | 서버 |
 | `~/.local/share/corgi/versions/<버전>/corgi` · `~/.local/bin/corgi`(링크) | 설치된 버전들과 지금 쓰는 버전 (§19) | `corgi update` |
-| `~/.config/corgi/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`), 자동 해제 시간(기본 30분), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다 | 사람·서버 |
+| `~/.config/corgi/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`, 기본 `system`), 자동 해제 시간(기본 30분), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다 | 사람·서버 |
 | `~/.config/corgi/apps/<name>.json` | 앱별 설정 (Q8) | 사람 |
 | `~/.android/avd/<AVD ID>.avd` · `.ini` | Android 디바이스 본체 — Corgi 가 만든 것은 `corgi_<id>` | Android Studio·서버 |
 | CoreSimulator 기본 device set | iOS 디바이스 본체 | Xcode·서버(simctl) |
@@ -253,7 +253,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 - 긴 작업(부팅·설치)은 응답 전에 `{"id":"r1","event":"progress","data":{…}}` 를 여러 번 보낸다.
 - 메서드: `status` · `catalog`(생성 화면의 기종·OS 목록, 슬림화하면 안 되는 기능) · `device.create|list|rename|setMemo|setDefault|slim|delete|up|down` · `group.list|create|update|delete` · `lease.acquire|release|who` · `settings.get|set` · `hook.check`
 - 오류 코드: `BUSY` · `NOT_HELD` · `NOT_FOUND` · `INVALID` · `NOT_ALLOWED`(원래 있던 기기 삭제·기본 디바이스 삭제 등) · `DEADLOCK` · `NO_DEFAULT` · `TOOL_MISSING`(avdslim 등 없음) · `FAILED` · (클라이언트 쪽) `SERVER_DOWN`
-- **현지화 (R25)**: 오류·진행 메시지는 문장 대신 `{code, key, params}` 로 보낸다(예: `{code:"BUSY", key:"lease.busy", params:{device:"…", holder:"claude-code"}}`). CLI·웹 화면이 `src/shared/i18n` 사전으로 설정 언어의 문장을 만든다. 사전에 없는 키를 대비해 영어 `message` 도 함께 싣는다. 에이전트는 `code` 로 판단한다
+- **현지화 (R25)**: 서버·CLI·웹 화면이 **같은 설정 언어와 같은 사전**(`src/shared/i18n`, 키의 정본은 `ko.ts`, `en.ts` 는 같은 키를 다 갖춰야 컴파일된다)으로 문장을 만든다. 서버가 보내는 오류·진행 문장도 설정 언어다. 에이전트는 문장이 아니라 오류 `code` 로 판단한다. 언어 설정이 `system` 이면 macOS 언어 설정(`AppleLanguages`)을 먼저 보고 — 터미널의 `LANG` 은 macOS 언어와 다르게 잡혀 있는 경우가 많다 — 없으면 `LANG`, 그래도 없으면 영어
 
 **HTTP** — 웹 화면(앱 창·브라우저)·메뉴바
 
@@ -439,5 +439,5 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | **업데이트 확인에 `gh` 인증을 그대로 쓴다** (§19) | 저장소가 프라이빗이라 인증이 필요한데, 토큰을 따로 받아 저장하면 관리할 비밀이 생긴다. 개발자 Mac 에는 `gh` 가 이미 로그인돼 있다 | Corgi 전용 토큰 저장 (비밀 관리 부담), 공개 저장소 (프라이빗 요구와 충돌) |
 | **디바이스 목록은 드라이버에서 그때그때 읽고, 레지스트리엔 Corgi 가 붙인 정보만** (R20·§6) | Xcode·Android Studio 에서 기기가 바뀌어도 바로 맞는다. 붙인 정보(메모·그룹·기본·슬림)는 `native`(UDID·AVD ID)로 잇는다. 기기가 사라져도 정보는 남겨 두었다가 다시 보이면 되살린다 | 기기 목록을 레지스트리에 저장 (밖의 변경과 맞추는 일이 생김) |
 | **그룹 점유 모드는 `all` 기본 + `--available`, 교착은 대기열에 넣을 때 막는다** (§8·R23) | 판단은 에이전트가 하되(R23), 기본은 가장 안전한 «전부 아니면 전무». 일부를 쥔 채 기다릴 때만 순환이 생길 수 있으므로, 대기열에 넣는 순간 순환을 검사하면 교착이 아예 생기지 않는다 | 대기열만 (쥔 채 기다리는 두 세션의 교착을 못 막음), 일부 점유 + 대기 금지 (레이아웃 체크에서 나머지를 기다릴 수 없음), 생긴 뒤 감지 (이미 둘 다 멈춘 뒤라 한쪽을 깨워야 함) |
-| **오류는 코드 + 키 + 값, 문장은 창구가 만든다** (§11·R25) | 창구마다 언어 설정이 다를 수 있고, 에이전트는 문장이 아니라 코드로 판단해야 한다. 영어 `message` 를 함께 실어 사전에 없는 키도 읽힌다 | 서버가 설정 언어로 문장 생성 (CLI·화면 언어가 다르면 섞임) |
+| **서버·CLI·화면이 같은 설정 언어·같은 사전으로 문장을 만든다, 에이전트는 오류 코드로** (§11·R25) | 언어 설정이 하나(`config.json`)라 창구마다 언어가 달라질 일이 없다. 서버가 문장을 만들면 드라이버 깊은 곳의 오류도 한 곳에서 번역된다. 에이전트는 문장이 아니라 `code` 로 판단하므로 언어와 상관없다 | 오류를 키 + 값으로 보내고 창구가 번역 (모든 오류 경로에 키·값을 실어야 해 복잡하고, 언어 설정이 하나라 얻는 게 없음) |
 | **앱 창은 Swift 껍데기 + WKWebView, 화면은 웹 하나** (§14·R11) | 화면을 한 번만 만들고 브라우저·argent 로 확인한다. Dock 아이콘은 창이 열린 동안만 보여 메뉴바 앱의 가벼움을 유지한다 | SwiftUI 로 화면 다시 작성 (두 벌 유지), 창을 늘 띄우는 일반 앱 (메뉴바 앱과 역할이 겹침) |

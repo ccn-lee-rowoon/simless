@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { loadConfig } from "../shared/config.ts";
 import { resolvePaths } from "../shared/paths.ts";
+import { systemLanguages } from "../shared/system-language.ts";
 import { VERSION } from "../shared/version.ts";
 import { CorgiServer } from "./app.ts";
 import { checkBootedSlim } from "./devices.ts";
@@ -16,7 +17,7 @@ export async function serve(): Promise<void> {
   mkdirSync(paths.stateDir, { recursive: true, mode: 0o700 });
 
   const drivers = [new AndroidDriver(config, { logDir: paths.logDir }), new IosDriver(config)];
-  const server = new CorgiServer({ paths, config, drivers });
+  const server = new CorgiServer({ paths, config, drivers, systemLanguages });
   const listener = await listen(paths.socket, VERSION, server.handle);
   const timer = setInterval(() => server.tick(), 2000);
   // 웹 UI — 포트를 못 열어도 소켓(CLI·훅)은 계속 돈다

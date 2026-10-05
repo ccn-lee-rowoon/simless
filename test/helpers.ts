@@ -138,7 +138,13 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
           .filter((d) => booted.has(d.id))
           .map((d) => [
             d.id,
-            { disabled: 49, total: 52, unit: "패키지" as const, memoryBytes: 1.5e9, measuredAt: 0 },
+            {
+              disabled: 49,
+              total: 52,
+              unit: "packages" as const,
+              memoryBytes: 1.5e9,
+              measuredAt: 0,
+            },
           ]),
       ),
   };

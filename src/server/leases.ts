@@ -71,12 +71,17 @@ export class LeaseManager {
 
   constructor(
     state: LeaseState,
-    private readonly options: LeaseOptions,
+    private options: LeaseOptions,
   ) {
     this.now = options.now ?? Date.now;
     for (const s of state.sessions) this.sessions.set(s.key, s);
     for (const l of state.leases) this.leases.set(l.deviceId, l);
     this.queue = [...state.queue];
+  }
+
+  /** 설정에서 자동 해제 시간을 바꿨을 때 (M11) */
+  setIdleMs(idleMs: number): void {
+    this.options.idleMs = idleMs;
   }
 
   snapshot(): LeaseState {

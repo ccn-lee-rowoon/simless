@@ -13,6 +13,7 @@ import { join } from "node:path";
 import type { PlatformCatalog, SlimCategory, SlimStats } from "../../shared/api.ts";
 import type { Config } from "../../shared/config.ts";
 import { run as defaultRun, type Runner, runOk, which } from "../../shared/exec.ts";
+import { t } from "../../shared/i18n.ts";
 import type { Device, DeviceSpec, SlimState } from "../../shared/model.ts";
 import { androidSdk } from "../../shared/tools.ts";
 import { HandlerError } from "../socket.ts";
@@ -195,8 +196,8 @@ export class AndroidDriver implements Driver {
       throw new HandlerError(
         wanted ? "NOT_FOUND" : "TOOL_MISSING",
         wanted
-          ? `없는 시스템 이미지: ${wanted}`
-          : `Android 시스템 이미지가 없습니다 (${this.sdk}/system-images)`,
+          ? t("err.noImage", { image: wanted })
+          : t("err.noImages", { path: `${this.sdk}/system-images` }),
       );
     }
     return image;
@@ -217,7 +218,7 @@ export class AndroidDriver implements Driver {
       })),
       os: images.map((image, i) => ({
         id: image.sysdir,
-        name: `${image.target} ${image.tag}${image.page16k ? " (16KB 페이지)" : ""}`,
+        name: `${image.target} ${image.tag}${image.page16k ? t("os.page16k") : ""}`,
         recommended: i === 0,
       })),
       custom: true,
@@ -246,7 +247,8 @@ export class AndroidDriver implements Driver {
     const profile = ANDROID_PROFILES.find(
       (p) => p.id === wanted || p.name.toLowerCase() === wanted,
     );
-    if (!profile) throw new HandlerError("NOT_FOUND", `없는 프로필: ${request.model}`);
+    if (!profile)
+      throw new HandlerError("NOT_FOUND", t("err.noProfile", { model: request.model ?? "" }));
     return {
       spec: {
         platform: "android",
@@ -311,11 +313,16 @@ export class AndroidDriver implements Driver {
     progress: Progress,
   ): Promise<{ native: string }> {
     const { spec } = input;
-    if (spec.platform !== "android") throw new HandlerError("INVALID", "Android 기종이 아닙니다");
+    if (spec.platform !== "android") throw new HandlerError("INVALID", "Not an Android model");
     const avdId = `corgi_${input.id}`;
     const avdDir = join(this.avdHome, `${avdId}.avd`);
-    if (existsSync(avdDir)) throw new HandlerError("INVALID", `이미 있는 AVD: ${avdId}`);
-    progress(`AVD 생성: ${input.name} (${spec.widthPx}×${spec.heightPx}px · ${spec.density}dpi)`);
+    if (existsSync(avdDir)) throw new HandlerError("INVALID", t("err.avdExists", { id: avdId }));
+    progress(
+      t("progress.avdCreate", {
+        name: input.name,
+        detail: `${spec.widthPx}×${spec.heightPx}px · ${spec.density}dpi`,
+      }),
+    );
 
     const config: Record<string, string> = {
       AvdId: avdId,
@@ -340,7 +347,7 @@ export class AndroidDriver implements Driver {
 
   /** 프로필·직접 입력용 config.ini — 크기와 이미지만 정하고 나머지는 흔한 기본값 */
   private freshConfig(spec: DeviceSpec): Record<string, string> {
-    if (spec.platform !== "android") throw new HandlerError("INVALID", "Android 기종이 아닙니다");
+    if (spec.platform !== "android") throw new HandlerError("INVALID", "Not an Android model");
     const image = this.image(spec.systemImage);
     return {
       "PlayStore.enabled": String(image.tag.includes("playstore")),
@@ -416,7 +423,7 @@ export class AndroidDriver implements Driver {
       if (taken.has(`emulator-${port}`)) continue;
       if ((await this.isPortFree(port)) && (await this.isPortFree(port + 1))) return port;
     }
-    throw new HandlerError("FAILED", "에뮬레이터에 쓸 빈 포트가 없습니다 (5554~5683)");
+    throw new HandlerError("FAILED", t("err.noFreePort"));
   }
 
   async boot(device: Device, progress: Progress): Promise<RuntimeState> {
@@ -429,7 +436,7 @@ export class AndroidDriver implements Driver {
     const serial = `emulator-${port}`;
     mkdirSync(this.options.logDir, { recursive: true });
     const logPath = join(this.options.logDir, `emulator-${device.native}.log`);
-    progress(`부팅: ${device.name} (${serial})`);
+    progress(t("progress.booting", { name: `${device.name} (${serial})` }));
     const proc = this.spawnEmulator(
       [
         this.emulator,
@@ -453,7 +460,7 @@ export class AndroidDriver implements Driver {
         const tail = existsSync(logPath)
           ? readFileSync(logPath, "utf8").trim().split("\n").slice(-8).join("\n")
           : "";
-        throw new Error(`에뮬레이터가 부팅 중에 끝났습니다 (code ${exitCode})\n${tail}`);
+        throw new Error(t("err.emulatorExited", { code: String(exitCode), log: tail }));
       }
       const prop = await this.runner([
         this.adb,
@@ -466,7 +473,7 @@ export class AndroidDriver implements Driver {
       if (prop.code === 0 && prop.stdout.trim() === "1") return { booted: true, targetId: serial };
       await Bun.sleep(pollMs);
     }
-    throw new Error(`부팅 시간이 지났습니다: ${device.name} — 로그 ${logPath}`);
+    throw new Error(t("err.bootTimeout", { name: device.name, log: logPath }));
   }
 
   async shutdown(device: Device, state: RuntimeState): Promise<void> {
@@ -477,23 +484,19 @@ export class AndroidDriver implements Driver {
       if (!(await this.running()).has(device.native)) return;
       await Bun.sleep(this.options.pollMs ?? 1000);
     }
-    throw new Error(`끄지 못했습니다: ${device.name} (${serial})`);
+    throw new Error(t("err.shutdownFailed", { name: device.name, serial }));
   }
 
   private avdslim(): string {
     const path = this.avdslimPath();
-    if (!path)
-      throw new HandlerError(
-        "TOOL_MISSING",
-        "avdslim 이 없습니다 — corgi doctor 로 설치 방법을 보세요",
-      );
+    if (!path) throw new HandlerError("TOOL_MISSING", t("err.toolMissing", { tool: "avdslim" }));
     return path;
   }
 
   /** 호스트 설정(tune-avd)은 바로, 기기 안 정리(on)는 켜져 있을 때 — 켤 때마다 afterBoot 에서 다시 한다 */
   async slim(device: Device, progress: Progress): Promise<void> {
     const avdslim = this.avdslim();
-    progress(`슬림화(avdslim tune-avd): ${device.name}`);
+    progress(t("progress.slimAvd", { name: device.name }));
     await runOk(this.runner, [
       avdslim,
       "tune-avd",
@@ -511,7 +514,7 @@ export class AndroidDriver implements Driver {
   }
 
   private async slimGuest(device: Device, serial: string, progress: Progress): Promise<void> {
-    progress(`기기 안 정리(avdslim on): ${device.name}`);
+    progress(t("progress.slimGuest", { name: device.name }));
     await runOk(this.runner, [this.avdslim(), "on", serial], { timeoutMs: 5 * 60_000 });
   }
 
@@ -519,12 +522,9 @@ export class AndroidDriver implements Driver {
     const avdslim = this.avdslim();
     const state = (await this.states([device])).get(device.id);
     if (!state?.booted || !state.targetId) {
-      throw new HandlerError(
-        "INVALID",
-        "Android 슬림 해제는 켜진 상태에서만 됩니다 — corgi up 뒤에 다시",
-      );
+      throw new HandlerError("INVALID", t("err.unslimNeedsBoot"));
     }
-    progress(`슬림 해제(avdslim off): ${device.name}`);
+    progress(t("progress.unslimAvd", { name: device.name }));
     await runOk(this.runner, [avdslim, "off", state.targetId], { timeoutMs: 5 * 60_000 });
   }
 
@@ -589,7 +589,7 @@ export class AndroidDriver implements Driver {
 
   /** `avdslim measure` 의 Activity Monitor 메모리 — 슬림 후 수치와 같은 기준 */
   async measure(_device: Device, state: RuntimeState): Promise<{ memoryBytes?: number }> {
-    if (!state.targetId) throw new HandlerError("INVALID", "꺼져 있어 잴 수 없습니다");
+    if (!state.targetId) throw new HandlerError("INVALID", t("err.measureOff"));
     const out = await runOk(this.runner, [this.avdslim(), "measure", state.targetId], {
       timeoutMs: 60_000,
     });
@@ -614,7 +614,7 @@ export class AndroidDriver implements Driver {
         stats.set(device.id, {
           disabled: counts.off,
           total: counts.relevant,
-          unit: "패키지",
+          unit: "packages",
           memoryBytes: parseFootprint(measure.stdout),
           measuredAt: Date.now(),
         });

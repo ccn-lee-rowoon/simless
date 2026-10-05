@@ -205,7 +205,7 @@ describe("AndroidDriver", () => {
     const error = await d
       .boot({ id: "x", native: "corgi_x", name: "x" } as Device, () => {})
       .catch((e) => e);
-    expect(String(error)).toContain("부팅 중에 끝났습니다");
+    expect(String(error)).toContain("exited while booting");
   });
 
   test("slim — avdslim 이 없으면 TOOL_MISSING", async () => {

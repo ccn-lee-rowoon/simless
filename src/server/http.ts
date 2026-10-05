@@ -14,7 +14,7 @@ import { HandlerError } from "./socket.ts";
 //   - 웹 UI 가 부를 수 있는 메서드만 허용
 
 /** 웹 UI 를 쓰는 사람 — 프로세스 기준 해제 없이 30분 규칙만 (docs/design.md §7) */
-export const WEB_SESSION: SessionInfo = { key: "web", agent: "웹 UI", cwd: "웹 UI", human: true };
+export const WEB_SESSION: SessionInfo = { key: "web", agent: "web", cwd: "web", human: true };
 
 const WEB_METHODS = new Set([
   "status",
@@ -28,6 +28,8 @@ const WEB_METHODS = new Set([
   "group.create",
   "group.update",
   "group.delete",
+  "settings.get",
+  "settings.set",
   "device.delete",
   "device.slim",
   "device.up",

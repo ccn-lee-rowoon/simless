@@ -1,6 +1,11 @@
 import { Command, CommanderError } from "commander";
+import { loadConfig } from "../shared/config.ts";
 import { ExitCode } from "../shared/exit-codes.ts";
+import { resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
+import { resolvePaths } from "../shared/paths.ts";
+import { systemLanguages } from "../shared/system-language.ts";
 import { VERSION } from "../shared/version.ts";
+import { registerConfig } from "./commands/config.ts";
 import { registerDevices } from "./commands/devices.ts";
 import { registerDoctor } from "./commands/doctor.ts";
 import { registerGroups } from "./commands/groups.ts";
@@ -8,16 +13,25 @@ import { registerLease } from "./commands/lease.ts";
 import { registerStatus } from "./commands/status.ts";
 import { CliError, makeContext, output, type Run } from "./context.ts";
 
+/** 설정 언어 — 명령 설명(--help)도 이 언어로 나오도록 명령을 만들기 전에 정한다 (R25) */
+function applyLanguage(): void {
+  try {
+    const config = loadConfig(resolvePaths().config);
+    setLanguage(resolveLanguage(config.language, systemLanguages()));
+  } catch {
+    setLanguage(resolveLanguage("system", systemLanguages()));
+  }
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   let exitCode: number = ExitCode.ok;
+  applyLanguage();
 
   const program = new Command("corgi")
-    .description(
-      "시뮬레이터·에뮬레이터 중개·관리 도구 — 용도별 그룹·기본 디바이스·UI 테스트용 슬림 디바이스",
-    )
+    .description(t("cli.description"))
     .version(VERSION, "-v, --version")
-    .option("--json", "결과를 JSON 으로 출력 (에이전트용)")
-    .option("--session <id>", "세션을 직접 지정 (기본: 명령을 실행한 에이전트 프로세스)")
+    .option("--json", t("cli.opt.json"))
+    .option("--session <id>", t("cli.opt.session"))
     .exitOverride();
 
   // 각 명령의 공통 처리 — 컨텍스트를 만들고, CliError 를 종료 코드로 바꾼다.
@@ -47,7 +61,7 @@ export async function runCli(argv: string[]): Promise<number> {
 
   program
     .command("serve")
-    .description("상주 서버를 띄운다 (보통 launchd 가 실행)")
+    .description(t("cli.serve"))
     .action(async () => {
       const { serve } = await import("../server/index.ts");
       await serve();
@@ -56,12 +70,10 @@ export async function runCli(argv: string[]): Promise<number> {
 
   program
     .command("install")
-    .description(
-      "서버를 launchd 에 등록하고(로그인 시 자동 실행), 에이전트 스킬을 설치하고, Corgi.app 을 만든다",
-    )
-    .option("--no-launchd", "launchd 등록은 건너뛴다")
-    .option("--no-skill", "스킬 설치는 건너뛴다")
-    .option("--no-app", "Corgi.app 만들기는 건너뛴다")
+    .description(t("cli.install"))
+    .option("--no-launchd", t("cli.install.noLaunchd"))
+    .option("--no-skill", t("cli.install.noSkill"))
+    .option("--no-app", t("cli.install.noApp"))
     .action(
       run(async (ctx, o: { launchd: boolean; skill: boolean; app: boolean }) => {
         const done: Record<string, string> = {};
@@ -77,12 +89,12 @@ export async function runCli(argv: string[]): Promise<number> {
         if (o.app) {
           const { installApp } = await import("./app-bundle.ts");
           const app = await installApp(ctx.paths, ctx.config);
-          done.app = app.menubar ? `${app.path} (메뉴바 앱)` : app.path;
+          done.app = app.menubar ? t("cli.install.menubar", { path: app.path }) : app.path;
           if (app.warning) console.error(app.warning);
         }
         output(ctx, done, () =>
           Object.entries(done)
-            .map(([what, path]) => `설치했습니다 (${what}): ${path}`)
+            .map(([what, path]) => t("cli.install.done", { what, path }))
             .join("\n"),
         );
       }),
@@ -90,25 +102,27 @@ export async function runCli(argv: string[]): Promise<number> {
 
   program
     .command("uninstall")
-    .description("launchd 등록과 Corgi.app 을 지운다 — 만든 디바이스·스킬은 지우지 않는다")
+    .description(t("cli.uninstall"))
     .action(
       run(async (ctx) => {
         const { uninstall } = await import("./launchd.ts");
         await uninstall(ctx.paths);
         await (await import("./app-bundle.ts")).uninstallApp(ctx.paths);
-        output(ctx, { uninstalled: ctx.paths.launchAgent }, () => "등록을 지웠습니다");
+        output(ctx, { uninstalled: ctx.paths.launchAgent }, () => t("cli.uninstall.done"));
       }),
     );
 
   program
     .command("ui")
-    .description("웹 UI 를 브라우저로 연다 (서버가 꺼져 있으면 켠다)")
-    .option("--print", "열지 않고 주소만 출력")
+    .description(t("cli.ui"))
+    .option("--print", t("cli.ui.print"))
     .action(
       run(async (ctx, o: { print?: boolean }) => {
         const { openUi } = await import("./ui.ts");
         const url = await openUi(ctx, { open: !o.print });
-        output(ctx, { url }, () => (o.print ? url : `열었습니다: ${url.replace(/#.*/, "")}`));
+        output(ctx, { url }, () =>
+          o.print ? url : t("cli.ui.opened", { url: url.replace(/#.*/, "") }),
+        );
       }),
     );
 
@@ -116,6 +130,7 @@ export async function runCli(argv: string[]): Promise<number> {
   registerLease(program, run);
   registerDevices(program, run);
   registerGroups(program, run);
+  registerConfig(program, run);
   registerDoctor(program, run);
 
   try {

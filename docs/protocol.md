@@ -6,7 +6,7 @@
 
 - **Unix 도메인 소켓**: `~/Library/Application Support/Corgi/corgi.sock` (권한 0600, `CORGI_SOCKET` 으로 바꿀 수 있음).
 - **연결 하나에 요청 하나.** 클라이언트가 요청 한 줄을 보내고, 서버는 진행 알림(0개 이상) 뒤에 응답 한 줄을 보내고 연결을 닫는다.
-- 한 줄에 JSON 하나(UTF-8, `\n` 으로 끝). 큰 응답은 여러 조각으로 오므로 스트리밍 디코더로 이어 붙인다.
+- 한 줄에 JSON 하나(UTF-8, `\n` 으로 끝). 오류·진행 문장은 서버의 설정 언어(R25)다 — 판단은 `code` 로 한다. 큰 응답은 여러 조각으로 오므로 스트리밍 디코더로 이어 붙인다.
 - 서버가 없으면 클라이언트는 `SERVER_DOWN`(CLI 종료 코드 4)으로 끝낸다. CLI 는 launchd 에 등록돼 있으면 먼저 서버를 켜고 한 번 더 보낸다.
 
 ## 메시지
@@ -73,7 +73,9 @@
 
 | 메서드 | params | result | 비고 |
 | --- | --- | --- | --- |
-| `status` | `{}` | `StatusResult` — 이 세션, 점유·대기 순번, `DeviceView[]`, 그룹 `groups`, 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
+| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en), 이 세션, 점유·대기 순번, `DeviceView[]`, 그룹 `groups`, 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
+| `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, androidRamMb, simslimProfile? }` | 설정 화면·`corgi config` (M11) |
+| `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·Android RAM·simslim 프로필 (R25) |
 | `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff`)·남는 것(`slimKeeps`) (M1·M4) |
 | `device.list` | `{}` | `DeviceView[]` | 이 Mac 의 디바이스 전부. 켜짐·argent ID(`targetId`)·점유자·메모(`memo`)·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20) |
 | `device.create` | `{ platform?, model \| custom, os?, name?, slim = true, baseline = true }` | `DeviceView` | `model` = 기종 ID·이름(`platform` 을 안 주면 두 플랫폼에서 찾고, 양쪽에 있으면 `INVALID`), `custom` = `{ widthDp, heightDp, density }`(Android). `os` 를 안 주면 기본값. 앱 없이 만들고 `slim` 이면 기준값을 잰 뒤 슬림화. 기본 이름은 슬림이면 `corgi <기종>`, 아니면 `<기종>` — 겹치면 번호를 붙인다. 진행 알림 있음 |

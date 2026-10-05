@@ -105,7 +105,7 @@ export function SlimStatsText({
   const title = [
     `꺼진 ${stats.unit} ${stats.disabled}/${stats.total}`,
     stats.memoryBytes
-      ? `메모리 ${gigabytes(stats.memoryBytes)}${stats.unit === "패키지" ? " (Activity Monitor 기준)" : ""}`
+      ? `메모리 ${gigabytes(stats.memoryBytes)}${stats.unit === "packages" ? " (Activity Monitor 기준)" : ""}`
       : "",
     stats.processes ? `프로세스 ${stats.processes}` : "",
   ]

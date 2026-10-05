@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
 import type { CorgiServer } from "./app.ts";
@@ -35,14 +36,14 @@ function editor(session: SessionInfo): string {
 export function registerGroupMethods(server: CorgiServer): void {
   const find = (ref: string): Group => {
     const group = server.registry.findGroup(ref);
-    if (!group) throw new HandlerError("NOT_FOUND", `없는 그룹: ${ref}`);
+    if (!group) throw new HandlerError("NOT_FOUND", t("err.noGroup", { ref }));
     return group;
   };
 
   const guardName = (name: string, except?: string) => {
     const other = server.registry.findGroup(name);
     if (other && other.id !== except && other.name.toLowerCase() === name.toLowerCase())
-      throw new HandlerError("INVALID", `이미 쓰는 그룹 이름입니다: ${name}`);
+      throw new HandlerError("INVALID", t("err.groupNameTaken", { name }));
   };
 
   const deviceIds = async (refs: string[]) => [

@@ -1,3 +1,4 @@
+import type { Lang } from "./i18n.ts";
 import type { Defaults, Device, Group } from "./model.ts";
 import type { SessionInfo } from "./protocol.ts";
 
@@ -18,7 +19,7 @@ export interface SlimStats {
   /** 꺼진 항목 수 / 대상 수 — iOS 는 launchd 데몬, Android 는 avdslim 프로필 패키지 */
   disabled: number;
   total: number;
-  unit: "데몬" | "패키지";
+  unit: "daemons" | "packages";
   /** 지금 쓰는 메모리 — iOS 는 시뮬레이터 프로세스 합, Android 는 에뮬레이터의 Activity Monitor 메모리 */
   memoryBytes?: number;
   processes?: number;
@@ -43,8 +44,19 @@ export interface DeviceView extends Device {
   groups: string[];
 }
 
+/** 설정 화면 (M11) */
+export interface SettingsResult {
+  /** 설정값 — system·ko·en */
+  language: "system" | Lang;
+  idleReleaseMinutes: number;
+  androidRamMb: number;
+  simslimProfile?: string;
+}
+
 export interface StatusResult {
   serverVersion: string;
+  /** 지금 쓰는 언어 — 설정이 system 이면 서버가 macOS 언어 설정으로 정한 값 (R25) */
+  language: Lang;
   session: SessionInfo;
   held: string[];
   queuePosition?: number;

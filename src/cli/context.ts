@@ -2,6 +2,7 @@ import type { BusyData } from "../shared/api.ts";
 import { call, RemoteError, ServerDownError } from "../shared/client.ts";
 import { type Config, loadConfig } from "../shared/config.ts";
 import { ExitCode } from "../shared/exit-codes.ts";
+import { t } from "../shared/i18n.ts";
 import { type Paths, resolvePaths } from "../shared/paths.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
 import { detectSession } from "../shared/session.ts";
@@ -62,15 +63,13 @@ export async function request<T>(
     });
     if (serverVersion !== VERSION && !warnedVersion) {
       warnedVersion = true;
-      console.error(
-        `주의: 서버 버전(${serverVersion})이 CLI(${VERSION})와 다릅니다 — 서버를 다시 시작하세요`,
-      );
+      console.error(t("cli.versionMismatch", { server: serverVersion, cli: VERSION }));
     }
     return result;
   } catch (error) {
     if (error instanceof ServerDownError) {
       throw new CliError(
-        `${error.message}\n  서버 등록(로그인 시 자동 실행): corgi install · 한 번만 띄우기: corgi serve`,
+        t("cli.serverDownHint", { message: error.message }),
         ExitCode.serverDown,
         "SERVER_DOWN",
       );
@@ -80,8 +79,7 @@ export async function request<T>(
       if (error.code === "BUSY" || error.code === "DEADLOCK") {
         const { holders } = error.data as BusyData;
         message += `\n${holders.map((h) => `  ${formatHolder(h)}`).join("\n")}`;
-        if (error.code === "BUSY")
-          message += "\n  기다리려면 --wait, 비어 있는 것만 쓰려면 --available";
+        if (error.code === "BUSY") message += t("cli.busyHint");
       }
       const exitCode =
         error.code === "BUSY" || error.code === "DEADLOCK"

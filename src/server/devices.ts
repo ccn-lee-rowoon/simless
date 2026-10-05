@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { CatalogResult, DeviceOpResult, DeviceView, PlatformCatalog } from "../shared/api.ts";
+import { t } from "../shared/i18n.ts";
 import type { Device, DeviceSpec, Platform } from "../shared/model.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
 import type { CorgiServer } from "./app.ts";
@@ -31,7 +32,7 @@ const CreateParams = z
   })
   .refine(
     (p) => (p.model === undefined) !== (p.custom === undefined),
-    "model 과 custom 중 하나만 주세요",
+    "Give either model or custom",
   );
 const DeviceRef = z.object({ device: z.string() });
 const RenameParams = DeviceRef.extend({ name: z.string().min(1) });
@@ -84,18 +85,20 @@ export function registerDeviceMethods(server: CorgiServer): void {
         since: lease?.acquiredAt ?? 0,
         reason: "held",
       });
-      throw new HandlerError("BUSY", `다른 세션이 사용 중입니다: ${device.name}`, {
+      throw new HandlerError("BUSY", t("err.busyDevice", { name: device.name }), {
         holders: view ? [{ ...view, deviceId: device.id }] : [],
       });
     }
   };
 
   /** Corgi 가 만든 디바이스만 — 삭제·슬림 켜고 끄기 (M7·M8·N5) */
-  const guardCreated = (device: Device, what: string) => {
+  const guardCreated = (device: Device, what: "delete" | "slim") => {
     if (!device.createdByCorgi) {
       throw new HandlerError(
         "NOT_ALLOWED",
-        `${device.name} 은 이 Mac 에 원래 있던 디바이스라 ${what}할 수 없습니다 — Corgi 가 만든 디바이스만 됩니다`,
+        t(what === "delete" ? "err.preexistingDelete" : "err.preexistingSlim", {
+          name: device.name,
+        }),
       );
     }
   };
@@ -107,11 +110,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
       refs.length > 0
         ? await server.resolve(refs)
         : (await server.devices()).filter((d) => held.has(d.id));
-    if (devices.length === 0)
-      throw new HandlerError(
-        "NOT_HELD",
-        "점유한 디바이스가 없습니다 — corgi use 로 점유하고 켜세요",
-      );
+    if (devices.length === 0) throw new HandlerError("NOT_HELD", t("err.notHeldAny"));
     // 사람(웹 UI 등)이 직접 켜고 끄는 건 점유가 아니다 — 다른 세션이 쓰는 중인 것만 막는다
     if (session.human) {
       for (const device of devices) guardOthers(device, session);
@@ -121,7 +120,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
     if (notHeld.length > 0) {
       throw new HandlerError(
         "NOT_HELD",
-        `점유하지 않은 디바이스: ${notHeld.map((d) => d.name).join(", ")} — corgi use 로 점유하세요`,
+        t("err.notHeld", { names: notHeld.map((d) => d.name).join(", ") }),
       );
     }
     return devices;
@@ -154,28 +153,31 @@ export function registerDeviceMethods(server: CorgiServer): void {
     const driver = server.driver(device.spec.platform);
     let state: RuntimeState | undefined;
     try {
-      progress(`슬림 전 기준값 측정 — 켜는 중: ${device.name}`);
+      progress(t("progress.baselineBoot", { name: device.name }));
       state = await driver.boot(device, progress);
       const settle = server.config.slimBaselineSettleSeconds;
       if (settle > 0) {
-        progress(`백그라운드 서비스가 다 뜰 때까지 ${settle}초 기다립니다`);
+        progress(t("progress.baselineSettle", { seconds: settle }));
         await Bun.sleep(settle * 1000);
       }
       const measured = await driver.measure(device, state);
       const gb = measured.memoryBytes
         ? `${(measured.memoryBytes / 1024 ** 3).toFixed(1)}GB`
-        : "알 수 없음";
+        : t("common.unknown");
       progress(
-        `기준값: 메모리 ${gb}${measured.processes ? ` · 프로세스 ${measured.processes}` : ""}`,
+        t("progress.baseline", { memory: gb }) +
+          (measured.processes
+            ? t("progress.baselineProcesses", { count: measured.processes })
+            : ""),
       );
       device = update(device, {
         slimBaseline: { ...measured, measuredAt: new Date().toISOString() },
       });
     } catch (error) {
-      progress(`기준값 측정 실패 — 건너뜁니다: ${message(error).split("\n")[0]}`);
+      progress(t("progress.baselineFailed", { error: message(error).split("\n")[0] ?? "" }));
     }
     if (state?.booted) {
-      progress(`끄는 중: ${device.name}`);
+      progress(t("progress.shuttingDown", { name: device.name }));
       await driver.shutdown(device, state).catch(() => {});
     }
     return device;
@@ -216,7 +218,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
       if (!driver) continue;
       try {
         for (const tool of await driver.missingTools())
-          problems.push({ platform: name, message: `${tool} 없음` });
+          problems.push({ platform: name, message: t("err.toolNotFound", { tool }) });
         platforms.push(await driver.catalog());
       } catch (error) {
         problems.push({ platform: name, message: message(error) });
@@ -252,13 +254,10 @@ export function registerDeviceMethods(server: CorgiServer): void {
     }
     if (found.length === 0) {
       if (lastError instanceof HandlerError) throw lastError;
-      throw new HandlerError("NOT_FOUND", `없는 기종: ${params.model} — corgi catalog`);
+      throw new HandlerError("NOT_FOUND", t("err.noModel", { model: params.model ?? "" }));
     }
     if (found.length > 1) {
-      throw new HandlerError(
-        "INVALID",
-        `두 플랫폼에 같은 이름의 기종이 있습니다 — --platform 으로 고르세요: ${params.model}`,
-      );
+      throw new HandlerError("INVALID", t("err.modelBothPlatforms", { model: params.model ?? "" }));
     }
     return found[0] as (typeof found)[number];
   };
@@ -271,7 +270,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
     const taken = new Set(all.map((d) => d.name.toLowerCase()));
     let name = params.name ?? defaultName(modelName, params.slim);
     if (taken.has(name.toLowerCase())) {
-      if (params.name) throw new HandlerError("INVALID", `이미 쓰는 이름입니다: ${name}`);
+      if (params.name) throw new HandlerError("INVALID", t("err.nameTaken", { name }));
       const base = name;
       let n = 2;
       while (taken.has(`${base} ${n}`.toLowerCase())) n++;
@@ -306,7 +305,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
     guardOthers(device, session);
     const lower = params.name.toLowerCase();
     if ((await server.devices()).some((d) => d.id !== device.id && d.name.toLowerCase() === lower))
-      throw new HandlerError("INVALID", `이미 쓰는 이름입니다: ${params.name}`);
+      throw new HandlerError("INVALID", t("err.nameTaken", { name: params.name }));
     await withLock(device.id, () =>
       server.driver(device.spec.platform).rename(device, params.name),
     );
@@ -335,19 +334,16 @@ export function registerDeviceMethods(server: CorgiServer): void {
     const params = parse(DeviceRef, p);
     const [device] = await server.resolve([params.device]);
     if (!device) throw new HandlerError("NOT_FOUND", params.device);
-    guardCreated(device, "삭제");
+    guardCreated(device, "delete");
     if (server.registry.defaults()[device.platform] === device.id) {
-      throw new HandlerError(
-        "NOT_ALLOWED",
-        `${device.name} 은 기본 디바이스입니다 — 다른 디바이스를 기본으로 정한 뒤 지우세요`,
-      );
+      throw new HandlerError("NOT_ALLOWED", t("err.deleteDefault", { name: device.name }));
     }
     guardOthers(device, session);
     const driver = server.driver(device.spec.platform);
     await withLock(device.id, async () => {
       const state = (await driver.states([device])).get(device.id);
       if (state?.booted) {
-        progressOf(connection)(`끄는 중: ${device.name}`);
+        progressOf(connection)(t("progress.shuttingDown", { name: device.name }));
         await driver.shutdown(device, state);
       }
       await driver.remove(device);
@@ -365,7 +361,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
         ? await server.resolve(params.devices)
         : (await server.devices()).filter((d) => d.createdByCorgi);
     const progress = progressOf(connection);
-    for (const device of devices) guardCreated(device, "슬림 설정");
+    for (const device of devices) guardCreated(device, "slim");
     if (params.mode !== "check") for (const device of devices) guardOthers(device, session);
     const results = await forEach(devices, async (device) => {
       const driver = server.driver(device.spec.platform);
@@ -401,7 +397,11 @@ export function registerDeviceMethods(server: CorgiServer): void {
         if (slim === "drifted") await applySlim(device, progress);
         else if (slim) update(device, { slim });
       }
-      progress(`켜짐: ${device.name}${state.targetId ? ` (${state.targetId})` : ""}`);
+      progress(
+        t("progress.booted", {
+          name: `${device.name}${state.targetId ? ` (${state.targetId})` : ""}`,
+        }),
+      );
     });
     return { results, devices: await server.deviceViews(session, fresh(devices)) };
   });
@@ -414,7 +414,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
       const driver = server.driver(device.spec.platform);
       const state = (await driver.states([device])).get(device.id);
       if (state?.booted) {
-        progress(`끄는 중: ${device.name}`);
+        progress(t("progress.shuttingDown", { name: device.name }));
         await driver.shutdown(device, state);
       }
     });

@@ -92,7 +92,7 @@ export async function install(paths: Paths): Promise<void> {
     await Bun.sleep(300);
     result = await run(["launchctl", "bootstrap", domain(), paths.launchAgent]);
   }
-  if (result.code !== 0) throw new Error(`launchctl bootstrap 실패: ${result.stderr.trim()}`);
+  if (result.code !== 0) throw new Error(`launchctl bootstrap failed: ${result.stderr.trim()}`);
 }
 
 /** 내리고, 정말 내려갈 때까지 기다린다 — bootout 은 바로 끝나지 않는다 */

@@ -5,8 +5,9 @@ import type { StatusResult } from "../../shared/api.ts";
 import { call } from "../../shared/client.ts";
 import { run, which } from "../../shared/exec.ts";
 import { ExitCode } from "../../shared/exit-codes.ts";
+import { t } from "../../shared/i18n.ts";
 import { LAUNCH_LABEL } from "../../shared/paths.ts";
-import { androidSdk, INSTALL_HINTS } from "../../shared/tools.ts";
+import { androidSdk, installHints } from "../../shared/tools.ts";
 import { VERSION } from "../../shared/version.ts";
 import { isAppInstalled } from "../app-bundle.ts";
 import { CliError, type Context, output, type Run } from "../context.ts";
@@ -70,10 +71,10 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
   );
   if (server instanceof Error) {
     add({
-      group: "서버",
-      name: "서버 연결",
+      group: t("doctor.group.server"),
+      name: t("doctor.server"),
       status: "fail",
-      detail: `연결 못 함 (${ctx.paths.socket})`,
+      detail: t("doctor.server.down", { path: ctx.paths.socket }),
       fix: isInstalled(ctx.paths)
         ? `launchctl kickstart gui/${process.getuid?.()}/${LAUNCH_LABEL}`
         : "corgi install",
@@ -81,21 +82,21 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
   } else {
     const same = server.serverVersion === VERSION;
     add({
-      group: "서버",
-      name: "서버 연결",
+      group: t("doctor.group.server"),
+      name: t("doctor.server"),
       status: same ? "ok" : "warn",
       detail: same
         ? `corgi ${VERSION}`
-        : `서버 ${server.serverVersion} · CLI ${VERSION} — 버전이 다름`,
-      fix: same ? undefined : "corgi install (서버를 새 버전으로 다시 시작)",
+        : t("doctor.server.mismatch", { server: server.serverVersion, cli: VERSION }),
+      fix: same ? undefined : t("doctor.server.restart"),
     });
   }
   if (!isInstalled(ctx.paths)) {
     add({
-      group: "서버",
-      name: "launchd 등록",
+      group: t("doctor.group.server"),
+      name: t("doctor.launchd"),
       status: "warn",
-      detail: "없음 — 로그인 시 서버가 자동으로 켜지지 않는다",
+      detail: t("doctor.launchd.missing"),
       fix: "corgi install",
       autofix: "launchd",
     });
@@ -103,12 +104,10 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
     const printed = await run(["launchctl", "print", `gui/${process.getuid?.()}/${LAUNCH_LABEL}`]);
     const running = /state = running/.test(printed.stdout);
     add({
-      group: "서버",
-      name: "launchd 등록",
+      group: t("doctor.group.server"),
+      name: t("doctor.launchd"),
       status: running ? "ok" : "warn",
-      detail: running
-        ? ctx.paths.launchAgent
-        : "등록돼 있지만 실행 중이 아님 — 시스템 설정 → 일반 → 로그인 항목 의 «앱 백그라운드 활동» 에서 꺼져 있을 수 있다",
+      detail: running ? ctx.paths.launchAgent : t("doctor.launchd.notRunning"),
       fix: running ? undefined : "corgi install",
       autofix: running ? undefined : "launchd",
     });
@@ -124,8 +123,8 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
     group: "Android",
     name: "Android SDK",
     status: sdkOk ? "ok" : "fail",
-    detail: sdkOk ? sdk : `adb·emulator 가 없음 (${sdk})`,
-    fix: sdkOk ? undefined : INSTALL_HINTS.androidSdk,
+    detail: sdkOk ? sdk : t("doctor.sdk.missing", { path: sdk }),
+    fix: sdkOk ? undefined : installHints().androidSdk,
   });
   const imagesDir = join(sdk, "system-images");
   const images = existsSync(imagesDir)
@@ -133,10 +132,10 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
     : [];
   add({
     group: "Android",
-    name: "시스템 이미지",
+    name: t("doctor.images"),
     status: images.length > 0 ? "ok" : "fail",
-    detail: images.length > 0 ? images.join(", ") : "없음",
-    fix: images.length > 0 ? undefined : INSTALL_HINTS.systemImage,
+    detail: images.length > 0 ? images.join(", ") : t("common.none"),
+    fix: images.length > 0 ? undefined : installHints().systemImage,
   });
   const avdslim = which("avdslim");
   const avdslimVersion = avdslim ? await version([avdslim, "version"]) : undefined;
@@ -145,10 +144,10 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
     name: "avdslim",
     status: !avdslim ? "fail" : outdated.has("avdslim") ? "warn" : "ok",
     detail: !avdslim
-      ? "없음 — Android 슬림화(R5)를 못 한다"
-      : `${avdslimVersion ?? avdslim}${outdated.has("avdslim") ? ` → ${outdated.get("avdslim")} 있음` : ""}`,
+      ? t("doctor.avdslim.missing")
+      : `${avdslimVersion ?? avdslim}${outdated.has("avdslim") ? t("doctor.newer", { version: outdated.get("avdslim") ?? "" }) : ""}`,
     fix: !avdslim
-      ? INSTALL_HINTS.avdslim
+      ? installHints().avdslim
       : outdated.has("avdslim")
         ? "brew upgrade avdslim"
         : undefined,
@@ -160,8 +159,11 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
     group: "iOS",
     name: "Xcode simctl",
     status: simctl.code === 0 ? "ok" : "fail",
-    detail: simctl.code === 0 ? ((await version(["xcodebuild", "-version"])) ?? "있음") : "없음",
-    fix: simctl.code === 0 ? undefined : INSTALL_HINTS.xcode,
+    detail:
+      simctl.code === 0
+        ? ((await version(["xcodebuild", "-version"])) ?? t("doctor.present"))
+        : t("common.none"),
+    fix: simctl.code === 0 ? undefined : installHints().xcode,
   });
   const simslim = which("simslim");
   const simslimVersion = simslim ? await version([simslim, "version"]) : undefined;
@@ -170,10 +172,10 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
     name: "simslim",
     status: !simslim ? "fail" : outdated.has("simslim") ? "warn" : "ok",
     detail: !simslim
-      ? "없음 — iOS 슬림화(R5)를 못 한다"
-      : `${simslimVersion ?? simslim}${outdated.has("simslim") ? ` → ${outdated.get("simslim")} 있음` : ""}`,
+      ? t("doctor.simslim.missing")
+      : `${simslimVersion ?? simslim}${outdated.has("simslim") ? t("doctor.newer", { version: outdated.get("simslim") ?? "" }) : ""}`,
     fix: !simslim
-      ? INSTALL_HINTS.simslim
+      ? installHints().simslim
       : outdated.has("simslim")
         ? "brew upgrade simslim"
         : undefined,
@@ -192,45 +194,43 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
   );
   const distinct = new Set(versions.map((v) => v.replace(/^.* \(/, "")));
   add({
-    group: "에이전트 연동",
+    group: t("doctor.group.agents"),
     name: "argent",
     status: argents.length === 0 ? "warn" : distinct.size > 1 ? "warn" : "ok",
     detail:
       argents.length === 0
-        ? "없음 — 화면 조작·스크린샷을 argent 로 한다 (S6)"
+        ? t("doctor.argent.missing")
         : distinct.size > 1
-          ? `여러 버전이 PATH 에 있음 — 먼저 잡히는 것: ${versions.join(" · ")}`
+          ? t("doctor.argent.many", { versions: versions.join(" · ") })
           : (versions[0] ?? ""),
     fix:
       argents.length === 0
-        ? INSTALL_HINTS.argent
+        ? installHints().argent
         : distinct.size > 1
-          ? "하나만 남기고 지우거나 PATH 순서를 정리"
+          ? t("doctor.argent.fix")
           : undefined,
   });
   const skill = await skillStatus();
   add({
-    group: "에이전트 연동",
-    name: "Corgi 스킬",
+    group: t("doctor.group.agents"),
+    name: t("doctor.skill"),
     status: skill === "current" ? "ok" : "warn",
     detail:
       skill === "current"
         ? "~/.claude/skills/corgi"
         : skill === "missing"
-          ? "설치 안 됨"
-          : "이 corgi 에 든 스킬과 다름 (예전 버전)",
+          ? t("doctor.skill.missing")
+          : t("doctor.skill.outdated"),
     fix: skill === "current" ? undefined : "corgi install --no-launchd",
     autofix: skill === "current" ? undefined : "skill",
   });
 
   const app = isAppInstalled(ctx.paths);
   add({
-    group: "에이전트 연동",
+    group: t("doctor.group.agents"),
     name: "Corgi.app",
     status: app ? "ok" : "warn",
-    detail: app
-      ? ctx.paths.appBundle
-      : "없음 — 더블클릭·Spotlight 로 웹 UI 를 열 수 없다 (corgi ui 는 된다)",
+    detail: app ? ctx.paths.appBundle : t("doctor.app.missing"),
     fix: app ? undefined : "corgi install",
     autofix: app ? undefined : "app",
   });
@@ -251,17 +251,16 @@ function render(checks: Check[]): string {
   }
   const fails = checks.filter((c) => c.status === "fail").length;
   const warns = checks.filter((c) => c.status === "warn").length;
-  lines.push("", fails + warns === 0 ? "모두 정상입니다." : `문제 ${fails}개 · 주의 ${warns}개`);
-  if (checks.some((c) => c.autofix))
-    lines.push("corgi doctor --fix 로 고칠 수 있는 항목이 있습니다 (launchd 등록·스킬·Corgi.app).");
+  lines.push("", fails + warns === 0 ? t("doctor.allGood") : t("doctor.summary", { fails, warns }));
+  if (checks.some((c) => c.autofix)) lines.push(t("doctor.canFix"));
   return lines.join("\n");
 }
 
 export function registerDoctor(program: Command, run: Run) {
   program
     .command("doctor")
-    .description("설치·연결을 점검하고 고치는 방법을 알려 준다 (S1·S2)")
-    .option("--fix", "corgi install 로 고칠 수 있는 것(launchd 등록·스킬·Corgi.app)은 고친다")
+    .description(t("doctor.description"))
+    .option("--fix", t("doctor.fix"))
     .action(
       run(async (ctx: Context, o: { fix?: boolean }) => {
         let checks = await runChecks(ctx);
@@ -275,7 +274,7 @@ export function registerDoctor(program: Command, run: Run) {
         }
         output(ctx, checks, () => render(checks));
         if (checks.some((c) => c.status === "fail")) {
-          throw new CliError("고쳐야 할 항목이 있습니다", ExitCode.failed, "DOCTOR_FAILED", checks);
+          throw new CliError(t("doctor.failed"), ExitCode.failed, "DOCTOR_FAILED", checks);
         }
       }),
     );

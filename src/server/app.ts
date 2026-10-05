@@ -5,10 +5,12 @@ import type {
   DeviceView,
   HolderView,
   LeaseItem,
+  SettingsResult,
   SlimStats,
   StatusResult,
 } from "../shared/api.ts";
-import type { Config } from "../shared/config.ts";
+import { type Config, saveSettings } from "../shared/config.ts";
+import { type Lang, resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
 import { type Device, layoutHeight, layoutWidth, sizeLabel } from "../shared/model.ts";
 import type { Paths } from "../shared/paths.ts";
 import { isAlive as defaultIsAlive } from "../shared/proc.ts";
@@ -26,6 +28,8 @@ export interface ServerDeps {
   paths: Paths;
   config: Config;
   drivers: Driver[];
+  /** 언어 설정이 system 일 때 볼 선호 언어 — 서버는 macOS 언어 설정을 준다 (R25) */
+  systemLanguages?: () => string[];
   now?: () => number;
   isAlive?: (pid: number, startedAt: number | undefined) => boolean;
 }
@@ -52,9 +56,26 @@ const AcquireParams = z.object({
 const ReleaseParams = z.object({ devices: z.array(z.string()).optional() });
 const WhoParams = z.object({ target: z.string().optional() });
 const ForceParams = z.object({ device: z.string() });
+const SettingsParams = z.object({
+  language: z.enum(["system", "ko", "en"]).optional(),
+  idleReleaseMinutes: z
+    .number()
+    .positive()
+    .max(24 * 60)
+    .optional(),
+  androidRamMb: z.number().int().min(1024).max(16384).optional(),
+  simslimProfile: z.string().nullable().optional(),
+});
 
 /** 화면 갱신 알림이 필요 없는 메서드 */
-const READ_ONLY = new Set(["status", "device.list", "catalog", "group.list", "lease.who"]);
+const READ_ONLY = new Set([
+  "status",
+  "device.list",
+  "catalog",
+  "group.list",
+  "lease.who",
+  "settings.get",
+]);
 
 export type ServerEvent = { type: "changed" } | { type: "progress"; message: string };
 
@@ -93,7 +114,10 @@ export class CorgiServer {
       "lease.release": (p, session) => this.release(parse(ReleaseParams, p), session),
       "lease.who": (p) => this.who(parse(WhoParams, p)),
       "lease.forceRelease": (p, session) => this.forceRelease(parse(ForceParams, p), session),
+      "settings.get": async () => this.settings(),
+      "settings.set": async (p) => this.setSettings(parse(SettingsParams, p)),
     };
+    this.applyLanguage();
     registerDeviceMethods(this);
     registerGroupMethods(this);
   }
@@ -105,7 +129,8 @@ export class CorgiServer {
 
   readonly handle: Handler = async (request: Request, connection: Connection) => {
     const method = this.methods[request.method];
-    if (!method) throw new HandlerError("INVALID", `모르는 메서드: ${request.method}`);
+    if (!method)
+      throw new HandlerError("INVALID", t("err.unknownMethod", { method: request.method }));
     // 요청이 곧 «사용» 이다 — 마지막 사용 시각 갱신 (R17). 웹 UI(사람)는 점유 기록을 남기지 않는다
     if (!request.session.human || this.leases.session(request.session.key))
       this.leases.touch(request.session);
@@ -154,13 +179,45 @@ export class CorgiServer {
     return this.deps.config;
   }
 
+  /** 지금 언어 — 서버가 만드는 오류·진행 문장도 이 언어로 (R25) */
+  get lang(): Lang {
+    return resolveLanguage(this.deps.config.language, this.deps.systemLanguages?.() ?? []);
+  }
+
+  private applyLanguage(): void {
+    setLanguage(this.lang);
+  }
+
+  private settings(): SettingsResult {
+    const { config } = this.deps;
+    return {
+      language: config.language,
+      idleReleaseMinutes: config.idleReleaseMinutes,
+      androidRamMb: config.android.ramMb,
+      simslimProfile: config.ios.simslimProfile,
+    };
+  }
+
+  /** 설정 파일에 쓰고 바로 반영한다 — 드라이버는 같은 설정 객체를 보므로 값만 바꾼다 */
+  private setSettings(patch: z.infer<typeof SettingsParams>): SettingsResult {
+    const next = saveSettings(this.deps.paths.config, patch);
+    const { config } = this.deps;
+    config.language = next.language;
+    config.idleReleaseMinutes = next.idleReleaseMinutes;
+    config.android.ramMb = next.android.ramMb;
+    config.ios.simslimProfile = next.ios.simslimProfile;
+    this.leases.setIdleMs(next.idleReleaseMinutes * 60_000);
+    this.applyLanguage();
+    return this.settings();
+  }
+
   driverOrUndefined(platform: Device["spec"]["platform"]): Driver | undefined {
     return this.deps.drivers.find((d) => d.platform === platform);
   }
 
   driver(platform: Device["spec"]["platform"]): Driver {
     const driver = this.deps.drivers.find((d) => d.platform === platform);
-    if (!driver) throw new HandlerError("TOOL_MISSING", `${platform} 드라이버가 없습니다`);
+    if (!driver) throw new HandlerError("TOOL_MISSING", t("err.noDriver", { platform }));
     return driver;
   }
 
@@ -219,13 +276,13 @@ export class CorgiServer {
       if (exact) return exact;
       const lower = ref.toLowerCase();
       const named = devices.filter((d) => d.name.toLowerCase() === lower);
-      if (named.length === 0) throw new HandlerError("NOT_FOUND", `없는 디바이스: ${ref}`);
+      if (named.length === 0) throw new HandlerError("NOT_FOUND", t("err.noDevice", { ref }));
       if (named.length > 1) {
         throw new HandlerError(
           "INVALID",
-          `이름이 같은 디바이스가 여럿입니다 — ID 로 고르세요:\n${named
-            .map((d) => `  ${d.id}  ${sizeLabel(d.spec)}  ${d.native}`)
-            .join("\n")}`,
+          t("err.ambiguousDevice", {
+            list: named.map((d) => `  ${d.id}  ${sizeLabel(d.spec)}  ${d.native}`).join("\n"),
+          }),
         );
       }
       return named[0] as Device;
@@ -353,6 +410,7 @@ export class CorgiServer {
     const snapshot = this.leases.snapshot();
     return {
       serverVersion: VERSION,
+      language: this.lang,
       session,
       held: this.leases.heldBy(session.key),
       queuePosition: this.leases.queuePosition(session.key),
@@ -380,9 +438,9 @@ export class CorgiServer {
     const refs = [...params.devices];
     if (params.group) {
       const group = this.registry.findGroup(params.group);
-      if (!group) throw new HandlerError("NOT_FOUND", `없는 그룹: ${params.group}`);
+      if (!group) throw new HandlerError("NOT_FOUND", t("err.noGroup", { ref: params.group }));
       if (group.deviceIds.length === 0)
-        throw new HandlerError("INVALID", `그룹에 디바이스가 없습니다: ${group.name}`);
+        throw new HandlerError("INVALID", t("err.emptyGroup", { name: group.name }));
       refs.push(...group.deviceIds);
     }
     if (params.default) {
@@ -391,15 +449,11 @@ export class CorgiServer {
         params.default === "both" ? (["android", "ios"] as const) : [params.default];
       const ids = platforms.map((p) => defaults[p]).filter((id): id is string => id !== undefined);
       if (ids.length === 0 || (params.default !== "both" && ids.length < platforms.length)) {
-        throw new HandlerError(
-          "NO_DEFAULT",
-          "기본 디바이스가 없습니다 — corgi create 로 만들거나 corgi default <디바이스> 로 정하세요",
-        );
+        throw new HandlerError("NO_DEFAULT", t("err.noDefault"));
       }
       refs.push(...ids);
     }
-    if (refs.length === 0)
-      throw new HandlerError("INVALID", "점유할 디바이스·그룹·기본 디바이스를 지정하세요");
+    if (refs.length === 0) throw new HandlerError("INVALID", t("err.noTarget"));
     const devices = await this.resolve(refs);
     return [...new Map(devices.map((d) => [d.id, d])).values()];
   }
@@ -442,16 +496,12 @@ export class CorgiServer {
       };
     if (result.status === "busy") {
       const data: BusyData = { holders: this.holdersData(result.holders), devices: items() };
-      throw new HandlerError("BUSY", "다른 세션이 사용 중입니다", data);
+      throw new HandlerError("BUSY", t("err.busy"), data);
     }
     if (result.status === "deadlock") {
       const cycle = result.cycle.map((key) => this.leases.session(key)?.agent ?? key);
       const data: BusyData = { holders: this.holdersData(result.holders), devices: items(), cycle };
-      throw new HandlerError(
-        "DEADLOCK",
-        `기다리면 서로를 기다리게 됩니다(${cycle.join(" → ")}) — 쥔 디바이스로 진행하거나, 놓고 다시 요청하세요`,
-        data,
-      );
+      throw new HandlerError("DEADLOCK", t("err.deadlock", { cycle: cycle.join(" → ") }), data);
     }
 
     connection.emit("queued", {
@@ -506,11 +556,7 @@ export class CorgiServer {
 
   /** 강제 해제 — 사람(웹 UI·CLI --force)만 (docs/design.md §8) */
   private async forceRelease(params: z.infer<typeof ForceParams>, session: SessionInfo) {
-    if (!session.human)
-      throw new HandlerError(
-        "INVALID",
-        "강제 해제는 사람만 할 수 있습니다 — 에이전트는 기다리거나 사용자에게 물으세요",
-      );
+    if (!session.human) throw new HandlerError("INVALID", t("err.forceHumanOnly"));
     const [device] = await this.resolve([params.device]);
     const holder = device ? this.leases.holderOf(device.id) : undefined;
     if (!device || !holder) return { released: [] };
@@ -531,7 +577,7 @@ export class CorgiServer {
           states.get(d.id)?.targetId === target,
       );
       if (devices.length === 0)
-        throw new HandlerError("NOT_FOUND", `이 Mac 의 디바이스가 아닙니다: ${target}`);
+        throw new HandlerError("NOT_FOUND", t("err.notThisMac", { target }));
     }
     return devices.map((device) => {
       const lease = snapshot.leases.find((l) => l.deviceId === device.id);

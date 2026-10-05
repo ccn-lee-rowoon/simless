@@ -1,8 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { z } from "zod";
 
 /** 사용자 설정 `~/.config/corgi/config.json` — 없는 값은 기본값. */
 export const Config = z.object({
+  /** 화면·CLI 언어 — system 이면 macOS 언어 설정을 따른다 (R25) */
+  language: z.enum(["system", "ko", "en"]).default("system"),
   /** 마지막 사용 후 이 시간이 지나고 기다리는 세션이 있으면 점유를 푼다 (R17) */
   idleReleaseMinutes: z.number().positive().default(30),
   httpPort: z.number().int().positive().default(8791),
@@ -34,6 +37,39 @@ export const Config = z.object({
     .prefault({}),
 });
 export type Config = z.infer<typeof Config>;
+
+/** 설정 화면·`corgi config set` 이 바꾸는 값 (M11) */
+export interface SettingsPatch {
+  language?: Config["language"];
+  idleReleaseMinutes?: number;
+  androidRamMb?: number;
+  simslimProfile?: string | null;
+}
+
+/**
+ * 설정 파일에 바뀐 값만 쓴다 — 사람이 손으로 넣은 다른 키는 그대로 둔다.
+ * 검증을 통과한 새 설정을 돌려준다.
+ */
+export function saveSettings(path: string, patch: SettingsPatch): Config {
+  const raw = (existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {}) as Record<
+    string,
+    unknown
+  >;
+  const android = { ...((raw.android as Record<string, unknown>) ?? {}) };
+  const ios = { ...((raw.ios as Record<string, unknown>) ?? {}) };
+  if (patch.language !== undefined) raw.language = patch.language;
+  if (patch.idleReleaseMinutes !== undefined) raw.idleReleaseMinutes = patch.idleReleaseMinutes;
+  if (patch.androidRamMb !== undefined) android.ramMb = patch.androidRamMb;
+  if (patch.simslimProfile !== undefined) {
+    if (patch.simslimProfile) ios.simslimProfile = patch.simslimProfile;
+    else delete ios.simslimProfile;
+  }
+  const next = { ...raw, android, ios };
+  const parsed = Config.parse(next);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
+  return parsed;
+}
 
 export function loadConfig(path: string): Config {
   if (!existsSync(path)) return Config.parse({});

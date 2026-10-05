@@ -2,6 +2,7 @@ import { createInterface } from "node:readline/promises";
 import type { Command } from "commander";
 import type { CatalogResult, DeviceOpResult, DeviceView } from "../../shared/api.ts";
 import { ExitCode } from "../../shared/exit-codes.ts";
+import { t } from "../../shared/i18n.ts";
 import { CliError, type Context, output, type Run, request } from "../context.ts";
 import { catalogText, devicesTable } from "../format.ts";
 import { type AcquireOptions, acquire, acquireOptions } from "./lease.ts";
@@ -23,16 +24,11 @@ function finish(
 ): void {
   output(ctx, result, () => {
     const failed = result.results.filter((r) => !r.ok);
-    const lines = failed.map((r) => `실패: ${r.name} — ${r.error}`);
+    const lines = failed.map((r) => t("cli.failedFor", { name: r.name, error: r.error ?? "" }));
     return [devicesTable(result.devices), ...lines].join("\n");
   });
   if (result.results.some((r) => !r.ok)) {
-    throw new CliError(
-      `${verb}에 실패한 디바이스가 있습니다`,
-      ExitCode.failed,
-      "FAILED",
-      result.results,
-    );
+    throw new CliError(t("cli.someFailed", { verb }), ExitCode.failed, "FAILED", result.results);
   }
 }
 
@@ -47,9 +43,9 @@ async function confirm(question: string): Promise<boolean> {
 export function registerDevices(program: Command, run: Run) {
   program
     .command("list")
-    .description("이 Mac 의 디바이스 전부 — 켜짐·슬림·점유·argent ID (M5·R20)")
-    .option("--platform <platform>", "android 또는 ios")
-    .option("--created", "Corgi 가 만든 디바이스만")
+    .description(t("cli.list"))
+    .option("--platform <platform>", t("cli.opt.platform"))
+    .option("--created", t("cli.opt.created"))
     .action(
       run(async (ctx, o: { platform?: "android" | "ios"; created?: boolean }) => {
         const devices = (await call<DeviceView[]>(ctx, "device.list", {})).filter(
@@ -61,8 +57,8 @@ export function registerDevices(program: Command, run: Run) {
 
   program
     .command("catalog")
-    .description("만들 수 있는 기종·OS 와 슬림화하면 꺼지는 것 (M1·M4)")
-    .option("--platform <platform>", "android 또는 ios")
+    .description(t("cli.catalog"))
+    .option("--platform <platform>", t("cli.opt.platform"))
     .action(
       run(async (ctx, o: { platform?: "android" | "ios" }) => {
         const result = await call<CatalogResult>(ctx, "catalog", { platform: o.platform });
@@ -72,18 +68,16 @@ export function registerDevices(program: Command, run: Run) {
 
   program
     .command("create")
-    .description(
-      "기종 + OS 로 새 디바이스를 만든다 — 슬림이면 `corgi …` 이름, 앱은 설치하지 않는다 (R1·R5·M1·M4)",
-    )
-    .argument("[기종]", "기종 이름 또는 ID — corgi catalog")
-    .option("--platform <platform>", "android 또는 ios (같은 이름의 기종이 양쪽에 있을 때)")
-    .option("--os <os>", "iOS 런타임·Android 시스템 이미지 (기본: 최신·추천)")
-    .option("--width <dp>", "직접 입력(Android) — 폭 dp")
-    .option("--height <dp>", "직접 입력(Android) — 높이 dp")
-    .option("--density <dpi>", "직접 입력(Android) — 밀도 (예: 320, 420)")
-    .option("--name <이름>", "표시 이름 (기본: 슬림이면 corgi <기종>, 아니면 <기종>)")
-    .option("--no-slim", "슬림화하지 않는다 — 일반 디바이스")
-    .option("--no-baseline", "슬림 전 기준값(메모리)을 재지 않는다 — 1~2분 빨라진다")
+    .description(t("cli.create"))
+    .argument("[model]", t("cli.create.model"))
+    .option("--platform <platform>", t("cli.create.platform"))
+    .option("--os <os>", t("cli.create.os"))
+    .option("--width <dp>", t("cli.create.width"))
+    .option("--height <dp>", t("cli.create.height"))
+    .option("--density <dpi>", t("cli.create.density"))
+    .option("--name <name>", t("cli.create.name"))
+    .option("--no-slim", t("cli.create.noSlim"))
+    .option("--no-baseline", t("cli.create.noBaseline"))
     .action(
       run(
         async (
@@ -101,22 +95,11 @@ export function registerDevices(program: Command, run: Run) {
           },
         ) => {
           const custom = o.width || o.height || o.density;
-          if (custom && model)
-            throw new CliError(
-              "기종과 직접 입력(--width 등)은 함께 줄 수 없습니다",
-              ExitCode.usage,
-            );
-          if (!custom && !model)
-            throw new CliError(
-              "기종을 주거나 --width·--height·--density 로 직접 입력하세요 — corgi catalog",
-              ExitCode.usage,
-            );
+          if (custom && model) throw new CliError(t("cli.create.bothGiven"), ExitCode.usage);
+          if (!custom && !model) throw new CliError(t("cli.create.noneGiven"), ExitCode.usage);
           const numbers = [o.width, o.height, o.density].map(Number);
           if (custom && numbers.some((n) => !Number.isFinite(n) || n <= 0)) {
-            throw new CliError(
-              "직접 입력은 --width·--height·--density 를 모두 양수로 주세요",
-              ExitCode.usage,
-            );
+            throw new CliError(t("cli.create.badCustom"), ExitCode.usage);
           }
           const device = await call<DeviceView>(ctx, "device.create", {
             platform: o.platform,
@@ -136,9 +119,9 @@ export function registerDevices(program: Command, run: Run) {
 
   program
     .command("rename")
-    .description("이름을 바꾼다 — ID 는 그대로라 같은 디바이스로 실행된다 (R4)")
-    .argument("<device>", "디바이스 ID 또는 이름")
-    .argument("<name>", "새 이름")
+    .description(t("cli.rename"))
+    .argument("<device>", t("cli.arg.device"))
+    .argument("<name>", t("cli.rename.name"))
     .action(
       run(async (ctx, device: string, name: string) => {
         const result = await call<DeviceView>(ctx, "device.rename", { device, name });
@@ -148,23 +131,22 @@ export function registerDevices(program: Command, run: Run) {
 
   program
     .command("memo")
-    .description(
-      "디바이스 메모 — 로그인한 계정 등. 글을 안 주면 보여 주고, --clear 면 지운다 (R24)",
-    )
-    .argument("<device>", "디바이스 ID 또는 이름")
-    .argument("[text...]", "메모")
-    .option("--clear", "메모를 지운다")
+    .description(t("cli.memo"))
+    .argument("<device>", t("cli.arg.device"))
+    .argument("[text...]", t("cli.memo.text"))
+    .option("--clear", t("cli.memo.clear"))
     .action(
       run(async (ctx, device: string, text: string[], o: { clear?: boolean }) => {
         if (text.length === 0 && !o.clear) {
           const [found] = (await call<DeviceView[]>(ctx, "device.list", {})).filter(
             (d) => d.id === device || d.name.toLowerCase() === device.toLowerCase(),
           );
-          if (!found) throw new CliError(`없는 디바이스: ${device}`, ExitCode.failed, "NOT_FOUND");
+          if (!found)
+            throw new CliError(t("err.noDevice", { ref: device }), ExitCode.failed, "NOT_FOUND");
           output(
             ctx,
             { id: found.id, memo: found.memo ?? null },
-            () => found.memo ?? "(메모 없음)",
+            () => found.memo ?? t("cli.memo.none"),
           );
           return;
         }
@@ -178,84 +160,82 @@ export function registerDevices(program: Command, run: Run) {
 
   program
     .command("default")
-    .description("기본 디바이스 — 플랫폼마다 하나. 주면 그 디바이스를 기본으로 (R22)")
-    .argument("[device]", "디바이스 ID 또는 이름")
+    .description(t("cli.default"))
+    .argument("[device]", t("cli.arg.device"))
     .action(
       run(async (ctx, device: string | undefined) => {
         if (device) {
           const result = await call<DeviceView>(ctx, "device.setDefault", { device });
-          output(ctx, result, () => `기본 디바이스(${result.platform}): ${result.name}`);
+          output(ctx, result, () =>
+            t("cli.default.set", { platform: result.platform, name: result.name }),
+          );
           return;
         }
         const defaults = (await call<DeviceView[]>(ctx, "device.list", {})).filter(
           (d) => d.default,
         );
         output(ctx, defaults, () =>
-          defaults.length > 0
-            ? devicesTable(defaults)
-            : "기본 디바이스가 없습니다 — corgi create 로 처음 만든 디바이스가 기본이 됩니다",
+          defaults.length > 0 ? devicesTable(defaults) : t("cli.default.none"),
         );
       }),
     );
 
   program
     .command("delete")
-    .description(
-      "Corgi 가 만든 디바이스를 지운다 — 켜져 있으면 끄고, 다른 세션이 쓰는 중이면 막는다 (M8)",
-    )
-    .argument("<device>", "디바이스 ID 또는 이름")
-    .option("-y, --yes", "확인 없이 지운다")
+    .description(t("cli.delete"))
+    .argument("<device>", t("cli.arg.device"))
+    .option("-y, --yes", t("cli.delete.yes"))
     .action(
       run(async (ctx, device: string, o: { yes?: boolean }) => {
-        if (!o.yes && !(await confirm(`${device} 를 지울까요? 되돌릴 수 없습니다.`))) {
-          throw new CliError("지우지 않았습니다 (확인 없이 지우려면 --yes)", ExitCode.usage);
+        if (!o.yes && !(await confirm(t("cli.delete.confirm", { device })))) {
+          throw new CliError(t("cli.delete.cancelled"), ExitCode.usage);
         }
         const result = await call<{ deleted: string }>(ctx, "device.delete", { device });
-        output(ctx, result, () => `지웠습니다: ${result.deleted}`);
+        output(ctx, result, () => t("cli.deleted", { id: result.deleted }));
       }),
     );
 
   program
     .command("slim")
-    .description("슬림화 — 적용(기본)·해제(--off)·확인(--check) (R5, M6)")
-    .argument("[devices...]", "디바이스 ID 또는 이름 (기본: Corgi 가 만든 것 전부)")
-    .option("--off", "슬림 해제")
-    .option("--check", "슬림 상태만 확인")
+    .description(t("cli.slim"))
+    .argument("[devices...]", t("cli.slim.devices"))
+    .option("--off", t("cli.slim.off"))
+    .option("--check", t("cli.slim.check"))
     .action(
       run(async (ctx, devices: string[], o: { off?: boolean; check?: boolean }) => {
         const mode = o.check ? "check" : o.off ? "off" : "on";
-        finish(ctx, await call(ctx, "device.slim", { devices, mode }), "슬림");
+        finish(ctx, await call(ctx, "device.slim", { devices, mode }), t("cli.verb.slim"));
       }),
     );
 
   program
     .command("up")
-    .description("점유한 디바이스를 켠다 (R7)")
-    .argument("[devices...]", "디바이스 ID 또는 이름 (기본: 이 세션이 점유한 것 전부)")
+    .description(t("cli.up"))
+    .argument("[devices...]", t("cli.upDown.devices"))
     .action(
       run(async (ctx, devices: string[]) =>
-        finish(ctx, await call(ctx, "device.up", { devices }), "켜기"),
+        finish(ctx, await call(ctx, "device.up", { devices }), t("cli.verb.boot")),
       ),
     );
 
   program
     .command("down")
-    .description("점유한 디바이스를 끈다")
-    .argument("[devices...]", "디바이스 ID 또는 이름 (기본: 이 세션이 점유한 것 전부)")
+    .description(t("cli.down"))
+    .argument("[devices...]", t("cli.upDown.devices"))
     .action(
       run(async (ctx, devices: string[]) =>
-        finish(ctx, await call(ctx, "device.down", { devices }), "끄기"),
+        finish(ctx, await call(ctx, "device.down", { devices }), t("cli.verb.shutdown")),
       ),
     );
 
   const useCommand = program
     .command("use")
-    .description("점유하고 켠다 — 주 흐름의 첫 단계. 디바이스·그룹·기본 디바이스로 (R15)")
-    .argument("[devices...]", "디바이스 ID 또는 이름");
+    .description(t("cli.use"))
+    .argument("[devices...]", t("cli.arg.devices"));
   acquireOptions(useCommand).action(
     run(async (ctx, devices: string[], o: AcquireOptions) => {
       const result = await acquire(ctx, devices, o);
-      finish(ctx, await call(ctx, "device.up", { devices: result.deviceIds }), "켜기");
+      finish(ctx, await call(ctx, "device.up", { devices: result.deviceIds }), t("cli.verb.boot"));
     }),
   );
 }

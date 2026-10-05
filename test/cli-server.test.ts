@@ -72,7 +72,9 @@ describe("표 출력", () => {
       default: false,
       groups: [],
     };
-    expect(devicesTable([device])).toContain("슬림 실패 cccc: avdslim 이 없습니다 — corgi doctor");
+    expect(devicesTable([device])).toContain(
+      "Slim failed cccc: avdslim 이 없습니다 — corgi doctor",
+    );
     expect(devicesTable([device])).not.toContain("자세한 내용");
   });
 });

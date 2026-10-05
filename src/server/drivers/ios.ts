@@ -1,6 +1,7 @@
 import type { CatalogModel, PlatformCatalog, SlimCategory, SlimStats } from "../../shared/api.ts";
 import type { Config } from "../../shared/config.ts";
 import { run as defaultRun, type Runner, runOk, which } from "../../shared/exec.ts";
+import { t } from "../../shared/i18n.ts";
 import type { Device, DeviceSpec, SlimState } from "../../shared/model.ts";
 import { HandlerError } from "../socket.ts";
 import type { Discovered, Driver, ModelRequest, Progress, RuntimeState } from "./types.ts";
@@ -246,11 +247,7 @@ export class IosDriver implements Driver {
   }
 
   async resolve(request: ModelRequest): Promise<{ spec: DeviceSpec; modelName: string }> {
-    if (request.custom)
-      throw new HandlerError(
-        "INVALID",
-        "iOS 는 크기를 직접 넣을 수 없습니다 — 기기 종류를 고르세요",
-      );
+    if (request.custom) throw new HandlerError("INVALID", t("err.iosCustom"));
     const [{ deviceTypes }, runtimes] = await Promise.all([this.simCatalog(), this.iosRuntimes()]);
     const wanted = (request.model ?? "").toLowerCase();
     const type = deviceTypes.find(
@@ -258,7 +255,8 @@ export class IosDriver implements Driver {
         (t.productFamily === "iPhone" || t.productFamily === "iPad") &&
         (t.identifier.toLowerCase() === wanted || t.name.toLowerCase() === wanted),
     );
-    if (!type) throw new HandlerError("NOT_FOUND", `없는 기기 종류: ${request.model}`);
+    if (!type)
+      throw new HandlerError("NOT_FOUND", t("err.noDeviceType", { model: request.model ?? "" }));
     const supported = runtimes.filter((r) =>
       r.supportedDeviceTypes.some((t) => t.identifier === type.identifier),
     );
@@ -274,11 +272,16 @@ export class IosDriver implements Driver {
     if (!runtime) {
       throw new HandlerError(
         "NOT_FOUND",
-        os ? `없는 런타임: ${request.os}` : `${type.name} 을 만들 수 있는 런타임이 없습니다`,
+        os
+          ? t("err.noRuntime", { os: request.os ?? "" })
+          : t("err.noRuntimeFor", { model: type.name }),
       );
     }
     if (!supported.includes(runtime))
-      throw new HandlerError("INVALID", `${runtime.name} 은 ${type.name} 을 지원하지 않습니다`);
+      throw new HandlerError(
+        "INVALID",
+        t("err.runtimeUnsupported", { runtime: runtime.name, model: type.name }),
+      );
     return { spec: await this.spec(type, runtime), modelName: type.name };
   }
 
@@ -291,8 +294,13 @@ export class IosDriver implements Driver {
     progress: Progress,
   ): Promise<{ native: string }> {
     const { spec } = input;
-    if (spec.platform !== "ios") throw new HandlerError("INVALID", "iOS 기종이 아닙니다");
-    progress(`시뮬레이터 생성: ${input.name} (${spec.deviceTypeName} · ${spec.runtimeName})`);
+    if (spec.platform !== "ios") throw new HandlerError("INVALID", "Not an iOS model");
+    progress(
+      t("progress.simCreate", {
+        name: input.name,
+        detail: `${spec.deviceTypeName} · ${spec.runtimeName}`,
+      }),
+    );
     const udid = (
       await runOk(this.runner, this.simctl("create", input.name, spec.deviceTypeId, spec.runtimeId))
     ).trim();
@@ -322,10 +330,10 @@ export class IosDriver implements Driver {
 
   boot(device: Device, progress: Progress): Promise<RuntimeState> {
     const next = this.bootChain.then(async () => {
-      progress(`부팅: ${device.name}`);
+      progress(t("progress.booting", { name: device.name }));
       const result = await this.runner(this.simctl("boot", device.native));
       if (result.code !== 0 && !result.stderr.includes("current state: Booted")) {
-        throw new Error(`simctl boot 실패\n${result.stderr.trim()}`);
+        throw new Error(`simctl boot failed\n${result.stderr.trim()}`);
       }
       await runOk(this.runner, this.simctl("bootstatus", device.native), {
         timeoutMs: BOOT_TIMEOUT_MS,
@@ -339,17 +347,13 @@ export class IosDriver implements Driver {
   async shutdown(device: Device): Promise<void> {
     const result = await this.runner(this.simctl("shutdown", device.native));
     if (result.code !== 0 && !result.stderr.includes("current state: Shutdown")) {
-      throw new Error(`simctl shutdown 실패\n${result.stderr.trim()}`);
+      throw new Error(`simctl shutdown failed\n${result.stderr.trim()}`);
     }
   }
 
   private simslim(): string {
     const path = this.simslimPath();
-    if (!path)
-      throw new HandlerError(
-        "TOOL_MISSING",
-        "simslim 이 없습니다 — corgi doctor 로 설치 방법을 보세요",
-      );
+    if (!path) throw new HandlerError("TOOL_MISSING", t("err.toolMissing", { tool: "simslim" }));
     return path;
   }
 
@@ -358,7 +362,7 @@ export class IosDriver implements Driver {
   }
 
   async slim(device: Device, progress: Progress): Promise<void> {
-    progress(`슬림화(simslim): ${device.name} — 잠시 켰다가 원래 상태로 돌아간다`);
+    progress(t("progress.slimSim", { name: device.name }));
     await runOk(
       this.runner,
       [this.simslim(), "on", device.native, ...this.profileArgs(), "--preserve-boot-state"],
@@ -369,7 +373,7 @@ export class IosDriver implements Driver {
   }
 
   async unslim(device: Device, progress: Progress): Promise<void> {
-    progress(`슬림 해제(simslim): ${device.name}`);
+    progress(t("progress.unslimSim", { name: device.name }));
     await runOk(this.runner, [this.simslim(), "off", device.native, "--preserve-boot-state"], {
       timeoutMs: SLIM_TIMEOUT_MS,
     });
@@ -407,7 +411,7 @@ export class IosDriver implements Driver {
       stats.set(device.id, {
         disabled: row.managedDisabled ?? 0,
         total: row.managedTotal,
-        unit: "데몬",
+        unit: "daemons",
         memoryBytes: row.memory?.bytes,
         processes: row.memory?.processes,
         measuredAt: Date.now(),
