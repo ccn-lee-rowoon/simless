@@ -403,7 +403,7 @@ summary:focus-visible {
 
 .table {
   width: 100%;
-  min-width: 720px;
+  min-width: 680px;
   border-collapse: collapse;
 }
 
@@ -429,7 +429,7 @@ summary:focus-visible {
 }
 
 .col-width {
-  width: 130px;
+  width: 120px;
 }
 
 .nowrap {
@@ -437,15 +437,15 @@ summary:focus-visible {
 }
 
 .col-state {
-  width: 110px;
+  width: 96px;
 }
 
 .col-actions {
-  width: 110px;
+  width: 104px;
 }
 
 .name-cell {
-  min-width: 220px;
+  min-width: 170px;
 }
 
 .actions {
