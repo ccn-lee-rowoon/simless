@@ -96,12 +96,13 @@
   "androidApk": "<xb3-client>/rn/android/app/build/outputs/apk/debug/app-debug.apk",
   "devClientScheme": "exp+novadeva",   // dev client 실행: exp+novadeva://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081
   "deepLinkScheme": "novaa",           // 앱 화면 딥링크
-  "metroPort": 8081                    // adb reverse tcp:8081 tcp:8081 필요
+  "metroPort": 8081                    // 예시 — 실제로는 세션마다 비어 있는 포트(S11)
 }
 ```
 
 - iOS 번들 ID `com.ensapia.nova.alpha`(2026-10-02 확인) · 시뮬레이터용 빌드 `~/Library/Developer/Xcode/DerivedData/NOVADEVA-*/Build/Products/Debug-iphonesimulator/NOVADEVA.app` · URL 스킴 `novaa`·`exp+novadeva`
-- Metro 는 도구가 띄우지 않는다. NOVA 쪽 세션이 띄운 Metro 를 같이 쓴다
+- Metro 는 세션마다 따로 띄운다(S11) — 비어 있는 포트에 띄우고 Android 는 `adb reverse tcp:8081 tcp:<포트>`, iOS dev client 는 주소에 포트를 넣는다
+- 2026-10-05 확인: iOS 시뮬레이터용 `NOVADEVA.app` 은 DerivedData 에서 지워져 없다(다시 빌드해야 함). Android 디버그 APK 는 있다(2026-10-02, 166MB). 빌드 캐시(`buildCacheProvider`)는 설정돼 있지 않다
 
 ## 새 세션 시작 프롬프트
 
