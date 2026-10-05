@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import type { CatalogModel, CatalogResult, DeviceView, PlatformCatalog } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import { call } from "./api.ts";
+import { PlatformIcon } from "./icons.tsx";
 import type { LogLine } from "./types.ts";
 import { Dialog, osText, resolutionText, widthText } from "./ui.tsx";
 
@@ -406,6 +407,7 @@ function MacDevices({
                 <li className="picker-heading">{d.platform === "android" ? "Android" : "iOS"}</li>
               )}
               <li className="mac-row">
+                <PlatformIcon platform={d.platform} />
                 <span className="mono strong picker-width">{widthText(d)}</span>
                 <span className="strong">{d.name}</span>
                 <span className="sub">

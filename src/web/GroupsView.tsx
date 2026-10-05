@@ -2,9 +2,11 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import type { DeviceView, StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
+import { Agent } from "./agents.tsx";
 import { call } from "./api.ts";
+import { PlatformIcon } from "./icons.tsx";
 import type { Act } from "./types.ts";
-import { ago, Dialog, osText, who, widthText } from "./ui.tsx";
+import { ago, Dialog, osText, widthText } from "./ui.tsx";
 
 /** 그룹 화면 — 용도별 디바이스 묶음을 만들고 고친다 (R21·M9) */
 export function GroupsView({ status, act }: { status: StatusResult; act: Act }) {
@@ -60,9 +62,12 @@ export function GroupsView({ status, act }: { status: StatusResult; act: Act }) 
                     return (
                       <li key={id}>
                         <span className={device.booted ? "dot dot-on" : "dot"} />
+                        <PlatformIcon platform={device.platform} />
                         <span className="mono">{widthText(device)}</span>
                         <span className="strong">{device.name}</span>
-                        {device.holder && <span className="chip">{who(device.holder)}</span>}
+                        {device.holder && (
+                          <Agent agent={device.holder.agent} human={device.holder.human} />
+                        )}
                       </li>
                     );
                   })}
@@ -251,6 +256,7 @@ function GroupDialog({
                         setPicked(next);
                       }}
                     />
+                    <PlatformIcon platform={d.platform} />
                     <span className="mono picker-width">{widthText(d)}</span>
                     <span className="strong">{d.name}</span>
                     <span className="sub">{osText(d)}</span>

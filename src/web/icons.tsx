@@ -64,3 +64,37 @@ export function ExternalIcon() {
     </svg>
   );
 }
+
+/** 플랫폼 아이콘 — Android 는 로봇 머리, iOS 는 아이폰 모양(애플 로고는 쓰지 않는다) */
+export function PlatformIcon({ platform }: { platform: "android" | "ios" }) {
+  const label = platform === "android" ? "Android" : "iOS";
+  return (
+    <svg
+      className={`platform-icon platform-icon-${platform}`}
+      width={16}
+      height={16}
+      viewBox="0 0 16 16"
+      role="img"
+      aria-label={label}
+    >
+      {platform === "android" ? (
+        <g fill="currentColor">
+          <path d="M2.4 11.6a5.6 5.6 0 0 1 11.2 0z" />
+          <path
+            d="M4.6 5.1L3.5 3.3M11.4 5.1l1.1-1.8"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+          />
+          <circle cx="5.9" cy="9" r=".75" fill="var(--surface)" />
+          <circle cx="10.1" cy="9" r=".75" fill="var(--surface)" />
+        </g>
+      ) : (
+        <g fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+          <rect x="4.3" y="1.6" width="7.4" height="12.8" rx="2" />
+          <path d="M7.1 3.6h1.8" strokeWidth="1.6" />
+        </g>
+      )}
+    </svg>
+  );
+}

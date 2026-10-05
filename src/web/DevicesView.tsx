@@ -2,11 +2,13 @@ import { useEffect, useId, useMemo, useState } from "react";
 import type { DeviceView, StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
+import { Agent } from "./agents.tsx";
 import { call } from "./api.ts";
+import { PlatformIcon } from "./icons.tsx";
 import type { Act } from "./types.ts";
 import {
+  ago,
   Dialog,
-  holderText,
   Menu,
   MenuItem,
   MenuSeparator,
@@ -119,12 +121,13 @@ export function DevicesView({
           <div className="sub mono nowrap">{resolutionText(d)}</div>
         </td>
         <td className="name-cell">
-          <div className="strong">
+          <div className="strong name-line">
+            <PlatformIcon platform={d.platform} />
             {d.name}
             <SlimBadge device={d} />
           </div>
-          <div className="sub">
-            {d.platform === "android" ? "Android" : "iOS"} · {osText(d)}
+          <div className="sub name-sub">
+            {osText(d)}
             {d.createdByCorgi ? ` · ${t("web.device.createdByCorgi")}` : ""}
           </div>
         </td>
@@ -161,7 +164,16 @@ export function DevicesView({
         <td>
           {d.holder ? (
             <>
-              <div>{d.mine ? t("web.device.mine") : holderText(d.holder)}</div>
+              <div>
+                {d.mine ? (
+                  t("web.device.mine")
+                ) : (
+                  <>
+                    <Agent agent={d.holder.agent} human={d.holder.human} />
+                    <span className="sub"> · {ago(d.holder.since)}</span>
+                  </>
+                )}
+              </div>
               {!d.holder.human && <div className="sub">{shortPath(d.holder.cwd)}</div>}
             </>
           ) : (
