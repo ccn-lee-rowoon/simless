@@ -15,6 +15,11 @@ export const ko = {
   "err.unknownMethod": "모르는 메서드: {method}",
   "err.noDriver": "{platform} 드라이버가 없습니다",
   "err.noDevice": "없는 디바이스: {ref}",
+  "err.notListed":
+    "Corgi 목록에 없는 디바이스: {ref} — 생성 화면의 «이 Mac 의 디바이스» 나 corgi add 로 먼저 추가하세요",
+  "err.alreadyListed": "이미 Corgi 목록에 있습니다: {ref}",
+  "err.unlistCreated":
+    "{name} 은 Corgi 가 만든 디바이스라 목록에서 뺄 수 없습니다 — 지우려면 삭제하세요",
   "err.ambiguousDevice": "이름이 같은 디바이스가 여럿입니다 — ID 로 고르세요:\n{list}",
   "err.noGroup": "없는 그룹: {ref}",
   "err.emptyGroup": "그룹에 디바이스가 없습니다: {name}",
@@ -110,7 +115,6 @@ export const ko = {
   "cli.status.held": "점유: {ids}",
   "cli.status.noneHeld": "점유 없음",
   "cli.status.queued": " · 대기 {position}번째",
-  "cli.status.others": "이 Mac 의 다른 디바이스 {count}대 — corgi list 로 전부 보기",
   "cli.status.server": "corgi 서버 {version}",
   "cli.acquire": "디바이스를 점유한다 — 디바이스·그룹·기본 디바이스로",
   "cli.arg.devices": "디바이스 ID 또는 이름",
@@ -147,6 +151,12 @@ export const ko = {
   "cli.list": "이 Mac 의 디바이스 전부 — 켜짐·슬림·점유·argent ID (M5·R20)",
   "cli.opt.platform": "android 또는 ios",
   "cli.opt.created": "Corgi 가 만든 디바이스만",
+  "cli.list.available": "Corgi 목록에 없는 이 Mac 의 디바이스 — corgi add 로 추가할 수 있는 것",
+  "cli.add": "이 Mac 의 디바이스를 Corgi 목록에 추가한다 — 만들지도 슬림화하지도 않는다 (R20)",
+  "cli.add.device": "디바이스 이름·UDID·AVD ID — corgi list --available",
+  "cli.unlist":
+    "추가한 디바이스를 Corgi 목록에서 뺀다 — 기기는 그대로, 점유·그룹·기본 지정은 풀린다 (R20)",
+  "cli.unlisted": "목록에서 뺐습니다: {id}",
   "cli.catalog": "만들 수 있는 기종·OS 와 슬림화하면 꺼지는 것 (M1·M4)",
   "cli.create":
     "기종 + OS 로 새 디바이스를 만든다 — 슬림이면 `corgi …` 이름, 앱은 설치하지 않는다 (R1·R5·M1·M4)",

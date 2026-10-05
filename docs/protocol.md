@@ -69,17 +69,20 @@
 
 ## 메서드
 
-디바이스는 Corgi ID·AVD ID·UDID·이름으로 가리킨다. 목록은 **이 Mac 의 디바이스 전부**다(R20) — Corgi 가 만든 것은 `createdByCorgi: true`. `devices` 를 비우면 메서드마다 정한 기본값을 쓴다.
+디바이스는 Corgi ID·AVD ID·UDID·이름으로 가리킨다. 목록·점유는 **Corgi 목록**(만든 것 + 이 Mac 에서 추가한 것, `listed: true`)만 다룬다(R20) — Corgi 가 만든 것은 `createdByCorgi: true`. 목록에 없는 이 Mac 의 디바이스를 가리키면 `NOT_FOUND`(추가하라는 안내). `devices` 를 비우면 메서드마다 정한 기본값을 쓴다.
 
 | 메서드 | params | result | 비고 |
 | --- | --- | --- | --- |
-| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en)·시스템 언어 `systemLanguage`, 이 세션, 점유·대기 순번, `DeviceView[]`, 그룹 `groups`, 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
+| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en)·시스템 언어 `systemLanguage`, 이 세션, 점유·대기 순번, `DeviceView[]`(Corgi 목록), 그룹 `groups`, 세션마다 점유·대기 `sessions`(점유하거나 기다리는 세션만 — `{ sessionKey, agent, cwd, human, lastUsedAt, held: [{deviceId, since}], queued, queuePosition? }`, M13), 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
 | `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, androidRamMb, simslimProfile? }` | 설정 화면·`corgi config` (M11) |
 | `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·Android RAM·simslim 프로필 (R25) |
 | `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff`)·남는 것(`slimKeeps`) (M1·M4) |
-| `device.list` | `{}` | `DeviceView[]` | 이 Mac 의 디바이스 전부. 켜짐·argent ID(`targetId`)·점유자·메모(`memo`)·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20) |
+| `device.list` | `{}` | `DeviceView[]` | Corgi 목록. 켜짐·argent ID(`targetId`)·점유자·메모(`memo`)·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20) |
 | `device.create` | `{ platform?, model \| custom, os?, name?, slim = true, baseline = true }` | `DeviceView` | `model` = 기종 ID·이름(`platform` 을 안 주면 두 플랫폼에서 찾고, 양쪽에 있으면 `INVALID`), `custom` = `{ widthDp, heightDp, density }`(Android). `os` 를 안 주면 기본값. 앱 없이 만들고 `slim` 이면 기준값을 잰 뒤 슬림화. 기본 이름은 슬림이면 `corgi <기종>`, 아니면 `<기종>` — 겹치면 번호를 붙인다. 진행 알림 있음 |
 | `device.rename` | `{ device, name }` | `DeviceView` | 원래 있던 디바이스도 된다. 다른 세션이 쓰는 중이면 `BUSY` |
+| `device.available` | `{}` | `DeviceView[]` | 이 Mac 에 있지만 Corgi 목록에 없는 디바이스 — 생성 화면의 «이 Mac 의 디바이스» (M1) |
+| `device.add` | `{ device }` | `DeviceView` | 이 Mac 의 디바이스를 Corgi 목록에 넣는다 — 만들지도 슬림화하지도 않는다. 이미 있으면 `INVALID` |
+| `device.unlist` | `{ device }` | `{ unlisted }` | 추가한 디바이스를 목록에서 뺀다 — 기기는 그대로, 점유·그룹 소속·기본 지정은 풀린다. Corgi 가 만든 것은 `NOT_ALLOWED`(삭제를 쓴다) |
 | `device.setMemo` | `{ device, memo }` | `DeviceView` | 로그인한 계정 등 (R24). 빈 글이면 지운다. 누가 쓰는 중이어도 고칠 수 있다 |
 | `device.setDefault` | `{ device }` | `DeviceView` | 그 플랫폼의 기본 디바이스로 (R22). 기본이 없는 플랫폼은 처음 만든 디바이스가 자동으로 기본이 된다 |
 | `device.delete` | `{ device }` | `{ deleted }` | Corgi 가 만든 것만, 기본 디바이스는 안 됨(`NOT_ALLOWED`). 메모·그룹 소속도 지운다. 켜져 있으면 끄고 지운다. 다른 세션이 쓰는 중이면 `BUSY` (M8) |

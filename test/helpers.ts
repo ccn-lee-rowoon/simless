@@ -49,6 +49,7 @@ export function androidDevice(id: string, name = `Android ${id}`): Device {
     native: `corgi_${id}`,
     spec: ANDROID_SPEC,
     createdByCorgi: true,
+    listed: true,
     slim: "none",
     createdAt: "2026-10-02T00:00:00.000Z",
   };
@@ -151,13 +152,17 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
   return driver;
 }
 
-/** 이 Mac 에 기기를 두고 ID 를 정해 둔다 — 테스트에서 ID 로 가리키려고 */
+/**
+ * 이 Mac 에 기기를 두고 ID 를 정해 둔다 — 테스트에서 ID 로 가리키려고.
+ * 원래 있던 기기(createdByCorgi false)는 기본으로 Corgi 목록에 추가된 것으로 둔다
+ */
 export function seedDevice(
   server: { registry: Registry },
   driver: FakeDriver,
   id: string,
   name: string,
   createdByCorgi = true,
+  listed = true,
 ): void {
   const device = androidDevice(id, name);
   if (!createdByCorgi) device.native = `${name.replace(/\s/g, "_")}_${id}`;
@@ -167,6 +172,7 @@ export function seedDevice(
     platform: "android",
     native: device.native,
     createdByCorgi,
+    listed,
     slim: "none",
     createdAt: device.createdAt,
   });

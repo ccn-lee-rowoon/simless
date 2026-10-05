@@ -71,6 +71,7 @@ const SettingsParams = z.object({
 const READ_ONLY = new Set([
   "status",
   "device.list",
+  "device.available",
   "catalog",
   "group.list",
   "lease.who",
@@ -255,7 +256,12 @@ export class CorgiServer {
           item.native,
           driver.platform === "android" && item.native.startsWith("corgi_"),
         );
-        devices.push({ ...meta, name: item.name, spec: item.spec });
+        devices.push({
+          ...meta,
+          listed: meta.listed ?? meta.createdByCorgi,
+          name: item.name,
+          spec: item.spec,
+        });
       }
       const gone = this.registry.prune(driver.platform, new Set(found.map((f) => f.native)));
       for (const id of gone) this.leases.forgetDevice(id);
@@ -264,8 +270,22 @@ export class CorgiServer {
     return this.inventoryCache;
   }
 
+  /** Corgi 목록 — 메인 목록·점유·보호는 이것만 (R20) */
   async devices(): Promise<Device[]> {
-    return (await this.inventory()).devices;
+    return (await this.inventory()).devices.filter((d) => d.listed);
+  }
+
+  /** 이 Mac 에 있지만 Corgi 목록에 없는 디바이스 — 생성 화면에서 골라 추가한다 */
+  async available(): Promise<Device[]> {
+    return (await this.inventory()).devices.filter((d) => !d.listed);
+  }
+
+  /** 이 Mac 에는 있지만 Corgi 목록에 없는 디바이스인지 — 오류 안내용 */
+  private isOnMac(ref: string): boolean {
+    const lower = ref.toLowerCase();
+    return (this.inventoryCache?.devices ?? []).some(
+      (d) => !d.listed && (d.id === ref || d.native === ref || d.name.toLowerCase() === lower),
+    );
   }
 
   /** ID·AVD ID·UDID·이름(대소문자 무시)으로 찾는다. 없으면 NOT_FOUND, 이름이 여럿이면 INVALID */
@@ -276,7 +296,12 @@ export class CorgiServer {
       if (exact) return exact;
       const lower = ref.toLowerCase();
       const named = devices.filter((d) => d.name.toLowerCase() === lower);
-      if (named.length === 0) throw new HandlerError("NOT_FOUND", t("err.noDevice", { ref }));
+      if (named.length === 0) {
+        throw new HandlerError(
+          "NOT_FOUND",
+          t(this.isOnMac(ref) ? "err.notListed" : "err.noDevice", { ref }),
+        );
+      }
       if (named.length > 1) {
         throw new HandlerError(
           "INVALID",
@@ -418,6 +443,25 @@ export class CorgiServer {
       devices: await this.deviceViews(session),
       groups: this.registry.groups(),
       defaults: this.registry.defaults(),
+      // 점유하거나 기다리는 세션만 — 조회만 한 세션은 빼고
+      sessions: snapshot.sessions
+        .filter(
+          (s) =>
+            snapshot.leases.some((l) => l.sessionKey === s.key) ||
+            snapshot.queue.some((e) => e.sessionKey === s.key),
+        )
+        .map((s) => ({
+          sessionKey: s.key,
+          agent: s.agent,
+          cwd: s.cwd,
+          human: s.human,
+          lastUsedAt: s.lastUsedAt,
+          held: snapshot.leases
+            .filter((l) => l.sessionKey === s.key)
+            .map((l) => ({ deviceId: l.deviceId, since: l.acquiredAt })),
+          queued: snapshot.queue.find((e) => e.sessionKey === s.key)?.deviceIds ?? [],
+          queuePosition: this.leases.queuePosition(s.key),
+        })),
       queue: snapshot.queue.map((e) => ({
         sessionKey: e.sessionKey,
         agent: this.leases.session(e.sessionKey)?.agent ?? "unknown",

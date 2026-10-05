@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState } from "react";
-import { type DeviceView, isPrimaryDevice as isPrimary, type StatusResult } from "../shared/api.ts";
+import type { DeviceView, StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
 import { call } from "./api.ts";
@@ -64,7 +64,6 @@ export function DevicesView({
   });
   const [groupFilter, setGroupFilterState] = useState(() => saved(GROUP_KEY, ""));
   const [query, setQuery] = useState("");
-  const [showOthers, setShowOthers] = useState(false);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [renaming, setRenaming] = useState<DeviceView | null>(null);
   const [memo, setMemo] = useState<DeviceView | null>(null);
@@ -102,11 +101,6 @@ export function DevicesView({
       )
       .sort(compare);
   }, [status.devices, platform, activeGroup, query]);
-
-  // 검색·그룹 거르기 중에는 접지 않는다
-  const flat = query.trim() !== "" || activeGroup !== undefined;
-  const primary = flat ? filtered : filtered.filter(isPrimary);
-  const others = flat ? [] : filtered.filter((d) => !isPrimary(d));
 
   const run = async (device: DeviceView, label: string, fn: () => Promise<unknown>) => {
     setBusy((s) => new Set(s).add(device.id));
@@ -340,41 +334,10 @@ export function DevicesView({
                   </th>
                 </tr>
               </thead>
-              <tbody>
-                {primary.map(row)}
-                {showOthers && others.map(row)}
-              </tbody>
+              <tbody>{filtered.map(row)}</tbody>
             </table>
-            {primary.length === 0 && others.length === 0 && (
-              <p className="sub empty-row">{t("web.noMatch")}</p>
-            )}
+            {filtered.length === 0 && <p className="sub empty-row">{t("web.noMatch")}</p>}
           </div>
-          {others.length > 0 && (
-            <button
-              type="button"
-              className="others-toggle"
-              aria-expanded={showOthers}
-              onClick={() => setShowOthers(!showOthers)}
-            >
-              <svg
-                className={showOthers ? "chevron chevron-open" : "chevron"}
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                aria-hidden="true"
-              >
-                <path
-                  d="M4 2.5L7.5 6L4 9.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-              </svg>
-              {t(showOthers ? "web.others.hide" : "web.others.show", { count: others.length })}
-              <span className="sub">{t("web.others.hint")}</span>
-            </button>
-          )}
         </div>
       )}
 

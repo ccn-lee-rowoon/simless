@@ -46,13 +46,20 @@ export function registerDevices(program: Command, run: Run) {
     .description(t("cli.list"))
     .option("--platform <platform>", t("cli.opt.platform"))
     .option("--created", t("cli.opt.created"))
+    .option("--available", t("cli.list.available"))
     .action(
-      run(async (ctx, o: { platform?: "android" | "ios"; created?: boolean }) => {
-        const devices = (await call<DeviceView[]>(ctx, "device.list", {})).filter(
-          (d) => (!o.platform || d.platform === o.platform) && (!o.created || d.createdByCorgi),
-        );
-        output(ctx, devices, () => devicesTable(devices));
-      }),
+      run(
+        async (
+          ctx,
+          o: { platform?: "android" | "ios"; created?: boolean; available?: boolean },
+        ) => {
+          const method = o.available ? "device.available" : "device.list";
+          const devices = (await call<DeviceView[]>(ctx, method, {})).filter(
+            (d) => (!o.platform || d.platform === o.platform) && (!o.created || d.createdByCorgi),
+          );
+          output(ctx, devices, () => devicesTable(devices));
+        },
+      ),
     );
 
   program
@@ -126,6 +133,28 @@ export function registerDevices(program: Command, run: Run) {
       run(async (ctx, device: string, name: string) => {
         const result = await call<DeviceView>(ctx, "device.rename", { device, name });
         output(ctx, result, () => devicesTable([result]));
+      }),
+    );
+
+  program
+    .command("add")
+    .description(t("cli.add"))
+    .argument("<device>", t("cli.add.device"))
+    .action(
+      run(async (ctx, device: string) => {
+        const result = await call<DeviceView>(ctx, "device.add", { device });
+        output(ctx, result, () => devicesTable([result]));
+      }),
+    );
+
+  program
+    .command("unlist")
+    .description(t("cli.unlist"))
+    .argument("<device>", t("cli.arg.device"))
+    .action(
+      run(async (ctx, device: string) => {
+        const result = await call<{ unlisted: string }>(ctx, "device.unlist", { device });
+        output(ctx, result, () => t("cli.unlisted", { id: result.unlisted }));
       }),
     );
 

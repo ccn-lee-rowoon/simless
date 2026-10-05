@@ -44,6 +44,19 @@ export interface DeviceView extends Device {
   groups: string[];
 }
 
+/** 세션 화면 한 줄 (M13) */
+export interface SessionView {
+  sessionKey: string;
+  agent: string;
+  cwd: string;
+  human: boolean;
+  lastUsedAt: number;
+  held: { deviceId: string; since: number }[];
+  /** 대기열에서 기다리는 디바이스 */
+  queued: string[];
+  queuePosition?: number;
+}
+
 /** 설정 화면 (M11) */
 export interface SettingsResult {
   /** 설정값 — system·ko·en */
@@ -65,6 +78,8 @@ export interface StatusResult {
   devices: DeviceView[];
   groups: Group[];
   defaults: Defaults;
+  /** 세션마다 점유·대기 (M13) */
+  sessions: SessionView[];
   queue: { sessionKey: string; agent: string; deviceIds: string[]; enqueuedAt: number }[];
 }
 
@@ -164,12 +179,4 @@ export function memoryChange(before?: number, after?: number): string | undefine
   const gb = (bytes: number) => `${(bytes / 1024 ** 3).toFixed(1)}GB`;
   const percent = Math.round(((after - before) / before) * 100);
   return `${gb(before)} → ${gb(after)} (${percent <= 0 ? "−" : "+"}${Math.abs(percent)}%)`;
-}
-
-/**
- * 먼저 보여 줄 디바이스 — 켜진 것·기본·그룹에 든 것·Corgi 가 만든 것·누가 쓰는 것 (M5).
- * 나머지(Xcode 가 만들어 둔 시뮬레이터 등)는 화면에서 접고 CLI status 에서는 수만 보인다.
- */
-export function isPrimaryDevice(d: DeviceView): boolean {
-  return d.booted || d.default || d.groups.length > 0 || d.createdByCorgi || d.holder !== undefined;
 }

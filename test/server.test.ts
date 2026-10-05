@@ -53,6 +53,26 @@ describe("소켓 서버", () => {
     });
   });
 
+  test("status 의 sessions — 세션마다 점유한 것·기다리는 것 (M13)", async () => {
+    const { socket } = await start();
+    await call(socket, "lease.acquire", { devices: ["aaaa"] }, session("A"));
+    await call(
+      socket,
+      "lease.acquire",
+      { devices: ["aaaa"], wait: true, timeoutMs: 10 },
+      session("B"),
+    );
+    const { result } = await call<StatusResult>(socket, "status", {}, session("C"));
+    expect(result.sessions).toEqual([
+      expect.objectContaining({
+        sessionKey: "A",
+        held: [expect.objectContaining({ deviceId: "aaaa" })],
+        queued: [],
+      }),
+      expect.objectContaining({ sessionKey: "B", held: [], queued: ["aaaa"], queuePosition: 1 }),
+    ]);
+  });
+
   test("기다리기 — 풀리는 순간 대기하던 호출이 점유로 끝난다", async () => {
     const { socket } = await start();
     await call(socket, "lease.acquire", { devices: ["aaaa"] }, session("A"));

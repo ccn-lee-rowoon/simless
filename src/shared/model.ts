@@ -42,6 +42,8 @@ export const DeviceMeta = z.object({
   native: z.string(),
   /** Corgi 가 만든 디바이스 — 삭제·슬림 켜고 끄기는 이것만 (M7·M8·N5) */
   createdByCorgi: z.boolean(),
+  /** Corgi 목록에 있는지 (R20) — 없으면(이전 형식) createdByCorgi 와 같다 */
+  listed: z.boolean().optional(),
   slim: SlimState,
   slimError: z.string().optional(),
   /** 슬림하기 전에 잰 기준값 — 슬림 후 메모리와 비교한다 (M10) */
@@ -79,6 +81,8 @@ export type Defaults = z.infer<typeof Defaults>;
 
 /** 이 Mac 의 디바이스 하나 — 드라이버가 읽은 기기 + Corgi 가 붙인 정보 */
 export interface Device extends DeviceMeta {
+  /** Corgi 목록에 있는지 — 메인 목록·점유·보호는 이것만 (R20) */
+  listed: boolean;
   /** 표시 이름 — Android `avd.ini.displayname`, iOS 시뮬레이터 이름. 바꿀 수 있다 (R3) */
   name: string;
   spec: DeviceSpec;

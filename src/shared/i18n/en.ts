@@ -14,6 +14,11 @@ export const en: Record<keyof typeof ko, string> = {
   "err.unknownMethod": "Unknown method: {method}",
   "err.noDriver": "No {platform} driver",
   "err.noDevice": "No such device: {ref}",
+  "err.notListed":
+    "Not in the Corgi list: {ref} — add it first from «Devices on this Mac» in the create window, or with corgi add",
+  "err.alreadyListed": "Already in the Corgi list: {ref}",
+  "err.unlistCreated":
+    "{name} was created by Corgi, so it can't be taken off the list — delete it instead",
   "err.ambiguousDevice": "Several devices have this name — pick one by ID:\n{list}",
   "err.noGroup": "No such group: {ref}",
   "err.emptyGroup": "The group has no devices: {name}",
@@ -102,7 +107,6 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.status.held": "Holding: {ids}",
   "cli.status.noneHeld": "Holding nothing",
   "cli.status.queued": " · waiting #{position}",
-  "cli.status.others": "{count} other devices on this Mac — see them all with corgi list",
   "cli.status.server": "corgi server {version}",
   "cli.acquire": "Acquire devices — by device, group, or default device",
   "cli.arg.devices": "Device IDs or names",
@@ -137,6 +141,13 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.list": "Every device on this Mac — state, slim, lease, argent ID (M5·R20)",
   "cli.opt.platform": "android or ios",
   "cli.opt.created": "Only devices Corgi created",
+  "cli.list.available":
+    "Devices on this Mac that aren't in the Corgi list — the ones corgi add can add",
+  "cli.add": "Add a device on this Mac to the Corgi list — nothing is created or slimmed (R20)",
+  "cli.add.device": "Device name, UDID, or AVD ID — see corgi list --available",
+  "cli.unlist":
+    "Take an added device off the Corgi list — the device stays; its lease, groups and default go (R20)",
+  "cli.unlisted": "Taken off the list: {id}",
   "cli.catalog": "Models and OS versions you can create, and what slimming turns off (M1·M4)",
   "cli.create":
     "Create a device from a model and OS — slim devices are named `corgi …`; no apps are installed (R1·R5·M1·M4)",

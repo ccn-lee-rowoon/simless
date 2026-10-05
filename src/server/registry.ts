@@ -139,6 +139,12 @@ export class Registry {
     this.save();
   }
 
+  /** Corgi 목록에서 뺀다 — 정보는 남기고 그룹 소속·기본 지정만 푼다 (R20) */
+  unlist(id: string): void {
+    this.detach(new Set([id]));
+    this.update(id, { listed: false });
+  }
+
   /** 이 플랫폼에서 더는 보이지 않는 기기의 정보를 지운다 — 지운 ID 를 돌려준다 */
   prune(platform: Platform, seen: Set<string>): string[] {
     const gone = this.devices.filter((d) => d.platform === platform && !seen.has(d.native));
@@ -151,6 +157,11 @@ export class Registry {
 
   private forget(ids: Set<string>): void {
     this.devices = this.devices.filter((d) => !ids.has(d.id));
+    this.detach(ids);
+  }
+
+  /** 그룹 소속·기본 지정에서 뺀다 */
+  private detach(ids: Set<string>): void {
     for (const group of this.groupList)
       group.deviceIds = group.deviceIds.filter((id) => !ids.has(id));
     for (const platform of ["android", "ios"] as const) {

@@ -285,13 +285,14 @@ export function registerDeviceMethods(server: CorgiServer): void {
       platform,
       native,
       createdByCorgi: true,
+      listed: true,
       slim: "none",
       createdAt: new Date().toISOString(),
     });
     // 그 플랫폼에 기본 디바이스가 없으면 처음 만든 것이 기본이 된다 (R22)
     if (!server.registry.defaults()[platform]) server.registry.setDefault(platform, id);
     server.invalidate();
-    let device: Device = { ...meta, name, spec };
+    let device: Device = { ...meta, listed: true, name, spec };
     if (params.slim && params.baseline)
       device = await withLock(id, () => measureBaseline(device, progress));
     if (params.slim) device = await withLock(id, () => applySlim(device, progress));
@@ -311,6 +312,53 @@ export function registerDeviceMethods(server: CorgiServer): void {
     );
     server.invalidate();
     return view(session, { ...device, name: params.name });
+  });
+
+  /** 이 Mac 에 있지만 Corgi 목록에 없는 디바이스 — 생성 화면의 «이 Mac 의 디바이스» (M1·R20) */
+  server.addMethod("device.available", async (_p, session) =>
+    server.deviceViews(session, await server.available()),
+  );
+
+  /** 이 Mac 의 디바이스를 Corgi 목록에 넣는다 — 만들지도 슬림화하지도 않는다 (R20) */
+  server.addMethod("device.add", async (p, session) => {
+    const params = parse(DeviceRef, p);
+    const lower = params.device.toLowerCase();
+    const matches = (await server.available()).filter(
+      (d) => d.id === params.device || d.native === params.device || d.name.toLowerCase() === lower,
+    );
+    if (matches.length === 0) {
+      const listed = (await server.devices()).some(
+        (d) =>
+          d.id === params.device || d.native === params.device || d.name.toLowerCase() === lower,
+      );
+      throw new HandlerError(
+        listed ? "INVALID" : "NOT_FOUND",
+        t(listed ? "err.alreadyListed" : "err.noDevice", { ref: params.device }),
+      );
+    }
+    if (matches.length > 1) {
+      throw new HandlerError(
+        "INVALID",
+        t("err.ambiguousDevice", {
+          list: matches.map((d) => `  ${d.id}  ${d.native}  ${d.name}`).join("\n"),
+        }),
+      );
+    }
+    const device = matches[0] as Device;
+    return view(session, { ...update(device, { listed: true }), listed: true });
+  });
+
+  /** Corgi 목록에서 뺀다 — 원래 있던(추가한) 디바이스만, 기기는 그대로 (R20) */
+  server.addMethod("device.unlist", async (p) => {
+    const params = parse(DeviceRef, p);
+    const [device] = await server.resolve([params.device]);
+    if (!device) throw new HandlerError("NOT_FOUND", params.device);
+    if (device.createdByCorgi)
+      throw new HandlerError("NOT_ALLOWED", t("err.unlistCreated", { name: device.name }));
+    server.registry.unlist(device.id);
+    server.leases.forgetDevice(device.id);
+    server.invalidate();
+    return { unlisted: device.id };
   });
 
   /** 메모는 기기 상태 기록이라 누가 쓰는 중이어도 고칠 수 있다 (R24) */

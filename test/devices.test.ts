@@ -96,15 +96,46 @@ describe("디바이스 명령", () => {
     expect(server.leases.heldBy("A")).toEqual([]);
   });
 
-  test("이 Mac 에 원래 있던 디바이스도 목록에 나오고 점유할 수 있다 (R20)", async () => {
+  test("이 Mac 의 디바이스는 목록에 없다가, 추가하면 목록에 들어와 점유할 수 있다 (R20)", async () => {
     const { A, server, driver } = await start();
-    seedDevice(server, driver, "pix6", "Pixel 6a", false);
-    const [device] = (await A("device.list")) as DeviceView[];
-    expect(device).toMatchObject({ id: "pix6", name: "Pixel 6a", createdByCorgi: false });
+    seedDevice(server, driver, "pix6", "Pixel 6a", false, false);
+    expect(await A("device.list")).toEqual([]);
+    expect(await A("lease.acquire", { devices: ["Pixel 6a"] })).toMatchObject({
+      code: "NOT_FOUND",
+      message: expect.stringContaining("corgi add"),
+    });
+    const [available] = (await A("device.available")) as DeviceView[];
+    expect(available).toMatchObject({ id: "pix6", listed: false, createdByCorgi: false });
+    expect(await A("device.add", { device: "Pixel 6a" })).toMatchObject({
+      id: "pix6",
+      listed: true,
+    });
+    expect(await A("device.available")).toEqual([]);
     expect(await A("lease.acquire", { devices: ["Pixel 6a"] })).toMatchObject({
       status: "granted",
       deviceIds: ["pix6"],
     });
+    expect(await A("device.add", { device: "pix6" })).toMatchObject({ code: "INVALID" });
+  });
+
+  test("추가한 디바이스는 목록에서 빼면 점유·그룹·기본 지정도 풀리고 기기는 남는다", async () => {
+    const { A, server, driver } = await start();
+    seedDevice(server, driver, "pix6", "Pixel 6a", false);
+    await A("group.create", { name: "DM", devices: ["pix6"] });
+    await A("device.setDefault", { device: "pix6" });
+    await A("lease.acquire", { devices: ["pix6"] });
+    expect(await A("device.unlist", { device: "pix6" })).toEqual({ unlisted: "pix6" });
+    expect(await A("device.list")).toEqual([]);
+    expect(server.leases.heldBy("A")).toEqual([]);
+    expect(server.registry.groups()[0]?.deviceIds).toEqual([]);
+    expect(server.registry.defaults()).toEqual({});
+    expect(driver.existing).toHaveLength(1);
+  });
+
+  test("Corgi 가 만든 디바이스는 목록에서 뺄 수 없다 — 삭제한다", async () => {
+    const { A } = await start();
+    const device = (await A("device.create", android360)) as DeviceView;
+    expect(await A("device.unlist", { device: device.id })).toMatchObject({ code: "NOT_ALLOWED" });
   });
 
   test("원래 있던 디바이스는 지우거나 슬림 설정할 수 없다 (M8·N5)", async () => {
