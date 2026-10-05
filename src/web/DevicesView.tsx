@@ -66,7 +66,6 @@ export function DevicesView({
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [renaming, setRenaming] = useState<DeviceView | null>(null);
-  const [memo, setMemo] = useState<DeviceView | null>(null);
   const [grouping, setGrouping] = useState<DeviceView | null>(null);
   const [deleting, setDeleting] = useState<DeviceView | null>(null);
 
@@ -94,11 +93,7 @@ export function DevicesView({
     return status.devices
       .filter((d) => platform === "all" || d.platform === platform)
       .filter((d) => !activeGroup || activeGroup.deviceIds.includes(d.id))
-      .filter(
-        (d) =>
-          q === "" ||
-          `${d.name} ${d.memo ?? ""} ${osText(d)} ${widthText(d)}`.toLowerCase().includes(q),
-      )
+      .filter((d) => q === "" || `${d.name} ${osText(d)} ${widthText(d)}`.toLowerCase().includes(q))
       .sort(compare);
   }, [status.devices, platform, activeGroup, query]);
 
@@ -163,7 +158,6 @@ export function DevicesView({
             ) : null;
           })}
         </td>
-        <td className="memo-cell">{d.memo ?? <span className="sub">—</span>}</td>
         <td>
           {d.holder ? (
             <>
@@ -193,7 +187,6 @@ export function DevicesView({
             <MenuItem disabled={lockedByOther} onClick={() => setRenaming(d)}>
               {t("web.device.rename")}
             </MenuItem>
-            <MenuItem onClick={() => setMemo(d)}>{t("web.device.memo")}</MenuItem>
             <MenuItem onClick={() => setGrouping(d)}>{t("web.device.groups")}</MenuItem>
             <MenuItem
               disabled={d.default}
@@ -333,7 +326,6 @@ export function DevicesView({
                   <th>{t("table.name")}</th>
                   <th className="col-state">{t("table.state")}</th>
                   <th>{t("web.tags")}</th>
-                  <th>{t("table.memo")}</th>
                   <th>{t("web.holder")}</th>
                   <th className="col-actions">
                     <span className="visually-hidden">{t("web.actions")}</span>
@@ -359,20 +351,6 @@ export function DevicesView({
             void run(d, t("web.device.rename"), () =>
               call("device.rename", { device: d.id, name: name.trim() }),
             );
-        }}
-      />
-      <TextDialog
-        title={t("web.device.memo")}
-        label={t("web.memo.label")}
-        device={memo}
-        initial={memo?.memo ?? ""}
-        multiline
-        onClose={() => setMemo(null)}
-        onSave={(d, text) => {
-          setMemo(null);
-          void run(d, t("web.device.memo"), () =>
-            call("device.setMemo", { device: d.id, memo: text }),
-          );
         }}
       />
       <DeviceGroupsDialog
@@ -427,7 +405,6 @@ function TextDialog({
   label,
   device,
   initial,
-  multiline,
   onClose,
   onSave,
 }: {
@@ -435,7 +412,6 @@ function TextDialog({
   label: string;
   device: DeviceView | null;
   initial: string;
-  multiline?: boolean;
   onClose: () => void;
   onSave: (device: DeviceView, text: string) => void;
 }) {
@@ -458,22 +434,12 @@ function TextDialog({
           <p className="sub">{device.name}</p>
           <div className="field">
             <label htmlFor={inputId}>{label}</label>
-            {multiline ? (
-              <textarea
-                id={inputId}
-                data-autofocus
-                rows={3}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-              />
-            ) : (
-              <input
-                id={inputId}
-                data-autofocus
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-              />
-            )}
+            <input
+              id={inputId}
+              data-autofocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
           </div>
           <footer className="dialog-footer">
             <span className="spacer" />

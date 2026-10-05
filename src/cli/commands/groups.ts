@@ -13,7 +13,7 @@ async function groupText(ctx: Context, group: Group): Promise<string> {
   const devices = await request<DeviceView[]>(ctx, "device.list", {});
   const rows = group.deviceIds.map((id) => {
     const d = devices.find((x) => x.id === id);
-    return d ? [d.id, d.label, d.name, d.memo ?? ""] : [id, "", t("cli.group.missingDevice"), ""];
+    return d ? [d.id, d.label, d.name] : [id, "", t("cli.group.missingDevice")];
   });
   return [
     `${group.name}  (${group.id})`,
@@ -21,7 +21,7 @@ async function groupText(ctx: Context, group: Group): Promise<string> {
     t("cli.group.lastEdit", { who: editorText(group) }),
     "",
     rows.length > 0
-      ? table([t("table.id"), t("table.size"), t("table.name"), t("table.memo")], rows)
+      ? table([t("table.id"), t("table.size"), t("table.name")], rows)
       : t("cli.group.empty"),
   ].join("\n");
 }

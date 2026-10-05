@@ -449,11 +449,6 @@ summary:focus-visible {
   min-width: 220px;
 }
 
-.memo-cell {
-  max-width: 220px;
-  white-space: pre-line;
-}
-
 .actions {
   white-space: nowrap;
   text-align: right;

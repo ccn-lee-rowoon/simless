@@ -175,10 +175,6 @@ export const ko = {
   "cli.create.badCustom": "직접 입력은 --width·--height·--density 를 모두 양수로 주세요",
   "cli.rename": "이름을 바꾼다 — ID 는 그대로라 같은 디바이스로 실행된다 (R4)",
   "cli.rename.name": "새 이름",
-  "cli.memo": "디바이스 메모 — 로그인한 계정 등. 글을 안 주면 보여 주고, --clear 면 지운다 (R24)",
-  "cli.memo.text": "메모",
-  "cli.memo.clear": "메모를 지운다",
-  "cli.memo.none": "(메모 없음)",
   "cli.default": "기본 디바이스 — 플랫폼마다 하나. 주면 그 디바이스를 기본으로 (R22)",
   "cli.default.set": "기본 디바이스({platform}): {name}",
   "cli.default.none":
@@ -209,7 +205,6 @@ export const ko = {
   "table.name": "이름",
   "table.state": "상태",
   "table.slim": "슬림",
-  "table.memo": "메모",
   "table.holder": "점유",
   "table.width": "폭",
   "table.model": "기종",
@@ -325,7 +320,7 @@ export const ko = {
   "web.platform": "플랫폼",
   "web.groupFilter": "그룹",
   "web.groupFilter.all": "전체",
-  "web.search": "이름·메모로 찾기",
+  "web.search": "이름으로 찾기",
   "web.tags": "태그",
   "web.holder": "사용 중",
   "web.noMatch": "맞는 디바이스가 없습니다",
@@ -341,7 +336,6 @@ export const ko = {
   "web.device.shutdown": "끄기",
   "web.device.more": "더보기",
   "web.device.rename": "이름 변경",
-  "web.device.memo": "메모",
   "web.device.groups": "그룹",
   "web.device.makeDefault": "기본 디바이스로 정하기",
   "web.device.slimOn": "슬림 켜기",
@@ -351,7 +345,6 @@ export const ko = {
   "web.device.defaultCantDelete":
     "기본 디바이스는 지울 수 없습니다 — 다른 디바이스를 기본으로 정한 뒤 지우세요",
   "web.rename.label": "새 이름 — ID({id})는 그대로라 같은 디바이스로 실행됩니다",
-  "web.memo.label": "로그인한 계정 등 — 에이전트도 읽습니다",
   "web.delete.title": "디바이스 삭제",
   "web.delete.body":
     "{name} 을(를) 지울까요? 켜져 있으면 끄고 지웁니다. 메모와 그룹 소속도 지워지고, 되돌릴 수 없습니다.",

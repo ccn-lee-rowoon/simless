@@ -9,7 +9,7 @@ Corgi lets several agent sessions and people share this Mac's simulators and emu
 
 | Who | Does what |
 | --- | --- |
-| Corgi (`corgi`) | Lists devices, device groups and memos; **acquires**/releases; boots/shuts down; creates and slims devices; gives each device's argent ID and size label |
+| Corgi (`corgi`) | Lists devices and device groups; **acquires**/releases; boots/shuts down; creates and slims devices; gives each device's argent ID and size label |
 | argent | Installs (`reinstall-app`) and launches (`launch-app`) apps, deep links (`open-url`), taps, screenshots |
 
 **Rules**
@@ -31,7 +31,7 @@ corgi --json group list      # device groups — read each description
 
 - Exit code 4 (can't reach the server) or anything odd: run `corgi doctor` and follow it. If you can't fix it, tell the user.
 - **Choose by purpose**:
-  1. The user names a group (or the task clearly matches one by its description) → that group. Read device **memos** (`corgi --json list`) for state such as the signed-in account.
+  1. The user names a group (or the task clearly matches one by its description) → that group.
   2. Nothing specific → the **default device** (`--default ios`, `--default android`, or both).
   3. The user names devices → those devices.
 - No device fits (e.g. a screen width is missing): show `corgi catalog`, **ask the user**, then create:
@@ -90,7 +90,6 @@ corgi release
 ```sh
 corgi group create "DM check" --desc "Moderator + member — needs both devices" <device>...
 corgi group edit "DM check" --add <device> --remove <device> --desc "…"
-corgi memo <device> "moderator account"     # what's on the device (signed-in account …)
 corgi default <device>                       # make it its platform's default device
 ```
 
@@ -99,7 +98,7 @@ corgi default <device>                       # make it its platform's default de
 | Command | What it does |
 | --- | --- |
 | `corgi --json status` | Server, devices, groups, defaults, leases |
-| `corgi --json list [--platform] [--created]` | Every device on this Mac — `targetId`, `label`, state, slim, memo, groups, holder |
+| `corgi --json list [--platform] [--created]` | Devices in the Corgi list — `targetId`, `label`, state, slim, groups, holder |
 | `corgi --json group list` / `group show <group>` | Device groups and their devices |
 | `corgi --json use … [--group] [--default [platform]] [--available] [--wait --timeout 9m]` | Acquire + boot |
 | `corgi acquire …` | Acquire without booting (same options) |

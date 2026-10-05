@@ -62,7 +62,6 @@ export function GroupsView({ status, act }: { status: StatusResult; act: Act }) 
                         <span className={device.booted ? "dot dot-on" : "dot"} />
                         <span className="mono">{widthText(device)}</span>
                         <span className="strong">{device.name}</span>
-                        {device.memo && <span className="sub">{device.memo}</span>}
                         {device.holder && <span className="chip">{who(device.holder)}</span>}
                       </li>
                     );
@@ -161,7 +160,7 @@ function GroupDialog({
     const q = query.trim().toLowerCase();
     return devices
       .filter((d) => platform === "all" || d.platform === platform)
-      .filter((d) => q === "" || `${d.name} ${d.memo ?? ""}`.toLowerCase().includes(q))
+      .filter((d) => q === "" || d.name.toLowerCase().includes(q))
       .sort(
         (a, b) =>
           a.platform.localeCompare(b.platform) ||
@@ -254,10 +253,7 @@ function GroupDialog({
                     />
                     <span className="mono picker-width">{widthText(d)}</span>
                     <span className="strong">{d.name}</span>
-                    <span className="sub">
-                      {osText(d)}
-                      {d.memo ? ` · ${d.memo}` : ""}
-                    </span>
+                    <span className="sub">{osText(d)}</span>
                   </label>
                 </li>
               </Fragment>

@@ -159,35 +159,6 @@ export function registerDevices(program: Command, run: Run) {
     );
 
   program
-    .command("memo")
-    .description(t("cli.memo"))
-    .argument("<device>", t("cli.arg.device"))
-    .argument("[text...]", t("cli.memo.text"))
-    .option("--clear", t("cli.memo.clear"))
-    .action(
-      run(async (ctx, device: string, text: string[], o: { clear?: boolean }) => {
-        if (text.length === 0 && !o.clear) {
-          const [found] = (await call<DeviceView[]>(ctx, "device.list", {})).filter(
-            (d) => d.id === device || d.name.toLowerCase() === device.toLowerCase(),
-          );
-          if (!found)
-            throw new CliError(t("err.noDevice", { ref: device }), ExitCode.failed, "NOT_FOUND");
-          output(
-            ctx,
-            { id: found.id, memo: found.memo ?? null },
-            () => found.memo ?? t("cli.memo.none"),
-          );
-          return;
-        }
-        const result = await call<DeviceView>(ctx, "device.setMemo", {
-          device,
-          memo: o.clear ? "" : text.join(" "),
-        });
-        output(ctx, result, () => devicesTable([result]));
-      }),
-    );
-
-  program
     .command("default")
     .description(t("cli.default"))
     .argument("[device]", t("cli.arg.device"))

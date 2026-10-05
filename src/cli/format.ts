@@ -90,7 +90,6 @@ export function devicesTable(devices: DeviceView[]): string {
       [d.default ? t("table.default") : "", d.createdByCorgi ? "Corgi" : ""]
         .filter(Boolean)
         .join(" "),
-      d.memo ?? "",
       d.mine ? t("table.me") : d.holder ? formatHolder(d.holder) : "",
     ]);
   // 슬림 실패 이유는 표에 넣기엔 길어 아래에 따로 적는다
@@ -106,7 +105,6 @@ export function devicesTable(devices: DeviceView[]): string {
         t("table.state"),
         t("table.slim"),
         "",
-        t("table.memo"),
         t("table.holder"),
       ],
       rows,
