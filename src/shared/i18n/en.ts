@@ -536,4 +536,8 @@ export const en: Record<keyof typeof ko, string> = {
   "web.setup.skill.add": "Add",
   "web.setup.skill.applyScope": "Install in these projects",
   "web.setup.skill.worktrees": "{count} worktree(s)",
+  "web.skillUpdate.title": "A Corgi skill update is available",
+  "web.skillUpdate.desc":
+    "The installed skill differs from this Corgi. After updating, new agent sessions follow the new instructions.",
+  "web.skillUpdate.action": "Skill update",
 };

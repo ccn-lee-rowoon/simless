@@ -361,7 +361,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 
 ## 15. 스킬 (S1~S10)
 
-`integrations/skill/corgi/SKILL.md` → 기본 `~/.claude/skills/corgi`, 고르면 프로젝트 `<폴더>/.claude/skills/corgi`(작업 트리마다, `git worktree list` 로 찾음 — git 공용 폴더의 `info/exclude` 에 `/.claude/skills/corgi/` 를 적어 저장소에는 안 보이게) (S9). 넣은 곳은 `…/Corgi/skills.json` 에 기억하고, `corgi install`·`corgi skill install`·설정 창이 모든 곳을 같이 고친다. 위치를 바꾸면 빠진 곳의 스킬은 지운다. **영어로 쓴다**(R25 — 읽는 쪽이 에이전트). 스킬 형식을 읽는 다른 에이전트(Codex 등)는 `corgi install --agent <이름>` 으로 그 에이전트 위치에도 설치한다.
+`integrations/skill/corgi/SKILL.md` → 기본 `~/.claude/skills/corgi`, 고르면 프로젝트 `<폴더>/.claude/skills/corgi`(작업 트리마다, `git worktree list` 로 찾음 — git 공용 폴더의 `info/exclude` 에 `/.claude/skills/corgi/` 를 적어 저장소에는 안 보이게) (S9). 넣은 곳은 `…/Corgi/skills.json` 에 기억하고, `corgi install`·`corgi skill install`·설정 창이 모든 곳을 같이 고친다. 위치를 바꾸면 빠진 곳의 스킬은 지운다. 서버는 켤 때·10분마다·설치를 바꿀 때 넣어 둔 곳을 다시 보고, 예전 스킬이 있으면 `status.skillUpdate` 를 켠다 → 대시보드 위 띠 «Corgi 스킬 업데이트가 있습니다 [업데이트]», 메뉴바 «스킬 업데이트 있음 — 업데이트». 누르면 `setup.apply { item: "skill" }` 로 모든 곳을 고친다. 새로 시작하는 에이전트 세션부터 새 스킬을 읽는다. **영어로 쓴다**(R25 — 읽는 쪽이 에이전트). 스킬 형식을 읽는 다른 에이전트(Codex 등)는 `corgi install --agent <이름>` 으로 그 에이전트 위치에도 설치한다.
 
 - description 에 S3 의 반응 프롬프트(디바이스가 필요한 작업 전부), S4 의 비반응(디바이스를 쓰지 않는 작업)을 넣는다. 테스트하는 앱의 «그룹» 기능과 헷갈리지 않게 «device group» 이라고 쓴다.
 - 본문 순서(S5): `corgi status` → **용도 고르기**: `corgi group list --json`(설명)·`corgi list --json`(메모)을 보고 맞는 그룹, 없으면 `--default` → `corgi use … [--available] [--wait]` — 일부가 사용 중이면 R23 기준(그룹 설명의 «모두 필요», 작업에 몇 대가 꼭 필요한지)으로 판단, 애매하면 사용자에게 묻기(S7) → `corgi list --json` 으로 기기별 `targetId`·`label` 받기 → 기기마다 argent: 앱 설치(`reinstall-app`)·실행(`launch-app`, Android 는 먼저 `adb reverse`)·같은 화면(`open-url` 또는 argent 흐름)·`screenshot` → 크기 라벨을 붙여 보고 → `corgi release` → 끌지 묻기(S8).

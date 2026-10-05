@@ -135,6 +135,28 @@ describe("첫 실행 설정 (M14)", () => {
     expect(existsSync(join(repo, ".claude", "skills", "corgi"))).toBe(false);
   });
 
+  test("넣어 둔 스킬이 예전 것이면 status 가 알리고, 업데이트하면 꺼진다 (S9)", async () => {
+    const env = tempEnv();
+    mkdirSync(join(env.env.HOME, ".claude", "skills", "corgi"), { recursive: true });
+    writeFileSync(join(env.env.HOME, ".claude", "skills", "corgi", "SKILL.md"), "old");
+    const server = new CorgiServer({
+      ...env,
+      drivers: [fakeDriver()],
+      env: { ...env.env, PATH: "" },
+      selfCommand: COMMAND,
+      setupChecks: async () => CHECKS,
+    });
+    const listener = await listen(env.paths.socket, VERSION, server.handle);
+    cleanups.push(() => listener.stop(), env.cleanup);
+    // biome-ignore lint/suspicious/noExplicitAny: 테스트 편의
+    const H = (method: string, params: unknown = {}): Promise<any> =>
+      call(env.paths.socket, method, params, session("web", { human: true })).then((r) => r.result);
+    await Bun.sleep(50); // 켤 때 확인이 끝나기를
+    expect(((await H("status")) as StatusResult).skillUpdate).toBe(true);
+    await H("setup.apply", { item: "skill", enabled: true });
+    expect(((await H("status")) as StatusResult).skillUpdate).toBe(false);
+  });
+
   test("없는 폴더는 INVALID", async () => {
     const { H } = await start();
     const error = await H("setup.skillScope", { kind: "project", paths: ["/no/such/dir"] });

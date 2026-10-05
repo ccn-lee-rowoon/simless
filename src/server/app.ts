@@ -200,6 +200,9 @@ export class CorgiServer {
     this.publish({ type: "changed" });
   }
 
+  /** 스킬 업데이트가 있는지 — setup.ts 가 켤 때·10분마다·설치를 바꿀 때 다시 본다 (S9) */
+  skillUpdate = false;
+
   /** 2초마다 — 끝난 세션의 점유를 풀고, 오래 안 쓴 점유 중 누가 기다리는 것을 푼다 */
   tick(): void {
     for (const session of this.leases.snapshot().sessions) {
@@ -541,6 +544,7 @@ export class CorgiServer {
         enqueuedAt: e.enqueuedAt,
       })),
       setupNeeded: setupNeeded(this.deps.paths),
+      skillUpdate: this.skillUpdate,
     };
   }
 

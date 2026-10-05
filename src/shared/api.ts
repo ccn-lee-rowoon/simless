@@ -86,6 +86,8 @@ export interface StatusResult {
   sessions: SessionView[];
   /** 첫 실행 설정을 아직 안 끝냄 — 앱이 설정 창을 띄운다 (M14) */
   setupNeeded: boolean;
+  /** 넣어 둔 스킬이 이 Corgi 의 것과 다른 곳이 있다 — 앱이 «스킬 업데이트» 를 알린다 (S9) */
+  skillUpdate: boolean;
   queue: { sessionKey: string; agent: string; deviceIds: string[]; enqueuedAt: number }[];
 }
 

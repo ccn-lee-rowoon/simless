@@ -38,6 +38,9 @@ import { readJson, writeJson } from "./store.ts";
 // 첫 실행 설정 (M14) — 앱을 처음 열면 뜨는 창이 부른다. 터미널 없이 점검·에이전트 연결·기본 디바이스까지.
 // 설치 자체는 CLI(`corgi install`)와 같은 함수를 쓴다. 서버가 하므로 창은 버튼만 누르면 된다.
 
+/** 스킬 업데이트 확인 간격 — 작업 트리가 새로 생겼는지도 이때 본다 */
+const SKILL_CHECK_MS = 10 * 60_000;
+
 const SetupFile = z.object({ finishedAt: z.number(), version: z.string() });
 
 const ScopeParams = z.discriminatedUnion("kind", [
@@ -92,6 +95,18 @@ export function registerSetupMethods(server: CorgiServer): void {
       { serverVersion: VERSION },
     );
 
+  /** 넣어 둔 곳 중 예전 스킬이 있으면(작업 트리에 빠진 것 포함) 알린다. 바뀌면 화면에 알린다 */
+  const checkSkillUpdate = async () => {
+    const views = await skillLocations().catch(() => []);
+    const next = views.some((v) => v.state === "outdated");
+    if (next !== server.skillUpdate) {
+      server.skillUpdate = next;
+      server.notify();
+    }
+  };
+  void checkSkillUpdate();
+  setInterval(() => void checkSkillUpdate(), SKILL_CHECK_MS).unref();
+
   server.addMethod("setup.status", async (): Promise<SetupStatus> => {
     const done = readJson(server.paths.setup, SetupFile.optional(), undefined);
     return {
@@ -120,6 +135,7 @@ export function registerSetupMethods(server: CorgiServer): void {
         uninstallHook(env);
         uninstallRule(env);
       }
+      if (item === "skill") await checkSkillUpdate();
     } catch (error) {
       if (error instanceof McpInstallError) {
         if (error.message === "claude") throw new HandlerError("TOOL_MISSING", t("setup.noClaude"));
@@ -146,6 +162,7 @@ export function registerSetupMethods(server: CorgiServer): void {
       if (!next.some((l) => sameLocation(l, old))) await uninstallSkillAt(old, env);
     for (const location of next) await installSkillAt(location, env);
     saveSkillLocations(server.paths.skills, next);
+    await checkSkillUpdate();
     return agents();
   });
 

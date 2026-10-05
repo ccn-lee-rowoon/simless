@@ -44,6 +44,8 @@ enum Strings {
       "settings": ("설정…", "Settings…"),
       "settingsTitle": ("Corgi 설정", "Corgi Settings"),
       "setupTitle": ("Corgi 시작하기", "Get started with Corgi"),
+      "skillUpdate": ("스킬 업데이트 있음 — 업데이트", "Skill update available — Update"),
+      "skillUpdated": ("Corgi 스킬을 업데이트했습니다", "Updated the Corgi skill"),
     ]
     guard let pair = table[key] else { return key }
     return lang == "ko" ? pair.0 : pair.1
@@ -87,6 +89,8 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
   private var setupWindow: NSWindow?
   /// 서버가 «설정 안 끝남» 이라고 하면 앱을 띄울 때 한 번 연다
   private var setupNeeded = false
+  /// 넣어 둔 스킬이 예전 것 (S9)
+  private var skillUpdate = false
   /// 세션 기록 창 — 세션 키마다 하나 (M13)
   private var sessionWindows: [String: NSWindow] = [:]
   private var retries = 0
@@ -145,6 +149,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
           if let lang = result["language"] as? String { Strings.lang = lang }
           self.serverVersion = result["serverVersion"] as? String
           self.setupNeeded = (result["setupNeeded"] as? Bool) == true
+          self.skillUpdate = (result["skillUpdate"] as? Bool) == true
           let all = (result["devices"] as? [[String: Any]]) ?? []
           self.devices = all.filter { ($0["booted"] as? Bool) == true }.map(Self.row)
           self.lastError = nil
@@ -199,6 +204,11 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
       menu.addItem(.separator())
     }
 
+    if skillUpdate {
+      menu.addItem(action(Strings.get("skillUpdate"), #selector(updateSkill)))
+      menu.addItem(.separator())
+    }
+
     let dashboard = action(Strings.get("dashboard"), #selector(openDashboard))
     dashboard.keyEquivalent = "d"
     menu.addItem(dashboard)
@@ -229,6 +239,23 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     process.arguments = ["kickstart", "gui/\(getuid())/\(launchLabel)"]
     try? process.run()
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.refresh() }
+  }
+
+  /// 서버에 스킬 업데이트를 부탁한다 — 넣어 둔 모든 곳을 새 스킬로
+  @objc private func updateSkill() {
+    guard let token = token(), let url = URL(string: "http://127.0.0.1:\(port)/api/call") else { return }
+    var request = URLRequest(url: url, timeoutInterval: 30)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "content-type")
+    request.setValue(token, forHTTPHeaderField: "x-corgi-token")
+    request.httpBody = try? JSONSerialization.data(
+      withJSONObject: ["method": "setup.apply", "params": ["item": "skill", "enabled": true]])
+    URLSession.shared.dataTask(with: request) { [weak self] _, _, _ in
+      DispatchQueue.main.async {
+        self?.statusItem.button?.toolTip = Strings.get("skillUpdated")
+        self?.refresh()
+      }
+    }.resume()
   }
 
   @objc private func quit() {

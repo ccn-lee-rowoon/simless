@@ -1692,3 +1692,21 @@ summary:focus-visible {
     flex-direction: column;
   }
 }
+
+/* 알림 띠 — 스킬 업데이트 등 (S9) */
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent-soft);
+}
+
+.banner-text {
+  flex: 1 1 320px;
+  min-width: 0;
+}

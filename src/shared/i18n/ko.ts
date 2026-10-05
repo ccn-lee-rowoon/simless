@@ -543,4 +543,8 @@ export const ko = {
   "web.setup.skill.add": "추가",
   "web.setup.skill.applyScope": "프로젝트에 넣기",
   "web.setup.skill.worktrees": "작업 트리 {count}개",
+  "web.skillUpdate.title": "Corgi 스킬 업데이트가 있습니다",
+  "web.skillUpdate.desc":
+    "넣어 둔 스킬이 이 Corgi 와 다릅니다. 업데이트하면 새로 시작하는 에이전트 세션부터 새 사용법을 따릅니다.",
+  "web.skillUpdate.action": "스킬 업데이트",
 } as const;

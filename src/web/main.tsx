@@ -317,6 +317,25 @@ function App() {
             </button>
           )}
         </header>
+        {status?.skillUpdate && (
+          <div className="banner" role="status">
+            <span className="banner-text">
+              <span className="strong">{t("web.skillUpdate.title")}</span>{" "}
+              <span className="sub">{t("web.skillUpdate.desc")}</span>
+            </span>
+            <button
+              type="button"
+              className="button button-primary button-small"
+              onClick={() =>
+                act(t("web.skillUpdate.action"), () =>
+                  call("setup.apply", { item: "skill", enabled: true }),
+                )
+              }
+            >
+              {t("web.setup.update")}
+            </button>
+          </div>
+        )}
         {!status ? (
           <p className="sub">{t("web.loading")}</p>
         ) : view === "devices" ? (
