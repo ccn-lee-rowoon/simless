@@ -42,6 +42,7 @@ bun run check   # biome check + tsc --noEmit
 bun run test    # 모든 테스트
 bun run trace   # 요구사항 ID ↔ 테스트 (--missing: 테스트 없는 요구사항)
 bun run build   # dist/simless 단일 실행 파일 — 진입점·파일 포함을 바꿨을 때
+bun run release <patch|minor|x.y.z>  # 버전 내기 (§6)
 ```
 
 **테스트에서 주의할 것**
@@ -112,7 +113,15 @@ feat(server): 점유 대기열과 세션 종료 시 자동 해제 추가
 - 리모트가 생기기 전까지는 `main` 에 직접 커밋한다.
 - 리모트를 연결하면 작업 브랜치 → PR → `main` 으로 바꾸고 이 절을 고친다.
 
-## 6. 이 Mac 에 반영할 때
+## 6. 버전과 바뀐 것 (CHANGELOG)
+
+- 버전은 SemVer, 정본은 `package.json` 의 `version` 하나(앱·CLI·서버가 읽는다). **직접 고치지 않는다** — `bun run release <patch|minor|x.y.z>` 로만 올린다(검사·테스트 → 버전 → CHANGELOG → `chore(release): vX.Y.Z` 커밋 → `vX.Y.Z` 태그).
+- 1.0 전에는 기능이 늘거나 동작이 바뀌면 minor, 고치기만 하면 patch.
+- 사용자에게 보이는 변화는 `feat`·`fix`·`perf` 로 커밋한다 — CHANGELOG 초안이 여기서 나온다(`bun run release draft`). 내기 전에 «아직 내지 않은 것» 을 사람이 읽기 좋게 다듬는다.
+- 소켓 프로토콜(`PROTOCOL_VERSION`)·저장 파일 형식(레지스트리 `version`)은 앱 버전과 따로, 깨질 때만 올린다.
+- 리모트·GitHub Release 올리기는 아직이다(U단계, `docs/design.md` §19).
+
+## 7. 이 Mac 에 반영할 때
 
 | 바꾼 것 | 할 일 |
 | --- | --- |
@@ -123,13 +132,13 @@ feat(server): 점유 대기열과 세션 종료 시 자동 해제 추가
 - `simless install` 은 보호(훅)·MCP 를 넣지 않는다(`--hook`·`--mcp`). 사용자가 정하지 않았으면 켜지 않는다.
 - 서버를 다시 켜기 전에 누가 점유 중인지 본다(`simless status`).
 
-## 7. 디바이스를 다룰 때
+## 8. 디바이스를 다룰 때
 
 - 이 Mac 에는 다른 세션이 쓰는 에뮬레이터·시뮬레이터·Metro 가 있을 수 있다. **이 작업이 만든 것이 아니면 건드리지 않는다.**
 - 시험용 디바이스는 `simless_` 로 시작하는 이름으로 만들고, 작업이 끝나면 무엇을 남겼는지 알린다.
 - 기기는 simless 로 점유한 뒤에만 argent·adb·simctl 로 건드린다(스크린샷 같은 읽기도). 강제 해제(`simless release --force`)는 사람만.
 
-## 8. 사용자와 일할 때
+## 9. 사용자와 일할 때
 
 - 답과 커밋 메시지는 한국어로. 쉬운 말로, 무엇을 했는지·무엇이 남았는지 분명히.
 - 실제로 확인한 것과 확인하지 않은 것을 나눠 말한다.
