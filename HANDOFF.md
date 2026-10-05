@@ -21,7 +21,9 @@
 - **2단계(doctor + 스킬) 완료** — 앱 설치·실행·딥링크는 argent 로 하기로 하고 Corgi 일괄 기능은 «나중에»(L1~L3). 스킬은 `~/.claude/skills/corgi` 에 설치됨. 남은 확인: NOVA 로 «코기로 확인해 줘» 처음부터 끝까지
 - **3단계(웹 UI + `Corgi.app`) 완료** — 순서를 앞당겼다(훅은 4단계로). 웹 UI(`corgi ui`·메뉴바 «대시보드 열기»): 만든 디바이스 목록(All·Android·iOS 탭), 생성(+)은 iOS 시뮬레이터·Android 대표 프로필·직접 입력, 같은 크기 여러 대 허용(이름만 안 겹치게), 슬림 수치와 슬림 전후 비교(만들 때 기준값 측정). `Corgi.app` 은 메뉴바 앱(단색 웰시코기 아이콘)
 - **2026-10-05 사양 변경** — 레이아웃 확인 전용 → 이 Mac 의 디바이스 전부를 중개(R20). 용도별 **그룹**·**기본 디바이스**(Android·iOS 1대씩)·디바이스 메모, 만들 때 슬림 선택(슬림만 `corgi` 접두사), 그룹 점유는 에이전트가 판단(R23), «사용 안 함» 제거, 슬림은 자동 재적용 + `SLIM` 배지, 화면은 `Corgi.app` 창(WKWebView), 귀엽지 않은 디자인, 한국어·영어(설정에서 선택). 이름 변경은 나중에(Q17 — SimPool 은 bitomule/simpool 과 겹침)
-- 다음은 **4단계(사양 변경 구현)** — 시안부터(`docs/design.md` §16). 그 뒤 5단계(보호: 훅) — 시작 전에 에이전트별 프로세스 트리·Claude 훅 세션 ID 실측(§17), argent 두 버전 정리
+- **4단계(사양 변경) 완료** — 이 Mac 디바이스 전부 목록(레지스트리 v2 — Corgi 가 붙인 정보만, v1 은 읽어서 옮기고 처음 만든 것을 기본으로), 기종 + OS 생성·슬림 선택·ⓘ, 그룹·기본 디바이스·메모, 그룹 점유(all·available·대기·교착 검사), 한국어·영어(설정), 새 화면(디바이스·그룹·설정), `Corgi.app` 창(WKWebView)·새 아이콘, 영어 스킬. 실제 서버에 적용해 확인함(기존 `bakw`·`8rav` 가 그대로 기본 디바이스로)
+- 다음은 5단계(보호: 훅) — 대상은 이 Mac 디바이스 전부(P1). 시작 전에 에이전트별 프로세스 트리·Claude 훅 세션 ID 실측(§17), argent 두 버전 정리
+- 남은 확인: 실제 기기로 그룹 점유·생성(기종 + OS)을 끝까지, 라이트 모드 화면, NOVA 로 주 흐름(R15)
 - 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `Corgi.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
 - 범용 도구 → NOVA 레포(xb3-client)와 분리해 별도 프로젝트로 만든다
 
@@ -78,8 +80,8 @@
 | brew tap · avdslim | `kdbhalala/avdslim` tap + avdslim 1.0.15 설치됨 | Corgi 가 쓰므로 유지 |
 | Corgi launchd 등록 | `~/Library/LaunchAgents/corgi.server.plist` (개발 모드: bun + 이 저장소의 `bin/corgi.ts`) | Corgi 를 쓰는 동안 유지. 지우려면 `corgi uninstall` |
 | `corgi` 명령 | `~/.bun/bin/corgi` → 이 저장소 (`bun link`) | 유지 |
-| Corgi.app (메뉴바 앱) | `~/Applications/Corgi.app` + 로그인 항목 `~/Library/LaunchAgents/corgi.menubar.plist` | 유지. 지우려면 `corgi uninstall` |
-| Corgi 디바이스 | 웹 UI 에서 만든 `corgi Small 360x760dp`(Android)·`corgi iPhone SE (3rd generation)`(iOS) | 사용자가 만든 것 — 필요 없으면 웹 UI 에서 삭제 |
+| Corgi.app (메뉴바 앱 + 앱 창) | `~/Applications/Corgi.app` + 로그인 항목 `~/Library/LaunchAgents/corgi.menubar.plist` | 유지. 지우려면 `corgi uninstall`. Swift 를 고치면 `corgi install --no-launchd --no-skill` |
+| Corgi 디바이스 | 웹 UI 에서 만든 `corgi Small 360x760dp`(`bakw`, Android 기본)·`corgi iPhone SE (3rd generation)`(`8rav`, iOS 기본), 그 밖에 `corgi_rddv`(corgi Medium Tablet) AVD 가 있음 | 사용자가 만든 것 — 필요 없으면 화면에서 삭제(기본은 다른 기기를 기본으로 정한 뒤) |
 | Corgi 스킬 | `~/.claude/skills/corgi/SKILL.md` (`corgi install` 이 씀) | 유지. 스킬을 고치면 `corgi install --no-launchd` 로 다시 설치 |
 | avdslim | brew 1.0.15 | 유지 |
 | 기존 `Pixel_6a` AVD·기존 iOS 시뮬레이터 | 건드리지 않음 | — |
