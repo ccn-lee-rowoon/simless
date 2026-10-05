@@ -71,8 +71,7 @@ corgi/
 ├── test/                    *.test.ts — 드라이버는 가짜로 바꿔 점유·대기·훅 판정을 검증
 ├── integrations/            이 Mac 의 다른 도구에 설치하는 것
 │   ├── skill/corgi/SKILL.md          → ~/.claude/skills/corgi
-│   ├── hooks/claude-settings.json    훅 등록 예시 (PreToolUse)
-│   └── rules/argent-corgi.md         전역 argent 규칙에 붙일 문구 (P2)
+│   └── rules/corgi.md                전역 규칙 (P2) → ~/.claude/rules/corgi.md
 ├── scripts/build.ts         단일 실행 파일 빌드 → dist/corgi
 ├── examples/apps/nova.json
 ├── docs/
@@ -326,7 +325,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 
 **설치** — `corgi install` 이 `~/.claude/settings.json` 의 `hooks.PreToolUse` 에 matcher `Bash|mcp__argent__.*`, 명령 `<corgi 절대 경로> hook claude pre-tool-use` 한 줄을 넣는다. 다른 설정·훅은 그대로 두고, 예전 Corgi 훅(명령이 ` hook claude pre-tool-use` 로 끝남)은 바꾸며, 쓰기 전에 `settings.json.corgi-backup` 을 남긴다. `--no-hook` 으로 건너뛰고, `corgi uninstall` 이 지운다. `corgi doctor` 가 훅·규칙을 점검한다.
 
-> 이 Mac 의 에뮬레이터·시뮬레이터(`corgi list` 에 있는 것 전부)는 `corgi use` 로 점유한 뒤에만 조작한다. 켜기·끄기는 argent `boot-device` 가 아니라 `corgi up`·`corgi down` 으로 한다.
+> Corgi 목록(`corgi list`)의 시뮬레이터·에뮬레이터는 `corgi use` 로 점유한 뒤에만 조작한다(스크린샷·describe 포함). 켜기·끄기는 argent `boot-device` 가 아니라 `corgi use`·`corgi down` 으로 한다. 전문은 `integrations/rules/corgi.md`(영어).
 
 ## 14. 앱 창·웹 화면 (R11·M1~M12)
 
