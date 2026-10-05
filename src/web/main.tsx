@@ -202,7 +202,7 @@ function App() {
       <aside className="sidebar">
         <div className="brand">
           <Logo />
-          <span>Corgi</span>
+          <span className="side-text">Corgi</span>
         </div>
         <nav className="side-nav" aria-label={t("web.nav")}>
           {nav.map((item) => (
@@ -211,33 +211,46 @@ function App() {
               type="button"
               className={view === item.id ? "side-item side-item-active" : "side-item"}
               aria-current={view === item.id ? "page" : undefined}
+              title={item.label}
               onClick={() => setView(item.id)}
             >
               <span className="side-label">
                 {item.icon}
-                {item.label}
+                <span className="side-text">{item.label}</span>
               </span>
               {item.count !== undefined && item.count > 0 && (
-                <span className="mono count">{item.count}</span>
+                <span className="mono count side-text">{item.count}</span>
               )}
             </button>
           ))}
         </nav>
         <span className="spacer" />
-        <button type="button" className="side-item" onClick={openSettings}>
+        <button
+          type="button"
+          className="side-item"
+          title={t("web.nav.settings")}
+          onClick={openSettings}
+        >
           <span className="side-label">
             <SettingsIcon />
-            {t("web.nav.settings")}
+            <span className="side-text">{t("web.nav.settings")}</span>
           </span>
-          <ExternalIcon />
+          <span className="side-text">
+            <ExternalIcon />
+          </span>
         </button>
-        <div className="server-state">
+        <div
+          className="server-state"
+          title={status ? t("web.server.connected", { version: status.serverVersion }) : undefined}
+        >
           <span className={online ? "dot dot-on" : "dot dot-bad"} />
-          {status && online
-            ? t("web.server.connected", { version: status.serverVersion })
-            : online
-              ? t("web.loading")
-              : t("web.server.offline")}
+          <span className="side-text">
+            {status && online
+              ? t("web.server.connected", { version: status.serverVersion })
+              : online
+                ? t("web.loading")
+                : t("web.server.offline")}
+          </span>
         </div>
       </aside>
 

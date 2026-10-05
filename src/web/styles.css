@@ -305,7 +305,6 @@ h4 {
 .content {
   flex: 1 1 auto;
   min-width: 0;
-  max-width: 1360px;
   padding: 20px 28px 120px;
 }
 
@@ -404,7 +403,7 @@ summary:focus-visible {
 
 .table {
   width: 100%;
-  min-width: 980px;
+  min-width: 720px;
   border-collapse: collapse;
 }
 
@@ -430,7 +429,7 @@ summary:focus-visible {
 }
 
 .col-width {
-  width: 150px;
+  width: 130px;
 }
 
 .nowrap {
@@ -668,10 +667,9 @@ summary:focus-visible {
 /* 세션 화면 (M13) */
 
 .session-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(520px, 100%), 1fr));
   gap: 12px;
-  max-width: 900px;
 }
 
 .session-card {
@@ -701,7 +699,6 @@ summary:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  max-width: 960px;
 }
 
 .session-sections .section-title {
@@ -766,7 +763,6 @@ summary:focus-visible {
 /* 세션 기록 창 */
 
 .session-window {
-  max-width: 820px;
   padding: 24px;
 }
 
@@ -848,7 +844,7 @@ summary:focus-visible {
 
 .group-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
   gap: 14px;
 }
 
@@ -1324,6 +1320,42 @@ summary:focus-visible {
 .notice-error {
   background: var(--danger);
   color: #ffffff;
+}
+
+/* 좁은 창 — 왼쪽 메뉴를 아이콘만으로 접어 표에 자리를 준다 */
+@media (max-width: 1100px) and (min-width: 721px) {
+  .sidebar {
+    width: 60px;
+    padding: 16px 8px;
+    align-items: center;
+  }
+
+  .brand {
+    padding: 4px 0 14px;
+  }
+
+  .side-text {
+    display: none;
+  }
+
+  .side-item {
+    justify-content: center;
+    width: 40px;
+    padding: 9px 0;
+  }
+
+  .server-state {
+    padding: 8px 0 0;
+  }
+
+  .server-state .dot {
+    margin-right: 0;
+  }
+
+  .content {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
 }
 
 @media (max-width: 720px) {
