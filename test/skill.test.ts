@@ -60,6 +60,12 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("kill <your Metro PID>");
   });
 
+  test("직접 빌드·설치할 때는 기기를 꼭 지정한다 — 남의 에뮬레이터에 깔리지 않게 (S7)", async () => {
+    const text = await bundledSkill();
+    expect(text).toContain("--deviceId <targetId>");
+    expect(text).toContain("ANDROID_SERIAL=<targetId>");
+  });
+
   test("그룹은 사용자가 요청할 때만 (S10)", async () => {
     expect(await bundledSkill()).toContain(
       "Create or edit device groups **only when the user asks**",

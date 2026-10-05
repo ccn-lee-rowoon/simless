@@ -5,7 +5,7 @@ description: Use when testing or checking a **mobile app** (React Native, Expo, 
 
 # simless — device broker
 
-simless lets several agent sessions and people share this Mac's simulators and emulators without stepping on each other. Every device on this Mac is listed, and you **acquire** a device before touching it. Devices are bundled by purpose into **device groups** (e.g. «UI layout check», «DM check»), and each platform has one **default device** for general testing.
+simless lets several agent sessions and people share this Mac's simulators and emulators without stepping on each other. The devices in the **simless list** (created by simless, or added from this Mac) are shared, and you **acquire** a device before touching it. Devices are bundled by purpose into **device groups** (e.g. «UI layout check», «DM check»), and each platform has one **default device** for general testing.
 
 | Who | Does what |
 | --- | --- |
@@ -19,6 +19,7 @@ simless lets several agent sessions and people share this Mac's simulators and e
 - Never run `simless release --force` (people only).
 - Create or edit device groups **only when the user asks**. Don't change groups someone else made.
 - Decide on error **codes** (`--json` output), not on message text — messages follow the user's language setting.
+- If `simless` isn't found (`command -v simless`), tell the user to install it — don't drive devices without it. `simless --help` lists exit codes, error codes and examples.
 
 ## Steps
 
@@ -43,6 +44,7 @@ simless --json group list      # device groups — read each description
   simless create --width 375 --height 812 --density 420     # Android custom size
   simless create "iPhone 17" --no-slim                      # a regular (non-slim) device
   ```
+  A device that exists on this Mac but isn't in the list (e.g. one made in Xcode): `simless --json list --available` shows them; add one with `simless add <device>` **only when the user asks**.
   Slim devices are named `simless …` and boot lighter, but slimming turns some features off (push notifications, iCloud, Siri …; see `simless catalog`). If the test needs them, create with `--no-slim`. iOS slimming takes 2–3 minutes. No apps are installed.
 
 ### 2. Acquire and boot
@@ -94,7 +96,7 @@ If it fails because the port was just taken, pick the next free one. Point each 
 
 Pass `targetId` as argent's device argument, device by device, following the argent skills.
 
-1. **Install** (when needed) — `reinstall-app`
+1. **Install** (when needed) — `reinstall-app`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <targetId>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
 2. **Launch** — `launch-app` (or the dev client URL above with `open-url`), after your Metro is up.
 3. **Same screen everywhere** — `open-url <deep link>` if there is one, otherwise replay an argent flow (`flow-execute`) per device. Don't reuse tap coordinates across sizes.
 4. **Screenshots** — `screenshot`, tagged with each device's `label`.
