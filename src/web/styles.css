@@ -180,6 +180,22 @@ h4 {
   background: var(--hover);
 }
 
+.side-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.side-item svg {
+  flex: none;
+  opacity: 0.85;
+}
+
+.side-item-active svg {
+  color: var(--accent-text);
+  opacity: 1;
+}
+
 .count {
   color: var(--muted);
   font-size: 12px;

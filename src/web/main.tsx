@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { CatalogResult, StatusResult } from "../shared/api.ts";
 import { language, resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
@@ -6,6 +6,7 @@ import { ApiError, call, subscribe, token } from "./api.ts";
 import { CreateDialog } from "./CreateDialog.tsx";
 import { DevicesView } from "./DevicesView.tsx";
 import { GroupsView } from "./GroupsView.tsx";
+import { DevicesIcon, ExternalIcon, GroupsIcon, SessionsIcon, SettingsIcon } from "./icons.tsx";
 import { SessionsView } from "./SessionsView.tsx";
 import { SettingsView } from "./SettingsView.tsx";
 import type { Act, LogLine } from "./types.ts";
@@ -164,10 +165,25 @@ function App() {
     );
   }
 
-  const nav: { id: View; label: string; count?: number }[] = [
-    { id: "devices", label: t("web.nav.devices"), count: status?.devices.length },
-    { id: "groups", label: t("web.nav.groups"), count: status?.groups.length },
-    { id: "sessions", label: t("web.nav.sessions"), count: status?.sessions.length },
+  const nav: { id: View; label: string; icon: ReactNode; count?: number }[] = [
+    {
+      id: "devices",
+      label: t("web.nav.devices"),
+      icon: <DevicesIcon />,
+      count: status?.devices.length,
+    },
+    {
+      id: "groups",
+      label: t("web.nav.groups"),
+      icon: <GroupsIcon />,
+      count: status?.groups.length,
+    },
+    {
+      id: "sessions",
+      label: t("web.nav.sessions"),
+      icon: <SessionsIcon />,
+      count: status?.sessions.length,
+    },
   ];
   const title = nav.find((n) => n.id === view)?.label ?? "";
 
@@ -187,7 +203,10 @@ function App() {
               aria-current={view === item.id ? "page" : undefined}
               onClick={() => setView(item.id)}
             >
-              <span>{item.label}</span>
+              <span className="side-label">
+                {item.icon}
+                {item.label}
+              </span>
               {item.count !== undefined && item.count > 0 && (
                 <span className="mono count">{item.count}</span>
               )}
@@ -196,16 +215,11 @@ function App() {
         </nav>
         <span className="spacer" />
         <button type="button" className="side-item" onClick={openSettings}>
-          <span>{t("web.nav.settings")}</span>
-          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-            <path
-              d="M4.5 2.5h5v5M9.5 2.5L3 9"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
+          <span className="side-label">
+            <SettingsIcon />
+            {t("web.nav.settings")}
+          </span>
+          <ExternalIcon />
         </button>
         <div className="server-state">
           <span className={online ? "dot dot-on" : "dot dot-bad"} />
