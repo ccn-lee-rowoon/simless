@@ -102,7 +102,7 @@ export const ko = {
   "cli.install.menubar": "{path} (메뉴바 앱)",
   "cli.install.done": "설치했습니다 ({what}): {path}",
   "cli.uninstall":
-    "launchd 등록·simless.app·Claude Code 훅·규칙을 지운다 — 만든 디바이스·스킬은 지우지 않는다",
+    "launchd 등록·simless.app·훅·규칙·MCP 등록(모든 에이전트)을 지운다 — 만든 디바이스·스킬은 지우지 않는다",
   "cli.uninstall.done": "등록을 지웠습니다",
   "cli.ui": "웹 화면을 브라우저로 연다 (서버가 꺼져 있으면 켠다)",
   "cli.ui.print": "열지 않고 주소만 출력",
@@ -120,9 +120,9 @@ export const ko = {
   "cli.acquire": "디바이스를 점유한다 — 디바이스·그룹·기본 디바이스로",
   "cli.arg.devices": "디바이스 ID 또는 이름",
   "cli.arg.device": "디바이스 ID 또는 이름",
-  "cli.opt.group": "그룹의 디바이스 전부 (R21)",
-  "cli.opt.default": "기본 디바이스 — android·ios, 안 주면 둘 다 (R22)",
-  "cli.opt.available": "비어 있는 것만 잡는다 — 바쁜 것은 상태만 알려 준다 (R23)",
+  "cli.opt.group": "그룹의 디바이스 전부",
+  "cli.opt.default": "기본 디바이스 — android·ios, 안 주면 둘 다",
+  "cli.opt.available": "비어 있는 것만 잡는다 — 바쁜 것은 상태만 알려 준다",
   "cli.opt.wait": "다른 세션이 쓰는 중이면 풀릴 때까지 기다린다 (--available 과 함께면 나머지만)",
   "cli.opt.timeout": "기다리기 최대 시간 (예: 90s, 10m — 기본 10m)",
   "cli.badDuration": "시간 형식이 잘못됐습니다: {text} (예: 90s, 10m)",
@@ -149,18 +149,18 @@ export const ko = {
   "cli.holder.since": "{device}{who} · {cwd} · {ago}부터 {what}",
 
   // CLI — 디바이스
-  "cli.list": "이 Mac 의 디바이스 전부 — 켜짐·슬림·점유·argent ID (M5·R20)",
+  "cli.list": "simless 목록의 디바이스(만든 것 + 추가한 것) — 켜짐·슬림·점유·argent ID",
   "cli.opt.platform": "android 또는 ios",
   "cli.opt.created": "simless 가 만든 디바이스만",
   "cli.list.available": "simless 목록에 없는 이 Mac 의 디바이스 — simless add 로 추가할 수 있는 것",
-  "cli.add": "이 Mac 의 디바이스를 simless 목록에 추가한다 — 만들지도 슬림화하지도 않는다 (R20)",
+  "cli.add": "이 Mac 의 디바이스를 simless 목록에 추가한다 — 만들지도 슬림화하지도 않는다",
   "cli.add.device": "디바이스 이름·UDID·AVD ID — simless list --available",
   "cli.unlist":
-    "추가한 디바이스를 simless 목록에서 뺀다 — 기기는 그대로, 점유·그룹·기본 지정은 풀린다 (R20)",
+    "추가한 디바이스를 simless 목록에서 뺀다 — 기기는 그대로, 점유·그룹·기본 지정은 풀린다",
   "cli.unlisted": "목록에서 뺐습니다: {id}",
-  "cli.catalog": "만들 수 있는 기종·OS 와 슬림화하면 꺼지는 것 (M1·M4)",
+  "cli.catalog": "만들 수 있는 기종·OS 와 슬림화하면 꺼지는 것",
   "cli.create":
-    "기종 + OS 로 새 디바이스를 만든다 — 슬림이면 `simless …` 이름, 앱은 설치하지 않는다 (R1·R5·M1·M4)",
+    "기종 + OS 로 새 디바이스를 만든다 — 슬림이면 `simless …` 이름, 앱은 설치하지 않는다",
   "cli.create.model": "기종 이름 또는 ID — simless catalog",
   "cli.create.platform": "android 또는 ios (같은 이름의 기종이 양쪽에 있을 때)",
   "cli.create.os": "iOS 런타임·Android 시스템 이미지 (기본: 최신·추천)",
@@ -174,26 +174,26 @@ export const ko = {
   "cli.create.noneGiven":
     "기종을 주거나 --width·--height·--density 로 직접 입력하세요 — simless catalog",
   "cli.create.badCustom": "직접 입력은 --width·--height·--density 를 모두 양수로 주세요",
-  "cli.rename": "이름을 바꾼다 — ID 는 그대로라 같은 디바이스로 실행된다 (R4)",
+  "cli.rename": "이름을 바꾼다 — ID 는 그대로라 같은 디바이스로 실행된다",
   "cli.rename.name": "새 이름",
-  "cli.default": "기본 디바이스 — 플랫폼마다 하나. 주면 그 디바이스를 기본으로 (R22)",
+  "cli.default": "기본 디바이스 — 플랫폼마다 하나. 주면 그 디바이스를 기본으로",
   "cli.default.set": "기본 디바이스({platform}): {name}",
   "cli.default.none":
     "기본 디바이스가 없습니다 — simless create 로 처음 만든 디바이스가 기본이 됩니다",
   "cli.delete":
-    "simless 가 만든 디바이스를 지운다 — 켜져 있으면 끄고, 다른 세션이 쓰는 중이면 막는다 (M8)",
+    "simless 가 만든 디바이스를 지운다 — 켜져 있으면 끄고, 다른 세션이 쓰는 중이면 막는다",
   "cli.delete.yes": "확인 없이 지운다",
   "cli.delete.confirm": "{device} 를 지울까요? 되돌릴 수 없습니다.",
   "cli.delete.cancelled": "지우지 않았습니다 (확인 없이 지우려면 --yes)",
   "cli.deleted": "지웠습니다: {id}",
-  "cli.slim": "슬림화 — 적용(기본)·해제(--off)·확인(--check) (R5, M6)",
+  "cli.slim": "슬림화 — 적용(기본)·해제(--off)·확인(--check)",
   "cli.slim.devices": "디바이스 ID 또는 이름 (기본: simless 가 만든 것 전부)",
   "cli.slim.off": "슬림 해제",
   "cli.slim.check": "슬림 상태만 확인",
-  "cli.up": "점유한 디바이스를 켠다 (R7)",
+  "cli.up": "점유한 디바이스를 켠다",
   "cli.down": "점유한 디바이스를 끈다",
   "cli.upDown.devices": "디바이스 ID 또는 이름 (기본: 이 세션이 점유한 것 전부)",
-  "cli.use": "점유하고 켠다 — 주 흐름의 첫 단계. 디바이스·그룹·기본 디바이스로 (R15)",
+  "cli.use": "점유하고 켠다 — 주 흐름의 첫 단계. 디바이스·그룹·기본 디바이스로",
   "cli.failedFor": "실패: {name} — {error}",
   "cli.someFailed": "{verb}에 실패한 디바이스가 있습니다",
   "cli.verb.boot": "켜기",
@@ -234,10 +234,10 @@ export const ko = {
   "catalog.problem": "주의({platform}): {message}",
 
   // CLI — 그룹
-  "cli.group": "디바이스 그룹 — 용도별 디바이스 묶음 (R21). 예: «UI 레이아웃 체크», «DM 확인»",
+  "cli.group": "디바이스 그룹 — 용도별 디바이스 묶음. 예: «UI 레이아웃 체크», «DM 확인»",
   "cli.group.list": "그룹 목록",
   "cli.group.none": "그룹이 없습니다 — simless group create <이름> --desc <설명> <디바이스…>",
-  "cli.group.show": "그룹의 설명과 디바이스(메모 포함)",
+  "cli.group.show": "그룹의 설명과 디바이스",
   "cli.group.arg": "그룹 ID 또는 이름",
   "cli.group.create": "그룹을 만든다",
   "cli.group.name": "그룹 이름",
@@ -254,12 +254,12 @@ export const ko = {
   "cli.group.missingDevice": "(없는 디바이스)",
 
   // CLI — 설정
-  "cli.config": "설정을 보거나 바꾼다 — 앱 창의 설정 화면과 같은 값 (M11·R25)",
+  "cli.config": "설정을 보거나 바꾼다 — 앱 창의 설정 화면과 같은 값",
   "cli.config.key": "설정 이름 (language·idleReleaseMinutes·android.ramMb …)",
   "cli.config.value": "새 값",
   "cli.config.set": "{key} = {value}",
   // CLI — doctor (S1·S2)
-  "doctor.description": "설치·연결을 점검하고 고치는 방법을 알려 준다 (S1·S2)",
+  "doctor.description": "설치·연결을 점검하고 고치는 방법을 알려 준다",
   "doctor.fix":
     "simless install 로 고칠 수 있는 것(launchd 등록·스킬·simless.app, 설치된 훅·규칙의 예전 버전)은 고친다",
   "doctor.group.server": "서버",
@@ -431,7 +431,7 @@ export const ko = {
   "web.history.ended": "세션이 끝나 해제",
   "web.history.idle": "오래 안 써서 해제",
   "web.history.deadlock": "교착이라 대기 거절",
-  "cli.history": "점유 기록 — 누가 언제 무엇을 점유·해제했는지, 최근 것부터 (M13)",
+  "cli.history": "점유 기록 — 누가 언제 무엇을 점유·해제했는지, 최근 것부터",
   "cli.history.session": "이 세션 키만",
   "cli.history.limit": "몇 줄까지 (기본 50, 최대 500)",
   "cli.history.empty": "기록이 없습니다",
@@ -455,7 +455,7 @@ export const ko = {
   "hook.serverDown":
     "simless 서버가 꺼져 있어 이 디바이스({name})를 누가 쓰는지 알 수 없습니다 — simless status 로 서버를 켠 뒤 다시 하세요",
   "cli.install.hook":
-    "보호 — Claude Code 훅(~/.claude/settings.json)·규칙(~/.claude/rules/simless.md)도 설치한다 (P2·P3)",
+    "보호 — Claude Code 훅(~/.claude/settings.json)·규칙(~/.claude/rules/simless.md)도 설치한다",
   "doctor.hook": "Claude Code 훅",
   "doctor.hook.missing":
     "없음 — 에이전트가 점유하지 않은 디바이스를 argent·adb 로 직접 건드려도 막지 못한다 (P3)",
@@ -524,7 +524,7 @@ export const ko = {
   "cli.opt.create":
     "--default 인데 그 플랫폼에 디바이스가 하나도 없으면 추천 기종을 슬림으로 만들어 쓴다 (몇 분 걸림)",
   "setup.noFolder": "폴더가 없습니다: {path}",
-  "cli.skill": "에이전트 스킬 — 넣는 곳(전역·프로젝트)과 상태 (S9)",
+  "cli.skill": "에이전트 스킬 — 넣는 곳(전역·프로젝트)과 상태",
   "cli.skill.status": "스킬을 넣은 곳마다 상태",
   "cli.skill.install": "스킬을 넣는다 (옵션이 없으면 기억해 둔 곳에 다시)",
   "cli.skill.project": "이 프로젝트 폴더들에만 — 작업 트리마다 넣고 .git/info/exclude 에 적는다",
@@ -572,4 +572,6 @@ export const ko = {
   "cli.install.agents":
     "--hook·--mcp 를 붙일 에이전트 (쉼표로): claude, copilot, codex, cursor, gemini",
   "web.slogan": "Make simulator management seamless.",
+  "cli.helpAgents":
+    '\n에이전트(AI)용:\n  - 항상 --json 을 붙인다. 결과는 stdout 의 JSON, 오류는 {"error": {code, message, data}}\n  - 종료 코드: 0 성공 · 1 실패 · 2 사용법 오류 · 3 다른 세션이 쓰는 중·아직 대기 중·교착 · 4 서버에 연결 못 함\n  - 오류 코드로 판단한다 (메시지는 사용자 언어): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - 기기를 건드리기 전에 점유한다 — 순서 전체는 simless 스킬(~/.claude/skills/simless, ~/.agents/skills/simless)\n\n예:\n  simless --json status                          디바이스·그룹·기본·누가 쓰는지\n  simless --json use --default ios               iOS 기본 디바이스를 점유하고 켠다 (없으면 --create)\n  simless --json use --group "DM check" --wait   그룹 전부, 쓰는 중이면 기다린다\n  simless --json use --group "layout" --available  비어 있는 것부터\n  simless --json list                            argent 에 넘길 targetId·크기 라벨\n  simless release                                다 쓰면 돌려준다\n  simless doctor                                 설치·연결 문제',
 } as const;

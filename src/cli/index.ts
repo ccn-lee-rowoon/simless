@@ -34,6 +34,8 @@ export async function runCli(argv: string[]): Promise<number> {
     .version(VERSION, "-v, --version")
     .option("--json", t("cli.opt.json"))
     .option("--session <id>", t("cli.opt.session"))
+    // 에이전트가 사용법을 찾아보지 않아도 되게 — JSON·종료 코드·오류 코드·예
+    .addHelpText("after", t("cli.helpAgents"))
     .exitOverride();
 
   // 각 명령의 공통 처리 — 컨텍스트를 만들고, CliError 를 종료 코드로 바꾼다.

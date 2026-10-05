@@ -97,7 +97,7 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.install.menubar": "{path} (menu bar app)",
   "cli.install.done": "Installed ({what}): {path}",
   "cli.uninstall":
-    "Remove the launchd registration, simless.app, and the Claude Code hook and rule — devices and the skill stay",
+    "Remove the launchd registration, simless.app, hooks, rules and MCP registrations (all agents) — devices and the skill stay",
   "cli.uninstall.done": "Registration removed",
   "cli.ui": "Open the web view in a browser (starts the server if needed)",
   "cli.ui.print": "Print the address instead of opening it",
@@ -113,9 +113,9 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.acquire": "Acquire devices — by device, group, or default device",
   "cli.arg.devices": "Device IDs or names",
   "cli.arg.device": "Device ID or name",
-  "cli.opt.group": "All devices in the group (R21)",
-  "cli.opt.default": "The default device — android or ios, both if omitted (R22)",
-  "cli.opt.available": "Take only free devices — report the busy ones (R23)",
+  "cli.opt.group": "All devices in the group",
+  "cli.opt.default": "The default device — android or ios, both if omitted",
+  "cli.opt.available": "Take only free devices — report the busy ones",
   "cli.opt.wait": "Wait until devices in use are released (with --available, only the rest)",
   "cli.opt.timeout": "Longest time to wait (e.g. 90s, 10m — default 10m)",
   "cli.badDuration": "Bad duration: {text} (e.g. 90s, 10m)",
@@ -140,19 +140,19 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.holder.using": "using",
   "cli.holder.waiting": "waiting first",
   "cli.holder.since": "{device}{who} · {cwd} · {what} since {ago}",
-  "cli.list": "Every device on this Mac — state, slim, lease, argent ID (M5·R20)",
+  "cli.list": "Devices in the simless list (created + added) — state, slim, lease, argent ID",
   "cli.opt.platform": "android or ios",
   "cli.opt.created": "Only devices simless created",
   "cli.list.available":
     "Devices on this Mac that aren't in the simless list — the ones simless add can add",
-  "cli.add": "Add a device on this Mac to the simless list — nothing is created or slimmed (R20)",
+  "cli.add": "Add a device on this Mac to the simless list — nothing is created or slimmed",
   "cli.add.device": "Device name, UDID, or AVD ID — see simless list --available",
   "cli.unlist":
-    "Take an added device off the simless list — the device stays; its lease, groups and default go (R20)",
+    "Take an added device off the simless list — the device stays; its lease, groups and default go",
   "cli.unlisted": "Taken off the list: {id}",
-  "cli.catalog": "Models and OS versions you can create, and what slimming turns off (M1·M4)",
+  "cli.catalog": "Models and OS versions you can create, and what slimming turns off",
   "cli.create":
-    "Create a device from a model and OS — slim devices are named `simless …`; no apps are installed (R1·R5·M1·M4)",
+    "Create a device from a model and OS — slim devices are named `simless …`; no apps are installed",
   "cli.create.model": "Model name or ID — see simless catalog",
   "cli.create.platform": "android or ios (when both have a model with this name)",
   "cli.create.os": "iOS runtime or Android system image (default: latest or recommended)",
@@ -166,27 +166,27 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.create.noneGiven":
     "Give a model, or a custom size with --width, --height and --density — see simless catalog",
   "cli.create.badCustom": "A custom size needs positive --width, --height and --density",
-  "cli.rename": "Rename a device — its ID stays, so it is still the same device (R4)",
+  "cli.rename": "Rename a device — its ID stays, so it is still the same device",
   "cli.rename.name": "New name",
-  "cli.default": "Default devices — one per platform. Give a device to make it the default (R22)",
+  "cli.default": "Default devices — one per platform. Give a device to make it the default",
   "cli.default.set": "Default device ({platform}): {name}",
   "cli.default.none":
     "No default devices — the first device you create with simless create becomes the default",
   "cli.delete":
-    "Delete a device simless created — shuts it down first; blocked while another session uses it (M8)",
+    "Delete a device simless created — shuts it down first; blocked while another session uses it",
   "cli.delete.yes": "Delete without asking",
   "cli.delete.confirm": "Delete {device}? This can't be undone.",
   "cli.delete.cancelled": "Not deleted (use --yes to skip the question)",
   "cli.deleted": "Deleted: {id}",
-  "cli.slim": "Slim devices — apply (default), remove (--off), or check (--check) (R5, M6)",
+  "cli.slim": "Slim devices — apply (default), remove (--off), or check (--check)",
   "cli.slim.devices": "Device IDs or names (default: every device simless created)",
   "cli.slim.off": "Remove slimming",
   "cli.slim.check": "Only check the slim state",
-  "cli.up": "Boot the devices you hold (R7)",
+  "cli.up": "Boot the devices you hold",
   "cli.down": "Shut down the devices you hold",
   "cli.upDown.devices": "Device IDs or names (default: everything this session holds)",
   "cli.use":
-    "Acquire and boot — the first step of the main flow. By device, group, or default device (R15)",
+    "Acquire and boot — the first step of the main flow. By device, group, or default device",
   "cli.failedFor": "Failed: {name} — {error}",
   "cli.someFailed": "{verb} failed for some devices",
   "cli.verb.boot": "Booting",
@@ -223,11 +223,10 @@ export const en: Record<keyof typeof ko, string> = {
   "catalog.howCustom":
     "Custom size (Android): simless create --width <dp> --height <dp> --density <dpi> [--os <image>]",
   "catalog.problem": "Note ({platform}): {message}",
-  "cli.group":
-    "Device groups — devices bundled by purpose (R21), e.g. «UI layout check», «DM check»",
+  "cli.group": "Device groups — devices bundled by purpose, e.g. «UI layout check», «DM check»",
   "cli.group.list": "List groups",
   "cli.group.none": "No groups — simless group create <name> --desc <description> <devices…>",
-  "cli.group.show": "Show a group's description and devices (with memos)",
+  "cli.group.show": "Show a group's description and devices",
   "cli.group.arg": "Group ID or name",
   "cli.group.create": "Create a group",
   "cli.group.name": "Group name",
@@ -242,12 +241,11 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.group.lastEdit": "Last edit: {who}",
   "cli.group.empty": "No devices",
   "cli.group.missingDevice": "(missing device)",
-  "cli.config": "Show or change settings — the same values as the app's Settings (M11·R25)",
+  "cli.config": "Show or change settings — the same values as the app's Settings",
   "cli.config.key": "Setting name (language, idleReleaseMinutes, android.ramMb …)",
   "cli.config.value": "New value",
   "cli.config.set": "{key} = {value}",
-  "doctor.description":
-    "Check the installation and connections, and explain how to fix problems (S1·S2)",
+  "doctor.description": "Check the installation and connections, and explain how to fix problems",
   "doctor.fix":
     "Fix what simless install can fix (launchd registration, skill, simless.app, and outdated copies of an installed hook or rule)",
   "doctor.group.server": "Server",
@@ -421,7 +419,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.history.ended": "Released — session ended",
   "web.history.idle": "Released — idle too long",
   "web.history.deadlock": "Wait refused — deadlock",
-  "cli.history": "Lease history — who acquired or released what and when, newest first (M13)",
+  "cli.history": "Lease history — who acquired or released what and when, newest first",
   "cli.history.session": "Only this session key",
   "cli.history.limit": "How many lines (default 50, max 500)",
   "cli.history.empty": "No history yet",
@@ -445,7 +443,7 @@ export const en: Record<keyof typeof ko, string> = {
   "hook.serverDown":
     "The simless server is down, so it's unknown who is using {name} — start it with simless status, then try again",
   "cli.install.hook":
-    "Protection — also install the Claude Code hook (~/.claude/settings.json) and rule (~/.claude/rules/simless.md) (P2, P3)",
+    "Protection — also install the Claude Code hook (~/.claude/settings.json) and rule (~/.claude/rules/simless.md)",
   "doctor.hook": "Claude Code hook",
   "doctor.hook.missing":
     "missing — agents can touch devices they don't hold through argent or adb directly (P3)",
@@ -516,7 +514,7 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.opt.create":
     "With --default: if the platform has no devices at all, create a slim recommended one and use it (takes a few minutes)",
   "setup.noFolder": "Folder not found: {path}",
-  "cli.skill": "The agent skill — where it is installed (global or project) and its state (S9)",
+  "cli.skill": "The agent skill — where it is installed (global or project) and its state",
   "cli.skill.status": "State of the skill in each place it is installed",
   "cli.skill.install": "Install the skill (with no option, again where it was installed)",
   "cli.skill.project":
@@ -568,4 +566,6 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.install.agents":
     "Agents for --hook and --mcp (comma-separated): claude, copilot, codex, cursor, gemini",
   "web.slogan": "Make simulator management seamless.",
+  "cli.helpAgents":
+    '\nFor agents (AI):\n  - Always pass --json. Results are JSON on stdout; errors are {"error": {code, message, data}}\n  - Exit codes: 0 ok · 1 failed · 2 usage error · 3 in use by another session, still waiting, or deadlock · 4 can\'t reach the server\n  - Decide on error codes (messages follow the user\'s language): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - Acquire a device before touching it — the full flow is in the simless skill (~/.claude/skills/simless, ~/.agents/skills/simless)\n\nExamples:\n  simless --json status                          devices, groups, defaults, who holds what\n  simless --json use --default ios               acquire and boot the iOS default device (add --create if there is none)\n  simless --json use --group "DM check" --wait   the whole group; wait if it is in use\n  simless --json use --group "layout" --available  take the free ones first\n  simless --json list                            targetId and size label to pass to argent\n  simless release                                give the devices back when done\n  simless doctor                                 installation and connection problems',
 };
