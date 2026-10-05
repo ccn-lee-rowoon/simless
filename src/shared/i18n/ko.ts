@@ -522,4 +522,6 @@ export const ko = {
   "web.settings.openSetup": "설정 안내 열기",
   "web.settings.retention": "기록 보관 (일)",
   "web.settings.retentionHint": "세션 화면의 점유 기록을 이 기간만큼 남기고, 지난 것은 지웁니다.",
+  "cli.opt.create":
+    "--default 인데 그 플랫폼에 디바이스가 하나도 없으면 추천 기종을 슬림으로 만들어 쓴다 (몇 분 걸림)",
 } as const;

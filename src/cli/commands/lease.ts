@@ -20,6 +20,8 @@ export interface AcquireOptions {
   /** commander: 값 없이 주면 true */
   default?: string | boolean;
   available?: boolean;
+  /** 기본 디바이스를 달라는데 그 플랫폼에 디바이스가 없으면 만든다 */
+  create?: boolean;
   wait?: boolean;
   timeout?: string;
 }
@@ -30,6 +32,7 @@ export function acquireOptions(command: Command): Command {
     .option("--group <group>", t("cli.opt.group"))
     .option("--default [platform]", t("cli.opt.default"))
     .option("--available", t("cli.opt.available"))
+    .option("--create", t("cli.opt.create"))
     .option("--wait", t("cli.opt.wait"))
     .option("--timeout <duration>", t("cli.opt.timeout"));
 }
@@ -62,10 +65,13 @@ export async function acquire(
             ? "both"
             : options.default,
       mode: options.available ? "available" : "all",
+      create: options.create ?? false,
       wait: options.wait ?? false,
       timeoutMs: options.timeout ? parseDuration(options.timeout) : undefined,
     },
     (event, data) => {
+      if (event === "progress" && !ctx.json)
+        console.error(`… ${(data as { message: string }).message}`);
       if (event === "queued" && !ctx.json) {
         const { position, holders } = data as { position: number } & BusyData;
         console.error(

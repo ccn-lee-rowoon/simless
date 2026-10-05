@@ -327,3 +327,29 @@ describe("슬림 전 기준값", () => {
     expect(driver.booted.has(device.id)).toBe(false);
   });
 });
+
+describe("기본 디바이스가 없을 때 (R22)", () => {
+  test("디바이스가 하나도 없으면 NO_DEFAULT 와 플랫폼별 대수, create 면 추천 기종을 만들어 점유한다", async () => {
+    const { A, server } = await start();
+    const missing = await A("lease.acquire", { default: "android" });
+    expect(missing.code).toBe("NO_DEFAULT");
+    expect(missing.data).toEqual({ missing: [{ platform: "android", devices: 0 }] });
+
+    const result = await A("lease.acquire", { default: "android", create: true });
+    expect(result.status).toBe("granted");
+    const [device] = await server.devices();
+    expect(device).toMatchObject({ name: "corgi Small 360", slim: "applied" });
+    expect(server.registry.defaults().android).toBe(device?.id);
+    expect(result.deviceIds).toEqual([device?.id]);
+  });
+
+  test("디바이스는 있는데 기본이 없으면 만들지 않고 사람에게 고르게 한다", async () => {
+    const { A, server, driver } = await start();
+    seedDevice(server, driver, "aaaa", "Added phone", false);
+    const before = (await server.devices()).length;
+    const result = await A("lease.acquire", { default: "android", create: true });
+    expect(result.code).toBe("NO_DEFAULT");
+    expect(result.data).toEqual({ missing: [{ platform: "android", devices: 1 }] });
+    expect(await server.devices()).toHaveLength(before);
+  });
+});

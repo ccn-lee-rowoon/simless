@@ -143,7 +143,7 @@ corgi/
 
 **Group** (R21) — `id`, `name`(겹치지 않게), `description`(에이전트도 읽음, «모두 필요» 같은 힌트), `deviceIds[]`, `updatedBy`(마지막으로 고친 세션 — `human` 또는 에이전트 이름), `updatedAt`. 한 디바이스가 여러 그룹에 들 수 있다.
 
-**기본 디바이스** (R22) — `{ android?: deviceId, ios?: deviceId }`. 그 플랫폼에 기본이 없을 때 Corgi 로 디바이스를 만들면 **그 디바이스가 자동으로 기본**이 된다. 사람·CLI 로 바꿀 수 있다. 기본이 없으면(만든 게 없거나 밖에서 지워짐) `NO_DEFAULT` 로 실패하고 만들거나 정하라고 안내한다.
+**기본 디바이스** (R22) — `{ android?: deviceId, ios?: deviceId }`. 그 플랫폼에 기본이 없을 때 Corgi 로 디바이스를 만들면 **그 디바이스가 자동으로 기본**이 된다. 사람·CLI 로 바꿀 수 있다. 기본이 없으면(만든 게 없거나 밖에서 지워짐) `NO_DEFAULT` 로 실패하고, data 에 플랫폼마다 디바이스 대수(`missing: [{platform, devices}]`)를 준다. 요청에 `create` 를 붙이면 **디바이스가 하나도 없는 플랫폼**만 추천 기종(Android `medium-phone`, iOS 가장 새 «iPhone N»)을 슬림으로 만들고(기준값 측정은 건너뜀) — 처음 만든 것이라 기본이 된다 — 이어서 점유한다. 디바이스가 있는데 기본이 없으면 사람이 고른다.
 
 실행 중 값(켜짐 여부, Android 시리얼)은 저장하지 않고 서버가 들고 있다.
 

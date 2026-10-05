@@ -513,4 +513,6 @@ export const en: Record<keyof typeof ko, string> = {
   "web.settings.retention": "Keep history (days)",
   "web.settings.retentionHint":
     "Lease history in the Sessions view is kept this long; older entries are deleted.",
+  "cli.opt.create":
+    "With --default: if the platform has no devices at all, create a slim recommended one and use it (takes a few minutes)",
 };

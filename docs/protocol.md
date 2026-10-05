@@ -55,7 +55,7 @@
 | --- | --- | --- |
 | `BUSY` | 다른 세션이 사용 중(또는 같은 디바이스를 먼저 기다리는 중). `data.holders` 에 누가·언제부터 | 3 |
 | `DEADLOCK` | 기다리면 서로를 기다리게 됨 — 대기열에 넣지 않았다. `data.cycle` 에 엮인 세션의 에이전트 이름 (§8) | 3 |
-| `NO_DEFAULT` | 기본 디바이스가 없음 | 1 |
+| `NO_DEFAULT` | 기본 디바이스가 없음 — data `{ missing: [{ platform, devices }] }`(그 플랫폼의 디바이스 대수, 0 이면 `create` 로 만들 수 있다) | 1 |
 | `NOT_HELD` | 이 세션이 점유하지 않은 디바이스를 켜거나 끄려 함 | 1 |
 | `NOT_FOUND` | 없는 디바이스·기종·런타임·시스템 이미지 | 1 |
 | `INVALID` | 잘못된 매개변수, 이미 쓰는 이름, 이름이 같은 디바이스가 여럿(ID 로 고르게 함) | 2 |
@@ -96,7 +96,7 @@
 | `group.create` | `{ name, description?, devices? }` | `Group` | 이름이 겹치면 `INVALID` |
 | `group.update` | `{ group, name?, description?, devices?, add?, remove? }` | `Group` | `devices` 는 통째로 바꾸기, `add`·`remove` 는 넣고 빼기. 안 준 값은 그대로 |
 | `group.delete` | `{ group }` | `{ deleted }` | 디바이스는 그대로 |
-| `lease.acquire` | `{ devices?, group?, default?: "android" \| "ios" \| "both", mode = "all" \| "available", wait = false, timeoutMs = 600000 }` | `{ status: "granted", deviceIds, devices }` · `{ status: "partial", deviceIds, devices, queued }` · `{ status: "queued", position, holders, devices }` | 디바이스·그룹·기본 디바이스를 합쳐 요청한다. `devices` 는 기기마다 `{ deviceId, name, state: held·queued·busy·free, holder? }` (R23). `all` 은 전부 아니면 아무것도 — 바쁘면 `BUSY`(data 에 `devices`), `available` 은 비어 있는 것만 잡는다(하나도 없으면 `BUSY`). `wait` 면 대기열에 넣는다 — `all` 은 전부 빌 때까지 기다리고, `available` 은 비어 있던 것을 잡고 바로 돌아오며 나머지는 빌 때마다 서버가 잡아 준다(비어 있던 게 없으면 처음 잡힐 때까지 기다린다). 대기열에 넣으면 교착이 생기는 요청은 `DEADLOCK` |
+| `lease.acquire` | `{ devices?, group?, default?: "android" \| "ios" \| "both", create = false, mode = "all" \| "available", wait = false, timeoutMs = 600000 }` | `{ status: "granted", deviceIds, devices }` · `{ status: "partial", deviceIds, devices, queued }` · `{ status: "queued", position, holders, devices }` | 디바이스·그룹·기본 디바이스를 합쳐 요청한다. `devices` 는 기기마다 `{ deviceId, name, state: held·queued·busy·free, holder? }` (R23). `all` 은 전부 아니면 아무것도 — 바쁘면 `BUSY`(data 에 `devices`), `available` 은 비어 있는 것만 잡는다(하나도 없으면 `BUSY`). `wait` 면 대기열에 넣는다 — `all` 은 전부 빌 때까지 기다리고, `available` 은 비어 있던 것을 잡고 바로 돌아오며 나머지는 빌 때마다 서버가 잡아 준다(비어 있던 게 없으면 처음 잡힐 때까지 기다린다). 대기열에 넣으면 교착이 생기는 요청은 `DEADLOCK`. `create` 면 기본 디바이스를 달라는데 디바이스가 하나도 없는 플랫폼에 추천 기종을 슬림으로 만들고 점유한다(진행 알림 있음, 몇 분) |
 | `lease.release` | `{ devices? }` | `{ released }` | 안 주면 이 세션의 점유·대기 전부 |
 | `lease.history` | `{ limit = 100 (최대 5000), session? }` | `[{ at, kind, sessionKey, agentSessionId?, agent, cwd, human, deviceIds }]` — 최근 것부터 | `kind`: `acquired` 바로 점유 · `queued` 대기 등록 · `granted` 기다려서 점유 · `released` 스스로 해제 · `forced` 강제 해제됨 · `ended` 세션 종료로 해제 · `idle` 오래 안 써서 해제 · `deadlock` 교착이라 대기 거절 (M13) |
 | `lease.sessions` | `{ limit = 200 (최대 1000) }` | `[{ sessionKey, agentSessionId?, agent, cwd, human, lastAt, events }]` — 마지막 활동이 최근인 것부터 | 기록에 남은 세션마다 묶음 — 세션 화면의 지난 세션 (M13) |

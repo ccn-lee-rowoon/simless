@@ -127,7 +127,7 @@ export async function runMcp(): Promise<void> {
     {
       title: "Acquire and boot devices",
       description:
-        "Acquire devices and boot them — by device IDs/names, a device group, or the default device. mode 'all' (default) takes all or nothing; 'available' takes the free ones now. With wait, joins the queue; if it returns STILL_QUEUED, call again with the same arguments (your place is kept). Returns each device's targetId to pass to argent tools. Errors: BUSY (someone holds a device — show the holder to the user or wait), DEADLOCK, NO_DEFAULT.",
+        "Acquire devices and boot them — by device IDs/names, a device group, or the default device. mode 'all' (default) takes all or nothing; 'available' takes the free ones now. With wait, joins the queue; if it returns STILL_QUEUED, call again with the same arguments (your place is kept). Returns each device's targetId to pass to argent tools. Errors: BUSY (someone holds a device — show the holder to the user or wait), DEADLOCK, NO_DEFAULT (data.missing tells, per platform, how many devices exist — 0 means call again with create: true; otherwise ask the user which device).",
       inputSchema: {
         devices: z.array(z.string()).optional().describe("Device IDs or names"),
         group: z.string().optional().describe("Device group name or ID"),
@@ -136,6 +136,12 @@ export async function runMcp(): Promise<void> {
           .optional()
           .describe("The default device for a platform, or both"),
         mode: z.enum(["all", "available"]).optional(),
+        create: z
+          .boolean()
+          .optional()
+          .describe(
+            "With default: if the platform has no devices at all, create a slim recommended one first (takes a few minutes)",
+          ),
         wait: z.boolean().optional().describe("Wait in the queue when devices are busy"),
       },
     },
@@ -145,6 +151,7 @@ export async function runMcp(): Promise<void> {
         group: args.group,
         default: args.default,
         mode: args.mode ?? "all",
+        create: args.create ?? false,
         wait: args.wait ?? false,
         timeoutMs: WAIT_SLICE_MS,
       });

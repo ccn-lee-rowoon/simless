@@ -58,7 +58,9 @@ corgi --json use <ID|name>...             # specific devices
   - The task can start with fewer devices (e.g. a layout check across widths): `--available` takes the free ones now; add `--wait` to have the server take the rest as they free up (`corgi status` shows them; run `corgi up` when they arrive).
   - Every device is required (e.g. «needs both devices»): show the holders to the user and **ask whether to wait**. If yes: `corgi --json use --group … --wait --timeout 9m`. If the Bash limit ends it as «still waiting», your place in line is kept — run it again.
   - `DEADLOCK`: waiting would make two sessions wait on each other. Continue with what you hold, or `corgi release` and ask again without holding anything.
-- `NO_DEFAULT`: no default device yet — ask the user which device to use (or to create one).
+- `NO_DEFAULT`: no default device yet. `data.missing` tells, per platform, how many devices exist:
+  - `devices: 0` — there is nothing to choose from: tell the user you're creating one (slim, a few minutes), then `corgi --json use --default <platform> --create`.
+  - more than 0 — ask the user which device to use (`corgi default <device>` makes it the default).
 - From `devices[]` remember each device's **`targetId`** (argent `udid`/`device_id` — iOS UDID, Android `emulator-<port>`) and **`label`** (e.g. `Android 360dp`, `iOS 402pt`). `corgi --json list` shows them again.
 
 ### 3. Start your own Metro (React Native · Expo apps)
@@ -131,7 +133,7 @@ If the `corgi` MCP server is registered, the same steps are available as tools: 
 | `corgi --json status` | Server, devices, groups, defaults, leases |
 | `corgi --json list [--platform] [--created]` | Devices in the Corgi list — `targetId`, `label`, state, slim, groups, holder |
 | `corgi --json group list` / `group show <group>` | Device groups and their devices |
-| `corgi --json use … [--group] [--default [platform]] [--available] [--wait --timeout 9m]` | Acquire + boot |
+| `corgi --json use … [--group] [--default [platform] [--create]] [--available] [--wait --timeout 9m]` | Acquire + boot |
 | `corgi acquire …` | Acquire without booting (same options) |
 | `corgi who [<udid·serial>]` | Who is using a device |
 | `corgi down` / `corgi release` | Shut down / release |

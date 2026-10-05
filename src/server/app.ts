@@ -57,6 +57,8 @@ const AcquireParams = z.object({
   group: z.string().optional(),
   /** 기본 디바이스 — 플랫폼 하나 또는 둘 다 (R22) */
   default: z.enum(["android", "ios", "both"]).optional(),
+  /** 기본 디바이스를 달라는데 그 플랫폼에 디바이스가 하나도 없으면 추천 기종을 슬림으로 만든다 (R22) */
+  create: z.boolean().default(false),
   /** all = 전부 아니면 아무것도, available = 비어 있는 것만 (R23) */
   mode: z.enum(["all", "available"]).default("all"),
   wait: z.boolean().default(false),
@@ -549,8 +551,37 @@ export class CorgiServer {
     });
   }
 
+  /** 다른 메서드를 안에서 부른다 — 기본 디바이스를 만들 때 device.create 를 그대로 쓴다 */
+  private invoke(name: string, params: unknown, session: SessionInfo, connection: Connection) {
+    const method = this.methods[name];
+    if (!method) throw new HandlerError("INVALID", t("err.unknownMethod", { method: name }));
+    return method(params, session, connection);
+  }
+
+  /** 디바이스가 하나도 없을 때 만들 기종 — Android 는 Medium Phone, iOS 는 가장 새 기본 iPhone */
+  private async recommendedModel(platform: Device["platform"]): Promise<string> {
+    const { models } = await this.driver(platform).catalog();
+    const phones = models.filter((m) => m.form === "phone");
+    if (platform === "android") {
+      const model = phones.find((m) => m.id === "medium-phone") ?? phones[0];
+      if (!model) throw new HandlerError("TOOL_MISSING", t("err.noModel", { model: "phone" }));
+      return model.id;
+    }
+    const plain = phones
+      .map((m) => ({ m, n: Number(/^iPhone (\d+)$/.exec(m.name)?.[1]) }))
+      .filter((x) => Number.isFinite(x.n))
+      .sort((a, b) => b.n - a.n);
+    const model = plain[0]?.m ?? phones.at(-1);
+    if (!model) throw new HandlerError("TOOL_MISSING", t("err.noModel", { model: "iPhone" }));
+    return model.id;
+  }
+
   /** 디바이스·그룹·기본 디바이스를 디바이스 목록으로 푼다 */
-  private async targets(params: z.infer<typeof AcquireParams>): Promise<Device[]> {
+  private async targets(
+    params: z.infer<typeof AcquireParams>,
+    session: SessionInfo,
+    connection: Connection,
+  ): Promise<Device[]> {
     const refs = [...params.devices];
     if (params.group) {
       const group = this.registry.findGroup(params.group);
@@ -560,12 +591,33 @@ export class CorgiServer {
       refs.push(...group.deviceIds);
     }
     if (params.default) {
-      const defaults = this.registry.defaults();
       const platforms =
         params.default === "both" ? (["android", "ios"] as const) : [params.default];
+      const listed = await this.devices();
+      const missing = platforms.filter((p) => !this.registry.defaults()[p]);
+      // 디바이스가 하나도 없는 플랫폼만 만든다 — 있는데 기본이 없으면 사람이 고른다
+      const creatable = missing.filter((p) => !listed.some((d) => d.spec.platform === p));
+      if (params.create) {
+        for (const platform of creatable) {
+          await this.invoke(
+            "device.create",
+            { platform, model: await this.recommendedModel(platform), slim: true, baseline: false },
+            session,
+            connection,
+          );
+        }
+      }
+      const defaults = this.registry.defaults();
       const ids = platforms.map((p) => defaults[p]).filter((id): id is string => id !== undefined);
+      // both 는 있는 쪽만 줘도 된다 — 하나도 없을 때만 실패
       if (ids.length === 0 || (params.default !== "both" && ids.length < platforms.length)) {
-        throw new HandlerError("NO_DEFAULT", t("err.noDefault"));
+        const left = platforms.filter((p) => !defaults[p]);
+        throw new HandlerError("NO_DEFAULT", t("err.noDefault"), {
+          missing: left.map((platform) => ({
+            platform,
+            devices: listed.filter((d) => d.spec.platform === platform).length,
+          })),
+        });
       }
       refs.push(...ids);
     }
@@ -596,7 +648,7 @@ export class CorgiServer {
     session: SessionInfo,
     connection: Connection,
   ): Promise<AcquireResult> {
-    const devices = await this.targets(params);
+    const devices = await this.targets(params, session, connection);
     const ids = devices.map((d) => d.id);
     const items = () => this.leaseItems(session, devices);
     const options = { wait: params.wait, mode: params.mode };
