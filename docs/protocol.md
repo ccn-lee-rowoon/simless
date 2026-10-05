@@ -73,7 +73,7 @@
 
 | 메서드 | params | result | 비고 |
 | --- | --- | --- | --- |
-| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en), 이 세션, 점유·대기 순번, `DeviceView[]`, 그룹 `groups`, 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
+| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en)·시스템 언어 `systemLanguage`, 이 세션, 점유·대기 순번, `DeviceView[]`, 그룹 `groups`, 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
 | `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, androidRamMb, simslimProfile? }` | 설정 화면·`corgi config` (M11) |
 | `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·Android RAM·simslim 프로필 (R25) |
 | `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff`)·남는 것(`slimKeeps`) (M1·M4) |

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CatalogModel, CatalogResult, DeviceView, PlatformCatalog } from "../shared/api.ts";
+import { t } from "../shared/i18n.ts";
 import { call } from "./api.ts";
 import type { LogLine } from "./types.ts";
 import { Dialog } from "./ui.tsx";
@@ -109,7 +110,7 @@ export function CreateDialog({
       });
       onCreated(device.name);
     } catch (error) {
-      onError(`만들기 실패 — ${(error as Error).message}`);
+      onError(t("web.create.failed", { message: (error as Error).message }));
       setCreating(false);
     }
   };
@@ -117,7 +118,7 @@ export function CreateDialog({
   const group = (form: CatalogModel["form"]) => models.filter((m) => m.form === form);
 
   return (
-    <Dialog open={open} onClose={creating ? () => {} : onClose} title="디바이스 생성" wide>
+    <Dialog open={open} onClose={creating ? () => {} : onClose} title={t("web.create.title")} wide>
       <form
         className="dialog-body create"
         onSubmit={(e) => {
@@ -125,7 +126,7 @@ export function CreateDialog({
           void create();
         }}
       >
-        <fieldset className="segmented" aria-label="플랫폼">
+        <fieldset className="segmented" aria-label={t("web.platform")}>
           {(["ios", "android"] as const).map((p) => (
             <button
               key={p}
@@ -140,7 +141,7 @@ export function CreateDialog({
           ))}
         </fieldset>
 
-        {!catalog && <p className="subtle">만들 수 있는 기종을 읽는 중…</p>}
+        {!catalog && <p className="sub">{t("web.create.loading")}</p>}
         {problems.map((p) => (
           <p key={p.message} className="notice-inline">
             {p.message}
@@ -148,11 +149,11 @@ export function CreateDialog({
         ))}
 
         <fieldset className="models" disabled={creating}>
-          <legend>기종</legend>
+          <legend>{t("table.model")}</legend>
           {(["phone", "tablet"] as const).map((form) =>
             group(form).length === 0 ? null : (
               <div key={form} className="model-group">
-                <h4>{form === "phone" ? "폰" : "태블릿"}</h4>
+                <h4>{t(form === "phone" ? "web.create.phones" : "web.create.tablets")}</h4>
                 <ul className="picker">
                   {group(form).map((m) => (
                     <li key={m.id}>
@@ -167,7 +168,7 @@ export function CreateDialog({
                           {unit}
                         </span>
                         <span className="picker-name">{m.name}</span>
-                        <span className="subtle mono">{m.detail}</span>
+                        <span className="sub mono">{m.detail}</span>
                       </button>
                     </li>
                   ))}
@@ -186,15 +187,15 @@ export function CreateDialog({
                     onClick={() => setModelId(CUSTOM)}
                   >
                     <span className="size mono">—</span>
-                    <span className="picker-name">직접 입력</span>
-                    <span className="subtle">폭·높이·밀도</span>
+                    <span className="picker-name">{t("web.create.custom")}</span>
+                    <span className="sub">{t("web.create.customHint")}</span>
                   </button>
                 </li>
               </ul>
               {custom && (
                 <div className="grid3">
                   <label className="field">
-                    <span>폭 (dp)</span>
+                    <span>{t("web.create.widthDp")}</span>
                     <input
                       inputMode="numeric"
                       value={size.widthDp}
@@ -202,7 +203,7 @@ export function CreateDialog({
                     />
                   </label>
                   <label className="field">
-                    <span>높이 (dp)</span>
+                    <span>{t("web.create.heightDp")}</span>
                     <input
                       inputMode="numeric"
                       value={size.heightDp}
@@ -210,7 +211,7 @@ export function CreateDialog({
                     />
                   </label>
                   <label className="field">
-                    <span>밀도 (dpi)</span>
+                    <span>{t("web.create.density")}</span>
                     <select
                       value={size.density}
                       onChange={(e) => setSize({ ...size, density: e.target.value })}
@@ -230,7 +231,7 @@ export function CreateDialog({
 
         <div className="grid2">
           <label className="field">
-            <span>{platform === "ios" ? "런타임" : "시스템 이미지"}</span>
+            <span>{t(platform === "ios" ? "web.create.runtime" : "web.create.image")}</span>
             <select
               value={os?.id ?? ""}
               disabled={creating || osChoices.length === 0}
@@ -239,13 +240,13 @@ export function CreateDialog({
               {osChoices.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.name}
-                  {o.recommended ? " (기본)" : ""}
+                  {o.recommended ? t("web.create.recommended") : ""}
                 </option>
               ))}
             </select>
           </label>
           <label className="field">
-            <span>이름</span>
+            <span>{t("table.name")}</span>
             <input
               value={name}
               placeholder={defaultName}
@@ -263,12 +264,12 @@ export function CreateDialog({
               disabled={creating}
               onChange={(e) => setSlim(e.target.checked)}
             />
-            슬림화 — UI 테스트용으로 가볍게 (이름 앞에 corgi)
+            {t("web.create.slim")}
           </label>
           <button
             type="button"
             className="icon-button info-button"
-            aria-label="슬림화하면 안 되는 기능"
+            aria-label={t("web.create.slimInfo")}
             aria-expanded={showSlimInfo}
             onClick={() => setShowSlimInfo(!showSlimInfo)}
           >
@@ -283,22 +284,22 @@ export function CreateDialog({
             disabled={creating || !slim}
             onChange={(e) => setBaseline(e.target.checked)}
           />
-          슬림 전후 비교 — 슬림하기 전에 한 번 켜서 메모리를 재 둔다 (1~2분 더 걸림)
+          {t("web.create.baseline")}
         </label>
 
         {creating && <Progress log={log} logStart={logStart} />}
         <footer className="dialog-footer">
-          <span className="subtle">앱은 설치하지 않습니다</span>
+          <span className="sub">{t("web.create.noApps")}</span>
           <span className="spacer" />
           <button type="button" className="button" disabled={creating} onClick={onClose}>
-            취소
+            {t("web.cancel")}
           </button>
           <button
             type="submit"
             className="button button-primary"
             disabled={creating || (!model && !custom)}
           >
-            {creating ? "만드는 중…" : "만들기"}
+            {creating ? t("web.create.creating") : t("web.create.submit")}
           </button>
         </footer>
       </form>
@@ -310,26 +311,30 @@ export function CreateDialog({
 function SlimInfo({ catalog }: { catalog: PlatformCatalog }) {
   if (catalog.slimOff.length === 0) {
     return (
-      <p className="subtle">
-        {catalog.platform === "ios" ? "simslim" : "avdslim"} 이 없어 목록을 읽지 못했습니다.
+      <p className="sub">
+        {t("web.create.slimInfoMissing", {
+          tool: catalog.platform === "ios" ? "simslim" : "avdslim",
+        })}
       </p>
     );
   }
   return (
     <div className="slim-info">
-      <p>슬림화하면 아래 기능이 꺼집니다. 테스트에 필요하면 슬림을 끄고 만드세요.</p>
+      <p>{t("web.create.slimInfoIntro")}</p>
       <ul>
         {catalog.slimOff.map((c) => (
           <li key={c.name}>
             <strong>{c.name}</strong>
-            {c.count ? <span className="subtle"> · {c.count}개</span> : null}
-            {c.detail && <div className="subtle">{c.detail}</div>}
+            {c.count ? (
+              <span className="sub"> · {t("web.create.slimCount", { count: c.count })}</span>
+            ) : null}
+            {c.detail && <div className="sub">{c.detail}</div>}
           </li>
         ))}
       </ul>
       {catalog.slimKeeps.length > 0 && (
         <>
-          <p>그대로 남는 것</p>
+          <p>{t("web.create.slimKeeps")}</p>
           <ul className="keeps">
             {catalog.slimKeeps.map((k) => (
               <li key={k}>{k}</li>
@@ -351,7 +356,7 @@ function Progress({ log, logStart }: { log: LogLine[]; logStart: number }) {
           .map((line) => (
             <p key={line.id}>{line.text}</p>
           ))}
-        {(log.at(-1)?.id ?? 0) === logStart && <p className="subtle">시작하는 중…</p>}
+        {(log.at(-1)?.id ?? 0) === logStart && <p className="sub">{t("web.create.starting")}</p>}
       </div>
     </div>
   );

@@ -411,6 +411,7 @@ export class CorgiServer {
     return {
       serverVersion: VERSION,
       language: this.lang,
+      systemLanguage: resolveLanguage("system", this.deps.systemLanguages?.() ?? []),
       session,
       held: this.leases.heldBy(session.key),
       queuePosition: this.leases.queuePosition(session.key),

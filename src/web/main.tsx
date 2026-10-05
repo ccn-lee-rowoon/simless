@@ -1,33 +1,28 @@
 import { StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { CatalogResult, StatusResult } from "../shared/api.ts";
+import { language, resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
 import { ApiError, call, subscribe, token } from "./api.ts";
 import { CreateDialog } from "./CreateDialog.tsx";
-import corgiIcon from "./corgi.svg";
-import { DevicesTab } from "./DevicesTab.tsx";
-import type { LogLine } from "./types.ts";
+import { DevicesView } from "./DevicesView.tsx";
+import { GroupsView } from "./GroupsView.tsx";
+import { SettingsView } from "./SettingsView.tsx";
+import type { Act, LogLine } from "./types.ts";
+import { Logo, useMenuDismiss } from "./ui.tsx";
 
-/** 메인 목록의 플랫폼 탭 */
-type Tab = "all" | "android" | "ios";
+type View = "devices" | "groups" | "settings";
+const VIEW_KEY = "corgi-view";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "android", label: "Android" },
-  { id: "ios", label: "iOS" },
-];
-
-const TAB_KEY = "corgi-tab";
-
-function savedTab(): Tab {
+function savedView(): View {
   try {
-    const saved = localStorage.getItem(TAB_KEY);
-    return saved === "android" || saved === "ios" ? saved : "all";
+    const value = localStorage.getItem(VIEW_KEY);
+    return value === "groups" || value === "settings" ? value : "devices";
   } catch {
-    return "all";
+    return "devices";
   }
 }
 
-export interface Notice {
+interface Notice {
   id: number;
   kind: "info" | "error";
   text: string;
@@ -36,22 +31,29 @@ export interface Notice {
 let noticeId = 0;
 let logId = 0;
 
+// 서버 상태가 오기 전까지는 브라우저(macOS) 언어로
+setLanguage(resolveLanguage("system", navigator.languages));
+
 function App() {
-  const [tab, setTabState] = useState<Tab>(savedTab);
-  const setTab = (next: Tab) => {
-    setTabState(next);
-    try {
-      localStorage.setItem(TAB_KEY, next);
-    } catch {
-      // 저장 못 해도 화면은 그대로 쓴다
-    }
-  };
+  const [view, setViewState] = useState<View>(savedView);
   const [status, setStatus] = useState<StatusResult | null>(null);
   const [catalog, setCatalog] = useState<CatalogResult | null>(null);
   const [online, setOnline] = useState(true);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [log, setLog] = useState<LogLine[]>([]);
+  const [showLog, setShowLog] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [, setLang] = useState(language());
+  useMenuDismiss();
+
+  const setView = (next: View) => {
+    setViewState(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      // 기억 못 해도 된다
+    }
+  };
 
   const notify = useCallback((kind: Notice["kind"], text: string) => {
     const id = ++noticeId;
@@ -63,14 +65,17 @@ function App() {
   }, []);
 
   const refreshStatus = useCallback(() => {
-    call<StatusResult>("status").then(setStatus, (e: unknown) =>
-      notify("error", String((e as Error).message)),
-    );
-  }, [notify]);
-
-  const refreshCatalog = useCallback(() => {
-    call<CatalogResult>("catalog").then(setCatalog, (e: unknown) =>
-      notify("error", String((e as Error).message)),
+    call<StatusResult>("status").then(
+      (next) => {
+        // 설정 언어 (R25) — 바뀌면 화면 전체를 다시 그린다
+        if (next.language !== language()) {
+          setLanguage(next.language);
+          document.documentElement.lang = next.language;
+          setLang(next.language);
+        }
+        setStatus(next);
+      },
+      (e: unknown) => notify("error", String((e as Error).message)),
     );
   }, [notify]);
 
@@ -79,7 +84,10 @@ function App() {
     refreshStatus();
     const unsubscribe = subscribe({
       changed: refreshStatus,
-      progress: (message) => setLog((list) => [...list.slice(-7), { id: ++logId, text: message }]),
+      progress: (message) => {
+        setShowLog(true);
+        setLog((list) => [...list.slice(-11), { id: ++logId, text: message }]);
+      },
       connection: setOnline,
     });
     // 밖에서 켜고 끈 것(창 닫기 등)도 따라가도록 가끔 다시 읽는다
@@ -92,19 +100,21 @@ function App() {
 
   // 만들 수 있는 기종·OS 는 생성(+) 화면을 열 때 읽는다
   useEffect(() => {
-    if (creating) refreshCatalog();
-  }, [creating, refreshCatalog]);
+    if (creating)
+      call<CatalogResult>("catalog").then(setCatalog, (e: unknown) =>
+        notify("error", String((e as Error).message)),
+      );
+  }, [creating, notify]);
 
-  /** 버튼 동작 공통 — 실패하면 알림, 다른 세션이 쓰는 중이면 누가 쓰는지 */
-  const act = useCallback(
-    async (label: string, fn: () => Promise<unknown>) => {
+  const act: Act = useCallback(
+    async (label, fn) => {
       try {
         await fn();
-        notify("info", `${label} 완료`);
+        notify("info", t("web.done", { label }));
       } catch (error) {
         const message =
           error instanceof ApiError || error instanceof Error ? error.message : String(error);
-        notify("error", `${label} 실패 — ${message}`);
+        notify("error", t("web.failed", { label, message }));
       } finally {
         refreshStatus();
       }
@@ -115,69 +125,91 @@ function App() {
   if (!token) {
     return (
       <main className="empty-page">
-        <img src={corgiIcon} alt="" width={96} height={96} />
+        <Logo size={56} />
         <h1>Corgi</h1>
-        <p>
-          터미널에서 <code>corgi ui</code> 로 열거나, Corgi 앱을 실행하세요.
-        </p>
+        <p>{t("web.noToken")}</p>
       </main>
     );
   }
 
-  const devices = status?.devices ?? [];
+  const tabs: { id: View; label: string }[] = [
+    { id: "devices", label: t("web.nav.devices") },
+    { id: "groups", label: t("web.nav.groups") },
+    { id: "settings", label: t("web.nav.settings") },
+  ];
+
   return (
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <img src={corgiIcon} alt="" width={36} height={36} />
-          <div>
-            <h1>Corgi</h1>
-            <p className="subtle">크기별 레이아웃 확인 디바이스</p>
-          </div>
+          <Logo />
+          <span>Corgi</span>
         </div>
-        <div className="topbar-right">
-          <span
-            className={online ? "dot dot-on" : "dot dot-off"}
-            title={online ? "서버 연결됨" : "서버 연결 끊김"}
-          />
-          <span className="subtle">{status ? `서버 ${status.serverVersion}` : "연결 중…"}</span>
-          <button type="button" className="button button-primary" onClick={() => setCreating(true)}>
-            + 생성
-          </button>
-        </div>
+        <nav className="nav" aria-label={t("web.nav")}>
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={view === tab.id ? "nav-item nav-item-active" : "nav-item"}
+              aria-current={view === tab.id ? "page" : undefined}
+              onClick={() => setView(tab.id)}
+            >
+              {tab.label}
+              {tab.id === "groups" && status && status.groups.length > 0 && (
+                <span className="mono count">{status.groups.length}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <span className="spacer" />
+        <span className="server-state">
+          <span className={online ? "dot dot-on" : "dot dot-bad"} />
+          {status && online
+            ? t("web.server.connected", { version: status.serverVersion })
+            : online
+              ? t("web.loading")
+              : t("web.server.offline")}
+        </span>
+        <button type="button" className="button button-primary" onClick={() => setCreating(true)}>
+          <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          {t("web.create")}
+        </button>
       </header>
 
-      <nav className="tabs" aria-label="플랫폼">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={tab === t.id ? "tab tab-active" : "tab"}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}{" "}
-            <span className="count">
-              {t.id === "all"
-                ? devices.length
-                : devices.filter((d) => d.spec.platform === t.id).length}
-            </span>
-          </button>
-        ))}
-      </nav>
-
       <main className="content">
-        <DevicesTab
-          devices={tab === "all" ? devices : devices.filter((d) => d.spec.platform === tab)}
-          platform={tab}
-          queue={status?.queue ?? []}
-          act={act}
-          onCreate={() => setCreating(true)}
-        />
+        {!status ? (
+          <p className="sub">{t("web.loading")}</p>
+        ) : view === "devices" ? (
+          <DevicesView status={status} act={act} onCreate={() => setCreating(true)} />
+        ) : view === "groups" ? (
+          <GroupsView status={status} act={act} />
+        ) : (
+          <SettingsView status={status} act={act} onSaved={refreshStatus} />
+        )}
       </main>
 
-      {log.length > 0 && (
-        <section className="log" aria-label="작업 기록">
-          <h3>작업 기록</h3>
+      {log.length > 0 && showLog && (
+        <section className="log" aria-label={t("web.log")}>
+          <header>
+            <h3>{t("web.log")}</h3>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label={t("web.close")}
+              onClick={() => setShowLog(false)}
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true">
+                <path
+                  d="M3 3l8 8M11 3l-8 8"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </header>
           {log.map((line) => (
             <p key={line.id}>{line.text}</p>
           ))}
@@ -199,7 +231,7 @@ function App() {
         onClose={() => setCreating(false)}
         onCreated={(name) => {
           setCreating(false);
-          notify("info", `만들었습니다: ${name}`);
+          notify("info", t("web.created", { name }));
           refreshStatus();
         }}
         onError={(message) => notify("error", message)}

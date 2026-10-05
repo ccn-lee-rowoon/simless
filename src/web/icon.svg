@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <title>Corgi</title>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="#1B1F27"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="46" stroke-linejoin="round">
+    <rect x="190" y="456" width="140" height="308" rx="39"/>
+    <rect x="386" y="372" width="182" height="392" rx="45"/>
+    <rect x="624" y="260" width="210" height="504" rx="50"/>
+  </g>
+</svg>

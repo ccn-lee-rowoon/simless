@@ -57,6 +57,8 @@ export interface StatusResult {
   serverVersion: string;
   /** 지금 쓰는 언어 — 설정이 system 이면 서버가 macOS 언어 설정으로 정한 값 (R25) */
   language: Lang;
+  /** 설정이 system 일 때 쓸 언어 — 설정 화면의 «시스템 설정 따르기 (지금: …)» */
+  systemLanguage: Lang;
   session: SessionInfo;
   held: string[];
   queuePosition?: number;
