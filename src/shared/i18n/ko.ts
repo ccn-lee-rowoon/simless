@@ -234,7 +234,7 @@ export const ko = {
   "catalog.problem": "주의({platform}): {message}",
 
   // CLI — 그룹
-  "cli.group": "디바이스 그룹 — 용도별 디바이스 묶음. 예: «UI 레이아웃 체크», «DM 확인»",
+  "cli.group": "디바이스 그룹 — 용도별 디바이스 묶음. 예: «UI 레이아웃 체크», «두 계정 확인»",
   "cli.group.list": "그룹 목록",
   "cli.group.none": "그룹이 없습니다 — simless group create <이름> --desc <설명> <디바이스…>",
   "cli.group.show": "그룹의 설명과 디바이스",
@@ -573,5 +573,5 @@ export const ko = {
     "--hook·--mcp 를 붙일 에이전트 (쉼표로): claude, copilot, codex, cursor, gemini",
   "web.slogan": "Make simulator management seamless.",
   "cli.helpAgents":
-    '\n에이전트(AI)용:\n  - 항상 --json 을 붙인다. 결과는 stdout 의 JSON, 오류는 {"error": {code, message, data}}\n  - 종료 코드: 0 성공 · 1 실패 · 2 사용법 오류 · 3 다른 세션이 쓰는 중·아직 대기 중·교착 · 4 서버에 연결 못 함\n  - 오류 코드로 판단한다 (메시지는 사용자 언어): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - 기기를 건드리기 전에 점유한다 — 순서 전체는 simless 스킬(~/.claude/skills/simless, ~/.agents/skills/simless)\n\n예:\n  simless --json status                          디바이스·그룹·기본·누가 쓰는지\n  simless --json use --default ios               iOS 기본 디바이스를 점유하고 켠다 (없으면 --create)\n  simless --json use --group "DM check" --wait   그룹 전부, 쓰는 중이면 기다린다\n  simless --json use --group "layout" --available  비어 있는 것부터\n  simless --json list                            argent 에 넘길 targetId·크기 라벨\n  simless release                                다 쓰면 돌려준다\n  simless doctor                                 설치·연결 문제',
+    '\n에이전트(AI)용:\n  - 항상 --json 을 붙인다. 결과는 stdout 의 JSON, 오류는 {"error": {code, message, data}}\n  - 종료 코드: 0 성공 · 1 실패 · 2 사용법 오류 · 3 다른 세션이 쓰는 중·아직 대기 중·교착 · 4 서버에 연결 못 함\n  - 오류 코드로 판단한다 (메시지는 사용자 언어): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - 기기를 건드리기 전에 점유한다 — 순서 전체는 simless 스킬(~/.claude/skills/simless, ~/.agents/skills/simless)\n\n예:\n  simless --json status                          디바이스·그룹·기본·누가 쓰는지\n  simless --json use --default ios               iOS 기본 디바이스를 점유하고 켠다 (없으면 --create)\n  simless --json use --group "two accounts" --wait  그룹 전부, 쓰는 중이면 기다린다\n  simless --json use --group "layout" --available  비어 있는 것부터\n  simless --json list                            argent 에 넘길 targetId·크기 라벨\n  simless release                                다 쓰면 돌려준다\n  simless doctor                                 설치·연결 문제',
 } as const;

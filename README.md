@@ -5,7 +5,7 @@
 이 Mac 의 **iOS 시뮬레이터·Android 에뮬레이터를 여러 AI 에이전트 세션이 안전하게 나눠 쓰게** 하는 도구다.
 에이전트는 «심리스로 확인해 줘» 한마디로 기기를 빌리고, 다 쓰면 돌려준다. 다른 세션이 쓰는 기기는 기다리거나 묻는다.
 
-- **용도별 기기 묶음(그룹)** — «DM 확인»(모더레이터 계정 기기 + 일반 회원 기기), «해상도별 레이아웃»(폭이 다른 세 대)처럼 묶어 두고 한 번에 빌린다
+- **용도별 기기 묶음(그룹)** — «두 계정 확인»(계정 A 기기 + 계정 B 기기), «해상도별 레이아웃»(폭이 다른 세 대)처럼 묶어 두고 한 번에 빌린다
 - **기본 디바이스** — 플랫폼마다 한 대. «기본 디바이스로 테스트해 줘». 기기가 하나도 없으면 만들어서 빌려준다
 - **iOS 와 Android 를 함께** — 한 그룹에 iPhone 과 Android 를 섞을 수 있다
 - **UI 테스트용 슬림 기기** — Siri·iCloud 같은 것을 꺼서 가볍게(예: 7.8GB → 1.6GB). 만들 때 고른다
@@ -43,7 +43,7 @@ simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·
 | 명령 | |
 | --- | --- |
 | `simless status` | 기기·그룹·누가 쓰는지 |
-| `simless use --default ios` · `--group "DM check"` · `<기기>…` | 빌려서 켜기 (`--available` 비어 있는 것만, `--wait` 기다리기, `--create` 없으면 만들기) |
+| `simless use --default ios` · `--group "two accounts"` · `<기기>…` | 빌려서 켜기 (`--available` 비어 있는 것만, `--wait` 기다리기, `--create` 없으면 만들기) |
 | `simless release` · `simless down` | 돌려주기 · 끄기 |
 | `simless catalog` · `simless create "iPhone 17"` | 만들 수 있는 기종 · 만들기 (`--no-slim` 일반 기기) |
 | `simless group list` · `simless group create …` | 그룹 |

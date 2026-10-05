@@ -1,11 +1,11 @@
 ---
 name: simless
-description: Use when testing or checking a **mobile app** (React Native, Expo, native iOS or Android) on an iOS simulator or Android emulator on this Mac — running the app, checking a screen, checking its layout across device sizes, or anything else that drives a simulator or emulator. Also use when the user explicitly asks for a simulator, emulator or simless, in any project. simless (the `simless` CLI) brokers the devices between sessions — acquire a device group, the default device, or specific devices, then drive screens with argent. Triggers in a mobile app project — "시뮬레이터로 확인해 줘", "에뮬레이터에서 테스트", "기본 디바이스로 테스트", "DM 확인 그룹으로 봐 줘", "여러 해상도로 확인", "레이아웃 크기별로 봐 줘", "320·375·414 에서 확인", "작은 폰에서 깨지는지", "태블릿에서도 봐 줘"; anywhere — "심리스로 확인해 줘", "시뮬레이터에서 봐 줘", "test on the simulator". Even for a single device, acquire it through simless first; argent skills (argent-device-interact etc.) then do the on-screen work. **Not for web projects**: checking a website's responsive layout at phone or tablet widths is done in a browser (resize, device emulation), not here — unless the user asks for a simulator or emulator by name (e.g. mobile Safari on an iOS simulator). Not for tasks that don't touch a device.
+description: Use when testing or checking a **mobile app** (React Native, Expo, native iOS or Android) on an iOS simulator or Android emulator on this Mac — running the app, checking a screen, checking its layout across device sizes, or anything else that drives a simulator or emulator. Also use when the user explicitly asks for a simulator, emulator or simless, in any project. simless (the `simless` CLI) brokers the devices between sessions — acquire a device group, the default device, or specific devices, then drive screens with argent. Triggers in a mobile app project — "시뮬레이터로 확인해 줘", "에뮬레이터에서 테스트", "기본 디바이스로 테스트", "그룹으로 확인해 줘", "여러 해상도로 확인", "레이아웃 크기별로 봐 줘", "320·375·414 에서 확인", "작은 폰에서 깨지는지", "태블릿에서도 봐 줘"; anywhere — "심리스로 확인해 줘", "시뮬레이터에서 봐 줘", "test on the simulator". Even for a single device, acquire it through simless first; argent skills (argent-device-interact etc.) then do the on-screen work. **Not for web projects**: checking a website's responsive layout at phone or tablet widths is done in a browser (resize, device emulation), not here — unless the user asks for a simulator or emulator by name (e.g. mobile Safari on an iOS simulator). Not for tasks that don't touch a device.
 ---
 
 # simless — device broker
 
-simless lets several agent sessions and people share this Mac's simulators and emulators without stepping on each other. The devices in the **simless list** (created by simless, or added from this Mac) are shared, and you **acquire** a device before touching it. Devices are bundled by purpose into **device groups** (e.g. «UI layout check», «DM check»), and each platform has one **default device** for general testing.
+simless lets several agent sessions and people share this Mac's simulators and emulators without stepping on each other. The devices in the **simless list** (created by simless, or added from this Mac) are shared, and you **acquire** a device before touching it. Devices are bundled by purpose into **device groups** (e.g. «UI layout check», «two accounts»), and each platform has one **default device** for general testing.
 
 | Who | Does what |
 | --- | --- |
@@ -50,7 +50,7 @@ simless --json group list      # device groups — read each description
 ### 2. Acquire and boot
 
 ```sh
-simless --json use --group "DM check"       # every device in the group, all or nothing
+simless --json use --group "two accounts"   # every device in the group, all or nothing
 simless --json use --default ios            # the iOS default device
 simless --json use <ID|name>...             # specific devices
 ```
@@ -119,8 +119,8 @@ simless release
 ## Device groups (only when the user asks)
 
 ```sh
-simless group create "DM check" --desc "Moderator + member — needs both devices" <device>...
-simless group edit "DM check" --add <device> --remove <device> --desc "…"
+simless group create "two accounts" --desc "Account A + account B — needs both devices" <device>...
+simless group edit "two accounts" --add <device> --remove <device> --desc "…"
 simless default <device>                       # make it its platform's default device
 ```
 

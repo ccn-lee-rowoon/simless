@@ -97,7 +97,7 @@ describe("디바이스 명령", () => {
   test("추가한 디바이스는 목록에서 빼면 점유·그룹·기본 지정도 풀리고 기기는 남는다", async () => {
     const { A, server, driver } = await start();
     seedDevice(server, driver, "pix6", "Pixel 6a", false);
-    await A("group.create", { name: "DM", devices: ["pix6"] });
+    await A("group.create", { name: "두 계정", devices: ["pix6"] });
     await A("device.setDefault", { device: "pix6" });
     await A("lease.acquire", { devices: ["pix6"] });
     expect(await A("device.unlist", { device: "pix6" })).toEqual({ unlisted: "pix6" });
@@ -139,8 +139,8 @@ describe("디바이스 명령", () => {
     seedDevice(server, driver, "pix6", "Pixel 6a", false);
     expect(await A("device.delete", { device: "pix6" })).toMatchObject({ code: "NOT_ALLOWED" });
     expect(await A("device.slim", { devices: ["pix6"] })).toMatchObject({ code: "NOT_ALLOWED" });
-    expect(await A("device.rename", { device: "pix6", name: "모더레이터 폰" })).toMatchObject({
-      name: "모더레이터 폰",
+    expect(await A("device.rename", { device: "pix6", name: "계정 A 폰" })).toMatchObject({
+      name: "계정 A 폰",
     });
   });
 

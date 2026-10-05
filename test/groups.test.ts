@@ -16,12 +16,12 @@ describe("그룹 (R21)", () => {
   test("만들면 디바이스·설명·고친 쪽이 남고, 디바이스 목록에 그룹 ID 가 붙는다", async () => {
     const { A } = await start();
     const group = (await A("group.create", {
-      name: "DM 확인",
-      description: "모더레이터 + 일반 회원 — 2대 모두 필요",
+      name: "Two accounts",
+      description: "계정 A + 계정 B — 2대 모두 필요",
       devices: ["Pixel 6a", "usr1"],
     })) as Group;
     expect(group).toMatchObject({
-      name: "DM 확인",
+      name: "Two accounts",
       deviceIds: ["mod1", "usr1"],
       updatedBy: "test-agent",
     });
@@ -31,23 +31,23 @@ describe("그룹 (R21)", () => {
 
   test("한 디바이스가 여러 그룹에 든다, 이름은 겹치지 않는다", async () => {
     const { A } = await start();
-    await A("group.create", { name: "DM 확인", devices: ["mod1"] });
+    await A("group.create", { name: "Two accounts", devices: ["mod1"] });
     await A("group.create", { name: "UI 레이아웃 체크", devices: ["mod1"] });
-    expect(await A("group.create", { name: "dm 확인" })).toMatchObject({ code: "INVALID" });
+    expect(await A("group.create", { name: "two accounts" })).toMatchObject({ code: "INVALID" });
     const [device] = (await A("device.list")) as DeviceView[];
     expect(device?.groups).toHaveLength(2);
   });
 
   test("고치기 — 넣고 빼고 이름·설명을 바꾸며, 안 준 값은 그대로", async () => {
     const { A, H } = await start();
-    await A("group.create", { name: "DM 확인", description: "설명", devices: ["mod1"] });
+    await A("group.create", { name: "Two accounts", description: "설명", devices: ["mod1"] });
     const updated = (await H("group.update", {
-      group: "dm 확인",
+      group: "two accounts",
       add: ["usr1"],
       remove: ["mod1"],
     })) as Group;
     expect(updated).toMatchObject({
-      name: "DM 확인",
+      name: "Two accounts",
       description: "설명",
       deviceIds: ["usr1"],
       updatedBy: "human",
@@ -57,7 +57,7 @@ describe("그룹 (R21)", () => {
 
   test("디바이스가 사라지면 그룹에서도 빠진다", async () => {
     const { A, driver } = await start();
-    await A("group.create", { name: "DM 확인", devices: ["mod1", "usr1"] });
+    await A("group.create", { name: "Two accounts", devices: ["mod1", "usr1"] });
     driver.existing = driver.existing.filter((e) => !e.native.endsWith("mod1"));
     const [group] = (await A("group.list")) as Group[];
     await A("device.list");
@@ -68,7 +68,7 @@ describe("그룹 (R21)", () => {
 
   test("지우면 그룹만 없어지고 디바이스는 그대로", async () => {
     const { A } = await start();
-    const group = (await A("group.create", { name: "DM 확인", devices: ["mod1"] })) as Group;
+    const group = (await A("group.create", { name: "Two accounts", devices: ["mod1"] })) as Group;
     expect(await A("group.delete", { group: group.id })).toEqual({ deleted: group.id });
     expect((await A("status")) as StatusResult).toMatchObject({ groups: [] });
     expect((await A("device.list")) as DeviceView[]).toHaveLength(2);
@@ -78,8 +78,8 @@ describe("그룹 (R21)", () => {
 describe("메모 (R24)", () => {
   test("디바이스에 메모를 남기고, 빈 글이면 지운다", async () => {
     const { A } = await start();
-    expect(await A("device.setMemo", { device: "mod1", memo: " 모더레이터 계정 " })).toMatchObject({
-      memo: "모더레이터 계정",
+    expect(await A("device.setMemo", { device: "mod1", memo: " 계정 A " })).toMatchObject({
+      memo: "계정 A",
     });
     const cleared = (await A("device.setMemo", { device: "mod1", memo: "" })) as DeviceView;
     expect(cleared.memo).toBeUndefined();
@@ -108,8 +108,8 @@ describe("기본 디바이스 (R22)", () => {
 describe("그룹·기본 디바이스로 점유 (R22·R23)", () => {
   test("그룹으로 점유하면 그룹의 디바이스 전부 — 기기마다 상태가 온다", async () => {
     const { A } = await start();
-    await A("group.create", { name: "DM 확인", devices: ["mod1", "usr1"] });
-    expect(await A("lease.acquire", { group: "DM 확인" })).toMatchObject({
+    await A("group.create", { name: "Two accounts", devices: ["mod1", "usr1"] });
+    expect(await A("lease.acquire", { group: "Two accounts" })).toMatchObject({
       status: "granted",
       deviceIds: ["mod1", "usr1"],
       devices: [
