@@ -180,3 +180,32 @@ export function memoryChange(before?: number, after?: number): string | undefine
   const percent = Math.round(((after - before) / before) * 100);
   return `${gb(before)} → ${gb(after)} (${percent <= 0 ? "−" : "+"}${Math.abs(percent)}%)`;
 }
+
+/** 점유 기록 한 줄 (M13) — 세션 화면의 «기록» */
+export type HistoryKind =
+  /** 바로 점유 */
+  | "acquired"
+  /** 대기열에 넣음 */
+  | "queued"
+  /** 기다리다 점유 */
+  | "granted"
+  /** 스스로 놓음 */
+  | "released"
+  /** 사람이 강제로 풂 */
+  | "forced"
+  /** 세션 프로세스가 끝나 풀림 (R17 ①) */
+  | "ended"
+  /** 오래 안 쓰고 기다리는 세션이 있어 풀림 (R17 ②) */
+  | "idle"
+  /** 교착이 생겨 대기열에 넣지 않음 */
+  | "deadlock";
+
+export interface HistoryEvent {
+  at: number;
+  kind: HistoryKind;
+  sessionKey: string;
+  agent: string;
+  cwd: string;
+  human: boolean;
+  deviceIds: string[];
+}

@@ -14,6 +14,8 @@ export interface Paths {
   socket: string;
   registry: string;
   leases: string;
+  /** 점유 기록 (M13) */
+  history: string;
   managedIndex: string;
   /** 웹 UI 요청 토큰 (0600) — corgi ui 가 읽어 브라우저에 넘긴다 */
   webToken: string;
@@ -39,6 +41,7 @@ export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
     socket: env.CORGI_SOCKET ?? join(stateDir, "corgi.sock"),
     registry: join(stateDir, "registry.json"),
     leases: join(stateDir, "leases.json"),
+    history: join(stateDir, "history.json"),
     managedIndex: join(stateDir, "managed-index.json"),
     webToken: join(stateDir, "web-token"),
     config: join(configDir, "config.json"),

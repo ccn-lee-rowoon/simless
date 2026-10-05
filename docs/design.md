@@ -102,6 +102,7 @@ corgi/
 | --- | --- | --- |
 | `~/Library/Application Support/Corgi/registry.json` | 디바이스에 Corgi 가 붙인 정보(메모·슬림·만든 여부·기준값), 그룹, 기본 디바이스 (영속). 기기 자체 목록은 저장하지 않는다(§6) | 서버 |
 | `…/Corgi/leases.json` | 점유·대기열 — 서버를 다시 켜도 복원 | 서버 |
+| `…/Corgi/history.json` | 점유 기록 — 최근 500개 (M13) | 서버 |
 | `…/Corgi/managed-index.json` | 이 Mac 디바이스 식별자(UDID·AVD ID·마지막 시리얼). **서버가 꺼졌을 때 훅이 읽는다** | 서버 쓰기 / 훅 읽기 |
 | `…/Corgi/corgi.sock` | 소켓 (권한 0600) | 서버 |
 | `…/Corgi/web-token` | 웹 화면 요청 토큰 (0600) | 서버 |
@@ -330,7 +331,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 
 **왼쪽 메뉴** (M9) — 디바이스 · 그룹 · 세션, 아래쪽에 설정(새 창 — 앱에서는 `window.webkit.messageHandlers.corgi` 로 Swift 에 알려 별도 NSWindow, 브라우저에서는 `window.open`)과 서버 상태.
 
-**세션 화면** (M13) — `status.sessions`: 세션마다 에이전트·작업 폴더·마지막 사용 시각, 점유한 디바이스, 기다리는 디바이스와 순번. 사람은 디바이스마다 강제 해제.
+**세션 화면** (M13) — `status.sessions`: 세션마다 에이전트·작업 폴더·마지막 사용 시각, 점유한 디바이스, 기다리는 디바이스와 순번. 사람은 디바이스마다 강제 해제. 아래 **기록**(`lease.history`): LeaseManager 가 점유·대기·해제가 일어날 때마다 남기는 사건(acquired·queued·granted·released·forced·ended·idle·deadlock)을 서버가 `…/Corgi/history.json` 에 최근 500개까지 둔다. CLI `corgi history`.
 
 **메인 화면** (M5·M9)
 - Corgi 목록 — 위에 **All · Android · iOS 탭**(마지막 탭 기억)과 그룹 거르기, 검색.

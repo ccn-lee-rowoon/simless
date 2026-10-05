@@ -1,5 +1,8 @@
 import { z } from "zod";
+import type { HistoryEvent, HistoryKind } from "../shared/api.ts";
 import { type SessionInfo, SessionInfo as SessionInfoSchema } from "../shared/protocol.ts";
+
+export type { HistoryEvent, HistoryKind };
 
 // 점유·대기 (R13·R14·R17, docs/design.md §8). 시간·저장은 밖에서 주입받는 순수 로직이다.
 
@@ -61,6 +64,8 @@ export interface LeaseOptions {
   onGranted?: (sessionKey: string, deviceIds: string[]) => void;
   /** 상태가 바뀔 때마다 — 저장·화면 갱신용 */
   onChange?: (state: LeaseState) => void;
+  /** 점유·해제·대기가 일어날 때마다 — 기록용 (M13) */
+  onHistory?: (event: HistoryEvent) => void;
 }
 
 export class LeaseManager {
@@ -162,6 +167,7 @@ export class LeaseManager {
     // 대기열에 넣기 전에 — 기다리면 서로를 기다리게 되는지 본다 (교착을 생기기 전에 막는다)
     const cycle = this.cycle(session.key, rest, free);
     if (cycle) {
+      this.record("deadlock", session.key, rest);
       if (free.length > 0) {
         this.grant(session.key, free);
         this.changed();
@@ -172,6 +178,8 @@ export class LeaseManager {
     this.grant(session.key, free);
     const entryMode = mode === "available" ? "each" : "all";
     const entry = this.queue.find((e) => e.sessionKey === session.key);
+    // 같은 대기를 다시 요청(--wait 이어 가기)하면 기록하지 않는다
+    if (entry?.deviceIds.join() !== rest.join()) this.record("queued", session.key, rest);
     if (entry) {
       entry.deviceIds = rest;
       entry.mode = entryMode;
@@ -223,10 +231,15 @@ export class LeaseManager {
     return undefined;
   }
 
-  /** deviceIds 를 안 주면 이 세션의 점유·대기를 모두 푼다. */
-  release(sessionKey: string, deviceIds?: string[]): string[] {
+  /** deviceIds 를 안 주면 이 세션의 점유·대기를 모두 푼다. forced 는 사람이 강제로 푼 것 */
+  release(
+    sessionKey: string,
+    deviceIds?: string[],
+    reason: "released" | "forced" = "released",
+  ): string[] {
     const targets = deviceIds ?? this.heldBy(sessionKey);
     const released = targets.filter((id) => this.leases.get(id)?.sessionKey === sessionKey);
+    if (released.length > 0) this.record(reason, sessionKey, released);
     for (const id of released) this.leases.delete(id);
     if (deviceIds === undefined) this.queue = this.queue.filter((e) => e.sessionKey !== sessionKey);
     this.prune(sessionKey);
@@ -237,7 +250,9 @@ export class LeaseManager {
 
   /** 세션 프로세스가 끝났다 — 점유·대기·기록을 모두 지운다 (R17 ①) */
   endSession(sessionKey: string): void {
-    for (const id of this.heldBy(sessionKey)) this.leases.delete(id);
+    const held = this.heldBy(sessionKey);
+    if (held.length > 0) this.record("ended", sessionKey, held);
+    for (const id of held) this.leases.delete(id);
     this.queue = this.queue.filter((e) => e.sessionKey !== sessionKey);
     this.sessions.delete(sessionKey);
     this.processQueue();
@@ -268,7 +283,9 @@ export class LeaseManager {
       }
     }
     for (const key of idle) {
-      for (const id of this.heldBy(key)) this.leases.delete(id);
+      const held = this.heldBy(key);
+      this.record("idle", key, held);
+      for (const id of held) this.leases.delete(id);
     }
     if (idle.size > 0) {
       this.processQueue();
@@ -302,13 +319,29 @@ export class LeaseManager {
     return result;
   }
 
-  private grant(sessionKey: string, deviceIds: string[]): void {
+  /** 점유를 준다 — 새로 잡은 것만 기록한다 (이미 쥔 것을 다시 요청한 건 빼고) */
+  private grant(
+    sessionKey: string,
+    deviceIds: string[],
+    kind: "acquired" | "granted" = "acquired",
+  ): void {
     const now = this.now();
-    for (const id of deviceIds) {
-      if (this.leases.get(id)?.sessionKey !== sessionKey) {
-        this.leases.set(id, { deviceId: id, sessionKey, acquiredAt: now });
-      }
-    }
+    const fresh = deviceIds.filter((id) => this.leases.get(id)?.sessionKey !== sessionKey);
+    for (const id of fresh) this.leases.set(id, { deviceId: id, sessionKey, acquiredAt: now });
+    if (fresh.length > 0) this.record(kind, sessionKey, fresh);
+  }
+
+  private record(kind: HistoryKind, sessionKey: string, deviceIds: string[]): void {
+    const session = this.sessions.get(sessionKey);
+    this.options.onHistory?.({
+      at: this.now(),
+      kind,
+      sessionKey,
+      agent: session?.agent ?? "unknown",
+      cwd: session?.cwd ?? "",
+      human: session?.human ?? false,
+      deviceIds: [...deviceIds],
+    });
   }
 
   private processQueue(): void {
@@ -322,7 +355,7 @@ export class LeaseManager {
         );
         const free = entry.deviceIds.filter((id) => !blocked.has(id));
         if (free.length > 0) {
-          this.grant(entry.sessionKey, free);
+          this.grant(entry.sessionKey, free, "granted");
           entry.deviceIds = entry.deviceIds.filter((id) => blocked.has(id));
           if (entry.deviceIds.length === 0) this.queue.splice(index, 1);
           const session = this.sessions.get(entry.sessionKey);
@@ -335,7 +368,7 @@ export class LeaseManager {
         continue;
       }
       if (entry && this.blockers(entry.sessionKey, entry.deviceIds).length === 0) {
-        this.grant(entry.sessionKey, entry.deviceIds);
+        this.grant(entry.sessionKey, entry.deviceIds, "granted");
         this.queue.splice(index, 1);
         const session = this.sessions.get(entry.sessionKey);
         if (session) session.lastUsedAt = this.now();

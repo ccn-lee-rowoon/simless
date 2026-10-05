@@ -19,6 +19,7 @@ import { VERSION } from "../shared/version.ts";
 import { registerDeviceMethods } from "./devices.ts";
 import type { Discovered, Driver, RuntimeState } from "./drivers/types.ts";
 import { registerGroupMethods } from "./groups.ts";
+import { History } from "./history.ts";
 import { EMPTY_LEASE_STATE, type Holder, LeaseManager, LeaseStateSchema } from "./leases.ts";
 import { Registry } from "./registry.ts";
 import { type Connection, type Handler, HandlerError } from "./socket.ts";
@@ -56,6 +57,10 @@ const AcquireParams = z.object({
 const ReleaseParams = z.object({ devices: z.array(z.string()).optional() });
 const WhoParams = z.object({ target: z.string().optional() });
 const ForceParams = z.object({ device: z.string() });
+const HistoryParams = z.object({
+  limit: z.number().int().positive().max(500).default(100),
+  session: z.string().optional(),
+});
 const SettingsParams = z.object({
   language: z.enum(["system", "ko", "en"]).optional(),
   idleReleaseMinutes: z
@@ -75,6 +80,7 @@ const READ_ONLY = new Set([
   "catalog",
   "group.list",
   "lease.who",
+  "lease.history",
   "settings.get",
 ]);
 
@@ -89,6 +95,7 @@ function parse<T extends z.ZodType>(schema: T, params: unknown): z.infer<T> {
 export class CorgiServer {
   readonly registry: Registry;
   readonly leases: LeaseManager;
+  readonly history: History;
   private readonly waiters = new Map<string, Set<() => void>>();
   private readonly isAlive: NonNullable<ServerDeps["isAlive"]>;
   private readonly methods: Record<string, Method>;
@@ -96,6 +103,7 @@ export class CorgiServer {
   constructor(private readonly deps: ServerDeps) {
     this.isAlive = deps.isAlive ?? ((pid, startedAt) => defaultIsAlive(pid, startedAt));
     this.registry = new Registry(deps.paths.registry);
+    this.history = new History(deps.paths.history);
     this.leases = new LeaseManager(
       readJson(deps.paths.leases, LeaseStateSchema, EMPTY_LEASE_STATE),
       {
@@ -106,6 +114,7 @@ export class CorgiServer {
           this.notify();
         },
         onGranted: (key) => this.wake(key),
+        onHistory: (event) => this.history.add(event),
       },
     );
     this.methods = {
@@ -115,6 +124,10 @@ export class CorgiServer {
       "lease.release": (p, session) => this.release(parse(ReleaseParams, p), session),
       "lease.who": (p) => this.who(parse(WhoParams, p)),
       "lease.forceRelease": (p, session) => this.forceRelease(parse(ForceParams, p), session),
+      "lease.history": async (p) => {
+        const params = parse(HistoryParams, p);
+        return this.history.list({ limit: params.limit, sessionKey: params.session });
+      },
       "settings.get": async () => this.settings(),
       "settings.set": async (p) => this.setSettings(parse(SettingsParams, p)),
     };
@@ -617,7 +630,7 @@ export class CorgiServer {
     const [device] = await this.resolve([params.device]);
     const holder = device ? this.leases.holderOf(device.id) : undefined;
     if (!device || !holder) return { released: [] };
-    return { released: this.leases.release(holder.key, [device.id]) };
+    return { released: this.leases.release(holder.key, [device.id], "forced") };
   }
 
   private async who(params: z.infer<typeof WhoParams>) {

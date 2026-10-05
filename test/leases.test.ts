@@ -216,3 +216,49 @@ describe("LeaseManager — 교착 막기", () => {
     expect(leases.acquire(A, ["d"], { wait: true })).toMatchObject({ status: "deadlock" });
   });
 });
+
+describe("LeaseManager — 기록 (M13)", () => {
+  function withHistory() {
+    let now = 0;
+    const events: { kind: string; sessionKey: string; deviceIds: string[] }[] = [];
+    const leases = new LeaseManager(
+      { sessions: [], leases: [], queue: [] },
+      {
+        idleMs: 1000,
+        now: () => now,
+        onHistory: ({ kind, sessionKey, deviceIds }) =>
+          events.push({ kind, sessionKey, deviceIds }),
+      },
+    );
+    return { leases, events, advance: (ms: number) => (now += ms) };
+  }
+
+  test("점유·대기·대기 끝 점유·해제·강제 해제·세션 종료·자동 해제를 남긴다", () => {
+    const { leases, events, advance } = withHistory();
+    leases.acquire(A, ["d1"], { wait: false });
+    leases.acquire(A, ["d1"], { wait: false }); // 이미 쥔 것을 다시 — 기록하지 않음
+    leases.acquire(B, ["d1"], { wait: true });
+    leases.acquire(B, ["d1"], { wait: true }); // 같은 대기를 이어 감 — 기록하지 않음
+    leases.release("A");
+    leases.release("B", ["d1"], "forced");
+    leases.acquire(C, ["d2"], { wait: false });
+    leases.endSession("C");
+    leases.acquire(A, ["d3"], { wait: false });
+    leases.acquire(B, ["d3"], { wait: true });
+    advance(2000);
+    leases.sweepIdle();
+    expect(events.map((e) => `${e.kind} ${e.sessionKey} ${e.deviceIds.join(",")}`)).toEqual([
+      "acquired A d1",
+      "queued B d1",
+      "released A d1",
+      "granted B d1",
+      "forced B d1",
+      "acquired C d2",
+      "ended C d2",
+      "acquired A d3",
+      "queued B d3",
+      "idle A d3",
+      "granted B d3",
+    ]);
+  });
+});

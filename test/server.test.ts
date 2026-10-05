@@ -154,3 +154,22 @@ describe("큰 응답", () => {
     expect(result.text).toBe(text);
   });
 });
+
+describe("점유 기록", () => {
+  test("lease.history — 최근 것부터, 세션으로 거를 수 있고 서버를 다시 켜도 남는다", async () => {
+    const env = tempEnv();
+    const driver = fakeDriver();
+    const server = new CorgiServer({ ...env, drivers: [driver] });
+    seedDevice(server, driver, "aaaa", "Small");
+    const listener = await listen(env.paths.socket, VERSION, server.handle);
+    cleanups.push(() => listener.stop(), env.cleanup);
+    const socket = env.paths.socket;
+    await call(socket, "lease.acquire", { devices: ["aaaa"] }, session("A"));
+    await call(socket, "lease.release", {}, session("A"));
+    const { result } = await call<{ kind: string }[]>(socket, "lease.history", {}, session("B"));
+    expect(result.map((e) => e.kind)).toEqual(["released", "acquired"]);
+    const again = new CorgiServer({ ...env, drivers: [driver] });
+    expect(again.history.list({ sessionKey: "A" })).toHaveLength(2);
+    expect(again.history.list({ sessionKey: "B" })).toHaveLength(0);
+  });
+});

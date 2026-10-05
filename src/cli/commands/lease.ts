@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import type { AcquireResult, BusyData, LeaseItem } from "../../shared/api.ts";
+import type { AcquireResult, BusyData, HistoryEvent, LeaseItem } from "../../shared/api.ts";
 import { ExitCode } from "../../shared/exit-codes.ts";
 import { t } from "../../shared/i18n.ts";
 import { CliError, type Context, output, type Run, request } from "../context.ts";
@@ -114,6 +114,30 @@ export function registerLease(program: Command, run: Run) {
           result.released.length > 0
             ? t("cli.released", { ids: result.released.join(", ") })
             : t("cli.nothingToRelease"),
+        );
+      }),
+    );
+
+  program
+    .command("history")
+    .description(t("cli.history"))
+    .option("--session <key>", t("cli.history.session"))
+    .option("--limit <n>", t("cli.history.limit"), "50")
+    .action(
+      run(async (ctx: Context, o: { session?: string; limit: string }) => {
+        const events = await request<HistoryEvent[]>(ctx, "lease.history", {
+          session: o.session,
+          limit: Math.min(500, Math.max(1, Number(o.limit) || 50)),
+        });
+        output(ctx, events, () =>
+          events.length === 0
+            ? t("cli.history.empty")
+            : events
+                .map(
+                  (e) =>
+                    `${new Date(e.at).toLocaleString()}  ${e.human ? t("common.human") : e.agent} (${e.sessionKey})  ${t(`web.history.${e.kind}`)}: ${e.deviceIds.join(", ")}`,
+                )
+                .join("\n"),
         );
       }),
     );
