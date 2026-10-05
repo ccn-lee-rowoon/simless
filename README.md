@@ -48,6 +48,7 @@ simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·
 | `simless catalog` · `simless create "iPhone 17"` | 만들 수 있는 기종 · 만들기 (`--no-slim` 일반 기기) |
 | `simless group list` · `simless group create …` | 그룹 |
 | `simless history` | 점유 기록 (90일 보관) |
+| `simless app install` · `simless app save --platform ios` | 네이티브 빌드 캐시 — 네이티브 지문이 같은 빌드가 있으면 빌드 없이 설치 · 방금 빌드한 것 보관 (Expo 앱) |
 | `simless skill status` · `simless skill install --project <폴더>` | 스킬을 넣은 곳 |
 | `simless config` · `simless doctor` · `simless ui` | 설정 · 점검 · 웹 화면 |
 

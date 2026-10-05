@@ -48,6 +48,8 @@ export interface Driver {
   states(devices: Device[]): Promise<Map<string, RuntimeState>>;
   boot(device: Device, progress: Progress): Promise<RuntimeState>;
   shutdown(device: Device, state: RuntimeState): Promise<void>;
+  /** 켜진 디바이스에 앱을 설치한다 — iOS 는 .app, Android 는 .apk (R26) */
+  install(device: Device, state: RuntimeState, path: string): Promise<void>;
   slim(device: Device, progress: Progress): Promise<void>;
   unslim(device: Device, progress: Progress): Promise<void>;
   /** 켠 직후 할 일 — Android 는 슬림화된 기기의 기기 안 정리를 다시 한다 */

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { z } from "zod";
 import type { CatalogResult, DeviceOpResult, DeviceView, PlatformCatalog } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
@@ -40,6 +41,8 @@ const RenameParams = DeviceRef.extend({ name: z.string().min(1) });
 const MemoParams = DeviceRef.extend({ memo: z.string().max(500) });
 const DevicesParams = z.object({ devices: z.array(z.string()).default([]) });
 const SlimParams = DevicesParams.extend({ mode: z.enum(["on", "off", "check"]).default("on") });
+/** 앱 설치 — 이 세션이 점유한, 켜진 디바이스 중 path 의 플랫폼에 맞는 것에 (R26) */
+const InstallParams = DevicesParams.extend({ path: z.string().min(1) });
 const CatalogParams = z.object({ platform: z.enum(["android", "ios"]).optional() });
 
 /** 기본 이름 — 슬림이면 `simless <기종>`, 아니면 `<기종>` (R5·M4) */
@@ -462,6 +465,34 @@ export function registerDeviceMethods(server: SimlessServer): void {
       }
     });
     return { results, devices: await server.deviceViews(session, fresh(devices)) };
+  });
+
+  server.addMethod("device.install", async (p, session, connection) => {
+    const params = parse(InstallParams, p);
+    const platform: Platform | undefined = params.path.endsWith(".apk")
+      ? "android"
+      : params.path.endsWith(".app")
+        ? "ios"
+        : undefined;
+    if (!platform) throw new HandlerError("INVALID", t("err.installKind", { path: params.path }));
+    if (!existsSync(params.path))
+      throw new HandlerError("NOT_FOUND", t("err.installMissing", { path: params.path }));
+    const held = await heldTargets(params.devices, session);
+    // 기기를 고르지 않았으면 점유한 것 중 그 플랫폼만 — 고른 것이 다른 플랫폼이면 INVALID
+    const devices = held.filter((d) => d.spec.platform === platform);
+    if (devices.length === 0)
+      throw new HandlerError("NOT_HELD", t("err.installNoDevice", { platform }));
+    if (params.devices.length > 0 && devices.length < held.length)
+      throw new HandlerError("INVALID", t("err.installPlatform", { platform }));
+    const progress = progressOf(connection);
+    const results = await forEach(devices, async (device) => {
+      const driver = server.driver(platform);
+      const state = (await driver.states([device])).get(device.id);
+      if (!state?.booted) throw new Error(t("err.installNotBooted", { name: device.name }));
+      progress(t("progress.installing", { name: device.name }));
+      await driver.install(device, state, params.path);
+    });
+    return { results };
   });
 }
 

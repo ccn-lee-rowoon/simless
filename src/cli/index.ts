@@ -6,6 +6,7 @@ import { resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
 import { resolvePaths } from "../shared/paths.ts";
 import { systemLanguages } from "../shared/system-language.ts";
 import { VERSION } from "../shared/version.ts";
+import { registerApp } from "./commands/app.ts";
 import { registerConfig } from "./commands/config.ts";
 import { registerDevices } from "./commands/devices.ts";
 import { registerDoctor } from "./commands/doctor.ts";
@@ -203,6 +204,7 @@ export async function runCli(argv: string[]): Promise<number> {
   registerConfig(program, run);
   registerDoctor(program, run);
   registerSkill(program, run);
+  registerApp(program, run);
 
   try {
     await program.parseAsync(argv, { from: "user" });

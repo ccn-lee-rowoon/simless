@@ -9,7 +9,7 @@ simless lets several agent sessions and people share this Mac's simulators and e
 
 | Who | Does what |
 | --- | --- |
-| Simless (`simless`) | Lists devices and device groups; **acquires**/releases; boots/shuts down; creates and slims devices; gives each device's argent ID and size label |
+| Simless (`simless`) | Lists devices and device groups; **acquires**/releases; boots/shuts down; creates and slims devices; gives each device's argent ID and size label; caches native builds (`simless app`) |
 | argent | Installs (`reinstall-app`) and launches (`launch-app`) apps, deep links (`open-url`), taps, screenshots |
 
 **Rules**
@@ -96,7 +96,18 @@ If it fails because the port was just taken, pick the next free one. Point each 
 
 Pass `targetId` as argent's device argument, device by device, following the argent skills.
 
-1. **Install** (when needed) — `reinstall-app`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <targetId>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
+1. **Install** (when needed).
+   - **Expo apps — try the build cache first.** Native builds take many minutes; Simless keeps finished simulator/emulator builds by their native fingerprint, so a worktree or session whose native side is unchanged (only JS differs) reuses one. From the app project, with the **same environment variables you would build with** (some apps' config depends on them):
+     ```sh
+     simless --json app install            # held, booted devices; add --platform ios|android to pick one
+     ```
+     Per platform, `hit: true` means it is installed — go on to launch. `hit: false` means nothing is cached for this fingerprint: build onto the device (below), then store the build so the next session skips it:
+     ```sh
+     npx expo run:ios --device <targetId>      # or run:android
+     simless --json app save --platform ios    # finds the newest build (DerivedData / android/app/build)
+     ```
+     `TOOL_MISSING` means it isn't an Expo project with `@expo/fingerprint` — skip the cache. Computing the fingerprint takes about 30 seconds.
+   - Otherwise `reinstall-app`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <targetId>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
 2. **Launch** — `launch-app` (or the dev client URL above with `open-url`), after your Metro is up.
 3. **Same screen everywhere** — `open-url <deep link>` if there is one, otherwise replay an argent flow (`flow-execute`) per device. Don't reuse tap coordinates across sizes.
 4. **Screenshots** — `screenshot`, tagged with each device's `label`.
@@ -140,6 +151,8 @@ If the `simless` MCP server is registered, the same steps are available as tools
 | `simless who [<udid·serial>]` | Who is using a device |
 | `simless down` / `simless release` | Shut down / release |
 | `simless catalog` / `simless create …` | Models you can create / create one |
+| `simless --json app install` / `app save --platform <p>` | Install the cached native build on held devices / store the one you just built |
+| `simless app list` / `app prune` | Cached builds / keep only the newest 5 per app and platform |
 | `simless doctor` | Check the installation and how to fix it |
 
 Exit codes: `0` ok · `1` failed · `2` usage error · `3` in use by another session, still waiting, or `DEADLOCK` · `4` can't reach the server. With `--json`, errors go to stdout as `{"error": {code, message, data}}`. `--available` exits 0 when it took at least one device.

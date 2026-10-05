@@ -97,6 +97,7 @@
 | `device.slim` | `{ devices = simless 가 만든 것 전부, mode = "on" \| "off" \| "check" }` | `{ results, devices }` | Simless 가 만든 것만(`NOT_ALLOWED`). on·off 는 다른 세션이 쓰는 중이면 `BUSY` |
 | `device.up` | `{ devices = 이 세션의 점유 전부 }` | `{ results, devices }` | 점유가 있어야 함(`NOT_HELD`). 켠 뒤 슬림을 확인하고 풀렸으면 다시 적용 (M6) |
 | `device.down` | 같음 | `{ results, devices }` | |
+| `device.install` | `{ path, devices = 이 세션의 점유 전부 }` | `{ results }` | 네이티브 빌드 캐시 (R26). `path` 가 `.app` 이면 iOS, `.apk` 면 Android — 점유한 것 중 그 플랫폼만. 다른 확장자 `INVALID`, 파일이 없으면 `NOT_FOUND`, 그 플랫폼 점유가 없으면 `NOT_HELD`, 고른 기기에 다른 플랫폼이 섞이면 `INVALID`. 꺼진 기기는 그 기기만 실패(`results[].ok: false`) |
 | `group.list` | `{}` | `Group[]` — `{ id, name, description, deviceIds, updatedBy, updatedAt }` | `updatedBy` 는 `human` 또는 에이전트 이름 (R21) |
 | `group.create` | `{ name, description?, devices? }` | `Group` | 이름이 겹치면 `INVALID` |
 | `group.update` | `{ group, name?, description?, devices?, add?, remove? }` | `Group` | `devices` 는 통째로 바꾸기, `add`·`remove` 는 넣고 빼기. 안 준 값은 그대로 |

@@ -487,6 +487,14 @@ export class AndroidDriver implements Driver {
     throw new Error(t("err.shutdownFailed", { name: device.name, serial }));
   }
 
+  async install(_device: Device, state: RuntimeState, path: string): Promise<void> {
+    if (!state.targetId) throw new Error("not booted");
+    // -r 다시 설치(데이터 유지), -t 테스트 빌드 허용
+    await runOk(this.runner, [this.adb, "-s", state.targetId, "install", "-r", "-t", path], {
+      timeoutMs: 5 * 60_000,
+    });
+  }
+
   private avdslim(): string {
     const path = this.avdslimPath();
     if (!path) throw new HandlerError("TOOL_MISSING", t("err.toolMissing", { tool: "avdslim" }));

@@ -6,7 +6,8 @@ import { join, relative } from "node:path";
 //   shared  모두가 쓴다. 아무 폴더도 import 하지 않는다
 //   install 설치·점검 — shared 만
 //   server  shared·install
-//   cli     shared·install (서버와는 소켓으로만)
+//   builds  네이티브 빌드 캐시 — shared 만
+//   cli     shared·install·builds (서버와는 소켓으로만)
 //   hook·mcp·web  shared (mcp 는 서버를 켜려고 install/launchd 도)
 // 예외는 EXCEPTIONS 에 이유와 함께 적는다.
 
@@ -15,7 +16,8 @@ const ALLOWED: Record<string, string[]> = {
   shared: ["shared"],
   install: ["shared", "install"],
   server: ["shared", "install", "server"],
-  cli: ["shared", "install", "cli"],
+  builds: ["shared", "builds"],
+  cli: ["shared", "install", "builds", "cli"],
   hook: ["shared", "hook"],
   mcp: ["shared", "install", "mcp"],
   web: ["shared", "web"],

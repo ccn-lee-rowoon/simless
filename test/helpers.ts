@@ -69,6 +69,8 @@ export type FakeDriver = Driver & {
   booted: Set<string>;
   /** 이 Mac 에 있는 기기 — list() 가 돌려준다. 만들면 늘고 지우면 준다 */
   existing: Discovered[];
+  /** install() 로 설치한 것 — [디바이스 ID, 경로] */
+  installed: [string, string][];
 };
 
 /** 아무것도 실제로 켜지 않는 드라이버 — 켜짐 상태만 기억한다 */
@@ -83,6 +85,7 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
     platform,
     booted,
     existing,
+    installed: [],
     missingTools: async () => [],
     list: async () => [...driver.existing],
     catalog: async () => ({
@@ -132,6 +135,9 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
     },
     shutdown: async (d) => {
       booted.delete(d.id);
+    },
+    install: async (d, _state, path) => {
+      driver.installed.push([d.id, path]);
     },
     slim: async () => {},
     unslim: async () => {},

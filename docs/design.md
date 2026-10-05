@@ -73,6 +73,7 @@ simless/
 │   │   ├── history.ts       점유 기록 — SQLite
 │   │   ├── drivers/         android.ts · ios.ts · types.ts(Driver) · android-profiles.ts
 │   │   ├── socket.ts · http.ts · params.ts(매개변수 검사) · store.ts(JSON 읽고 쓰기)
+│   ├── builds/              네이티브 빌드 캐시 (R26) — 지문 계산·보관·정리·방금 빌드한 것 찾기. CLI 가 쓴다
 │   ├── cli/                 Simless 명령 — index.ts(commander) + commands/*.ts, 서버와는 소켓으로만
 │   ├── hook/                훅 — 대상 추출(targets.ts, 순수 함수) + 판정 요청 + 서버 꺼짐 처리
 │   ├── mcp/                 MCP 서버(stdio) — 소켓으로 서버 메서드를 부른다
@@ -98,7 +99,8 @@ simless/
 | `shared` | (없음) |
 | `install` | `shared` |
 | `server` | `shared` · `install` (예외: `http.ts` 가 웹 화면 묶음 `web/index.html`) |
-| `cli` | `shared` · `install` (예외: `simless serve` 가 `server/index.ts`) — 나머지는 소켓으로만 |
+| `builds` | `shared` |
+| `cli` | `shared` · `install` · `builds` (예외: `simless serve` 가 `server/index.ts`) — 나머지는 소켓으로만 |
 | `hook` · `web` | `shared` |
 | `mcp` | `shared` · `install`(서버를 켜려고 `launchd`) |
 
@@ -130,6 +132,7 @@ simless/
 | `…/simless/update.json` | 마지막 확인 시각·최신 버전·알림 보낸 버전 | 서버 |
 | `~/Library/Logs/simless/` | 서버 로그 | 서버 |
 | `~/.local/share/simless/versions/<버전>/simless` · `~/.local/bin/simless`(링크) | 설치된 버전들과 지금 쓰는 버전 (§19) | `simless update` |
+| `~/Library/Caches/Simless/builds/<앱>/<플랫폼>/<지문>/` | 캐시된 네이티브 빌드(.app·.apk) + `meta.json`. 앱·플랫폼마다 최근 5개 (R26). `SIMLESS_BUILD_CACHE` 로 바꿀 수 있다 | CLI |
 | `~/.config/simless/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`, 기본 `system`), 자동 해제 시간(기본 30분), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다 | 사람·서버 |
 | `~/.config/simless/apps/<name>.json` | 앱별 설정 (Q8) | 사람 |
 | `~/.android/avd/<AVD ID>.avd` · `.ini` | Android 디바이스 본체 — Simless 가 만든 것은 `simless_<id>` | Android Studio·서버 |
@@ -255,6 +258,13 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 - Metro 는 **세션마다 따로** 띄운다 (S11) — 8081부터 비어 있는 포트에 자기 작업 폴더의 Metro 를 띄우고, 점유한 기기만 그 포트를 보게 한다. Android 는 기기마다 `adb reverse` 라 다시 빌드할 필요가 없고, iOS 시뮬레이터는 Mac 의 localhost 를 같이 쓰므로 dev client 주소(Expo)나 빌드 때 포트(`RCT_METRO_PORT`)로 정한다. 포트는 Simless 가 나눠 주지 않고 스킬이 비어 있는 것을 고른다 — 필요해지면 점유 대상으로 넣는다. 남의 Metro 는 끄지 않는다 (S7).
 - 점유한 디바이스만 argent 로 다룬다 — 5단계 훅이 지킨다 (P1·P8).
 
+**네이티브 빌드 캐시 (R26)** — 설치의 예외. 캐시를 Simless 가 가지고 있어 설치도 Simless 가 한다.
+
+1. `simless app install` — CLI 가 지금 폴더에서 위로 `node_modules/.bin/fingerprint` 가 있는 앱 프로젝트를 찾고, 이 세션이 점유한 켜진 기기의 플랫폼마다 `fingerprint fingerprint:generate --platform <p>` 로 지문을 계산한다(NOVA 약 30초). 호출한 셸의 환경 변수 그대로 — 앱 설정이 환경에 따라 바뀌면 지문도 바뀐다.
+2. 캐시(`~/Library/Caches/Simless/builds/<package.json name>/<플랫폼>/<지문>/`)에 있으면 서버의 `device.install` 이 기기마다 설치한다(iOS `simctl install`, Android `adb -s <시리얼> install -r -t`). 서버는 점유·켜짐·플랫폼을 확인한다.
+3. 없으면 `hit: false` 와 빌드 명령(`npx expo run:<p> --device <targetId>`)을 돌려준다. 에이전트가 빌드한 뒤 `simless app save` 가 방금 빌드한 것을 찾아 지문으로 보관한다 — iOS 는 `ios/*.xcworkspace` 이름의 DerivedData `…/Build/Products/Debug-iphonesimulator/*.app`(또는 `ios/build` 아래), Android 는 `android/app/build/outputs/apk/debug/*.apk`. 보관할 때 앱·플랫폼마다 최근 5개만 남긴다.
+- 지문은 Expo 앱에 이미 든 도구로 계산하므로 앱 저장소는 고치지 않는다(결정 기록). Expo 가 아닌 앱은 `TOOL_MISSING` — 캐시 없이 빌드한다.
+
 **나중에(L1~L3) 만들 때 참고** — 2단계에서 한 번 만들다 되돌린 내용이다.
 
 | 동작 | Android | iOS |
@@ -275,7 +285,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 - 요청 `{"v":1,"id":"r1","method":"lease.acquire","session":{…},"params":{…}}`
 - 응답 `{"id":"r1","ok":true,"result":{…}}` / `{"id":"r1","ok":false,"error":{"code":"BUSY","message":"…","holder":{…}}}`
 - 긴 작업(부팅·설치)은 응답 전에 `{"id":"r1","event":"progress","data":{…}}` 를 여러 번 보낸다.
-- 메서드: `status` · `catalog`(생성 화면의 기종·OS 목록, 슬림화하면 안 되는 기능) · `device.create|list|rename|setMemo|setDefault|slim|delete|up|down` · `group.list|create|update|delete` · `lease.acquire|release|who` · `settings.get|set` · `hook.check`
+- 메서드: `status` · `catalog`(생성 화면의 기종·OS 목록, 슬림화하면 안 되는 기능) · `device.create|list|rename|setMemo|setDefault|slim|delete|up|down|install` · `group.list|create|update|delete` · `lease.acquire|release|who` · `settings.get|set` · `hook.check`
 - 오류 코드: `BUSY` · `NOT_HELD` · `NOT_FOUND` · `INVALID` · `NOT_ALLOWED`(원래 있던 기기 삭제·기본 디바이스 삭제 등) · `DEADLOCK` · `NO_DEFAULT` · `TOOL_MISSING`(avdslim 등 없음) · `FAILED` · (클라이언트 쪽) `SERVER_DOWN`
 - **현지화 (R25)**: 서버·CLI·웹 화면이 **같은 설정 언어와 같은 사전**(`src/shared/i18n`, 키의 정본은 `ko.ts`, `en.ts` 는 같은 키를 다 갖춰야 컴파일된다)으로 문장을 만든다. 서버가 보내는 오류·진행 문장도 설정 언어다. 에이전트는 문장이 아니라 오류 `code` 로 판단한다. 언어 설정이 `system` 이면 macOS 언어 설정(`AppleLanguages`)을 먼저 보고 — 터미널의 `LANG` 은 macOS 언어와 다르게 잡혀 있는 경우가 많다 — 없으면 `LANG`, 그래도 없으면 영어
 
@@ -306,6 +316,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | `simless who [<udid·시리얼·dev>]` | 누가 쓰는지 | R13 |
 | `simless up` · `simless down` | 점유한 디바이스 켜기·끄기 | R7 |
 | **`simless use [<dev>… \| --group … \| --default …] [--available] [--wait]`** | **acquire + up 한 번에** — 주 흐름의 첫 단계 | R15 |
+| `simless app install [<dev>…] [--platform] [--project]` · `app save [--platform] [--path] [--project]` · `app list` · `app prune [--keep 5]` | 네이티브 빌드 캐시 — 지문이 같으면 점유한 켜진 기기에 설치, 빌드한 것 보관 (§10) | R26 |
 | `simless config [get\|set <키> <값>]` | 설정 (언어 등) — 앱 창 설정 화면과 같은 값 | M11·R25 |
 | `simless update [--check] [--rollback]` | 새 버전 확인·업데이트·이전 버전으로 되돌리기 | R19 |
 | `simless serve` · `simless hook <에이전트> pre-tool-use` · `simless mcp` | 서버·훅·MCP 진입점 (사람이 직접 쓰지 않음) | — |
@@ -313,7 +324,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 - 종료 코드: `0` 성공 · `1` 실패 · `2` 사용법 오류 · `3` 다른 세션이 사용 중(`--available` 이면 하나도 못 잡았을 때만) · `4` 서버에 연결 못 함
 - `up`·`down` 은 점유가 있어야 한다. 없으면 실패하고 `simless use` 를 안내한다.
 - 없앤 것: `enable`·`disable`(사용 안 함, R6), `list --all`(목록이 처음부터 전부).
-- 일괄 설치·실행·딥링크(`install-app`·`launch`·`open`)는 «나중에» (L1~L3, §10).
+- 일괄 설치·실행·딥링크(`install-app`·`launch`·`open`)는 «나중에» (L1~L3, §10). 캐시된 빌드 설치만 `simless app install` (R26).
 
 ## 13. 훅 (P3~P9)
 

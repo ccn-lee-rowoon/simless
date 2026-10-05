@@ -39,6 +39,11 @@ export const en: Record<keyof typeof ko, string> = {
   "err.deleteDefault": "{name} is a default device — make another device the default first",
   "err.notHeldAny": "You hold no devices — acquire and boot them with simless use",
   "err.notHeld": "Not acquired: {names} — acquire them with simless use",
+  "err.installKind": "Only .app (iOS simulator) and .apk (Android) can be installed: {path}",
+  "err.installMissing": "Build not found: {path}",
+  "err.installNoDevice": "No held {platform} device — hold and boot one with simless use",
+  "err.installPlatform": "Some of the chosen devices are not {platform}",
+  "err.installNotBooted": "{name} is off — boot it with simless up",
   "err.noModel": "No such model: {model} — see simless catalog",
   "err.modelBothPlatforms": "Both platforms have a model named {model} — pick one with --platform",
   "err.nameTaken": "Name already in use: {name}",
@@ -62,6 +67,7 @@ export const en: Record<keyof typeof ko, string> = {
   "err.toolNotFound": "{tool} not found",
   "err.serverDown": "Can't connect to the Simless server ({path})",
   "err.serverClosed": "The server closed the connection without answering",
+  "progress.installing": "Installing on {name}",
   "progress.baselineBoot": "Measuring the pre-slim baseline — booting {name}",
   "progress.baselineSettle": "Waiting {seconds}s for background services to settle",
   "progress.baseline": "Baseline: memory {memory}",
@@ -187,6 +193,30 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.upDown.devices": "Device IDs or names (default: everything this session holds)",
   "cli.use":
     "Acquire and boot — the first step of the main flow. By device, group, or default device",
+  "cli.badPlatform": "Platform must be android or ios: {platform}",
+  "cli.app":
+    "Native build cache — reuse a build with the same native fingerprint and skip the build",
+  "cli.app.install":
+    "Install the cached build on held, booted devices (prints the build command if there is none)",
+  "cli.app.save":
+    "Store the app you just built (.app/.apk) in the cache under the current fingerprint",
+  "cli.app.list": "Cached builds",
+  "cli.app.prune": "Keep only the newest builds per app and platform",
+  "cli.app.keep": "How many to keep",
+  "cli.app.project": "App project folder (default: searched upward from the current folder)",
+  "cli.app.path": "Build to store (default: the newest in DerivedData or android/app/build)",
+  "cli.app.verb": "Install",
+  "cli.app.noProject":
+    "No Expo fingerprint tool (node_modules/.bin/fingerprint) found from {dir} — run inside the app project or pass --project",
+  "cli.app.noDevice": "No held, booted device — hold and boot one with simless use",
+  "cli.app.fingerprinting": "Computing the {platform} native fingerprint (about 30s)",
+  "cli.app.miss": "{platform}: not cached (fingerprint {fingerprint}) — build, then store it:",
+  "cli.app.installed": "{name}: installed the cached build (fingerprint {fingerprint})",
+  "cli.app.needPlatform": "Pass --platform (or a .app/.apk with --path)",
+  "cli.app.noBuild": "No {platform} build found: {path}",
+  "cli.app.saved": "Stored the {platform} build — fingerprint {fingerprint}, {size} ({source})",
+  "cli.app.empty": "No cached builds ({root})",
+  "cli.app.pruned": "Removed {count}",
   "cli.failedFor": "Failed: {name} — {error}",
   "cli.someFailed": "{verb} failed for some devices",
   "cli.verb.boot": "Booting",
@@ -567,5 +597,5 @@ export const en: Record<keyof typeof ko, string> = {
     "Agents for --hook and --mcp (comma-separated): claude, copilot, codex, cursor, gemini",
   "web.slogan": "Make simulator management seamless.",
   "cli.helpAgents":
-    '\nFor agents (AI):\n  - Always pass --json. Results are JSON on stdout; errors are {"error": {code, message, data}}\n  - Exit codes: 0 ok · 1 failed · 2 usage error · 3 in use by another session, still waiting, or deadlock · 4 can\'t reach the server\n  - Decide on error codes (messages follow the user\'s language): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - Acquire a device before touching it — the full flow is in the simless skill (~/.claude/skills/simless, ~/.agents/skills/simless)\n\nExamples:\n  simless --json status                          devices, groups, defaults, who holds what\n  simless --json use --default ios               acquire and boot the iOS default device (add --create if there is none)\n  simless --json use --group "two accounts" --wait  the whole group; wait if it is in use\n  simless --json use --group "layout" --available  take the free ones first\n  simless --json list                            targetId and size label to pass to argent\n  simless release                                give the devices back when done\n  simless doctor                                 installation and connection problems',
+    '\nFor agents (AI):\n  - Always pass --json. Results are JSON on stdout; errors are {"error": {code, message, data}}\n  - Exit codes: 0 ok · 1 failed · 2 usage error · 3 in use by another session, still waiting, or deadlock · 4 can\'t reach the server\n  - Decide on error codes (messages follow the user\'s language): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - Acquire a device before touching it — the full flow is in the simless skill (~/.claude/skills/simless, ~/.agents/skills/simless)\n\nExamples:\n  simless --json status                          devices, groups, defaults, who holds what\n  simless --json use --default ios               acquire and boot the iOS default device (add --create if there is none)\n  simless --json use --group "two accounts" --wait  the whole group; wait if it is in use\n  simless --json use --group "layout" --available  take the free ones first\n  simless --json list                            targetId and size label to pass to argent\n  simless --json app install                     install the cached build if the native fingerprint matches (Expo apps)\n  simless release                                give the devices back when done\n  simless doctor                                 installation and connection problems',
 };

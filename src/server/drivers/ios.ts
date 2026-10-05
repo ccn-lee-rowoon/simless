@@ -351,6 +351,12 @@ export class IosDriver implements Driver {
     }
   }
 
+  async install(device: Device, _state: RuntimeState, path: string): Promise<void> {
+    await runOk(this.runner, this.simctl("install", device.native, path), {
+      timeoutMs: 5 * 60_000,
+    });
+  }
+
   private simslim(): string {
     const path = this.simslimPath();
     if (!path) throw new HandlerError("TOOL_MISSING", t("err.toolMissing", { tool: "simslim" }));

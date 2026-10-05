@@ -30,6 +30,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 - **상태는 서버 하나만** 갖는다. CLI·MCP·훅·웹·메뉴바는 요청을 보내는 창구다.
 - 서버 메서드는 `src/server/*.ts` 의 `registerXMethods(server)` 가 `server.addMethod(이름, 함수)` 로 붙인다.
 - 폴더 사이 import 규칙은 설계 §3 표, `test/architecture.test.ts` 가 지킨다.
+- 네이티브 빌드 캐시(`src/builds/`, R26)는 CLI 쪽이다 — 지문을 호출한 셸의 환경으로 계산해야 해서. 기기에 설치만 서버(`device.install`)가 한다.
 
 ## 3. 자주 하는 변경
 
