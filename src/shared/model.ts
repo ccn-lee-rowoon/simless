@@ -30,20 +30,21 @@ export const IosSpec = z.object({
 export const DeviceSpec = z.discriminatedUnion("platform", [AndroidSpec, IosSpec]);
 export type DeviceSpec = z.infer<typeof DeviceSpec>;
 
-/** 만든 디바이스 1대 — registry 에 저장 (docs/design.md §6) */
-export const Device = z.object({
+/**
+ * 디바이스에 Corgi 가 붙인 정보 — registry 에 저장한다 (docs/design.md §6).
+ * 기기 자체(이름·크기)는 저장하지 않고 드라이버에서 그때그때 읽는다 (R20).
+ */
+export const DeviceMeta = z.object({
   /** Corgi 가 붙이는 ID. 절대 안 바뀐다 (R4) */
   id: z.string(),
-  /** 표시 이름. 바꿀 수 있다 (R3) */
-  name: z.string(),
-  /** Android AVD ID(`corgi_<id>`) 또는 iOS UDID — 이름을 바꿔도 그대로 */
+  platform: Platform,
+  /** Android AVD ID 또는 iOS UDID — 이름을 바꿔도 그대로. 기기와 이 정보를 잇는다 */
   native: z.string(),
-  spec: DeviceSpec,
-  /** false = 사용 안 함, 일괄 동작에서 빠진다 (R6) */
-  enabled: z.boolean(),
+  /** Corgi 가 만든 디바이스 — 삭제·슬림 켜고 끄기는 이것만 (M7·M8·N5) */
+  createdByCorgi: z.boolean(),
   slim: SlimState,
   slimError: z.string().optional(),
-  /** 슬림하기 전에 잰 기준값 — 슬림 후 메모리와 비교한다 (M6) */
+  /** 슬림하기 전에 잰 기준값 — 슬림 후 메모리와 비교한다 (M10) */
   slimBaseline: z
     .object({
       memoryBytes: z.number().optional(),
@@ -51,11 +52,17 @@ export const Device = z.object({
       measuredAt: z.string(),
     })
     .optional(),
-  /** 복제한 원본 — 표시용, 원본이 지워져도 상관없다 (M1) */
-  source: z.object({ name: z.string(), native: z.string() }).optional(),
+  /** Corgi 가 처음 본(또는 만든) 시각 */
   createdAt: z.string(),
 });
-export type Device = z.infer<typeof Device>;
+export type DeviceMeta = z.infer<typeof DeviceMeta>;
+
+/** 이 Mac 의 디바이스 하나 — 드라이버가 읽은 기기 + Corgi 가 붙인 정보 */
+export interface Device extends DeviceMeta {
+  /** 표시 이름 — Android `avd.ini.displayname`, iOS 시뮬레이터 이름. 바꿀 수 있다 (R3) */
+  name: string;
+  spec: DeviceSpec;
+}
 
 /** RN 레이아웃이 받는 폭 — Android dp, iOS pt (M2) */
 export function layoutWidth(spec: DeviceSpec): number {

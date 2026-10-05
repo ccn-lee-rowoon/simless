@@ -32,7 +32,6 @@ const CreateParams = z
   );
 const DeviceRef = z.object({ device: z.string() });
 const RenameParams = DeviceRef.extend({ name: z.string().min(1) });
-const EnableParams = DeviceRef.extend({ enabled: z.boolean() });
 const DevicesParams = z.object({ devices: z.array(z.string()).default([]) });
 const SlimParams = DevicesParams.extend({ mode: z.enum(["on", "off", "check"]).default("on") });
 const SourceParams = z.object({ platform: z.enum(["android", "ios"]).optional() });
@@ -94,11 +93,23 @@ export function registerDeviceMethods(server: CorgiServer): void {
     }
   };
 
+  /** Corgi 가 만든 디바이스만 — 삭제·슬림 켜고 끄기 (M7·M8·N5) */
+  const guardCreated = (device: Device, what: string) => {
+    if (!device.createdByCorgi) {
+      throw new HandlerError(
+        "NOT_ALLOWED",
+        `${device.name} 은 이 Mac 에 원래 있던 디바이스라 ${what}할 수 없습니다 — Corgi 가 만든 디바이스만 됩니다`,
+      );
+    }
+  };
+
   /** 켜기·끄기는 이 세션이 점유한 디바이스만 (P1). 사람은 점유 없이, 남이 쓰는 중인 것만 빼고 */
-  const heldTargets = (refs: string[], session: SessionInfo): Device[] => {
+  const heldTargets = async (refs: string[], session: SessionInfo): Promise<Device[]> => {
     const held = new Set(server.leases.heldBy(session.key));
     const devices =
-      refs.length > 0 ? server.resolve(refs) : server.registry.list().filter((d) => held.has(d.id));
+      refs.length > 0
+        ? await server.resolve(refs)
+        : (await server.devices()).filter((d) => held.has(d.id));
     if (devices.length === 0)
       throw new HandlerError(
         "NOT_HELD",
@@ -119,16 +130,25 @@ export function registerDeviceMethods(server: CorgiServer): void {
     return devices;
   };
 
-  /** 작업 중에 바뀐 값(슬림 상태 등)을 반영한 최신 레지스트리 항목 */
-  const fresh = (devices: Device[]): Device[] => devices.map((d) => server.registry.get(d.id) ?? d);
+  /** 작업 중에 바뀐 값(슬림 상태 등)을 반영한 최신 정보 */
+  const fresh = (devices: Device[]): Device[] =>
+    devices.map((d) => {
+      const meta = server.registry.get(d.id);
+      return meta ? { ...d, ...meta } : d;
+    });
+
+  const update = (device: Device, patch: Parameters<typeof server.registry.update>[1]): Device => ({
+    ...device,
+    ...server.registry.update(device.id, patch),
+  });
 
   const applySlim = async (device: Device, progress: Progress): Promise<Device> => {
-    server.registry.update(device.id, { slim: "applying", slimError: undefined });
+    update(device, { slim: "applying", slimError: undefined });
     try {
       await server.driver(device.spec.platform).slim(device, progress);
-      return server.registry.update(device.id, { slim: "applied", slimError: undefined });
+      return update(device, { slim: "applied", slimError: undefined });
     } catch (error) {
-      return server.registry.update(device.id, { slim: "failed", slimError: message(error) });
+      return update(device, { slim: "failed", slimError: message(error) });
     }
   };
 
@@ -151,7 +171,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
       progress(
         `기준값: 메모리 ${gb}${measured.processes ? ` · 프로세스 ${measured.processes}` : ""}`,
       );
-      device = server.registry.update(device.id, {
+      device = update(device, {
         slimBaseline: { ...measured, measuredAt: new Date().toISOString() },
       });
     } catch (error) {
@@ -212,13 +232,13 @@ export function registerDeviceMethods(server: CorgiServer): void {
   server.addMethod("source.list", async (p): Promise<SourceListResult> => {
     const { platform } = parse(SourceParams, p);
     const { sources, presets, problems } = await allSources(platform);
-    const devices = server.registry.list();
+    const devices = (await server.devices()).filter((d) => d.createdByCorgi);
     const created = new Map(devices.map((d) => [specKey(d.spec), d.id]));
     const items: SourceEntry[] = [
       ...sources.map((s) => ({ s, kind: "device" as const })),
       ...presets.map((s) => ({ s, kind: "profile" as const })),
     ].map(({ s: source, kind }) => {
-      const managed = server.registry.findByNative(source.native)?.id;
+      const managed = devices.find((d) => d.native === source.native)?.id;
       return {
         ...source,
         kind,
@@ -244,17 +264,24 @@ export function registerDeviceMethods(server: CorgiServer): void {
   server.addMethod("device.create", async (p, session, connection) => {
     const params = parse(CreateParams, p);
     const { sources, presets } = await allSources();
+    const all = await server.devices();
+    const corgiNatives = new Set(all.filter((d) => d.createdByCorgi).map((d) => d.native));
     // 원본은 Corgi 가 만든 것이 아닌 이 Mac 의 디바이스 (슬림된 것을 원본으로 쓰는 건 나중에 — L4)
-    const candidates = [...sources, ...presets].filter(
-      (s) => !server.registry.findByNative(s.native),
-    );
+    const candidates = [...sources, ...presets].filter((s) => !corgiNatives.has(s.native));
     const wanted = (params.source ?? "").toLowerCase();
     const exact = candidates.filter((s) => s.native.toLowerCase() === wanted);
     const byName = candidates.filter((s) => s.name.toLowerCase() === wanted);
     const matches = exact.length > 0 ? exact : byName;
+    const wantedLower = params.source?.toLowerCase();
     if (
-      params.source &&
-      (server.registry.findByNative(params.source) || server.registry.find(params.source))
+      wantedLower &&
+      all.some(
+        (d) =>
+          d.createdByCorgi &&
+          (d.id === params.source ||
+            d.native === params.source ||
+            d.name.toLowerCase() === wantedLower),
+      )
     ) {
       throw new HandlerError(
         "INVALID",
@@ -276,12 +303,13 @@ export function registerDeviceMethods(server: CorgiServer): void {
     }
     const source = matches[0] as SourceDevice;
     // 같은 크기도 여러 대 만들 수 있다 — 막는 건 이름 중복뿐 (M3)
+    const taken = new Set(all.map((d) => d.name.toLowerCase()));
     let name = params.name ?? defaultName(source);
-    if (server.registry.find(name)) {
+    if (taken.has(name.toLowerCase())) {
       if (params.name) throw new HandlerError("INVALID", `이미 쓰는 이름입니다: ${name}`);
       const base = name;
       let n = 2;
-      while (server.registry.find(`${base} ${n}`)) n++;
+      while (taken.has(`${base} ${n}`.toLowerCase())) n++;
       name = `${base} ${n}`;
     }
 
@@ -289,17 +317,16 @@ export function registerDeviceMethods(server: CorgiServer): void {
     const progress = progressOf(connection);
     const driver = server.driver(source.platform);
     const { native } = await driver.create({ id, name, source }, progress);
-    let device: Device = {
+    const meta = server.registry.add({
       id,
-      name,
+      platform: source.platform,
       native,
-      spec: source.spec,
-      enabled: true,
+      createdByCorgi: true,
       slim: "none",
-      source: { name: source.name, native: source.native },
       createdAt: new Date().toISOString(),
-    };
-    server.registry.add(device);
+    });
+    server.invalidate();
+    let device: Device = { ...meta, name, spec: source.spec };
     if (params.slim && params.baseline)
       device = await withLock(id, () => measureBaseline(device, progress));
     if (params.slim) device = await withLock(id, () => applySlim(device, progress));
@@ -308,29 +335,24 @@ export function registerDeviceMethods(server: CorgiServer): void {
 
   server.addMethod("device.rename", async (p, session) => {
     const params = parse(RenameParams, p);
-    const [device] = server.resolve([params.device]);
+    const [device] = await server.resolve([params.device]);
     if (!device) throw new HandlerError("NOT_FOUND", params.device);
     guardOthers(device, session);
-    const other = server.registry.find(params.name);
-    if (other && other.id !== device.id)
+    const lower = params.name.toLowerCase();
+    if ((await server.devices()).some((d) => d.id !== device.id && d.name.toLowerCase() === lower))
       throw new HandlerError("INVALID", `이미 쓰는 이름입니다: ${params.name}`);
     await withLock(device.id, () =>
       server.driver(device.spec.platform).rename(device, params.name),
     );
-    return view(session, server.registry.update(device.id, { name: params.name }));
-  });
-
-  server.addMethod("device.setEnabled", async (p, session) => {
-    const params = parse(EnableParams, p);
-    const [device] = server.resolve([params.device]);
-    if (!device) throw new HandlerError("NOT_FOUND", params.device);
-    return view(session, server.registry.update(device.id, { enabled: params.enabled }));
+    server.invalidate();
+    return view(session, { ...device, name: params.name });
   });
 
   server.addMethod("device.delete", async (p, session, connection) => {
     const params = parse(DeviceRef, p);
-    const [device] = server.resolve([params.device]);
+    const [device] = await server.resolve([params.device]);
     if (!device) throw new HandlerError("NOT_FOUND", params.device);
+    guardCreated(device, "삭제");
     guardOthers(device, session);
     const driver = server.driver(device.spec.platform);
     await withLock(device.id, async () => {
@@ -342,15 +364,19 @@ export function registerDeviceMethods(server: CorgiServer): void {
       await driver.remove(device);
     });
     server.registry.remove(device.id);
-    server.leases.release(session.key, [device.id]);
+    server.leases.forgetDevice(device.id);
+    server.invalidate();
     return { deleted: device.id };
   });
 
   server.addMethod("device.slim", async (p, session, connection) => {
     const params = parse(SlimParams, p);
     const devices =
-      params.devices.length > 0 ? server.resolve(params.devices) : server.registry.list();
+      params.devices.length > 0
+        ? await server.resolve(params.devices)
+        : (await server.devices()).filter((d) => d.createdByCorgi);
     const progress = progressOf(connection);
+    for (const device of devices) guardCreated(device, "슬림 설정");
     if (params.mode !== "check") for (const device of devices) guardOthers(device, session);
     const results = await forEach(devices, async (device) => {
       const driver = server.driver(device.spec.platform);
@@ -359,11 +385,11 @@ export function registerDeviceMethods(server: CorgiServer): void {
         if (updated.slim === "failed") throw new Error(updated.slimError);
       } else if (params.mode === "off") {
         await driver.unslim(device, progress);
-        server.registry.update(device.id, { slim: "none", slimError: undefined });
+        update(device, { slim: "none", slimError: undefined });
       } else {
         const state = (await driver.states([device])).get(device.id) ?? { booted: false };
         const slim = await driver.checkSlim(device, state);
-        if (slim) server.registry.update(device.id, { slim });
+        if (slim) update(device, { slim });
       }
     });
     return {
@@ -374,7 +400,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
 
   server.addMethod("device.up", async (p, session, connection) => {
     const params = parse(DevicesParams, p);
-    const devices = heldTargets(params.devices, session);
+    const devices = await heldTargets(params.devices, session);
     const progress = progressOf(connection);
     const results = await forEach(devices, async (device) => {
       const driver = server.driver(device.spec.platform);
@@ -384,7 +410,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
       if (device.slim === "applied" || device.slim === "drifted") {
         const slim = await driver.checkSlim(device, state);
         if (slim === "drifted") await applySlim(device, progress);
-        else if (slim) server.registry.update(device.id, { slim });
+        else if (slim) update(device, { slim });
       }
       progress(`켜짐: ${device.name}${state.targetId ? ` (${state.targetId})` : ""}`);
     });
@@ -393,7 +419,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
 
   server.addMethod("device.down", async (p, session, connection) => {
     const params = parse(DevicesParams, p);
-    const devices = heldTargets(params.devices, session);
+    const devices = await heldTargets(params.devices, session);
     const progress = progressOf(connection);
     const results = await forEach(devices, async (device) => {
       const driver = server.driver(device.spec.platform);
@@ -409,7 +435,7 @@ export function registerDeviceMethods(server: CorgiServer): void {
 
 /** 서버가 켜질 때 — 켜져 있는 디바이스의 슬림 상태를 확인한다 (M6) */
 export async function checkBootedSlim(server: CorgiServer): Promise<void> {
-  const devices = server.registry.list();
+  const devices = (await server.devices()).filter((d) => d.createdByCorgi && d.slim !== "none");
   const states = await server.runtimeStates(devices);
   for (const device of devices) {
     const state = states.get(device.id);

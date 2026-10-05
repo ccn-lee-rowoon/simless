@@ -52,8 +52,8 @@ export async function acquire(
 export function registerLease(program: Command, run: Run) {
   program
     .command("acquire")
-    .description("디바이스를 점유한다 (지정하지 않으면 사용 중인 디바이스 전부)")
-    .argument("[devices...]", "디바이스 ID 또는 이름")
+    .description("디바이스를 점유한다")
+    .argument("<devices...>", "디바이스 ID 또는 이름")
     .option("--wait", "다른 세션이 쓰는 중이면 풀릴 때까지 기다렸다 점유")
     .option("--timeout <시간>", "기다리기 최대 시간 (예: 90s, 10m — 기본 10m)")
     .action(

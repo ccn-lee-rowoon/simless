@@ -19,6 +19,7 @@ import { HandlerError } from "../socket.ts";
 import { ANDROID_PROFILES } from "./android-profiles.ts";
 import type {
   CustomRequest,
+  Discovered,
   Driver,
   Progress,
   RuntimeState,
@@ -223,6 +224,39 @@ export class AndroidDriver implements Driver {
       },
       request.systemImage,
     );
+  }
+
+  /**
+   * 이 Mac 의 AVD 전부 (R20) — `<ID>.ini` 마다 config.ini 의 표시 이름·화면 크기를 읽는다.
+   * 크기가 없으면 skin.name(`1080x2400`)으로, 그것도 없으면 뺀다.
+   */
+  async list(): Promise<Discovered[]> {
+    if (!existsSync(this.avdHome)) return [];
+    const result: Discovered[] = [];
+    for (const file of readdirSync(this.avdHome)) {
+      if (!file.endsWith(".ini")) continue;
+      const avdId = file.slice(0, -".ini".length);
+      const path = this.configPath(avdId);
+      if (!existsSync(path)) continue;
+      const config = readProps(path);
+      const skin = /^(\d+)x(\d+)$/.exec(config["skin.name"] ?? "");
+      const widthPx = Number(config["hw.lcd.width"] ?? skin?.[1]);
+      const heightPx = Number(config["hw.lcd.height"] ?? skin?.[2]);
+      const density = Number(config["hw.lcd.density"] ?? 420);
+      if (!(widthPx > 0 && heightPx > 0 && density > 0)) continue;
+      result.push({
+        native: avdId,
+        name: config["avd.ini.displayname"] || avdId.replace(/_/g, " "),
+        spec: {
+          platform: "android",
+          widthPx,
+          heightPx,
+          density,
+          systemImage: config["image.sysdir.1"] ?? "",
+        },
+      });
+    }
+    return result;
   }
 
   /**

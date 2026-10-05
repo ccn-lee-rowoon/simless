@@ -47,15 +47,16 @@ async function confirm(question: string): Promise<boolean> {
 export function registerDevices(program: Command, run: Run) {
   program
     .command("list")
-    .description(
-      "만든 디바이스 — 켜짐·슬림·점유·argent ID (M5). --all 이면 이 Mac 의 전체 목록 (M9)",
-    )
-    .option("--all", "이 Mac 의 모든 에뮬레이터·시뮬레이터 — 복제 원본 (M1)")
-    .option("--platform <platform>", "android 또는 ios (--all 과 함께)")
+    .description("이 Mac 의 디바이스 전부 — 켜짐·슬림·점유·argent ID (M5·R20)")
+    .option("--all", "만들 수 있는 원본 목록 (M1)")
+    .option("--platform <platform>", "android 또는 ios")
+    .option("--created", "Corgi 가 만든 디바이스만")
     .action(
-      run(async (ctx, o: { all?: boolean; platform?: "android" | "ios" }) => {
+      run(async (ctx, o: { all?: boolean; platform?: "android" | "ios"; created?: boolean }) => {
         if (!o.all) {
-          const devices = await call<DeviceView[]>(ctx, "device.list", {});
+          const devices = (await call<DeviceView[]>(ctx, "device.list", {})).filter(
+            (d) => (!o.platform || d.platform === o.platform) && (!o.created || d.createdByCorgi),
+          );
           output(ctx, devices, () => devicesTable(devices));
           return;
         }
@@ -163,25 +164,11 @@ export function registerDevices(program: Command, run: Run) {
       }),
     );
 
-  for (const [command, enabled, description] of [
-    ["enable", true, "다시 사용한다"],
-    ["disable", false, "사용 안 함 — 일괄 동작에서 뺀다 (R6)"],
-  ] as const) {
-    program
-      .command(command)
-      .description(description)
-      .argument("<device>", "디바이스 ID 또는 이름")
-      .action(
-        run(async (ctx, device: string) => {
-          const result = await call<DeviceView>(ctx, "device.setEnabled", { device, enabled });
-          output(ctx, result, () => devicesTable([result]));
-        }),
-      );
-  }
-
   program
     .command("delete")
-    .description("디바이스를 지운다 — 켜져 있으면 끄고, 다른 세션이 쓰는 중이면 막는다 (M8)")
+    .description(
+      "Corgi 가 만든 디바이스를 지운다 — 켜져 있으면 끄고, 다른 세션이 쓰는 중이면 막는다 (M8)",
+    )
     .argument("<device>", "디바이스 ID 또는 이름")
     .option("-y, --yes", "확인 없이 지운다")
     .action(
@@ -197,7 +184,7 @@ export function registerDevices(program: Command, run: Run) {
   program
     .command("slim")
     .description("슬림화 — 적용(기본)·해제(--off)·확인(--check) (R5, M6)")
-    .argument("[devices...]", "디바이스 ID 또는 이름 (기본: 전부)")
+    .argument("[devices...]", "디바이스 ID 또는 이름 (기본: Corgi 가 만든 것 전부)")
     .option("--off", "슬림 해제")
     .option("--check", "슬림 상태만 확인")
     .action(
@@ -230,7 +217,7 @@ export function registerDevices(program: Command, run: Run) {
   program
     .command("use")
     .description("점유하고 켠다 — 주 흐름의 첫 단계 (R15)")
-    .argument("[devices...]", "디바이스 ID 또는 이름 (기본: 사용 중인 디바이스 전부)")
+    .argument("<devices...>", "디바이스 ID 또는 이름")
     .option("--wait", "다른 세션이 쓰는 중이면 풀릴 때까지 기다린다")
     .option("--timeout <시간>", "기다리기 최대 시간 (예: 90s, 10m — 기본 10m)")
     .action(

@@ -2,15 +2,16 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { CorgiServer } from "../src/server/app.ts";
 import { listen } from "../src/server/socket.ts";
 import { VERSION } from "../src/shared/version.ts";
-import { androidDevice, fakeDriver, tempEnv } from "./helpers.ts";
+import { androidDevice, fakeDriver, seedDevice, tempEnv } from "./helpers.ts";
 
 const entry = new URL("../bin/corgi.ts", import.meta.url).pathname;
 const env = tempEnv();
 let stop = () => {};
 
 beforeAll(async () => {
-  const server = new CorgiServer({ ...env, drivers: [fakeDriver()] });
-  server.registry.add(androidDevice("aaaa", "Small"));
+  const driver = fakeDriver();
+  const server = new CorgiServer({ ...env, drivers: [driver] });
+  seedDevice(server, driver, "aaaa", "Small");
   stop = (await listen(env.paths.socket, VERSION, server.handle)).stop;
 });
 afterAll(() => {

@@ -1,7 +1,13 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Driver, RuntimeState, SourceDevice } from "../src/server/drivers/types.ts";
+import type {
+  Discovered,
+  Driver,
+  RuntimeState,
+  SourceDevice,
+} from "../src/server/drivers/types.ts";
+import type { Registry } from "../src/server/registry.ts";
 import { Config } from "../src/shared/config.ts";
 import type { Device } from "../src/shared/model.ts";
 import { resolvePaths } from "../src/shared/paths.ts";
@@ -30,13 +36,23 @@ export function session(key: string, extra: Partial<SessionInfo> = {}): SessionI
   return { key, agent: "test-agent", cwd: "/work", human: false, ...extra };
 }
 
+const ANDROID_SPEC = {
+  platform: "android",
+  widthPx: 720,
+  heightPx: 1520,
+  density: 320,
+  systemImage: "x",
+} as const;
+
+/** Corgi 가 만든 Android 디바이스 하나 (레지스트리 정보 + 기기) */
 export function androidDevice(id: string, name = `Android ${id}`): Device {
   return {
     id,
+    platform: "android",
     name,
     native: `corgi_${id}`,
-    spec: { platform: "android", widthPx: 720, heightPx: 1520, density: 320, systemImage: "x" },
-    enabled: true,
+    spec: ANDROID_SPEC,
+    createdByCorgi: true,
     slim: "none",
     createdAt: "2026-10-02T00:00:00.000Z",
   };
@@ -48,24 +64,25 @@ export function fakeSource(native: string, widthDp: number, name = native): Sour
     platform: "android",
     native,
     name,
-    spec: {
-      platform: "android",
-      widthPx: widthDp * 2,
-      heightPx: 1520,
-      density: 320,
-      systemImage: "x",
-    },
+    spec: { ...ANDROID_SPEC, widthPx: widthDp * 2 },
     detail: `${widthDp * 2}×1520px · 320dpi`,
     booted: false,
   };
 }
 
-/** 아무것도 실제로 켜지 않는 드라이버 — 켜짐 상태만 기억한다. list 를 바꾸면 원본 목록이 바뀐다 */
-export function fakeDriver(
-  platform: "android" | "ios" = "android",
-): Driver & { booted: Set<string>; list: SourceDevice[] } {
+export type FakeDriver = Driver & {
+  booted: Set<string>;
+  /** 이 Mac 에 있는 기기 — list() 가 돌려준다. 만들면 늘고 지우면 준다 */
+  existing: Discovered[];
+  /** 생성 원본 목록 */
+  sourceList: SourceDevice[];
+};
+
+/** 아무것도 실제로 켜지 않는 드라이버 — 켜짐 상태만 기억한다 */
+export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver {
   const booted = new Set<string>();
-  const sources: SourceDevice[] = [
+  const existing: Discovered[] = [];
+  const sourceList: SourceDevice[] = [
     fakeSource("Small_360", 360, "Small 360"),
     fakeSource("Large_412", 412, "Large 412"),
   ];
@@ -73,12 +90,14 @@ export function fakeDriver(
     booted.has(d.id)
       ? { booted: true, targetId: `emulator-${5554 + booted.size * 2}` }
       : { booted: false };
-  return {
+  const driver: FakeDriver = {
     platform,
     booted,
-    list: sources,
+    existing,
+    sourceList,
     missingTools: async () => [],
-    sources: async () => sources,
+    list: async () => [...driver.existing],
+    sources: async () => driver.sourceList,
     customSource: async (r) => ({
       ...fakeSource(
         `custom:${r.widthDp}x${r.heightDp}@${r.density}`,
@@ -86,9 +105,18 @@ export function fakeDriver(
         `Android ${r.widthDp}dp`,
       ),
     }),
-    create: async ({ id }) => ({ native: `corgi_${id}` }),
-    rename: async () => {},
-    remove: async () => {},
+    create: async ({ id, name, source }) => {
+      const native = `corgi_${id}`;
+      driver.existing.push({ native, name, spec: source.spec });
+      return { native };
+    },
+    rename: async (device, name) => {
+      const item = driver.existing.find((e) => e.native === device.native);
+      if (item) item.name = name;
+    },
+    remove: async (device) => {
+      driver.existing = driver.existing.filter((e) => e.native !== device.native);
+    },
     states: async (devices) => new Map(devices.map((d) => [d.id, state(d)])),
     boot: async (d) => {
       booted.add(d.id);
@@ -111,4 +139,26 @@ export function fakeDriver(
           ]),
       ),
   };
+  return driver;
+}
+
+/** 이 Mac 에 기기를 두고 ID 를 정해 둔다 — 테스트에서 ID 로 가리키려고 */
+export function seedDevice(
+  server: { registry: Registry },
+  driver: FakeDriver,
+  id: string,
+  name: string,
+  createdByCorgi = true,
+): void {
+  const device = androidDevice(id, name);
+  if (!createdByCorgi) device.native = `${name.replace(/\s/g, "_")}_${id}`;
+  driver.existing.push({ native: device.native, name, spec: device.spec });
+  server.registry.add({
+    id,
+    platform: "android",
+    native: device.native,
+    createdByCorgi,
+    slim: "none",
+    createdAt: device.createdAt,
+  });
 }

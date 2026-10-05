@@ -78,13 +78,14 @@ const device: Device = {
     heightPt: 874,
     scale: 3,
   },
-  enabled: true,
+  platform: "ios",
+  createdByCorgi: true,
   slim: "none",
   createdAt: "2026-10-02T00:00:00.000Z",
 };
 
 describe("IosDriver", () => {
-  test("sources — 이 Mac 의 iPhone·iPad 시뮬레이터, 폭은 기기 종류 프로필의 pt", async () => {
+  test("list·sources — 이 Mac 의 iPhone·iPad 시뮬레이터, 폭은 기기 종류 프로필의 pt", async () => {
     const devices = {
       "rt.26-5": [
         {
@@ -122,7 +123,11 @@ describe("IosDriver", () => {
     const { runner } = fakeRunner({
       "xcrun simctl list -j devices": { stdout: JSON.stringify({ devices }) },
     });
-    const sources = await new IosDriver(config, runner, () => "/bin/simslim").sources();
+    const driver = new IosDriver(config, runner, () => "/bin/simslim");
+    expect(await driver.list()).toEqual([
+      { native: "U-17", name: "iPhone 17", spec: expect.objectContaining({ widthPt: 402 }) },
+    ]);
+    const sources = await driver.sources();
     expect(sources).toHaveLength(1); // 워치·쓸 수 없는 것·없는 런타임은 빠진다
     expect(sources[0]).toMatchObject({
       native: "U-17",

@@ -8,7 +8,15 @@ export interface RuntimeState {
   targetId?: string;
 }
 
-/** 이 Mac 의 디바이스 하나 — 복제 원본 후보 (M1) */
+/** 이 Mac 의 디바이스 하나 — 드라이버가 읽은 그대로 (R20) */
+export interface Discovered {
+  /** AVD ID 또는 UDID */
+  native: string;
+  name: string;
+  spec: DeviceSpec;
+}
+
+/** 만들 수 있는 것 하나 — 생성 원본 (M1) */
 export interface SourceDevice {
   platform: Platform;
   /** AVD ID 또는 UDID */
@@ -41,7 +49,9 @@ export interface Driver {
   readonly platform: Platform;
   /** 필요한 도구 중 없는 것 — 비어 있으면 쓸 수 있다 */
   missingTools(): Promise<string[]>;
-  /** 이 Mac 의 디바이스 전부 — Corgi 가 만든 것도 포함 (서버가 가린다) */
+  /** 이 Mac 의 디바이스 전부 (R20). 읽지 못하면 오류를 낸다 — 서버가 빈 목록으로 오해해 정보를 지우지 않게 */
+  list(): Promise<Discovered[]>;
+  /** 생성 원본으로 쓸 이 Mac 의 디바이스 — Corgi 가 만든 것도 포함 (서버가 가린다) */
   sources(): Promise<SourceDevice[]>;
   /** 내장 대표 프로필 — Android 만 (requirements M1) */
   presetSources?(): Promise<SourceDevice[]>;

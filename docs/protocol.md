@@ -56,7 +56,8 @@
 | `BUSY` | 다른 세션이 사용 중(또는 같은 디바이스를 먼저 기다리는 중). `data.holders` 에 누가·언제부터 | 3 |
 | `NOT_HELD` | 이 세션이 점유하지 않은 디바이스를 켜거나 끄려 함 | 1 |
 | `NOT_FOUND` | 없는 디바이스·기기 종류·런타임·이미지 | 1 |
-| `INVALID` | 잘못된 매개변수, 이미 만든 크기(M3), 이미 쓰는 이름 | 2 |
+| `INVALID` | 잘못된 매개변수, 이미 쓰는 이름, 이름이 같은 디바이스가 여럿(ID 로 고르게 함) | 2 |
+| `NOT_ALLOWED` | 이 Mac 에 원래 있던 디바이스를 지우거나 슬림 설정하려 함 (M8·N5) | 1 |
 | `TOOL_MISSING` | avdslim·simslim·SDK 등 필요한 도구가 없음 | 1 |
 | `FAILED` | 그 밖의 실패 (외부 명령 오류 등) | 1 |
 | (클라이언트) `SERVER_DOWN` | 서버에 연결 못 함 | 4 |
@@ -66,21 +67,20 @@
 
 ## 메서드
 
-디바이스는 ID 나 이름으로 가리킨다. `devices` 를 비우면 메서드마다 정한 기본값을 쓴다.
+디바이스는 Corgi ID·AVD ID·UDID·이름으로 가리킨다. 목록은 **이 Mac 의 디바이스 전부**다(R20) — Corgi 가 만든 것은 `createdByCorgi: true`. `devices` 를 비우면 메서드마다 정한 기본값을 쓴다.
 
 | 메서드 | params | result | 비고 |
 | --- | --- | --- | --- |
 | `status` | `{}` | `StatusResult` — 이 세션, 점유·대기 순번, `DeviceView[]`, 대기열 | |
 | `source.list` | `{ platform? }` | `{ items: SourceEntry[], problems }` | 이 Mac 의 전체 목록(복제 원본). 폭 순. Corgi 것은 `managed`, 같은 크기로 이미 만든 원본은 `created` 에 디바이스 ID (M1~M3·M9) |
-| `device.list` | `{}` | `DeviceView[]` | 켜짐·argent ID(`targetId`)·점유자 포함 (M5) |
+| `device.list` | `{}` | `DeviceView[]` | 이 Mac 의 디바이스 전부. 켜짐·argent ID(`targetId`)·점유자 포함 (M5·R20) |
 | `device.create` | `{ source, name?, slim = true }` | `DeviceView` | `source` = 원본 ID(AVD ID·UDID) 또는 이름. 원본과 같은 크기로 앱 없이 만든다. 같은 크기는 `INVALID`, 같은 이름의 원본이 여럿이면 `INVALID`(후보 ID 표시). 진행 알림 있음 |
-| `device.rename` | `{ device, name }` | `DeviceView` | 다른 세션이 쓰는 중이면 `BUSY` |
-| `device.setEnabled` | `{ device, enabled }` | `DeviceView` | R6 |
-| `device.delete` | `{ device }` | `{ deleted }` | 켜져 있으면 끄고 지운다. 다른 세션이 쓰는 중이면 `BUSY` (M8) |
-| `device.slim` | `{ devices = 전부, mode = "on" \| "off" \| "check" }` | `{ results, devices }` | on·off 는 다른 세션이 쓰는 중이면 `BUSY` |
+| `device.rename` | `{ device, name }` | `DeviceView` | 원래 있던 디바이스도 된다. 다른 세션이 쓰는 중이면 `BUSY` |
+| `device.delete` | `{ device }` | `{ deleted }` | Corgi 가 만든 것만(`NOT_ALLOWED`). 켜져 있으면 끄고 지운다. 다른 세션이 쓰는 중이면 `BUSY` (M8) |
+| `device.slim` | `{ devices = Corgi 가 만든 것 전부, mode = "on" \| "off" \| "check" }` | `{ results, devices }` | Corgi 가 만든 것만(`NOT_ALLOWED`). on·off 는 다른 세션이 쓰는 중이면 `BUSY` |
 | `device.up` | `{ devices = 이 세션의 점유 전부 }` | `{ results, devices }` | 점유가 있어야 함(`NOT_HELD`). 켠 뒤 슬림을 확인하고 풀렸으면 다시 적용 (M6) |
 | `device.down` | 같음 | `{ results, devices }` | |
-| `lease.acquire` | `{ devices = 사용 중 전부, wait = false, timeoutMs = 600000 }` | `{ status: "granted", deviceIds }` 또는 `{ status: "queued", position, holders }` | 전부 아니면 전무. 바쁘면 `BUSY`, `wait` 면 `queued` 알림 후 차례가 오거나 시간이 지날 때까지 기다린다 |
+| `lease.acquire` | `{ devices, wait = false, timeoutMs = 600000 }` | `{ status: "granted", deviceIds }` 또는 `{ status: "queued", position, holders }` | 전부 아니면 전무. 바쁘면 `BUSY`, `wait` 면 `queued` 알림 후 차례가 오거나 시간이 지날 때까지 기다린다 |
 | `lease.release` | `{ devices? }` | `{ released }` | 안 주면 이 세션의 점유·대기 전부 |
 | `lease.who` | `{ target? }` | `[{ deviceId, name, holder? }]` | `target` 은 ID·이름·AVD ID·UDID·시리얼 |
 

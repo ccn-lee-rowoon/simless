@@ -53,7 +53,7 @@ export function formatHolder(holder: HolderView & { deviceId?: string }): string
 
 export function devicesTable(devices: DeviceView[]): string {
   if (devices.length === 0)
-    return "만든 디바이스가 없습니다 — corgi list --all 에서 원본을 골라 corgi create <원본>";
+    return "디바이스가 없습니다 — corgi list --all 에서 원본을 골라 corgi create <원본>";
   const rows = [...devices]
     .sort((a, b) => a.spec.platform.localeCompare(b.spec.platform) || a.layoutWidth - b.layoutWidth)
     .map((d) => [
@@ -67,12 +67,12 @@ export function devicesTable(devices: DeviceView[]): string {
             (d.slimStats.memoryBytes ? `${(d.slimStats.memoryBytes / 1024 ** 3).toFixed(1)}GB` : "")
           }`.trim()
         : d.slim,
-      d.enabled ? "" : "사용 안 함",
+      d.createdByCorgi ? "Corgi" : "",
       d.mine ? "나" : d.holder ? formatHolder(d.holder) : "",
     ]);
   // 슬림 실패 이유는 표에 넣기엔 길어 아래에 따로 적는다
   const notes = devices
     .filter((d) => d.slim === "failed" && d.slimError)
     .map((d) => `슬림 실패 ${d.id}: ${d.slimError?.split("\n")[0]}`);
-  return [table(["ID", "크기", "이름", "상태", "슬림", "", "점유"], rows), ...notes].join("\n");
+  return [table(["ID", "크기", "이름", "상태", "슬림", "만듦", "점유"], rows), ...notes].join("\n");
 }

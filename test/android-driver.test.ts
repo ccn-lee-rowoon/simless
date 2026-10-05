@@ -112,6 +112,36 @@ describe("AndroidDriver", () => {
     expect(await driver(env, { runner: fakeAdb().runner }).sources()).toEqual([]);
   });
 
+  test("list — 이 Mac 의 AVD 전부, 크기가 없으면 skin.name, 표시 이름이 없으면 ID 로 (R20)", async () => {
+    const { env } = sdkWithImages();
+    sourceAvd(env.ANDROID_AVD_HOME, "Size_Small_360dp", small);
+    sourceAvd(env.ANDROID_AVD_HOME, "Pixel_6a", {
+      AvdId: "Pixel_6a",
+      "skin.name": "1080x2400",
+      "hw.lcd.density": "420",
+    });
+    sourceAvd(env.ANDROID_AVD_HOME, "Broken", { AvdId: "Broken" });
+    const list = await driver(env, { runner: fakeAdb().runner }).list();
+    expect(list.sort((a, b) => a.native.localeCompare(b.native))).toEqual([
+      {
+        native: "Pixel_6a",
+        name: "Pixel 6a",
+        spec: { platform: "android", widthPx: 1080, heightPx: 2400, density: 420, systemImage: "" },
+      },
+      {
+        native: "Size_Small_360dp",
+        name: "Small 360x760dp",
+        spec: {
+          platform: "android",
+          widthPx: 720,
+          heightPx: 1520,
+          density: 320,
+          systemImage: "system-images/android-36/google_apis_playstore/arm64-v8a/",
+        },
+      },
+    ]);
+  });
+
   test("만든 AVD 는 이름을 바꿔도 ID 가 그대로이고, 지우면 사라진다 — 다른 AVD 는 그대로", async () => {
     const { env } = sdkWithImages();
     sourceAvd(env.ANDROID_AVD_HOME, "Size_Small_360dp", small);

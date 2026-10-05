@@ -3,7 +3,7 @@ import type { Config } from "../../shared/config.ts";
 import { run as defaultRun, type Runner, runOk, which } from "../../shared/exec.ts";
 import type { Device, DeviceSpec, SlimState } from "../../shared/model.ts";
 import { HandlerError } from "../socket.ts";
-import type { Driver, Progress, RuntimeState, SourceDevice } from "./types.ts";
+import type { Discovered, Driver, Progress, RuntimeState, SourceDevice } from "./types.ts";
 
 // iOS 시뮬레이터 — simctl 로 만들고 켜고, simslim 으로 슬림화한다 (docs/design.md §9).
 // 화면 크기는 기기 종류로 정해지고 바꿀 수 없다.
@@ -108,18 +108,35 @@ export class IosDriver implements Driver {
     };
   }
 
-  /** 이 Mac 의 iPhone·iPad 시뮬레이터 — 복제 원본 후보 (M1). 크기는 기기 종류가 정한다 */
-  async sources(): Promise<SourceDevice[]> {
-    const [deviceTypes, runtimes, devices] = await Promise.all([
+  private catalogCache?: { at: number; deviceTypes: SimDeviceType[]; runtimes: SimRuntime[] };
+
+  /** 기기 종류·런타임은 Xcode 를 바꿀 때만 바뀐다 — 1분 동안 다시 읽지 않는다 */
+  private async simCatalog(): Promise<{ deviceTypes: SimDeviceType[]; runtimes: SimRuntime[] }> {
+    if (this.catalogCache && Date.now() - this.catalogCache.at < 60_000) return this.catalogCache;
+    const [deviceTypes, runtimes] = await Promise.all([
       this.listJson<SimDeviceType[]>("devicetypes"),
       this.listJson<SimRuntime[]>("runtimes"),
+    ]);
+    this.catalogCache = { at: Date.now(), deviceTypes, runtimes };
+    return this.catalogCache;
+  }
+
+  /** 이 Mac 의 iPhone·iPad 시뮬레이터 (워치·TV·쓸 수 없는 것은 뺀다). 크기는 기기 종류가 정한다 */
+  private async simulators() {
+    const [{ deviceTypes, runtimes }, devices] = await Promise.all([
+      this.simCatalog(),
       this.listJson<
         Record<string, (SimDevice & { isAvailable: boolean; deviceTypeIdentifier: string })[]>
       >("devices"),
     ]);
     const typeById = new Map(deviceTypes.map((t) => [t.identifier, t]));
     const runtimeById = new Map(runtimes.map((r) => [r.identifier, r]));
-    const sources: SourceDevice[] = [];
+    const result: {
+      sim: SimDevice;
+      deviceType: SimDeviceType;
+      runtime: SimRuntime;
+      spec: Extract<DeviceSpec, { platform: "ios" }>;
+    }[] = [];
     for (const [runtimeId, sims] of Object.entries(devices)) {
       const runtime = runtimeById.get(runtimeId);
       if (runtime?.platform !== "iOS" || !runtime.isAvailable) continue;
@@ -129,17 +146,30 @@ export class IosDriver implements Driver {
         if (deviceType.productFamily !== "iPhone" && deviceType.productFamily !== "iPad") continue;
         const spec = await this.spec(deviceType, runtime);
         if (spec.platform !== "ios") continue;
-        sources.push({
-          platform: "ios",
-          native: sim.udid,
-          name: sim.name,
-          spec,
-          detail: `${deviceType.name === sim.name ? "" : `${deviceType.name} · `}${spec.widthPt * spec.scale}×${spec.heightPt * spec.scale}px @${spec.scale}x · ${runtime.name}`,
-          booted: sim.state === "Booted",
-        });
+        result.push({ sim, deviceType, runtime, spec });
       }
     }
-    return sources;
+    return result;
+  }
+
+  async list(): Promise<Discovered[]> {
+    return (await this.simulators()).map(({ sim, spec }) => ({
+      native: sim.udid,
+      name: sim.name,
+      spec,
+    }));
+  }
+
+  /** 생성 원본 후보 (M1) */
+  async sources(): Promise<SourceDevice[]> {
+    return (await this.simulators()).map(({ sim, deviceType, runtime, spec }) => ({
+      platform: "ios",
+      native: sim.udid,
+      name: sim.name,
+      spec,
+      detail: `${deviceType.name === sim.name ? "" : `${deviceType.name} · `}${spec.widthPt * spec.scale}×${spec.heightPt * spec.scale}px @${spec.scale}x · ${runtime.name}`,
+      booted: sim.state === "Booted",
+    }));
   }
 
   /**

@@ -37,6 +37,8 @@ export const ErrorCode = z.enum([
   "NOT_HELD",
   "NOT_FOUND",
   "INVALID",
+  /** 할 수 없는 작업 — 원래 있던 디바이스 삭제·슬림 등 */
+  "NOT_ALLOWED",
   /** avdslim·simslim 등 필요한 도구가 없음 */
   "TOOL_MISSING",
   "FAILED",

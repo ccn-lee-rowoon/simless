@@ -5,7 +5,7 @@ import { listen } from "../src/server/socket.ts";
 import type { DeviceOpResult, DeviceView } from "../src/shared/api.ts";
 import { call } from "../src/shared/client.ts";
 import { VERSION } from "../src/shared/version.ts";
-import { fakeDriver, session, tempEnv } from "./helpers.ts";
+import { fakeDriver, seedDevice, session, tempEnv } from "./helpers.ts";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -39,8 +39,7 @@ describe("디바이스 명령", () => {
       name: "corgi Small 360",
       slim: "applied",
       label: "Android 360dp",
-      enabled: true,
-      source: { name: "Small 360", native: "Small_360" },
+      createdByCorgi: true,
     });
     expect(await A("device.create", android360)).toMatchObject({ name: "corgi Small 360 2" });
     expect(await A("device.create", { ...android360, name: "corgi Small 360" })).toMatchObject({
@@ -95,12 +94,50 @@ describe("디바이스 명령", () => {
     expect(server.leases.heldBy("A")).toEqual([]);
   });
 
-  test("사용 안 함은 «전부» 점유에서 빠진다 (R6)", async () => {
+  test("이 Mac 에 원래 있던 디바이스도 목록에 나오고 점유할 수 있다 (R20)", async () => {
+    const { A, server, driver } = await start();
+    seedDevice(server, driver, "pix6", "Pixel 6a", false);
+    const [device] = (await A("device.list")) as DeviceView[];
+    expect(device).toMatchObject({ id: "pix6", name: "Pixel 6a", createdByCorgi: false });
+    expect(await A("lease.acquire", { devices: ["Pixel 6a"] })).toEqual({
+      status: "granted",
+      deviceIds: ["pix6"],
+    });
+  });
+
+  test("원래 있던 디바이스는 지우거나 슬림 설정할 수 없다 (M8·N5)", async () => {
+    const { A, server, driver } = await start();
+    seedDevice(server, driver, "pix6", "Pixel 6a", false);
+    expect(await A("device.delete", { device: "pix6" })).toMatchObject({ code: "NOT_ALLOWED" });
+    expect(await A("device.slim", { devices: ["pix6"] })).toMatchObject({ code: "NOT_ALLOWED" });
+    expect(await A("device.rename", { device: "pix6", name: "모더레이터 폰" })).toMatchObject({
+      name: "모더레이터 폰",
+    });
+  });
+
+  test("밖에서 지워진 디바이스는 정보와 점유가 함께 사라진다", async () => {
+    const { A, server, driver } = await start();
+    seedDevice(server, driver, "pix6", "Pixel 6a", false);
+    await A("lease.acquire", { devices: ["pix6"] });
+    driver.existing = [];
+    expect(await A("device.list")).toEqual([]);
+    expect(server.registry.get("pix6")).toBeUndefined();
+    expect(server.leases.heldBy("A")).toEqual([]);
+  });
+
+  test("목록을 못 읽으면 정보를 지우지 않는다", async () => {
+    const { A, server, driver } = await start();
+    seedDevice(server, driver, "pix6", "Pixel 6a", false);
+    driver.list = async () => {
+      throw new Error("simctl 실패");
+    };
+    expect(await A("device.list")).toEqual([]);
+    expect(server.registry.get("pix6")).toBeDefined();
+  });
+
+  test("점유는 디바이스를 지정해야 한다", async () => {
     const { A } = await start();
-    const a = (await A("device.create", android360)) as DeviceView;
-    const b = (await A("device.create", { source: "Large 412" })) as DeviceView;
-    await A("device.setEnabled", { device: b.id, enabled: false });
-    expect(await A("lease.acquire", {})).toEqual({ status: "granted", deviceIds: [a.id] });
+    expect(await A("lease.acquire", {})).toMatchObject({ code: "INVALID" });
   });
 
   test("관리 디바이스 목록 파일을 남긴다 — 서버가 꺼졌을 때 훅이 읽는다 (P9)", async () => {
@@ -118,6 +155,7 @@ describe("슬림 재적용", () => {
     const { A, server, driver } = await start();
     const device = (await A("device.create", android360)) as DeviceView;
     server.registry.update(device.id, { slim: "drifted" });
+    server.invalidate();
     let checks = 0;
     driver.checkSlim = async () => (checks++ === 0 ? "drifted" : "applied");
     await A("lease.acquire", { devices: [device.id] });
@@ -130,11 +168,11 @@ describe("원본 목록과 복제", () => {
   test("전체 목록 — 폭 순, 같은 크기로 만든 원본은 «생성됨», Corgi 가 만든 것은 managed (M3·M9)", async () => {
     const { A, driver } = await start();
     const made = (await A("device.create", { source: "Small_360" })) as DeviceView;
-    driver.list.push({
-      ...driver.list[0],
+    driver.sourceList.push({
+      ...driver.sourceList[0],
       native: made.native,
       name: made.name,
-    } as (typeof driver.list)[0]);
+    } as (typeof driver.sourceList)[0]);
     const { items } = await A("source.list");
     expect(
       items.map((i: { native: string; created?: string; managed?: string }) => [
@@ -152,21 +190,21 @@ describe("원본 목록과 복제", () => {
   test("Corgi 가 만든 디바이스는 원본으로 쓸 수 없다 (L4 는 나중에)", async () => {
     const { A, driver } = await start();
     const made = (await A("device.create", { source: "Small_360" })) as DeviceView;
-    driver.list.push({
-      ...driver.list[1],
+    driver.sourceList.push({
+      ...driver.sourceList[1],
       native: made.native,
       name: "corgi copy",
-    } as (typeof driver.list)[0]);
+    } as (typeof driver.sourceList)[0]);
     expect(await A("device.create", { source: made.native })).toMatchObject({ code: "INVALID" });
   });
 
   test("이름이 같은 원본이 여럿이면 원본 ID 로 고르게 한다", async () => {
     const { A, driver } = await start();
-    driver.list.push({
-      ...driver.list[1],
+    driver.sourceList.push({
+      ...driver.sourceList[1],
       native: "Large_412_b",
       name: "Small 360",
-    } as (typeof driver.list)[0]);
+    } as (typeof driver.sourceList)[0]);
     const error = await A("device.create", { source: "small 360" });
     expect(error).toMatchObject({ code: "INVALID" });
     expect(error.message).toContain("Large_412_b");

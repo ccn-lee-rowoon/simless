@@ -1,33 +1,62 @@
 import { z } from "zod";
-import { Device } from "../shared/model.ts";
+import { DeviceMeta, DeviceSpec, type Platform, SlimState } from "../shared/model.ts";
 import { readJson, writeJson } from "./store.ts";
 
-const RegistryFile = z.object({ version: z.literal(1), devices: z.array(Device) });
+const RegistryV2 = z.object({ version: z.literal(2), devices: z.array(DeviceMeta) });
 
-/** Corgi 가 만든 디바이스 목록 (M5). 관리 대상은 여기 있는 것뿐이다. */
+/** 1단계~3단계의 형식 — Corgi 가 만든 디바이스만, 이름·크기까지 저장했다 */
+const RegistryV1 = z.object({
+  version: z.literal(1),
+  devices: z.array(
+    z.object({
+      id: z.string(),
+      native: z.string(),
+      spec: DeviceSpec,
+      slim: SlimState,
+      slimError: z.string().optional(),
+      slimBaseline: DeviceMeta.shape.slimBaseline,
+      createdAt: z.string(),
+    }),
+  ),
+});
+
+const RegistryFile = z.union([RegistryV2, RegistryV1]);
+
+function migrate(file: z.infer<typeof RegistryFile>): DeviceMeta[] {
+  if (file.version === 2) return file.devices;
+  return file.devices.map((d) => ({
+    id: d.id,
+    platform: d.spec.platform,
+    native: d.native,
+    createdByCorgi: true,
+    slim: d.slim,
+    slimError: d.slimError,
+    slimBaseline: d.slimBaseline,
+    createdAt: d.createdAt,
+  }));
+}
+
+/**
+ * 디바이스에 Corgi 가 붙인 정보 (docs/design.md §6). 기기 목록 자체는 드라이버에서 읽고,
+ * 여기에는 ID·만든 여부·슬림 상태 등만 둔다 — `native`(AVD ID·UDID)로 기기와 잇는다.
+ */
 export class Registry {
-  private devices: Device[];
+  private devices: DeviceMeta[];
 
   constructor(private readonly path: string) {
-    this.devices = readJson(path, RegistryFile, { version: 1, devices: [] }).devices;
+    this.devices = migrate(readJson(path, RegistryFile, { version: 2, devices: [] }));
   }
 
-  list(): Device[] {
+  list(): DeviceMeta[] {
     return [...this.devices];
   }
 
-  get(id: string): Device | undefined {
+  get(id: string): DeviceMeta | undefined {
     return this.devices.find((d) => d.id === id);
   }
 
-  /** ID 나 이름(대소문자 무시)으로 찾는다 */
-  find(ref: string): Device | undefined {
-    const lower = ref.toLowerCase();
-    return this.get(ref) ?? this.devices.find((d) => d.name.toLowerCase() === lower);
-  }
-
-  findByNative(native: string): Device | undefined {
-    return this.devices.find((d) => d.native === native);
+  findByNative(platform: Platform, native: string): DeviceMeta | undefined {
+    return this.devices.find((d) => d.platform === platform && d.native === native);
   }
 
   /** 겹치지 않는 짧은 ID — AVD ID(`corgi_<id>`)에도 쓰므로 소문자·숫자만 */
@@ -38,17 +67,34 @@ export class Registry {
     }
   }
 
-  add(device: Device): void {
+  add(device: DeviceMeta): DeviceMeta {
     if (this.get(device.id)) throw new Error(`이미 있는 ID: ${device.id}`);
-    this.devices.push(device);
+    const parsed = DeviceMeta.parse(device);
+    this.devices.push(parsed);
     this.save();
+    return parsed;
   }
 
-  update(id: string, patch: Partial<Omit<Device, "id">>): Device {
+  /** 처음 본 기기에 ID 를 붙인다 */
+  adopt(platform: Platform, native: string, createdByCorgi: boolean): DeviceMeta {
+    return (
+      this.findByNative(platform, native) ??
+      this.add({
+        id: this.newId(),
+        platform,
+        native,
+        createdByCorgi,
+        slim: "none",
+        createdAt: new Date().toISOString(),
+      })
+    );
+  }
+
+  update(id: string, patch: Partial<Omit<DeviceMeta, "id" | "platform" | "native">>): DeviceMeta {
     const index = this.devices.findIndex((d) => d.id === id);
     const current = this.devices[index];
     if (!current) throw new Error(`없는 디바이스: ${id}`);
-    const next = Device.parse({ ...current, ...patch });
+    const next = DeviceMeta.parse({ ...current, ...patch });
     this.devices[index] = next;
     this.save();
     return next;
@@ -59,7 +105,17 @@ export class Registry {
     this.save();
   }
 
+  /** 이 플랫폼에서 더는 보이지 않는 기기의 정보를 지운다 — 지운 ID 를 돌려준다 */
+  prune(platform: Platform, seen: Set<string>): string[] {
+    const gone = this.devices.filter((d) => d.platform === platform && !seen.has(d.native));
+    if (gone.length === 0) return [];
+    const ids = new Set(gone.map((d) => d.id));
+    this.devices = this.devices.filter((d) => !ids.has(d.id));
+    this.save();
+    return [...ids];
+  }
+
   private save(): void {
-    writeJson(this.path, { version: 1, devices: this.devices });
+    writeJson(this.path, { version: 2, devices: this.devices });
   }
 }

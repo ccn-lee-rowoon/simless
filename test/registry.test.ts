@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Registry } from "../src/server/registry.ts";
-import type { Device } from "../src/shared/model.ts";
 
 const dirs: string[] = [];
 function tempPath() {
@@ -15,43 +14,70 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-function device(id: string, name: string): Device {
-  return {
-    id,
-    name,
-    native: `corgi_${id}`,
-    spec: { platform: "android", widthPx: 720, heightPx: 1520, density: 320, systemImage: "x" },
-    enabled: true,
-    slim: "none",
-    createdAt: "2026-10-02T00:00:00.000Z",
-  };
-}
-
 describe("Registry", () => {
-  test("추가한 디바이스는 파일에 남아 다시 열어도 보인다", () => {
+  test("처음 본 기기에 ID 를 붙이고, 다시 열어도 같은 ID 다 (R4)", () => {
     const path = tempPath();
-    new Registry(path).add(device("ab12", "Small 360"));
-    expect(new Registry(path).list().map((d) => d.name)).toEqual(["Small 360"]);
+    const first = new Registry(path).adopt("ios", "UDID-1", false);
+    expect(first).toMatchObject({ platform: "ios", native: "UDID-1", createdByCorgi: false });
+    expect(first.id).toMatch(/^[a-z0-9]{4}$/);
+    expect(new Registry(path).adopt("ios", "UDID-1", false).id).toBe(first.id);
   });
 
-  test("ID 또는 이름(대소문자 무시)으로 찾는다", () => {
+  test("같은 native 라도 플랫폼이 다르면 다른 기기", () => {
     const registry = new Registry(tempPath());
-    registry.add(device("ab12", "Small 360"));
-    expect(registry.find("ab12")?.id).toBe("ab12");
-    expect(registry.find("small 360")?.id).toBe("ab12");
-    expect(registry.find("nope")).toBeUndefined();
+    const a = registry.adopt("ios", "X", false);
+    const b = registry.adopt("android", "X", false);
+    expect(a.id).not.toBe(b.id);
   });
 
-  test("이름을 바꿔도 ID·native 는 그대로 (R4)", () => {
+  test("보이지 않는 기기의 정보는 prune 으로 지운다 — 다른 플랫폼은 그대로", () => {
     const registry = new Registry(tempPath());
-    registry.add(device("ab12", "Small 360"));
-    const renamed = registry.update("ab12", { name: "작은 폰" });
-    expect(renamed).toMatchObject({ id: "ab12", native: "corgi_ab12", name: "작은 폰" });
+    const gone = registry.adopt("ios", "GONE", false);
+    registry.adopt("ios", "KEEP", false);
+    registry.adopt("android", "AVD", false);
+    expect(registry.prune("ios", new Set(["KEEP"]))).toEqual([gone.id]);
+    expect(
+      registry
+        .list()
+        .map((d) => d.native)
+        .sort(),
+    ).toEqual(["AVD", "KEEP"]);
   });
 
-  test("새 ID 는 소문자·숫자 4자이고 겹치지 않는다", () => {
-    const registry = new Registry(tempPath());
-    const id = registry.newId();
-    expect(id).toMatch(/^[a-z0-9]{4}$/);
+  test("1~3단계 형식(만든 디바이스만, 이름·크기 포함)을 읽어 옮긴다", () => {
+    const path = tempPath();
+    writeFileSync(
+      path,
+      JSON.stringify({
+        version: 1,
+        devices: [
+          {
+            id: "ab12",
+            name: "corgi Small",
+            native: "corgi_ab12",
+            spec: {
+              platform: "android",
+              widthPx: 720,
+              heightPx: 1520,
+              density: 320,
+              systemImage: "x",
+            },
+            enabled: true,
+            slim: "applied",
+            createdAt: "2026-10-02T00:00:00.000Z",
+          },
+        ],
+      }),
+    );
+    expect(new Registry(path).list()).toEqual([
+      {
+        id: "ab12",
+        platform: "android",
+        native: "corgi_ab12",
+        createdByCorgi: true,
+        slim: "applied",
+        createdAt: "2026-10-02T00:00:00.000Z",
+      },
+    ]);
   });
 });

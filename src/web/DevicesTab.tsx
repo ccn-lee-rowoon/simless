@@ -96,7 +96,7 @@ export function DevicesTab({
             const lockedByOther = d.holder !== undefined && !d.mine;
             const waiting = queue.filter((q) => q.deviceIds.includes(d.id)).length;
             return (
-              <tr key={d.id} className={d.enabled ? "" : "row-disabled"}>
+              <tr key={d.id}>
                 <td>
                   <div className="size">{d.label.replace(/^(Android|iOS) /, "")}</div>
                   <PlatformBadge platform={d.spec.platform} />
@@ -105,8 +105,7 @@ export function DevicesTab({
                   <div className="name">{d.name}</div>
                   <div className="subtle mono">
                     {d.id}
-                    {d.source ? ` · 원본 ${d.source.name}` : ""}
-                    {d.enabled ? "" : " · 사용 안 함"}
+                    {d.createdByCorgi ? " · Corgi 가 만듦" : ""}
                   </div>
                 </td>
                 <td>
@@ -157,15 +156,6 @@ export function DevicesTab({
                     <div className="menu-items">
                       <MenuItem disabled={lockedByOther} onClick={() => setRenaming(d)}>
                         이름 변경
-                      </MenuItem>
-                      <MenuItem
-                        onClick={() =>
-                          run(d, d.enabled ? "사용 안 함" : "다시 사용", () =>
-                            call("device.setEnabled", { device: d.id, enabled: !d.enabled }),
-                          )
-                        }
-                      >
-                        {d.enabled ? "사용 안 함" : "다시 사용"}
                       </MenuItem>
                       <MenuItem
                         disabled={lockedByOther}

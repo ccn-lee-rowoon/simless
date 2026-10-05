@@ -157,6 +157,18 @@ export class LeaseManager {
     this.changed();
   }
 
+  /** 디바이스가 사라졌다(지웠거나 밖에서 지워짐) — 점유와 대기열에서 뺀다 */
+  forgetDevice(deviceId: string): void {
+    const lease = this.leases.get(deviceId);
+    this.leases.delete(deviceId);
+    for (const entry of this.queue)
+      entry.deviceIds = entry.deviceIds.filter((id) => id !== deviceId);
+    this.queue = this.queue.filter((e) => e.deviceIds.length > 0);
+    if (lease) this.prune(lease.sessionKey);
+    this.processQueue();
+    this.changed();
+  }
+
   /** 오래 안 쓴 점유 중 누가 기다리는 것만 푼다 (R17 ②). 푼 세션 키를 돌려준다. */
   sweepIdle(): string[] {
     const now = this.now();

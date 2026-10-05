@@ -4,7 +4,7 @@ import { listen } from "../src/server/socket.ts";
 import type { AcquireResult, StatusResult } from "../src/shared/api.ts";
 import { call, RemoteError, ServerDownError } from "../src/shared/client.ts";
 import { VERSION } from "../src/shared/version.ts";
-import { androidDevice, fakeDriver, session, tempEnv } from "./helpers.ts";
+import { fakeDriver, seedDevice, session, tempEnv } from "./helpers.ts";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -13,9 +13,10 @@ afterEach(() => {
 
 async function start(options: { isAlive?: (pid: number) => boolean } = {}) {
   const env = tempEnv();
-  const server = new CorgiServer({ ...env, drivers: [fakeDriver()], isAlive: options.isAlive });
-  server.registry.add(androidDevice("aaaa", "Small"));
-  server.registry.add(androidDevice("bbbb", "Large"));
+  const driver = fakeDriver();
+  const server = new CorgiServer({ ...env, drivers: [driver], isAlive: options.isAlive });
+  seedDevice(server, driver, "aaaa", "Small");
+  seedDevice(server, driver, "bbbb", "Large");
   const listener = await listen(env.paths.socket, VERSION, server.handle);
   cleanups.push(() => listener.stop(), env.cleanup);
   return { server, socket: env.paths.socket };

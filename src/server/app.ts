@@ -14,7 +14,7 @@ import { isAlive as defaultIsAlive } from "../shared/proc.ts";
 import type { Request, SessionInfo } from "../shared/protocol.ts";
 import { VERSION } from "../shared/version.ts";
 import { registerDeviceMethods } from "./devices.ts";
-import type { Driver, RuntimeState } from "./drivers/types.ts";
+import type { Discovered, Driver, RuntimeState } from "./drivers/types.ts";
 import { EMPTY_LEASE_STATE, type Holder, LeaseManager, LeaseStateSchema } from "./leases.ts";
 import { Registry } from "./registry.ts";
 import { type Connection, type Handler, HandlerError } from "./socket.ts";
@@ -30,8 +30,12 @@ export interface ServerDeps {
 
 type Method = (params: unknown, session: SessionInfo, connection: Connection) => Promise<unknown>;
 
+export interface InventoryProblem {
+  platform: Device["platform"];
+  message: string;
+}
+
 const AcquireParams = z.object({
-  /** 비우면 사용 중인(enabled) 디바이스 전부 */
   devices: z.array(z.string()).default([]),
   wait: z.boolean().default(false),
   /** 기다리기의 이번 호출 최대 시간 — 지나면 «아직 대기 중» 으로 돌려준다 */
@@ -100,7 +104,10 @@ export class CorgiServer {
       return await method(request.params, request.session, connection);
     } finally {
       // 읽기만 하는 메서드가 아니면 화면(웹 UI·메뉴바)에 바뀌었다고 알린다
-      if (!READ_ONLY.has(request.method)) this.notify();
+      if (!READ_ONLY.has(request.method)) {
+        this.invalidate();
+        this.notify();
+      }
     }
   };
 
@@ -148,12 +155,71 @@ export class CorgiServer {
     return driver;
   }
 
-  /** ID·이름으로 디바이스를 찾는다. 하나라도 없으면 NOT_FOUND */
-  resolve(refs: string[]): Device[] {
+  private inventoryCache?: { at: number; devices: Device[]; problems: InventoryProblem[] };
+
+  /** 목록을 바꾸는 작업(만들기·이름 변경·삭제) 뒤에 부른다 */
+  invalidate(): void {
+    this.inventoryCache = undefined;
+  }
+
+  /**
+   * 이 Mac 의 디바이스 전부 (R20) — 드라이버가 읽은 기기에 레지스트리 정보를 붙인다.
+   * 처음 보는 기기에는 ID 를 붙이고, 목록 읽기가 성공한 플랫폼에서 사라진 기기의 정보는 지운다.
+   * 목록을 자주 묻으므로(웹 화면·CLI) 잠깐 기억해 둔다.
+   */
+  async inventory(): Promise<{ devices: Device[]; problems: InventoryProblem[] }> {
+    if (this.inventoryCache && Date.now() - this.inventoryCache.at < 1500)
+      return this.inventoryCache;
+    const devices: Device[] = [];
+    const problems: InventoryProblem[] = [];
+    for (const driver of this.deps.drivers) {
+      let found: Discovered[];
+      try {
+        found = await driver.list();
+      } catch (error) {
+        problems.push({
+          platform: driver.platform,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        continue;
+      }
+      for (const item of found) {
+        const meta = this.registry.adopt(
+          driver.platform,
+          item.native,
+          driver.platform === "android" && item.native.startsWith("corgi_"),
+        );
+        devices.push({ ...meta, name: item.name, spec: item.spec });
+      }
+      const gone = this.registry.prune(driver.platform, new Set(found.map((f) => f.native)));
+      for (const id of gone) this.leases.forgetDevice(id);
+    }
+    this.inventoryCache = { at: Date.now(), devices, problems };
+    return this.inventoryCache;
+  }
+
+  async devices(): Promise<Device[]> {
+    return (await this.inventory()).devices;
+  }
+
+  /** ID·AVD ID·UDID·이름(대소문자 무시)으로 찾는다. 없으면 NOT_FOUND, 이름이 여럿이면 INVALID */
+  async resolve(refs: string[]): Promise<Device[]> {
+    const devices = await this.devices();
     return refs.map((ref) => {
-      const device = this.registry.find(ref);
-      if (!device) throw new HandlerError("NOT_FOUND", `없는 디바이스: ${ref}`);
-      return device;
+      const exact = devices.find((d) => d.id === ref || d.native === ref);
+      if (exact) return exact;
+      const lower = ref.toLowerCase();
+      const named = devices.filter((d) => d.name.toLowerCase() === lower);
+      if (named.length === 0) throw new HandlerError("NOT_FOUND", `없는 디바이스: ${ref}`);
+      if (named.length > 1) {
+        throw new HandlerError(
+          "INVALID",
+          `이름이 같은 디바이스가 여럿입니다 — ID 로 고르세요:\n${named
+            .map((d) => `  ${d.id}  ${sizeLabel(d.spec)}  ${d.native}`)
+            .join("\n")}`,
+        );
+      }
+      return named[0] as Device;
     });
   }
 
@@ -190,8 +256,9 @@ export class CorgiServer {
    * 슬림 수치는 읽는 데 몇 초 걸린다(simslim list 등) — 목록은 기다리지 않고 지난 값을 붙이고,
    * 15초가 지났으면 뒤에서 다시 읽은 뒤 화면에 바뀌었다고 알린다.
    */
-  private refreshSlimStats(states: Map<string, RuntimeState>): void {
-    const devices = this.registry.list().filter((d) => states.get(d.id)?.booted);
+  private refreshSlimStats(all: Device[], states: Map<string, RuntimeState>): void {
+    // 슬림 수치는 Corgi 가 슬림화한 기기만 본다
+    const devices = all.filter((d) => d.createdByCorgi && states.get(d.id)?.booted);
     // 켜진 디바이스가 바뀌면 시간과 상관없이 다시 읽는다
     const booted = devices.map((d) => d.id).join(",");
     if (this.slimStatsRefreshing) return;
@@ -219,10 +286,12 @@ export class CorgiServer {
       });
   }
 
-  async deviceViews(session: SessionInfo, devices = this.registry.list()): Promise<DeviceView[]> {
+  async deviceViews(session: SessionInfo, only?: Device[]): Promise<DeviceView[]> {
+    const all = await this.devices();
+    const devices = only ?? all;
     const states = await this.runtimeStates(devices);
-    this.writeManagedIndex(states);
-    this.refreshSlimStats(states);
+    if (!only) this.writeManagedIndex(all, states);
+    this.refreshSlimStats(devices, states);
     const leases = new Map(this.leases.snapshot().leases.map((l) => [l.deviceId, l]));
     return devices.map((device) => {
       const state = states.get(device.id);
@@ -252,9 +321,9 @@ export class CorgiServer {
 
   private lastIndex = "";
 
-  /** 서버가 꺼졌을 때 훅이 «관리 디바이스인지» 판단하는 파일 (P9, docs/design.md §5) */
-  writeManagedIndex(states: Map<string, RuntimeState>): void {
-    const devices = this.registry.list().map((d) => ({
+  /** 서버가 꺼졌을 때 훅이 «이 Mac 의 디바이스인지» 판단하는 파일 (P9, docs/design.md §5) */
+  writeManagedIndex(all: Device[], states: Map<string, RuntimeState>): void {
+    const devices = all.map((d) => ({
       id: d.id,
       name: d.name,
       platform: d.spec.platform,
@@ -296,11 +365,9 @@ export class CorgiServer {
     session: SessionInfo,
     connection: Connection,
   ): Promise<AcquireResult> {
-    const devices =
-      params.devices.length > 0
-        ? this.resolve(params.devices)
-        : this.registry.list().filter((d) => d.enabled);
-    if (devices.length === 0) throw new HandlerError("NOT_FOUND", "점유할 디바이스가 없습니다");
+    if (params.devices.length === 0)
+      throw new HandlerError("INVALID", "점유할 디바이스를 지정하세요");
+    const devices = await this.resolve(params.devices);
     const ids = devices.map((d) => d.id);
 
     const result = this.leases.acquire(session, ids, { wait: params.wait });
@@ -348,7 +415,7 @@ export class CorgiServer {
   }
 
   private async release(params: z.infer<typeof ReleaseParams>, session: SessionInfo) {
-    const ids = params.devices ? this.resolve(params.devices).map((d) => d.id) : undefined;
+    const ids = params.devices ? (await this.resolve(params.devices)).map((d) => d.id) : undefined;
     return { released: this.leases.release(session.key, ids) };
   }
 
@@ -359,7 +426,7 @@ export class CorgiServer {
         "INVALID",
         "강제 해제는 사람만 할 수 있습니다 — 에이전트는 기다리거나 사용자에게 물으세요",
       );
-    const [device] = this.resolve([params.device]);
+    const [device] = await this.resolve([params.device]);
     const holder = device ? this.leases.holderOf(device.id) : undefined;
     if (!device || !holder) return { released: [] };
     return { released: this.leases.release(holder.key, [device.id]) };
@@ -367,7 +434,7 @@ export class CorgiServer {
 
   private async who(params: z.infer<typeof WhoParams>) {
     const snapshot = this.leases.snapshot();
-    let devices = this.registry.list();
+    let devices = await this.devices();
     if (params.target) {
       const target = params.target;
       const states = await this.runtimeStates(devices);
@@ -379,7 +446,7 @@ export class CorgiServer {
           states.get(d.id)?.targetId === target,
       );
       if (devices.length === 0)
-        throw new HandlerError("NOT_FOUND", `Corgi 가 관리하는 디바이스가 아닙니다: ${target}`);
+        throw new HandlerError("NOT_FOUND", `이 Mac 의 디바이스가 아닙니다: ${target}`);
     }
     return devices.map((device) => {
       const lease = snapshot.leases.find((l) => l.deviceId === device.id);
