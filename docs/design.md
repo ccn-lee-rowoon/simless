@@ -34,7 +34,7 @@
 | CLI 인자 | `commander` | 서브커맨드·`--help` 정리 |
 | 검증·타입 | `zod` 4 | 설정·소켓 메시지·저장 파일 스키마를 한 곳에서 정의하고 타입도 뽑는다. MCP SDK 도 쓴다 |
 | 프로세스 정보 | `bun:ffi` 로 macOS libproc(`proc_pidinfo`·`proc_pidpath`) 호출 | 세션 찾기(§7)·종료 감지. `ps` 는 한 번에 20~80ms, FFI 는 약 3ms(실측) — 훅이 Bash 마다 돌기 때문 |
-| MCP | `@modelcontextprotocol/sdk` (5단계) | stdio |
+| MCP | `@modelcontextprotocol/sdk` (6단계) | stdio. zod 4 를 그대로 받는다. 단일 실행 파일이 약 3.4MB 커졌다(65→68MB) |
 | 웹 화면 | React + Bun 내장 번들러(HTML import) | Vite 없이 `Bun.serve` 가 서빙. `Corgi.app` 창(WKWebView)과 브라우저가 같은 화면을 연다 |
 | 플랫폼 로고 | `simple-icons` (CC0) | 애플·안드로이드 로고 경로 두 개만 쓴다(번들에도 그 둘만 들어간다). 손으로 그리면 모양이 어긋난다 |
 | 현지화 | 의존 없이 `src/shared/i18n/` 의 사전(`ko`·`en`) | 웹 화면·CLI 가 같은 사전을 쓴다. 메뉴바(Swift)는 문구가 적어 Swift 안에 따로 둔다 |
@@ -379,7 +379,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | 3 ✅ | 웹 UI + `Corgi.app` (앞당김 — 사람이 직접 보고 확인하려고) — HTTP API·SSE·토큰, 메인 목록(All·Android·iOS 탭), 생성(+)(iOS 시뮬레이터·Android 대표 프로필·직접 입력), 슬림 수치와 슬림 전후 비교, 메뉴바 앱(단색 아이콘·«대시보드 열기»), `corgi ui` | 사람이 메뉴바·브라우저로 전부 관리한다 |
 | 4 ✅ | **사양 변경 (2026-10-05)** — ① 시안(디자인 M12)으로 화면 확정 (사용자 요청으로 건너뛰고 A안 — 라이트 그래파이트 + 파랑, 다크 잉크 + 민트 — 으로 바로 구현) ② 이 Mac 디바이스 전부 목록·레지스트리 재구성(R20, 사용 안 함 제거) ③ 생성: 기종 + OS, 슬림 선택·ⓘ(M1·M4) ④ 메모·기본 디바이스·그룹(R21·R22·R24) ⑤ 그룹 점유 모드·교착(R23, §8) ⑥ 슬림 자동 재적용·`SLIM` 배지(M6) ⑦ 오류 코드·현지화·설정(R25·M11) ⑧ 앱 창(WKWebView, R11) ⑨ 스킬 영어로 다시 쓰기. 항목마다 커밋 | 용도별 그룹·기본 디바이스로 요청하고, 앱 창에서 전부 관리한다 |
 | 5 (구현) | 보호 — Claude Code 훅(`corgi hook claude pre-tool-use`), 규칙(`~/.claude/rules/corgi.md`), 서버 꺼짐 처리, `corgi install`·`doctor` 연동. 대상은 Corgi 목록의 디바이스(P1). **설치는 사용자 결정 대기** — 다른 세션이 쓰는 기기가 목록에 있으면 그 세션이 막히므로(2026-10-05 보류). 남은 것: 다른 에이전트 어댑터(조사 후, Q16) | 다른 세션이 남의 디바이스를 못 건드린다 |
-| 6 | MCP 래퍼 | 에이전트가 사용법 없이 바로 쓴다 |
+| 6 ✅ | MCP 래퍼 — `corgi mcp`(stdio). 도구: `corgi_status`·`corgi_use`(디바이스·그룹·기본, all·available, 기다리기는 45초씩 나눠 «STILL_QUEUED → 다시 호출»)·`corgi_release`·`corgi_down`·`corgi_catalog`·`corgi_create`·`corgi_group_save`. 오류는 코드부터(`BUSY: …`). 세션은 CLI 처럼 프로세스 트리, 서버가 꺼져 있으면 켠다. **등록은 사용자 결정** — `claude mcp add --scope user corgi -- <corgi 절대 경로> mcp` | 에이전트가 사용법 없이 바로 쓴다 |
 | U | 업데이트 — `scripts/release.ts`, 확인·알림, `corgi update`·되돌리기 (§19). **리모트·첫 Release 가 생긴 뒤**, 5단계 이후 아무 때나 | 새 버전을 알림 받고 명령 한 번으로 올린다 |
 | 나중 | 스크린샷 모아 보기 (화면 탭) · 일괄 설치·실행·딥링크 (L1~L3) · 슬림된 디바이스 복제 (L4) · 이름 변경 (Q17) — 필요하면 | — |
 

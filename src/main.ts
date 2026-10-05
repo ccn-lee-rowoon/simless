@@ -9,6 +9,12 @@ export async function main(argv: string[]): Promise<number> {
     return runHook(rest[0], rest[1], Bun.stdin);
   }
 
+  if (command === "mcp") {
+    const { runMcp } = await import("./mcp/index.ts");
+    await runMcp();
+    await new Promise(() => {}); // stdin 이 닫힐 때까지 돈다
+  }
+
   const { runCli } = await import("./cli/index.ts");
   return runCli(argv);
 }

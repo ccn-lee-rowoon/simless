@@ -93,6 +93,10 @@ corgi group edit "DM check" --add <device> --remove <device> --desc "…"
 corgi default <device>                       # make it its platform's default device
 ```
 
+## MCP tools
+
+If the `corgi` MCP server is registered, the same steps are available as tools: `corgi_status`, `corgi_use` (devices, group, or default; `mode: "available"`; `wait` — call again while it answers `STILL_QUEUED`), `corgi_release`, `corgi_down`, `corgi_catalog`, `corgi_create`, `corgi_group_save`. Errors start with the code (`BUSY: …`). Use either the CLI or the tools — they share the same session.
+
 ## Command summary
 
 | Command | What it does |
