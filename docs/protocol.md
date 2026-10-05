@@ -73,7 +73,10 @@
 
 | 메서드 | params | result | 비고 |
 | --- | --- | --- | --- |
-| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en)·시스템 언어 `systemLanguage`, 이 세션, 점유·대기 순번, `DeviceView[]`(Corgi 목록), 그룹 `groups`, 세션마다 점유·대기 `sessions`(점유하거나 기다리는 세션만 — `{ sessionKey, agentSessionId?, agent, cwd, human, lastUsedAt, held: [{deviceId, since}], queued, queuePosition? }`, M13), 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
+| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en)·시스템 언어 `systemLanguage`, 첫 실행 설정을 안 끝냈는지 `setupNeeded`(M14), 이 세션, 점유·대기 순번, `DeviceView[]`(Corgi 목록), 그룹 `groups`, 세션마다 점유·대기 `sessions`(점유하거나 기다리는 세션만 — `{ sessionKey, agentSessionId?, agent, cwd, human, lastUsedAt, held: [{deviceId, since}], queued, queuePosition? }`, M13), 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
+| `setup.status` | `{}` | `{ needed, finishedAt?, checks: CheckView[], agents: { claude, skill, mcp, hook, rule } }` | 첫 실행 설정 창 (M14). `checks` 는 `corgi doctor` 와 같은 점검(항목마다 `id` — `server`·`launchd`·`xcode`·`simslim`·`androidSdk`·`images`·`avdslim`·`argent`·…). `agents` 는 설치 상태 `missing`·`outdated`·`current`, `claude` 는 claude 명령이 있는지. 점검에 몇 초 걸린다 |
+| `setup.apply` | `{ item: "skill" \| "mcp" \| "protection", enabled }` | `agents` (위와 같음) | 켜면 설치·끄면 제거. `protection` = 훅 + 규칙. `mcp` 는 `claude mcp add --scope user corgi -- <corgi> mcp` — claude 가 없으면 `TOOL_MISSING` |
+| `setup.finish` | `{}` | `{ finished: true }` | `…/Corgi/setup.json` 에 끝낸 시각을 남긴다 — 앱이 다시 띄우지 않는다 |
 | `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, androidRamMb, simslimProfile? }` | 설정 화면·`corgi config` (M11) |
 | `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·Android RAM·simslim 프로필 (R25) |
 | `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff`)·남는 것(`slimKeeps`) (M1·M4) |

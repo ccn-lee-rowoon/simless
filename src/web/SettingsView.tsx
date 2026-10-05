@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { SettingsResult, StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import { call } from "./api.ts";
+import { openSetup } from "./bridge.ts";
 import type { Act } from "./types.ts";
 
 const RAM_CHOICES = [1536, 2048, 3072, 4096];
@@ -49,6 +50,16 @@ export function SettingsView({
         });
       }}
     >
+      <section className="panel settings-section">
+        <h3>{t("web.settings.setup")}</h3>
+        <div className="setup-intro">
+          <p className="sub">{t("web.settings.setupHint")}</p>
+          <button type="button" className="button button-small" onClick={openSetup}>
+            {t("web.settings.openSetup")}
+          </button>
+        </div>
+      </section>
+
       <section className="panel settings-section">
         <h3>{t("web.settings.language")}</h3>
         <fieldset className="radio-list">

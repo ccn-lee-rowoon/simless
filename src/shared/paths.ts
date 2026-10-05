@@ -17,6 +17,8 @@ export interface Paths {
   /** 점유 기록 (M13) */
   history: string;
   managedIndex: string;
+  /** 첫 실행 설정을 끝낸 시각 (M14) — 없으면 앱이 설정 창을 띄운다 */
+  setup: string;
   /** 웹 UI 요청 토큰 (0600) — corgi ui 가 읽어 브라우저에 넘긴다 */
   webToken: string;
   config: string;
@@ -43,6 +45,7 @@ export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
     leases: join(stateDir, "leases.json"),
     history: join(stateDir, "history.json"),
     managedIndex: join(stateDir, "managed-index.json"),
+    setup: join(stateDir, "setup.json"),
     webToken: join(stateDir, "web-token"),
     config: join(configDir, "config.json"),
     appsDir: join(configDir, "apps"),

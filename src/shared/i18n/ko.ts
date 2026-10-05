@@ -95,7 +95,7 @@ export const ko = {
   "cli.busyHint": "\n  기다리려면 --wait, 비어 있는 것만 쓰려면 --available",
   "cli.serve": "상주 서버를 띄운다 (보통 launchd 가 실행)",
   "cli.install":
-    "서버를 launchd 에 등록하고(로그인 시 자동 실행), 에이전트 스킬·Claude Code 훅·규칙을 설치하고, Corgi.app 을 만든다",
+    "서버를 launchd 에 등록하고(로그인 시 자동 실행), 에이전트 스킬을 설치하고, Corgi.app 을 만든다. 보호(훅·규칙)와 MCP 는 앱의 첫 실행 설정에서 고르거나 --hook·--mcp 로",
   "cli.install.noLaunchd": "launchd 등록은 건너뛴다",
   "cli.install.noSkill": "스킬 설치는 건너뛴다",
   "cli.install.noApp": "Corgi.app 만들기는 건너뛴다",
@@ -260,7 +260,8 @@ export const ko = {
   "cli.config.set": "{key} = {value}",
   // CLI — doctor (S1·S2)
   "doctor.description": "설치·연결을 점검하고 고치는 방법을 알려 준다 (S1·S2)",
-  "doctor.fix": "corgi install 로 고칠 수 있는 것(launchd 등록·스킬·훅·규칙·Corgi.app)은 고친다",
+  "doctor.fix":
+    "corgi install 로 고칠 수 있는 것(launchd 등록·스킬·Corgi.app, 설치된 훅·규칙의 예전 버전)은 고친다",
   "doctor.group.server": "서버",
   "doctor.group.agents": "에이전트 연동",
   "doctor.server": "서버 연결",
@@ -453,11 +454,70 @@ export const ko = {
     "{name} 은 Corgi 가 관리하는 디바이스라 점유한 뒤에만 쓸 수 있습니다 — corgi use {id}",
   "hook.serverDown":
     "Corgi 서버가 꺼져 있어 이 디바이스({name})를 누가 쓰는지 알 수 없습니다 — corgi status 로 서버를 켠 뒤 다시 하세요",
-  "cli.install.noHook":
-    "Claude Code 훅(~/.claude/settings.json)·규칙(~/.claude/rules/corgi.md) 설치는 건너뛴다",
+  "cli.install.hook":
+    "보호 — Claude Code 훅(~/.claude/settings.json)·규칙(~/.claude/rules/corgi.md)도 설치한다 (P2·P3)",
   "doctor.hook": "Claude Code 훅",
   "doctor.hook.missing":
     "없음 — 에이전트가 점유하지 않은 디바이스를 argent·adb 로 직접 건드려도 막지 못한다 (P3)",
   "doctor.hook.outdated": "다른 corgi 를 가리킴 (옮겼거나 개발·배포가 바뀜)",
   "doctor.rule": "Corgi 규칙",
+  "cli.install.mcp": "Claude Code 에 corgi mcp 를 등록한다 (사용자 범위, R12)",
+  "setup.noClaude": "claude 명령을 찾지 못했습니다 — Claude Code 를 설치한 뒤 다시 하세요",
+  "setup.mcpFailed": "MCP 등록에 실패했습니다: {error}",
+  "web.setup.title": "Corgi 시작하기",
+  "web.setup.intro":
+    "Corgi 를 쓰는 데 필요한 것을 차례로 확인합니다. 나중에 설정 창에서 다시 열 수 있습니다.",
+  "web.setup.steps.check": "이 Mac 점검",
+  "web.setup.steps.agents": "에이전트 연결",
+  "web.setup.steps.devices": "기본 디바이스",
+  "web.setup.check.intro":
+    "디바이스를 만들고 다루는 데 쓰는 도구입니다. iOS 나 Android 중 하나만 써도 되고, 빠진 것은 나중에 설치해도 됩니다.",
+  "web.setup.check.server": "Corgi 서버",
+  "web.setup.check.ios": "iOS 시뮬레이터",
+  "web.setup.check.android": "Android 에뮬레이터",
+  "web.setup.check.screen": "화면 조작",
+  "web.setup.check.recheck": "다시 확인",
+  "web.setup.check.checking": "확인 중…",
+  "web.setup.check.summary": "문제 {fails}개 · 주의 {warns}개",
+  "web.setup.check.allGood": "모두 준비됐습니다",
+  "web.setup.check.terminal": "터미널에서 실행한 뒤 «다시 확인» 을 누르세요",
+  "web.setup.copy": "복사",
+  "web.setup.copied": "복사함",
+  "web.setup.agents.intro":
+    "AI 에이전트가 Corgi 로 디바이스를 빌려 쓰게 합니다. 지금은 Claude Code 를 지원합니다.",
+  "web.setup.agents.others": "Codex·Gemini CLI 등 다른 에이전트 연결은 준비 중입니다.",
+  "web.setup.recommended": "권장",
+  "web.setup.optional": "선택",
+  "web.setup.skill.title": "Corgi 스킬",
+  "web.setup.skill.desc":
+    "디바이스가 필요할 때 Corgi 로 점유하고, 쓰고, 해제하는 방법을 Claude Code 에 알려 줍니다.",
+  "web.setup.mcp.title": "MCP 도구",
+  "web.setup.mcp.desc":
+    "corgi_status·corgi_use 같은 도구를 Claude Code 에 등록합니다. 이 Mac 의 모든 Claude Code 세션에 생기고, 새로 시작한 세션부터 보입니다.",
+  "web.setup.mcp.noClaude":
+    "claude 명령을 찾지 못했습니다 — Claude Code 를 설치한 뒤 «다시 확인» 을 누르세요.",
+  "web.setup.protect.title": "보호 (훅 + 규칙)",
+  "web.setup.protect.desc":
+    "Corgi 목록의 디바이스를 점유하지 않은 세션이 adb·simctl·argent 로 건드리면 막고, 점유하는 명령을 알려 줍니다. 도구 호출마다 약 20ms 가 더 걸립니다.",
+  "web.setup.protect.warn":
+    "Corgi 없이 이미 쓰고 있는 디바이스가 Corgi 목록에 있으면 그 세션도 막힙니다. 그 디바이스를 목록에서 빼거나 작업이 끝난 뒤 켜세요.",
+  "web.setup.state.current": "설치됨",
+  "web.setup.state.outdated": "업데이트 필요",
+  "web.setup.state.missing": "설치 안 됨",
+  "web.setup.install": "설치",
+  "web.setup.update": "업데이트",
+  "web.setup.remove": "제거",
+  "web.setup.devices.intro":
+    "에이전트가 «기본 디바이스로 테스트해 줘» 를 받으면 쓰는 디바이스입니다. 처음 만든 디바이스가 기본이 됩니다.",
+  "web.setup.devices.none": "기본 디바이스 없음",
+  "web.setup.devices.create": "디바이스 만들기",
+  "web.setup.devices.choose": "목록에서 고르기…",
+  "web.setup.devices.later":
+    "나중에 해도 됩니다 — 대시보드의 «디바이스 생성» 에서 언제든 만들 수 있습니다.",
+  "web.setup.back": "이전",
+  "web.setup.next": "다음",
+  "web.setup.finish": "완료",
+  "web.settings.setup": "첫 실행 설정",
+  "web.settings.setupHint": "도구 점검·에이전트 연결·기본 디바이스를 다시 확인합니다.",
+  "web.settings.openSetup": "설정 안내 열기",
 } as const;

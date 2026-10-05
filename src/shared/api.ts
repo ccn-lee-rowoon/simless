@@ -82,6 +82,8 @@ export interface StatusResult {
   defaults: Defaults;
   /** 세션마다 점유·대기 (M13) */
   sessions: SessionView[];
+  /** 첫 실행 설정을 아직 안 끝냄 — 앱이 설정 창을 띄운다 (M14) */
+  setupNeeded: boolean;
   queue: { sessionKey: string; agent: string; deviceIds: string[]; enqueuedAt: number }[];
 }
 
@@ -213,3 +215,53 @@ export interface HistoryEvent {
   human: boolean;
   deviceIds: string[];
 }
+
+/** 점검 항목 — corgi doctor 와 첫 실행 설정 창이 같이 쓴다 (S1·S2·M14) */
+export type CheckId =
+  | "server"
+  | "launchd"
+  | "androidSdk"
+  | "images"
+  | "avdslim"
+  | "xcode"
+  | "simslim"
+  | "argent"
+  | "skill"
+  | "hook"
+  | "rule"
+  | "app";
+
+export interface CheckView {
+  id: CheckId;
+  group: string;
+  name: string;
+  status: "ok" | "warn" | "fail";
+  detail: string;
+  /** 고치는 방법 — 사람이 실행할 명령 */
+  fix?: string;
+  /** corgi doctor --fix 가 고칠 수 있는 것 */
+  autofix?: "launchd" | "skill" | "app" | "hook";
+}
+
+/** 설치 상태 — missing = 없음, outdated = 들어 있는 것과 다름, current = 같음 */
+export type InstallState = "missing" | "outdated" | "current";
+
+/** 에이전트 연결 — 첫 실행 설정 창에서 켜고 끈다 (M14) */
+export interface SetupAgents {
+  /** claude 명령이 있는지 — 없으면 MCP 등록을 못 한다 */
+  claude: boolean;
+  skill: InstallState;
+  mcp: InstallState;
+  /** 보호 = 훅 + 규칙 (P2·P3) */
+  hook: InstallState;
+  rule: InstallState;
+}
+
+export interface SetupStatus {
+  needed: boolean;
+  finishedAt?: number;
+  checks: CheckView[];
+  agents: SetupAgents;
+}
+
+export type SetupItem = "skill" | "mcp" | "protection";

@@ -74,37 +74,48 @@ export async function runCli(argv: string[]): Promise<number> {
     .option("--no-launchd", t("cli.install.noLaunchd"))
     .option("--no-skill", t("cli.install.noSkill"))
     .option("--no-app", t("cli.install.noApp"))
-    .option("--no-hook", t("cli.install.noHook"))
+    .option("--hook", t("cli.install.hook"))
+    .option("--mcp", t("cli.install.mcp"))
     .action(
-      run(async (ctx, o: { launchd: boolean; skill: boolean; app: boolean; hook: boolean }) => {
-        const done: Record<string, string> = {};
-        if (o.launchd) {
-          const { install } = await import("./launchd.ts");
-          await install(ctx.paths);
-          done.launchd = ctx.paths.launchAgent;
-        }
-        if (o.skill) {
-          const { installSkill } = await import("./skill.ts");
-          done.skill = await installSkill();
-        }
-        if (o.hook) {
-          const { installHook, installRule } = await import("./claude-hook.ts");
-          const { selfCommand } = await import("./launchd.ts");
-          done.hook = installHook(selfCommand());
-          done.rule = await installRule();
-        }
-        if (o.app) {
-          const { installApp } = await import("./app-bundle.ts");
-          const app = await installApp(ctx.paths, ctx.config);
-          done.app = app.menubar ? t("cli.install.menubar", { path: app.path }) : app.path;
-          if (app.warning) console.error(app.warning);
-        }
-        output(ctx, done, () =>
-          Object.entries(done)
-            .map(([what, path]) => t("cli.install.done", { what, path }))
-            .join("\n"),
-        );
-      }),
+      run(
+        async (
+          ctx,
+          o: { launchd: boolean; skill: boolean; app: boolean; hook?: boolean; mcp?: boolean },
+        ) => {
+          const done: Record<string, string> = {};
+          if (o.launchd) {
+            const { install } = await import("./launchd.ts");
+            await install(ctx.paths);
+            done.launchd = ctx.paths.launchAgent;
+          }
+          if (o.skill) {
+            const { installSkill } = await import("./skill.ts");
+            done.skill = await installSkill();
+          }
+          if (o.hook) {
+            const { installHook, installRule } = await import("./claude-hook.ts");
+            const { selfCommand } = await import("./launchd.ts");
+            done.hook = installHook(selfCommand());
+            done.rule = await installRule();
+          }
+          if (o.mcp) {
+            const { installMcp } = await import("./claude-mcp.ts");
+            const { selfCommand } = await import("./launchd.ts");
+            done.mcp = await installMcp(selfCommand());
+          }
+          if (o.app) {
+            const { installApp } = await import("./app-bundle.ts");
+            const app = await installApp(ctx.paths, ctx.config);
+            done.app = app.menubar ? t("cli.install.menubar", { path: app.path }) : app.path;
+            if (app.warning) console.error(app.warning);
+          }
+          output(ctx, done, () =>
+            Object.entries(done)
+              .map(([what, path]) => t("cli.install.done", { what, path }))
+              .join("\n"),
+          );
+        },
+      ),
     );
 
   program
@@ -118,6 +129,7 @@ export async function runCli(argv: string[]): Promise<number> {
         const { uninstallHook, uninstallRule } = await import("./claude-hook.ts");
         uninstallHook();
         uninstallRule();
+        await (await import("./claude-mcp.ts")).uninstallMcp();
         output(ctx, { uninstalled: ctx.paths.launchAgent }, () => t("cli.uninstall.done"));
       }),
     );

@@ -1,0 +1,446 @@
+import { useCallback, useEffect, useState } from "react";
+import type {
+  CheckId,
+  CheckView,
+  InstallState,
+  SetupAgents,
+  SetupItem,
+  SetupStatus,
+  StatusResult,
+} from "../shared/api.ts";
+import { type MessageKey, t } from "../shared/i18n.ts";
+import { call } from "./api.ts";
+import { postToApp } from "./bridge.ts";
+import { PlatformIcon } from "./icons.tsx";
+import type { Act } from "./types.ts";
+import { Logo } from "./ui.tsx";
+
+// 첫 실행 설정 창 — ?window=setup (M14). 앱을 처음 열면 뜬다.
+// 터미널 없이 차례로: 이 Mac 점검 → 에이전트 연결 → 기본 디바이스. 설치는 서버가 한다.
+
+type Step = "check" | "agents" | "devices";
+const STEPS: { id: Step; label: MessageKey }[] = [
+  { id: "check", label: "web.setup.steps.check" },
+  { id: "agents", label: "web.setup.steps.agents" },
+  { id: "devices", label: "web.setup.steps.devices" },
+];
+
+/** 점검을 묶어 보이는 차례 — 서버 등록·스킬·훅 같은 Corgi 자신의 것은 다른 단계에서 */
+const CHECK_SECTIONS: { label: MessageKey; ids: CheckId[] }[] = [
+  { label: "web.setup.check.server", ids: ["server", "launchd"] },
+  { label: "web.setup.check.ios", ids: ["xcode", "simslim"] },
+  { label: "web.setup.check.android", ids: ["androidSdk", "images", "avdslim"] },
+  { label: "web.setup.check.screen", ids: ["argent"] },
+];
+
+export function SetupView({
+  status,
+  act,
+  onCreate,
+}: {
+  status: StatusResult;
+  act: Act;
+  onCreate: () => void;
+}) {
+  const [step, setStep] = useState<Step>("check");
+  const [setup, setSetup] = useState<SetupStatus | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const load = useCallback(() => {
+    setChecking(true);
+    call<SetupStatus>("setup.status").then(
+      (next) => {
+        setSetup(next);
+        setChecking(false);
+      },
+      () => setChecking(false),
+    );
+  }, []);
+  useEffect(load, [load]);
+
+  const index = STEPS.findIndex((s) => s.id === step);
+  const finish = () =>
+    act(t("web.setup.finish"), async () => {
+      await call("setup.finish");
+      // 앱이면 대시보드를 열고 이 창을 닫는다. 브라우저면 이 창이 대시보드가 된다
+      if (postToApp({ open: "dashboard" })) postToApp({ close: "setup" });
+      else location.href = "/";
+    });
+
+  return (
+    <div className="setup">
+      <header className="setup-head">
+        <Logo size={40} />
+        <div>
+          <h1 className="page-title">{t("web.setup.title")}</h1>
+          <p className="sub">{t("web.setup.intro")}</p>
+        </div>
+      </header>
+
+      <ol className="setup-steps">
+        {STEPS.map((s, i) => (
+          <li key={s.id}>
+            <button
+              type="button"
+              className={
+                s.id === step
+                  ? "setup-step setup-step-active"
+                  : i < index
+                    ? "setup-step setup-step-done"
+                    : "setup-step"
+              }
+              aria-current={s.id === step ? "step" : undefined}
+              onClick={() => setStep(s.id)}
+            >
+              <span className="setup-step-number mono">{i + 1}</span>
+              {t(s.label)}
+            </button>
+          </li>
+        ))}
+      </ol>
+
+      <section className="setup-body">
+        {step === "check" && <CheckStep setup={setup} checking={checking} onRecheck={load} />}
+        {step === "agents" && (
+          <AgentsStep
+            agents={setup?.agents}
+            checking={checking}
+            onRecheck={load}
+            onChanged={(agents) => setSetup((s) => (s ? { ...s, agents } : s))}
+            act={act}
+          />
+        )}
+        {step === "devices" && <DevicesStep status={status} act={act} onCreate={onCreate} />}
+      </section>
+
+      <footer className="setup-footer">
+        {index > 0 && (
+          <button
+            type="button"
+            className="button"
+            onClick={() => setStep(STEPS[index - 1]?.id ?? "check")}
+          >
+            {t("web.setup.back")}
+          </button>
+        )}
+        <span className="spacer" />
+        {index < STEPS.length - 1 ? (
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={() => setStep(STEPS[index + 1]?.id ?? "devices")}
+          >
+            {t("web.setup.next")}
+          </button>
+        ) : (
+          <button type="button" className="button button-primary" onClick={finish}>
+            {t("web.setup.finish")}
+          </button>
+        )}
+      </footer>
+    </div>
+  );
+}
+
+const MARK: Record<CheckView["status"], string> = { ok: "✓", warn: "!", fail: "✕" };
+
+function CheckStep({
+  setup,
+  checking,
+  onRecheck,
+}: {
+  setup: SetupStatus | null;
+  checking: boolean;
+  onRecheck: () => void;
+}) {
+  const byId = new Map((setup?.checks ?? []).map((c) => [c.id, c]));
+  const shown = CHECK_SECTIONS.flatMap((s) => s.ids.flatMap((id) => byId.get(id) ?? []));
+  const fails = shown.filter((c) => c.status === "fail").length;
+  const warns = shown.filter((c) => c.status === "warn").length;
+
+  return (
+    <>
+      <div className="setup-intro">
+        <p className="sub">{t("web.setup.check.intro")}</p>
+        <button
+          type="button"
+          className="button button-small"
+          disabled={checking}
+          onClick={onRecheck}
+        >
+          {checking ? t("web.setup.check.checking") : t("web.setup.check.recheck")}
+        </button>
+      </div>
+      {!setup ? (
+        <p className="sub">{t("web.setup.check.checking")}</p>
+      ) : (
+        <>
+          <p className={fails + warns === 0 ? "setup-summary setup-summary-ok" : "setup-summary"}>
+            {fails + warns === 0
+              ? t("web.setup.check.allGood")
+              : t("web.setup.check.summary", { fails, warns })}
+          </p>
+          {CHECK_SECTIONS.map((section) => {
+            const checks = section.ids.flatMap((id) => byId.get(id) ?? []);
+            if (checks.length === 0) return null;
+            return (
+              <div key={section.label} className="panel setup-section">
+                <h3>{t(section.label)}</h3>
+                <ul className="setup-checks">
+                  {checks.map((c) => (
+                    <li key={c.id} className="setup-check">
+                      <span className={`setup-mark setup-mark-${c.status}`} aria-hidden="true">
+                        {MARK[c.status]}
+                      </span>
+                      <div className="setup-check-text">
+                        <span className="strong">{c.name}</span>
+                        <span className="sub">{c.detail}</span>
+                        {c.fix && <Command text={c.fix} />}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </>
+      )}
+    </>
+  );
+}
+
+/** 사람이 터미널에서 실행할 명령 — 복사 버튼과 함께 */
+function Command({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  // 명령이 아니라 설명(«Xcode 를 설치하고 …»)이면 그냥 글로
+  if (!/^[a-z]/.test(text)) return <span className="sub setup-fix">→ {text}</span>;
+  // 끝의 괄호는 덧붙인 설명 — 복사하지 않는다
+  const [, command = text, note] = /^(.*?)\s*(\([^()]*\))?$/.exec(text) ?? [];
+  return (
+    <span className="setup-command">
+      <code className="mono">{command}</code>
+      {note && <span className="sub">{note}</span>}
+      <button
+        type="button"
+        className="button button-small"
+        title={t("web.setup.check.terminal")}
+        onClick={() => {
+          void navigator.clipboard?.writeText(command).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          });
+        }}
+      >
+        {copied ? t("web.setup.copied") : t("web.setup.copy")}
+      </button>
+    </span>
+  );
+}
+
+const STATE_LABEL: Record<InstallState, MessageKey> = {
+  current: "web.setup.state.current",
+  outdated: "web.setup.state.outdated",
+  missing: "web.setup.state.missing",
+};
+
+function AgentsStep({
+  agents,
+  checking,
+  onRecheck,
+  onChanged,
+  act,
+}: {
+  agents: SetupAgents | undefined;
+  checking: boolean;
+  onRecheck: () => void;
+  onChanged: (agents: SetupAgents) => void;
+  act: Act;
+}) {
+  if (!agents) return <p className="sub">{t("web.setup.check.checking")}</p>;
+
+  const apply = (item: SetupItem, enabled: boolean, label: string) =>
+    act(label, async () => {
+      onChanged(await call<SetupAgents>("setup.apply", { item, enabled }));
+    });
+
+  /** 보호는 훅과 규칙이 둘 다 있어야 «설치됨» */
+  const protection: InstallState =
+    agents.hook === "current" && agents.rule === "current"
+      ? "current"
+      : agents.hook === "missing" && agents.rule === "missing"
+        ? "missing"
+        : "outdated";
+
+  return (
+    <>
+      <div className="setup-intro">
+        <p className="sub">{t("web.setup.agents.intro")}</p>
+        <button
+          type="button"
+          className="button button-small"
+          disabled={checking}
+          onClick={onRecheck}
+        >
+          {checking ? t("web.setup.check.checking") : t("web.setup.check.recheck")}
+        </button>
+      </div>
+      <Integration
+        title={t("web.setup.skill.title")}
+        badge={t("web.setup.recommended")}
+        description={t("web.setup.skill.desc")}
+        path="~/.claude/skills/corgi"
+        state={agents.skill}
+        onApply={(enabled) => apply("skill", enabled, t("web.setup.skill.title"))}
+      />
+      <Integration
+        title={t("web.setup.protect.title")}
+        badge={t("web.setup.recommended")}
+        description={t("web.setup.protect.desc")}
+        path="~/.claude/settings.json · ~/.claude/rules/corgi.md"
+        state={protection}
+        warning={protection === "current" ? undefined : t("web.setup.protect.warn")}
+        onApply={(enabled) => apply("protection", enabled, t("web.setup.protect.title"))}
+      />
+      <Integration
+        title={t("web.setup.mcp.title")}
+        badge={t("web.setup.optional")}
+        description={t("web.setup.mcp.desc")}
+        path="~/.claude.json"
+        state={agents.mcp}
+        disabled={agents.claude ? undefined : t("web.setup.mcp.noClaude")}
+        onApply={(enabled) => apply("mcp", enabled, t("web.setup.mcp.title"))}
+      />
+      <p className="sub">{t("web.setup.agents.others")}</p>
+    </>
+  );
+}
+
+function Integration({
+  title,
+  badge,
+  description,
+  path,
+  state,
+  warning,
+  disabled,
+  onApply,
+}: {
+  title: string;
+  badge: string;
+  description: string;
+  path: string;
+  state: InstallState;
+  warning?: string;
+  /** 설치할 수 없는 이유 */
+  disabled?: string;
+  onApply: (enabled: boolean) => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const run = (enabled: boolean) => {
+    setBusy(true);
+    void onApply(enabled).finally(() => setBusy(false));
+  };
+  return (
+    <div className="panel setup-section setup-integration">
+      <div className="setup-integration-head">
+        <h3>{title}</h3>
+        <span className="chip">{badge}</span>
+        <span className="spacer" />
+        <span className={`setup-state setup-state-${state}`}>{t(STATE_LABEL[state])}</span>
+      </div>
+      <p>{description}</p>
+      <p className="sub mono">{path}</p>
+      {warning && <p className="notice-inline">{warning}</p>}
+      {disabled && state === "missing" && <p className="notice-inline">{disabled}</p>}
+      <div className="setup-actions">
+        {state !== "current" && (
+          <button
+            type="button"
+            className="button button-primary button-small"
+            disabled={busy || (disabled !== undefined && state === "missing")}
+            onClick={() => run(true)}
+          >
+            {state === "outdated" ? t("web.setup.update") : t("web.setup.install")}
+          </button>
+        )}
+        {state !== "missing" && (
+          <button
+            type="button"
+            className="button button-small"
+            disabled={busy}
+            onClick={() => run(false)}
+          >
+            {t("web.setup.remove")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DevicesStep({
+  status,
+  act,
+  onCreate,
+}: {
+  status: StatusResult;
+  act: Act;
+  onCreate: () => void;
+}) {
+  const rows: { platform: "ios" | "android"; label: string }[] = [
+    { platform: "ios", label: "iOS" },
+    { platform: "android", label: "Android" },
+  ];
+  return (
+    <>
+      <div className="setup-intro">
+        <p className="sub">{t("web.setup.devices.intro")}</p>
+      </div>
+      <div className="panel setup-section">
+        <ul className="setup-checks">
+          {rows.map(({ platform, label }) => {
+            const id = status.defaults[platform];
+            const device = status.devices.find((d) => d.id === id);
+            const others = status.devices.filter((d) => d.platform === platform);
+            return (
+              <li key={platform} className="setup-check setup-default">
+                <PlatformIcon platform={platform} />
+                <div className="setup-check-text">
+                  <span className="strong">{label}</span>
+                  <span className={device ? "" : "sub"}>
+                    {device ? device.name : t("web.setup.devices.none")}
+                  </span>
+                </div>
+                <span className="spacer" />
+                {!device && others.length > 0 && (
+                  <select
+                    className="setup-select"
+                    value=""
+                    onChange={(e) => {
+                      const picked = e.target.value;
+                      if (picked)
+                        void act(label, () => call("device.setDefault", { device: picked }));
+                    }}
+                  >
+                    <option value="">{t("web.setup.devices.choose")}</option>
+                    {others.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <div className="setup-actions">
+          <button type="button" className="button button-primary button-small" onClick={onCreate}>
+            {t("web.setup.devices.create")}
+          </button>
+        </div>
+      </div>
+      <p className="sub">{t("web.setup.devices.later")}</p>
+    </>
+  );
+}

@@ -18,6 +18,9 @@ export const WEB_SESSION: SessionInfo = { key: "web", agent: "web", cwd: "web", 
 
 const WEB_METHODS = new Set([
   "status",
+  "setup.status",
+  "setup.apply",
+  "setup.finish",
   "device.list",
   "catalog",
   "device.create",

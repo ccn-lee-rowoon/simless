@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import type { CatalogResult, StatusResult } from "../shared/api.ts";
 import { language, resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
 import { ApiError, call, subscribe, token } from "./api.ts";
+import { postToApp } from "./bridge.ts";
 import { CreateDialog } from "./CreateDialog.tsx";
 import { DevicesView } from "./DevicesView.tsx";
 import { GroupsView } from "./GroupsView.tsx";
@@ -16,6 +17,7 @@ import {
 } from "./icons.tsx";
 import { SessionsView, SessionWindow } from "./SessionsView.tsx";
 import { SettingsView } from "./SettingsView.tsx";
+import { SetupView } from "./SetupView.tsx";
 import type { Act, LogLine } from "./types.ts";
 import { Logo, useMenuDismiss } from "./ui.tsx";
 
@@ -25,19 +27,13 @@ type View = "devices" | "groups" | "sessions";
 const PARAMS = new URLSearchParams(location.search);
 const SETTINGS_WINDOW = PARAMS.get("window") === "settings";
 const SESSION_WINDOW = PARAMS.get("window") === "session" ? PARAMS.get("key") : null;
+/** ?window=setup — 첫 실행 설정 (M14) */
+const SETUP_WINDOW = PARAMS.get("window") === "setup";
 
 /** 설정 창 열기 — 앱(Corgi.app)이면 Swift 에 알려 별도 창, 브라우저면 새 창 */
 function openSettings(): void {
-  const bridge = (
-    window as unknown as {
-      webkit?: { messageHandlers?: { corgi?: { postMessage: (message: unknown) => void } } };
-    }
-  ).webkit?.messageHandlers?.corgi;
-  if (bridge) {
-    bridge.postMessage({ open: "settings" });
-    return;
-  }
-  window.open("/?window=settings", "corgi-settings", "width=760,height=720");
+  if (!postToApp({ open: "settings" }))
+    window.open("/?window=settings", "corgi-settings", "width=760,height=720");
 }
 const VIEW_KEY = "corgi-view";
 
@@ -159,6 +155,39 @@ function App() {
         <h1>Corgi</h1>
         <p>{t("web.noToken")}</p>
       </main>
+    );
+  }
+
+  const createDialog = (
+    <CreateDialog
+      open={creating}
+      catalog={catalog}
+      log={log}
+      onClose={() => setCreating(false)}
+      onCreated={(name) => {
+        setCreating(false);
+        notify("info", t("web.created", { name }));
+        refreshStatus();
+      }}
+      onAdded={(name) => {
+        notify("info", t("web.create.added", { name }));
+        refreshStatus();
+      }}
+      onError={(message) => notify("error", message)}
+    />
+  );
+
+  if (SETUP_WINDOW) {
+    return (
+      <div className="setup-window">
+        {status ? (
+          <SetupView status={status} act={act} onCreate={() => setCreating(true)} />
+        ) : (
+          <p className="sub">{t("web.loading")}</p>
+        )}
+        <Notices notices={notices} />
+        {createDialog}
+      </div>
     );
   }
 
@@ -327,22 +356,7 @@ function App() {
 
       <Notices notices={notices} />
 
-      <CreateDialog
-        open={creating}
-        catalog={catalog}
-        log={log}
-        onClose={() => setCreating(false)}
-        onCreated={(name) => {
-          setCreating(false);
-          notify("info", t("web.created", { name }));
-          refreshStatus();
-        }}
-        onAdded={(name) => {
-          notify("info", t("web.create.added", { name }));
-          refreshStatus();
-        }}
-        onError={(message) => notify("error", message)}
-      />
+      {createDialog}
     </div>
   );
 }

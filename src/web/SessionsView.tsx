@@ -9,6 +9,7 @@ import type {
 import { language, type MessageKey, t } from "../shared/i18n.ts";
 import { AgentIcon, agentLabel } from "./agents.tsx";
 import { call } from "./api.ts";
+import { postToApp } from "./bridge.ts";
 import { PlatformIcon } from "./icons.tsx";
 import type { Act } from "./types.ts";
 import { ago, shortPath, widthText } from "./ui.tsx";
@@ -67,15 +68,7 @@ function rows(status: StatusResult, events: HistoryEvent[]): SessionRow[] {
 
 /** 세션 기록 창 열기 — 앱이면 Swift 에 알려 별도 창, 브라우저면 새 창 */
 export function openSessionWindow(sessionKey: string): void {
-  const bridge = (
-    window as unknown as {
-      webkit?: { messageHandlers?: { corgi?: { postMessage: (message: unknown) => void } } };
-    }
-  ).webkit?.messageHandlers?.corgi;
-  if (bridge) {
-    bridge.postMessage({ open: "session", key: sessionKey });
-    return;
-  }
+  if (postToApp({ open: "session", key: sessionKey })) return;
   window.open(
     `/?window=session&key=${encodeURIComponent(sessionKey)}`,
     `corgi-session-${sessionKey}`,

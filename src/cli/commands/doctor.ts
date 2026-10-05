@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
-import type { StatusResult } from "../../shared/api.ts";
+import type { CheckView, StatusResult } from "../../shared/api.ts";
 import { call } from "../../shared/client.ts";
 import { run, which } from "../../shared/exec.ts";
 import { ExitCode } from "../../shared/exit-codes.ts";
@@ -17,20 +17,9 @@ import { skillStatus } from "../skill.ts";
 
 // 설치 안내·연결 확인 (S1·S2). 서버가 꺼져 있어도 돌아야 하므로 서버 코드 없이 직접 본다.
 
-type Status = "ok" | "warn" | "fail";
+export type Check = CheckView;
 
-export interface Check {
-  group: string;
-  name: string;
-  status: Status;
-  detail: string;
-  /** 고치는 방법 — 사람이 실행할 명령 */
-  fix?: string;
-  /** corgi doctor --fix 가 고칠 수 있는 것 */
-  autofix?: "launchd" | "skill" | "app" | "hook";
-}
-
-const MARK: Record<Status, string> = { ok: "✓", warn: "!", fail: "✗" };
+const MARK: Record<Check["status"], string> = { ok: "✓", warn: "!", fail: "✗" };
 
 async function version(command: string[]): Promise<string | undefined> {
   const result = await run(command, { timeoutMs: 5000 });
@@ -61,17 +50,27 @@ function pathDirs(): string[] {
   return (process.env.PATH ?? "").split(":").filter(Boolean);
 }
 
-export async function runChecks(ctx: Context): Promise<Check[]> {
+/**
+ * 점검 목록. 서버 안에서 부를 때(첫 실행 설정 창, M14)는 자기 소켓에 묻지 않도록 serverVersion 을 준다.
+ */
+export async function runChecks(
+  ctx: Pick<Context, "paths" | "config" | "session">,
+  options: { serverVersion?: string } = {},
+): Promise<Check[]> {
   const checks: Check[] = [];
   const add = (check: Check) => checks.push(check);
 
   // 서버 — 자동 시작 없이 지금 상태를 본다
-  const server = await call<StatusResult>(ctx.paths.socket, "status", {}, ctx.session).then(
-    (r) => r,
-    (error: unknown) => error as Error,
-  );
+  const server =
+    options.serverVersion !== undefined
+      ? { serverVersion: options.serverVersion }
+      : await call<StatusResult>(ctx.paths.socket, "status", {}, ctx.session).then(
+          (r) => r,
+          (error: unknown) => error as Error,
+        );
   if (server instanceof Error) {
     add({
+      id: "server",
       group: t("doctor.group.server"),
       name: t("doctor.server"),
       status: "fail",
@@ -83,6 +82,7 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
   } else {
     const same = server.serverVersion === VERSION;
     add({
+      id: "server",
       group: t("doctor.group.server"),
       name: t("doctor.server"),
       status: same ? "ok" : "warn",
@@ -94,6 +94,7 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
   }
   if (!isInstalled(ctx.paths)) {
     add({
+      id: "launchd",
       group: t("doctor.group.server"),
       name: t("doctor.launchd"),
       status: "warn",
@@ -105,6 +106,7 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
     const printed = await run(["launchctl", "print", `gui/${process.getuid?.()}/${LAUNCH_LABEL}`]);
     const running = /state = running/.test(printed.stdout);
     add({
+      id: "launchd",
       group: t("doctor.group.server"),
       name: t("doctor.launchd"),
       status: running ? "ok" : "warn",
@@ -121,6 +123,7 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
   const sdkOk =
     existsSync(join(sdk, "platform-tools", "adb")) && existsSync(join(sdk, "emulator", "emulator"));
   add({
+    id: "androidSdk",
     group: "Android",
     name: "Android SDK",
     status: sdkOk ? "ok" : "fail",
@@ -132,6 +135,7 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
     ? readdirSync(imagesDir).filter((d) => !d.startsWith("."))
     : [];
   add({
+    id: "images",
     group: "Android",
     name: t("doctor.images"),
     status: images.length > 0 ? "ok" : "fail",
@@ -141,6 +145,7 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
   const avdslim = which("avdslim");
   const avdslimVersion = avdslim ? await version([avdslim, "version"]) : undefined;
   add({
+    id: "avdslim",
     group: "Android",
     name: "avdslim",
     status: !avdslim ? "fail" : outdated.has("avdslim") ? "warn" : "ok",
@@ -157,6 +162,7 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
   // iOS
   const simctl = await run(["xcrun", "simctl", "help"], { timeoutMs: 10_000 });
   add({
+    id: "xcode",
     group: "iOS",
     name: "Xcode simctl",
     status: simctl.code === 0 ? "ok" : "fail",
@@ -169,6 +175,7 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
   const simslim = which("simslim");
   const simslimVersion = simslim ? await version([simslim, "version"]) : undefined;
   add({
+    id: "simslim",
     group: "iOS",
     name: "simslim",
     status: !simslim ? "fail" : outdated.has("simslim") ? "warn" : "ok",
@@ -195,6 +202,7 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
   );
   const distinct = new Set(versions.map((v) => v.replace(/^.* \(/, "")));
   add({
+    id: "argent",
     group: t("doctor.group.agents"),
     name: "argent",
     status: argents.length === 0 ? "warn" : distinct.size > 1 ? "warn" : "ok",
@@ -213,6 +221,7 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
   });
   const skill = await skillStatus();
   add({
+    id: "skill",
     group: t("doctor.group.agents"),
     name: t("doctor.skill"),
     status: skill === "current" ? "ok" : "warn",
@@ -228,6 +237,7 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
 
   const hook = hookStatus(selfCommand());
   add({
+    id: "hook",
     group: t("doctor.group.agents"),
     name: t("doctor.hook"),
     status: hook === "current" ? "ok" : "warn",
@@ -237,11 +247,13 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
         : hook === "missing"
           ? t("doctor.hook.missing")
           : t("doctor.hook.outdated"),
-    fix: hook === "current" ? undefined : "corgi install --no-launchd --no-app",
-    autofix: hook === "current" ? undefined : "hook",
+    // 보호는 고르는 것이다 (M14) — 없으면 안내만, 예전 것이면 고친다
+    fix: hook === "current" ? undefined : "corgi install --no-launchd --no-app --hook",
+    autofix: hook === "outdated" ? "hook" : undefined,
   });
   const rule = await ruleStatus();
   add({
+    id: "rule",
     group: t("doctor.group.agents"),
     name: t("doctor.rule"),
     status: rule === "current" ? "ok" : "warn",
@@ -251,12 +263,13 @@ export async function runChecks(ctx: Context): Promise<Check[]> {
         : rule === "missing"
           ? t("doctor.skill.missing")
           : t("doctor.skill.outdated"),
-    fix: rule === "current" ? undefined : "corgi install --no-launchd --no-app",
-    autofix: rule === "current" ? undefined : "hook",
+    fix: rule === "current" ? undefined : "corgi install --no-launchd --no-app --hook",
+    autofix: rule === "outdated" ? "hook" : undefined,
   });
 
   const app = isAppInstalled(ctx.paths);
   add({
+    id: "app",
     group: t("doctor.group.agents"),
     name: "Corgi.app",
     status: app ? "ok" : "warn",

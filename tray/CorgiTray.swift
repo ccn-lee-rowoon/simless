@@ -43,6 +43,7 @@ enum Strings {
       "view": ("보기", "View"),
       "settings": ("설정…", "Settings…"),
       "settingsTitle": ("Corgi 설정", "Corgi Settings"),
+      "setupTitle": ("Corgi 시작하기", "Get started with Corgi"),
     ]
     guard let pair = table[key] else { return key }
     return lang == "ko" ? pair.0 : pair.1
@@ -82,6 +83,10 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
   private var window: NSWindow?
   private var webView: WKWebView?
   private var settingsWindow: NSWindow?
+  /// 첫 실행 설정 창 (M14)
+  private var setupWindow: NSWindow?
+  /// 서버가 «설정 안 끝남» 이라고 하면 앱을 띄울 때 한 번 연다
+  private var setupNeeded = false
   /// 세션 기록 창 — 세션 키마다 하나 (M13)
   private var sessionWindows: [String: NSWindow] = [:]
   private var retries = 0
@@ -99,7 +104,19 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     }
     menu.delegate = self
     statusItem.menu = menu
-    refresh()
+    refresh { [weak self] in self?.openSetupIfNeeded(attempt: 0) }
+  }
+
+  /// 처음 뜰 때 설정을 안 끝냈으면 설정 창을 연다. 서버가 아직 안 떴으면(로그인 직후) 잠시 뒤 다시
+  private func openSetupIfNeeded(attempt: Int) {
+    if serverVersion == nil {
+      guard attempt < 5 else { return }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+        self?.refresh { self?.openSetupIfNeeded(attempt: attempt + 1) }
+      }
+      return
+    }
+    if setupNeeded { openSetup() }
   }
 
   private func token() -> String? {
@@ -127,6 +144,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
            let result = json["result"] as? [String: Any] {
           if let lang = result["language"] as? String { Strings.lang = lang }
           self.serverVersion = result["serverVersion"] as? String
+          self.setupNeeded = (result["setupNeeded"] as? Bool) == true
           let all = (result["devices"] as? [[String: Any]]) ?? []
           self.devices = all.filter { ($0["booted"] as? Bool) == true }.map(Self.row)
           self.lastError = nil
@@ -234,8 +252,14 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
   ) {
     guard let body = message.body as? [String: Any] else { return }
+    if body["close"] as? String == "setup" {
+      setupWindow?.close()
+      return
+    }
     switch body["open"] as? String {
     case "settings": openSettings()
+    case "setup": openSetup()
+    case "dashboard": openDashboard()
     case "session": if let key = body["key"] as? String { openSession(key) }
     default: break
     }
@@ -293,6 +317,16 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
         size: NSSize(width: 760, height: 720), autosave: "CorgiSettings")
     }
     show(settingsWindow)
+  }
+
+  /// 첫 실행 설정 창 — 처음 열 때 자동으로, 나중엔 설정 창의 버튼으로 (M14)
+  @objc func openSetup() {
+    if setupWindow == nil {
+      setupWindow = makeAuxWindow(
+        title: Strings.get("setupTitle"), query: "window=setup",
+        size: NSSize(width: 820, height: 780), autosave: "CorgiSetup")
+    }
+    show(setupWindow)
   }
 
   private func makeWindow() {
@@ -353,9 +387,10 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
       // 다음에 열 때 설정을 새로 읽도록 닫으면 버린다
       settingsWindow = nil
     }
+    if closing === setupWindow { setupWindow = nil }
     sessionWindows = sessionWindows.filter { $0.value !== closing }
     // 창이 하나도 안 남으면 메뉴바 앱으로 돌아간다 (Dock 아이콘 없음)
-    let all = [window, settingsWindow] + sessionWindows.values.map { Optional($0) }
+    let all = [window, settingsWindow, setupWindow] + sessionWindows.values.map { Optional($0) }
     let others = all.contains { $0 !== closing && $0?.isVisible == true }
     if !others { NSApp.setActivationPolicy(.accessory) }
   }

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import skillPath from "../../integrations/skill/corgi/SKILL.md" with { type: "file" };
@@ -27,4 +27,9 @@ export async function installSkill(env: NodeJS.ProcessEnv = process.env): Promis
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, await bundledSkill());
   return target;
+}
+
+/** 스킬 폴더째 지운다 — 첫 실행 설정 창에서 끌 때 (M14) */
+export function uninstallSkill(env: NodeJS.ProcessEnv = process.env): void {
+  rmSync(dirname(skillTarget(env)), { recursive: true, force: true });
 }

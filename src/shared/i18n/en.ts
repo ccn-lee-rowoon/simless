@@ -89,7 +89,7 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.busyHint": "\n  To wait, add --wait; to take only free devices, add --available",
   "cli.serve": "Run the resident server (usually started by launchd)",
   "cli.install":
-    "Register the server with launchd (starts at login), install the agent skill, Claude Code hook and rule, and build Corgi.app",
+    "Register the server with launchd (starts at login), install the agent skill and build Corgi.app. Choose protection (hook + rule) and MCP in the app's first-run setup, or pass --hook / --mcp",
   "cli.install.noLaunchd": "Skip launchd registration",
   "cli.install.noSkill": "Skip installing the skill",
   "cli.install.noApp": "Skip building Corgi.app",
@@ -248,7 +248,7 @@ export const en: Record<keyof typeof ko, string> = {
   "doctor.description":
     "Check the installation and connections, and explain how to fix problems (S1·S2)",
   "doctor.fix":
-    "Fix what corgi install can fix (launchd registration, skill, hook, rule, Corgi.app)",
+    "Fix what corgi install can fix (launchd registration, skill, Corgi.app, and outdated copies of an installed hook or rule)",
   "doctor.group.server": "Server",
   "doctor.group.agents": "Agent integration",
   "doctor.server": "Server connection",
@@ -442,12 +442,72 @@ export const en: Record<keyof typeof ko, string> = {
     "{name} is managed by Corgi and can only be used after acquiring it — corgi use {id}",
   "hook.serverDown":
     "The Corgi server is down, so it's unknown who is using {name} — start it with corgi status, then try again",
-  "cli.install.noHook":
-    "Skip the Claude Code hook (~/.claude/settings.json) and rule (~/.claude/rules/corgi.md)",
+  "cli.install.hook":
+    "Protection — also install the Claude Code hook (~/.claude/settings.json) and rule (~/.claude/rules/corgi.md) (P2, P3)",
   "doctor.hook": "Claude Code hook",
   "doctor.hook.missing":
     "missing — agents can touch devices they don't hold through argent or adb directly (P3)",
   "doctor.hook.outdated":
     "points to a different corgi (moved, or switched between development and release)",
   "doctor.rule": "Corgi rule",
+  "cli.install.mcp": "Register corgi mcp with Claude Code (user scope, R12)",
+  "setup.noClaude": "Couldn't find the claude command — install Claude Code and try again",
+  "setup.mcpFailed": "Couldn't register the MCP server: {error}",
+  "web.setup.title": "Get started with Corgi",
+  "web.setup.intro":
+    "Corgi checks what it needs, one step at a time. You can reopen this later from Settings.",
+  "web.setup.steps.check": "Check this Mac",
+  "web.setup.steps.agents": "Connect agents",
+  "web.setup.steps.devices": "Default devices",
+  "web.setup.check.intro":
+    "Tools Corgi uses to create and drive devices. You can use just iOS or just Android, and install anything missing later.",
+  "web.setup.check.server": "Corgi server",
+  "web.setup.check.ios": "iOS simulators",
+  "web.setup.check.android": "Android emulators",
+  "web.setup.check.screen": "Screen control",
+  "web.setup.check.recheck": "Check again",
+  "web.setup.check.checking": "Checking…",
+  "web.setup.check.summary": "{fails} problem(s) · {warns} warning(s)",
+  "web.setup.check.allGood": "Everything is ready",
+  "web.setup.check.terminal": "Run it in Terminal, then press «Check again»",
+  "web.setup.copy": "Copy",
+  "web.setup.copied": "Copied",
+  "web.setup.agents.intro":
+    "Let AI agents borrow devices through Corgi. Claude Code is supported today.",
+  "web.setup.agents.others":
+    "Connections for other agents (Codex, Gemini CLI and others) are coming.",
+  "web.setup.recommended": "Recommended",
+  "web.setup.optional": "Optional",
+  "web.setup.skill.title": "Corgi skill",
+  "web.setup.skill.desc":
+    "Teaches Claude Code to acquire, use and release devices through Corgi when it needs one.",
+  "web.setup.mcp.title": "MCP tools",
+  "web.setup.mcp.desc":
+    "Registers tools such as corgi_status and corgi_use with Claude Code. They appear in every Claude Code session on this Mac, starting with new sessions.",
+  "web.setup.mcp.noClaude":
+    "Couldn't find the claude command — install Claude Code, then press «Check again».",
+  "web.setup.protect.title": "Protection (hook + rule)",
+  "web.setup.protect.desc":
+    "Blocks sessions that touch a device in the Corgi list through adb, simctl or argent without holding it, and tells them how to acquire it. Adds about 20 ms to each tool call.",
+  "web.setup.protect.warn":
+    "If a device in the Corgi list is already in use without Corgi, that session gets blocked too. Remove the device from the list first, or turn this on after that work is done.",
+  "web.setup.state.current": "Installed",
+  "web.setup.state.outdated": "Needs update",
+  "web.setup.state.missing": "Not installed",
+  "web.setup.install": "Install",
+  "web.setup.update": "Update",
+  "web.setup.remove": "Remove",
+  "web.setup.devices.intro":
+    "The device an agent uses when asked to «test on the default device». The first device you create becomes the default.",
+  "web.setup.devices.none": "No default device",
+  "web.setup.devices.create": "Create a device",
+  "web.setup.devices.choose": "Choose from the list…",
+  "web.setup.devices.later":
+    "You can do this later — create devices any time from «Create device» in the dashboard.",
+  "web.setup.back": "Back",
+  "web.setup.next": "Next",
+  "web.setup.finish": "Done",
+  "web.settings.setup": "First-run setup",
+  "web.settings.setupHint": "Check tools, agent connections and default devices again.",
+  "web.settings.openSetup": "Open setup",
 };

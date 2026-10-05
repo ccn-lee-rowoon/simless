@@ -2,6 +2,7 @@ import { z } from "zod";
 import type {
   AcquireResult,
   BusyData,
+  CheckView,
   DeviceView,
   HolderView,
   LeaseItem,
@@ -23,6 +24,7 @@ import { History } from "./history.ts";
 import { registerHookMethods } from "./hook.ts";
 import { EMPTY_LEASE_STATE, type Holder, LeaseManager, LeaseStateSchema } from "./leases.ts";
 import { Registry } from "./registry.ts";
+import { registerSetupMethods, setupNeeded } from "./setup.ts";
 import { type Connection, type Handler, HandlerError } from "./socket.ts";
 import { readJson, writeJson } from "./store.ts";
 
@@ -33,6 +35,12 @@ export interface ServerDeps {
   /** 언어 설정이 system 일 때 볼 선호 언어 — 서버는 macOS 언어 설정을 준다 (R25) */
   systemLanguages?: () => string[];
   now?: () => number;
+  /** 첫 실행 설정 창이 스킬·훅·MCP 를 넣을 때 보는 환경(HOME) — 테스트는 임시 HOME 을 준다 (M14) */
+  env?: NodeJS.ProcessEnv;
+  /** 훅·MCP 에 적을 corgi 명령 — 기본은 지금 실행 중인 corgi */
+  selfCommand?: string[];
+  /** 설정 창의 점검 — 기본은 corgi doctor 와 같은 점검. 테스트는 바꾼다 */
+  setupChecks?: () => Promise<CheckView[]>;
   isAlive?: (pid: number, startedAt: number | undefined) => boolean;
 }
 
@@ -137,6 +145,7 @@ export class CorgiServer {
     registerDeviceMethods(this);
     registerGroupMethods(this);
     registerHookMethods(this);
+    registerSetupMethods(this);
   }
 
   /** 다른 모듈(드라이버 명령 등)이 메서드를 붙인다 */
@@ -194,6 +203,15 @@ export class CorgiServer {
 
   get config(): Config {
     return this.deps.config;
+  }
+
+  get paths(): Paths {
+    return this.deps.paths;
+  }
+
+  /** 첫 실행 설정 창이 쓰는 것 (M14) */
+  get setupDeps(): Pick<ServerDeps, "env" | "selfCommand" | "setupChecks"> {
+    return this.deps;
   }
 
   /** 지금 언어 — 서버가 만드는 오류·진행 문장도 이 언어로 (R25) */
@@ -505,6 +523,7 @@ export class CorgiServer {
         deviceIds: e.deviceIds,
         enqueuedAt: e.enqueuedAt,
       })),
+      setupNeeded: setupNeeded(this.deps.paths),
     };
   }
 

@@ -8,11 +8,23 @@ export interface RunResult {
   stderr: string;
 }
 
-export type Runner = (command: string[], options?: { timeoutMs?: number }) => Promise<RunResult>;
+export interface RunOptions {
+  timeoutMs?: number;
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+}
+
+export type Runner = (command: string[], options?: RunOptions) => Promise<RunResult>;
 
 /** 외부 명령 실행. 시간이 지나면 끝내고 code 124 를 돌려준다. */
 export const run: Runner = async (command, options = {}) => {
-  const proc = Bun.spawn(command, { stdout: "pipe", stderr: "pipe", stdin: "ignore" });
+  const proc = Bun.spawn(command, {
+    stdout: "pipe",
+    stderr: "pipe",
+    stdin: "ignore",
+    cwd: options.cwd,
+    env: options.env,
+  });
   const timer = options.timeoutMs ? setTimeout(() => proc.kill(), options.timeoutMs) : undefined;
   const [stdout, stderr, code] = await Promise.all([
     new Response(proc.stdout).text(),
@@ -27,7 +39,7 @@ export const run: Runner = async (command, options = {}) => {
 export async function runOk(
   runner: Runner,
   command: string[],
-  options?: { timeoutMs?: number },
+  options?: RunOptions,
 ): Promise<string> {
   const result = await runner(command, options);
   if (result.code !== 0) {

@@ -89,8 +89,9 @@ corgi/
 | 명령 | 하는 일 |
 | --- | --- |
 | (배포) | `dist/corgi` 를 `~/.local/share/corgi/versions/<버전>/corgi` 에 두고 `~/.local/bin/corgi` 를 그 파일로 링크한다(§19). 혼자 쓸 땐 저장소에서 `bun link`. 동료와는 **프라이빗 GitHub Release** 에 올리고, 설치 스크립트가 `gh release download`(또는 `curl`)로 받아 배치 → `corgi install` 까지 한다. 브라우저로 받으면 격리 속성 때문에 실행이 막히므로 스크립트로 받는다 |
-| `corgi install` | LaunchAgent(`~/Library/LaunchAgents/corgi.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`corgi`·Android SDK 경로를 절대 경로로** 적는다. 훅 명령도 절대 경로로 등록한다. `~/Applications/Corgi.app` 생성. 스킬·훅·argent 규칙 설치(각각 묻고, `--yes` 로 생략) |
-| `corgi uninstall` | 위를 되돌린다. 만든 디바이스는 지우지 않는다 |
+| `corgi install` | LaunchAgent(`~/Library/LaunchAgents/corgi.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`corgi`·Android SDK 경로를 절대 경로로** 적는다. 스킬 설치, `~/Applications/Corgi.app` 생성 → 앱을 띄우면 **첫 실행 설정 창**(M14)이 뜬다. 보호(훅·규칙)와 MCP 는 그 창에서 고른다 — 터미널만 쓸 때는 `--hook`·`--mcp`. 훅·MCP 명령은 절대 경로로 적는다 |
+| `corgi uninstall` | 위를 되돌린다(훅·규칙·MCP 등록 포함). 만든 디바이스는 지우지 않는다 |
+| 첫 실행 설정 (M14) | 앱이 뜰 때 `status.setupNeeded` 면 설정 창(`?window=setup`)을 연다 — ① 이 Mac 점검(`corgi doctor` 와 같은 점검, 빠진 도구는 설치 명령과 복사 버튼, «다시 확인») ② 에이전트 연결(스킬 권장 · 보호 권장 · MCP 선택 — 버튼 하나로 설치·제거, 서버가 한다) ③ 기본 디바이스(없으면 목록에서 고르거나 생성 창). «완료» 면 `setup.json` 을 남기고 대시보드를 연다. 끝내지 않고 닫으면 다음에 또 뜬다. 설정 창에서 다시 연다 |
 | `Corgi.app` | 메뉴바 앱 + 앱 창(§14). `tray/CorgiTray.swift` 를 컴파일한 실행 파일 + `Info.plist`(`LSUIElement` — 평소엔 Dock 아이콘 없음) + 아이콘, ad-hoc 서명. 더블클릭·Spotlight·Launchpad 에서 연다. Xcode 가 없어 컴파일을 못 하면 브라우저로 웹 화면을 여는 스크립트로 대신한다 |
 | 로그인 항목 이름 | macOS 로그인 항목(«앱 백그라운드 활동»)에는 실행 파일 서명자 이름이 보인다 — 개발 모드는 bun 의 «Jarred Sumner». `Corgi.app` 을 만들 때(3단계) plist 에 `AssociatedBundleIdentifiers` 로 앱을 연결해 «Corgi» 로 보이게 한다. 사용자가 이 항목을 끄면 launchd 가 서버를 띄우지 않으므로 `corgi doctor` 가 확인한다 |
 | 서버 자동 시작 (Q10) | CLI·MCP 는 소켓이 없으면 `launchctl kickstart` 로 켜고 몇 초 기다린다. 훅은 켜지 않는다 |
@@ -323,7 +324,7 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 
 **규칙 (P2)** — `integrations/rules/corgi.md` 를 `corgi install` 이 `~/.claude/rules/corgi.md` 로 따로 설치한다(argent 의 `argent.md` 에 붙이면 argent 업데이트가 덮어쓴다). 다른 에이전트의 전역 규칙 위치는 조사 후.
 
-**설치** — `corgi install` 이 `~/.claude/settings.json` 의 `hooks.PreToolUse` 에 matcher `Bash|mcp__argent__.*`, 명령 `<corgi 절대 경로> hook claude pre-tool-use` 한 줄을 넣는다. 다른 설정·훅은 그대로 두고, 예전 Corgi 훅(명령이 ` hook claude pre-tool-use` 로 끝남)은 바꾸며, 쓰기 전에 `settings.json.corgi-backup` 을 남긴다. `--no-hook` 으로 건너뛰고, `corgi uninstall` 이 지운다. `corgi doctor` 가 훅·규칙을 점검한다.
+**설치** — 첫 실행 설정 창(M14)의 «보호» 또는 `corgi install --hook` 이 `~/.claude/settings.json` 의 `hooks.PreToolUse` 에 matcher `Bash|mcp__argent__.*`, 명령 `<corgi 절대 경로> hook claude pre-tool-use` 한 줄을 넣는다. 다른 설정·훅은 그대로 두고, 예전 Corgi 훅(명령이 ` hook claude pre-tool-use` 로 끝남)은 바꾸며, 쓰기 전에 `settings.json.corgi-backup` 을 남긴다. 기본으로는 넣지 않는다 — 다른 세션이 Corgi 없이 쓰는 기기가 목록에 있으면 그 세션까지 막으므로 사람이 고른다. `corgi uninstall` 이 지운다. `corgi doctor` 가 훅·규칙을 점검하고, `--fix` 는 이미 넣은 것이 예전 것일 때만 고친다.
 
 > Corgi 목록(`corgi list`)의 시뮬레이터·에뮬레이터는 `corgi use` 로 점유한 뒤에만 조작한다(스크린샷·describe 포함). 켜기·끄기는 argent `boot-device` 가 아니라 `corgi use`·`corgi down` 으로 한다. 전문은 `integrations/rules/corgi.md`(영어).
 
@@ -348,7 +349,9 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 
 **그룹 화면** (M9·R21) — 그룹 목록(이름·설명·디바이스 수·마지막으로 고친 사람/에이전트), 만들기·고치기(이름·설명·디바이스 고르기 — 목록에서 체크), 삭제. 없는 디바이스(밖에서 지워짐)는 표시하고 빼게 한다.
 
-**설정** (M11, 새 창) — 언어(시스템 따름·한국어·English, R25) · 자동 해제 시간 · Android RAM·시스템 이미지 · simslim 프로필. `config.json` 에 쓰고 서버가 바로 반영한다.
+**설정** (M11, 새 창) — 첫 실행 설정 다시 열기(M14) · 언어(시스템 따름·한국어·English, R25) · 자동 해제 시간 · Android RAM·시스템 이미지 · simslim 프로필. `config.json` 에 쓰고 서버가 바로 반영한다.
+
+**첫 실행 설정 창** (M14) — `?window=setup`, 앱에서는 Swift 별도 창(처음 뜰 때 서버가 아직 안 떴으면 2초 간격으로 다시 물어본다). 단계 표시 + 단계마다 한 화면, 아래에 이전·다음(창 아래에 붙음). 생성 창(M1)을 그 창 안에서 연다. «완료» → 앱이면 Swift 에 `{open:"dashboard"}`·`{close:"setup"}`, 브라우저면 `/` 로.
 
 **디자인** (M12) — 귀엽지 않고 단정하게. 촘촘한 표 형태 목록, 시스템 글꼴, 숫자(폭·해상도·메모리)는 고정폭, 강조색 하나. 아이콘은 겹친 기기 프레임 같은 추상적 단색 모양(메뉴바는 템플릿 이미지). **구현 전에 시안을 보고 정한다.**
 
@@ -379,7 +382,8 @@ Corgi 는 하지 않는다. 에이전트가 `corgi list --json`(또는 `corgi us
 | 3 ✅ | 웹 UI + `Corgi.app` (앞당김 — 사람이 직접 보고 확인하려고) — HTTP API·SSE·토큰, 메인 목록(All·Android·iOS 탭), 생성(+)(iOS 시뮬레이터·Android 대표 프로필·직접 입력), 슬림 수치와 슬림 전후 비교, 메뉴바 앱(단색 아이콘·«대시보드 열기»), `corgi ui` | 사람이 메뉴바·브라우저로 전부 관리한다 |
 | 4 ✅ | **사양 변경 (2026-10-05)** — ① 시안(디자인 M12)으로 화면 확정 (사용자 요청으로 건너뛰고 A안 — 라이트 그래파이트 + 파랑, 다크 잉크 + 민트 — 으로 바로 구현) ② 이 Mac 디바이스 전부 목록·레지스트리 재구성(R20, 사용 안 함 제거) ③ 생성: 기종 + OS, 슬림 선택·ⓘ(M1·M4) ④ 메모·기본 디바이스·그룹(R21·R22·R24) ⑤ 그룹 점유 모드·교착(R23, §8) ⑥ 슬림 자동 재적용·`SLIM` 배지(M6) ⑦ 오류 코드·현지화·설정(R25·M11) ⑧ 앱 창(WKWebView, R11) ⑨ 스킬 영어로 다시 쓰기. 항목마다 커밋 | 용도별 그룹·기본 디바이스로 요청하고, 앱 창에서 전부 관리한다 |
 | 5 (구현) | 보호 — Claude Code 훅(`corgi hook claude pre-tool-use`), 규칙(`~/.claude/rules/corgi.md`), 서버 꺼짐 처리, `corgi install`·`doctor` 연동. 대상은 Corgi 목록의 디바이스(P1). **설치는 사용자 결정 대기** — 다른 세션이 쓰는 기기가 목록에 있으면 그 세션이 막히므로(2026-10-05 보류). 남은 것: 다른 에이전트 어댑터(조사 후, Q16) | 다른 세션이 남의 디바이스를 못 건드린다 |
-| 6 ✅ | MCP 래퍼 — `corgi mcp`(stdio). 도구: `corgi_status`·`corgi_use`(디바이스·그룹·기본, all·available, 기다리기는 45초씩 나눠 «STILL_QUEUED → 다시 호출»)·`corgi_release`·`corgi_down`·`corgi_catalog`·`corgi_create`·`corgi_group_save`. 오류는 코드부터(`BUSY: …`). 세션은 CLI 처럼 프로세스 트리, 서버가 꺼져 있으면 켠다. **등록은 사용자 결정** — `claude mcp add --scope user corgi -- <corgi 절대 경로> mcp` | 에이전트가 사용법 없이 바로 쓴다 |
+| 5.5 ✅ | 첫 실행 설정 창 (M14, 2026-10-05) — 앱을 처음 열면 점검 → 에이전트 연결(스킬·보호·MCP) → 기본 디바이스를 차례로. 서버 `setup.*`, `corgi install` 은 보호·MCP 를 기본으로 넣지 않음(`--hook`·`--mcp`) | 터미널 없이 앱에서 설정을 끝낸다 |
+| 6 ✅ | MCP 래퍼 — `corgi mcp`(stdio). 도구: `corgi_status`·`corgi_use`(디바이스·그룹·기본, all·available, 기다리기는 45초씩 나눠 «STILL_QUEUED → 다시 호출»)·`corgi_release`·`corgi_down`·`corgi_catalog`·`corgi_create`·`corgi_group_save`. 오류는 코드부터(`BUSY: …`). 세션은 CLI 처럼 프로세스 트리, 서버가 꺼져 있으면 켠다. **등록은 사용자 결정** — 첫 실행 설정 창의 «MCP 도구» 또는 `corgi install --mcp` | 에이전트가 사용법 없이 바로 쓴다 |
 | U | 업데이트 — `scripts/release.ts`, 확인·알림, `corgi update`·되돌리기 (§19). **리모트·첫 Release 가 생긴 뒤**, 5단계 이후 아무 때나 | 새 버전을 알림 받고 명령 한 번으로 올린다 |
 | 나중 | 스크린샷 모아 보기 (화면 탭) · 일괄 설치·실행·딥링크 (L1~L3) · 슬림된 디바이스 복제 (L4) · 이름 변경 (Q17) — 필요하면 | — |
 
