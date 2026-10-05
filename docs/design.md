@@ -36,6 +36,7 @@
 | 프로세스 정보 | `bun:ffi` 로 macOS libproc(`proc_pidinfo`·`proc_pidpath`) 호출 | 세션 찾기(§7)·종료 감지. `ps` 는 한 번에 20~80ms, FFI 는 약 3ms(실측) — 훅이 Bash 마다 돌기 때문 |
 | MCP | `@modelcontextprotocol/sdk` (5단계) | stdio |
 | 웹 화면 | React + Bun 내장 번들러(HTML import) | Vite 없이 `Bun.serve` 가 서빙. `Corgi.app` 창(WKWebView)과 브라우저가 같은 화면을 연다 |
+| 플랫폼 로고 | `simple-icons` (CC0) | 애플·안드로이드 로고 경로 두 개만 쓴다(번들에도 그 둘만 들어간다). 손으로 그리면 모양이 어긋난다 |
 | 현지화 | 의존 없이 `src/shared/i18n/` 의 사전(`ko`·`en`) | 웹 화면·CLI 가 같은 사전을 쓴다. 메뉴바(Swift)는 문구가 적어 Swift 안에 따로 둔다 |
 | 테스트 | `bun test` | |
 | 포맷·린트·타입 | Biome · `tsc --noEmit` | |

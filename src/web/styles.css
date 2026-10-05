@@ -536,7 +536,7 @@ summary:focus-visible {
 }
 
 .platform-icon-ios {
-  color: var(--muted);
+  color: var(--text);
 }
 
 .agent {
