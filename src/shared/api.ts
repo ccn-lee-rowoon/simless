@@ -165,3 +165,11 @@ export function memoryChange(before?: number, after?: number): string | undefine
   const percent = Math.round(((after - before) / before) * 100);
   return `${gb(before)} → ${gb(after)} (${percent <= 0 ? "−" : "+"}${Math.abs(percent)}%)`;
 }
+
+/**
+ * 먼저 보여 줄 디바이스 — 켜진 것·기본·그룹에 든 것·Corgi 가 만든 것·누가 쓰는 것 (M5).
+ * 나머지(Xcode 가 만들어 둔 시뮬레이터 등)는 화면에서 접고 CLI status 에서는 수만 보인다.
+ */
+export function isPrimaryDevice(d: DeviceView): boolean {
+  return d.booted || d.default || d.groups.length > 0 || d.createdByCorgi || d.holder !== undefined;
+}

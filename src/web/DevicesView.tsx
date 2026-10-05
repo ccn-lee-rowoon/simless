@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState } from "react";
-import type { DeviceView, StatusResult } from "../shared/api.ts";
+import { type DeviceView, isPrimaryDevice as isPrimary, type StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
 import { call } from "./api.ts";
@@ -36,11 +36,6 @@ function remember(key: string, value: string): void {
   } catch {
     // 기억 못 해도 화면은 그대로 쓴다
   }
-}
-
-/** 먼저 보여 줄 디바이스 — 켜진 것·기본·그룹에 든 것·Corgi 가 만든 것·누가 쓰는 것 (M5) */
-function isPrimary(d: DeviceView): boolean {
-  return d.booted || d.default || d.groups.length > 0 || d.createdByCorgi || d.holder !== undefined;
 }
 
 function compare(a: DeviceView, b: DeviceView): number {

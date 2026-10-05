@@ -102,6 +102,7 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.status.held": "Holding: {ids}",
   "cli.status.noneHeld": "Holding nothing",
   "cli.status.queued": " · waiting #{position}",
+  "cli.status.others": "{count} other devices on this Mac — see them all with corgi list",
   "cli.status.server": "corgi server {version}",
   "cli.acquire": "Acquire devices — by device, group, or default device",
   "cli.arg.devices": "Device IDs or names",

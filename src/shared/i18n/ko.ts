@@ -110,6 +110,7 @@ export const ko = {
   "cli.status.held": "점유: {ids}",
   "cli.status.noneHeld": "점유 없음",
   "cli.status.queued": " · 대기 {position}번째",
+  "cli.status.others": "이 Mac 의 다른 디바이스 {count}대 — corgi list 로 전부 보기",
   "cli.status.server": "corgi 서버 {version}",
   "cli.acquire": "디바이스를 점유한다 — 디바이스·그룹·기본 디바이스로",
   "cli.arg.devices": "디바이스 ID 또는 이름",

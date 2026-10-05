@@ -63,6 +63,20 @@ export function formatHolder(holder: HolderView & { deviceId?: string }): string
   });
 }
 
+/** 슬림 표시 (M6) — SLIM 하나, 켜져 있으면 수치와 슬림 전후 비교, 실패만 따로 */
+function slimText(d: DeviceView): string {
+  if (d.slim === "none") return "";
+  if (d.slim === "failed") return t("slim.failed");
+  if (d.slim === "applying") return t("slim.applying");
+  const stats = d.slimStats;
+  if (!stats) return t("slim.applied");
+  const memory =
+    memoryChange(d.slimBaseline?.memoryBytes, stats.memoryBytes) ??
+    (stats.memoryBytes ? `${(stats.memoryBytes / 1024 ** 3).toFixed(1)}GB` : "");
+  const unit = t(stats.unit === "packages" ? "slim.unit.packages" : "slim.unit.daemons");
+  return `${t("slim.applied")} ${stats.disabled}/${stats.total} ${unit} ${memory}`.trim();
+}
+
 export function devicesTable(devices: DeviceView[]): string {
   if (devices.length === 0) return t("table.noDevices");
   const rows = [...devices]
@@ -72,12 +86,7 @@ export function devicesTable(devices: DeviceView[]): string {
       d.label,
       d.name,
       d.booted ? `${t("common.on")} ${d.targetId ?? ""}`.trim() : t("common.off"),
-      d.slimStats
-        ? `${d.slim} ${d.slimStats.disabled}/${d.slimStats.total} ${
-            memoryChange(d.slimBaseline?.memoryBytes, d.slimStats.memoryBytes) ??
-            (d.slimStats.memoryBytes ? `${(d.slimStats.memoryBytes / 1024 ** 3).toFixed(1)}GB` : "")
-          }`.trim()
-        : d.slim,
+      slimText(d),
       [d.default ? t("table.default") : "", d.createdByCorgi ? "Corgi" : ""]
         .filter(Boolean)
         .join(" "),
