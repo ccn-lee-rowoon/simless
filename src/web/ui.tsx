@@ -223,21 +223,20 @@ export function useMenuDismiss(): void {
 }
 
 /** 앱 아이콘 — 폭이 다른 기기 세 대 (M12) */
+/** 로고 — 크기가 다른 화면 둘을 이음매 없는 한 줄로 (simulator + seamless). icon.svg 와 같은 경로 */
 export function Logo({ size = 24 }: { size?: number }) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 26 26"
+      viewBox="168 168 688 688"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth={size >= 40 ? 44 : 58}
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <rect x="1.5" y="11" width="5" height="11" rx="1.4" />
-      <rect x="8.5" y="8" width="6.5" height="14" rx="1.6" />
-      <rect x="17" y="4" width="7.5" height="18" rx="1.8" />
+      <path d="M 470 560 C 446 470 432 356 368 356 L 280 356 Q 216 356 216 420 L 216 716 Q 216 780 280 780 L 368 780 C 432 780 446 650 470 560 C 498 452 510 228 600 228 L 744 228 Q 808 228 808 292 L 808 716 Q 808 780 744 780 L 600 780 C 510 780 498 668 470 560 Z" />
     </svg>
   );
 }
