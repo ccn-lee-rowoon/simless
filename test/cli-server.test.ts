@@ -57,7 +57,7 @@ describe("CLI ↔ 서버 (R13·R14)", () => {
   });
 });
 
-describe("표 출력", () => {
+describe("표 출력 — 슬림 실패 이유 (M6)", () => {
   test("슬림이 실패한 디바이스는 이유를 표 아래에 적는다", async () => {
     const { devicesTable } = await import("../src/cli/format.ts");
     const device = {

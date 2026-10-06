@@ -21,7 +21,7 @@ const start = (options: { isAlive?: (pid: number) => boolean } = {}) =>
     },
   });
 
-describe("소켓 서버", () => {
+describe("소켓 서버 — 점유·대기·자동 해제 (R13·R14·R17)", () => {
   test("status — 디바이스와 이 세션의 점유를 돌려준다", async () => {
     const { socket } = await start();
     const { result } = await call<StatusResult>(socket, "status", {}, session("A"));
@@ -154,7 +154,7 @@ describe("큰 응답", () => {
   });
 });
 
-describe("점유 기록", () => {
+describe("점유 기록 (M13)", () => {
   test("lease.history — 최근 것부터, 세션으로 거를 수 있고 서버를 다시 켜도 남는다", async () => {
     const env = tempEnv();
     const driver = fakeDriver();

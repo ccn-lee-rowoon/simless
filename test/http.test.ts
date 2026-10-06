@@ -73,7 +73,7 @@ describe("웹 UI HTTP (R11)", () => {
   });
 });
 
-describe("checkRequest", () => {
+describe("웹 요청 검사 — Host·Origin (R11)", () => {
   const token = "t";
   const req = (headers: Record<string, string>, method = "POST") =>
     new Request("http://127.0.0.1:8791/api/call?", { method, headers });

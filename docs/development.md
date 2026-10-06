@@ -13,7 +13,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 | `bun run check` | Biome(린트·포맷) + `tsc --noEmit` — 커밋 전에 반드시 |
 | `bun run test` | 모든 테스트. 한 파일만: `bun test test/leases.test.ts` |
 | `bun run test:watch` | 고칠 때마다 다시 |
-| `bun run trace` | 요구사항 ID 마다 테스트·코드에서 몇 번 가리키나. `--missing` 은 테스트가 없는 것만 |
+| `bun run trace` | 요구사항 ID 마다 확인 방법·테스트·코드에서 몇 번 가리키나, 끝에 확인 방법별 수. `--missing` 은 확인이 `테스트` 인데 테스트가 없는 것만 |
 | `bun run format` | 포맷·import 정리를 고쳐 쓴다 |
 | `bun run build` | `dist/simless` 단일 실행 파일 — 진입점·묶음 파일(`with { type: "file" }`)을 바꿨을 때 |
 
@@ -90,13 +90,51 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 - **준비 도구**(`test/helpers.ts`) — `tempEnv()` 임시 상태·HOME·짧은 소켓 경로, `fakeDriver()` 아무것도 켜지 않는 드라이버, `seedDevice()` 디바이스 넣기, `session()` 세션 정보
 - **점검(`runChecks`, S1·S2)** — `probe: { run, which, env }` 로 가짜 명령·임시 HOME 을 준다(`test/checks.test.ts`). 진짜 `brew`·`xcrun`·`launchctl` 을 부르지 않는다
 - **이 Mac 을 건드리지 않는다** — 설치·훅·MCP 를 부르는 테스트는 `deps: (env) => ({ env: { ...env.env, PATH: "" } })` 로 HOME 을 임시 폴더로, PATH 를 비워 진짜 `claude` 등을 못 쓰게 한다. 실제 기기는 테스트에서 켜지 않는다
-- **이름에 요구사항 ID** — `describe("그룹 (R21)")` 처럼. `bun run trace` 가 이걸 센다
+- **이름에 요구사항 ID** — `describe("그룹 (R21)")` 처럼. `bun run trace` 가 이걸 세고, requirements.md 에서 확인이 `테스트` 인 요구사항에 테스트가 없거나 없는 ID 를 쓰면 `test/requirements.test.ts` 가 실패한다
 - **문서도 검사한다** — 스킬처럼 요구사항을 담은 문서는 꼭 있어야 할 문장을 테스트로(`test/skill.test.ts`)
 - **주의** — 같은 프로세스의 소켓 서버를 부르는 promise 에 `expect(…).rejects` 를 쓰지 않는다(Bun 1.3.6 오동작). `.catch((e) => e)` 로 받아 검사한다. `afterEach` 는 helpers.ts 맨 위에 두면 파일마다 걸리지 않는다 — `testServers()` 가 부른 파일에 건다
 
+### 테스트 파일 지도
+
+| 파일 | 다루는 것 | 요구사항 |
+| --- | --- | --- |
+| `requirements.test.ts` | requirements.md ↔ 테스트 이름이 맞는지 (ID 중복·확인 칸·테스트 없는 요구사항·없는 ID·ID 순서) | 전체 |
+| `architecture.test.ts` | 폴더 경계(설계 §3) | — |
+| `server.test.ts` | 소켓 서버 — status·점유·BUSY·기다리기·세션 종료 해제·점유 기록 | R13·R14·R17·M13 |
+| `leases.test.ts` | LeaseManager 순수 로직 — 대기열·비어 있는 것만·교착·기록 | R13·R14·R17·R23·M13 |
+| `devices.test.ts` | 만들기·이름·슬림·켜기·삭제·추가·빼기, 사람의 켜기·끄기, 슬림 수치·기준값, 기본 디바이스 만들어 빌려주기 | R1·R3·R5·R20·R22·M1·M3·M4·M6·M8·M10·P1 |
+| `groups.test.ts` | 그룹·기본 디바이스·그룹 점유(all·available·대기) | R21·R22·R23·R24 |
+| `registry.test.ts` | 레지스트리 저장·옮기기(예전 형식) | R4·R20·R21·R22 |
+| `android-driver.test.ts`·`ios-driver.test.ts` | 드라이버 — 가짜 명령으로 만들기·켜기·슬림·기종 목록 | R1·R2·R4·R5·R7·M1·M4·M6·M10 |
+| `measure.test.ts` | 슬림 전후 메모리 비교 문구 | M10 |
+| `hook.test.ts` | 훅 대상 뽑기(heredoc 포함)·서버 꺼짐·점유 판정·`simless hook` 출력 | P1·P3·P4·P5·P6·P8·P9 |
+| `claude-hook.test.ts` | Claude Code 훅·규칙 설치 | P2·P3 |
+| `session.test.ts` | 세션 = 에이전트 프로세스·에이전트 세션 ID | R18 |
+| `cli.test.ts`·`cli-server.test.ts` | CLI 종료 코드·서버와 주고받기·표 출력 | R12·R13·R14·M6 |
+| `mcp.test.ts` | MCP 도구 | R12 |
+| `http.test.ts` | 웹 HTTP — 토큰·Host·Origin·웹 메서드 | R11 |
+| `security.test.ts` | `SECURITY.md` 의 규칙 — 다른 세션 작업 폴더 감추기·토큰·파일 권한 | — |
+| `setup.test.ts` | 첫 실행 설정 창 — 스킬·보호·MCP·스킬 위치·바로 설치 | M14·S9·R12 |
+| `checks.test.ts` | 점검(`simless doctor`·설정 창) — 가짜 명령으로 | S1·S2 |
+| `skill.test.ts` | 스킬 문서에 꼭 있어야 할 문장 | R16·S3~S11 |
+| `uninstall.test.ts` | 제거 — 스킬·보호·데이터, 서버 등록은 가짜로 | S12 |
+| `builds.test.ts` | 네이티브 빌드 캐시 — 지문·보관·정리·찾기·설치 | R26 |
+| `history.test.ts` | 점유 기록 SQLite·보관 기간 | M13 |
+| `i18n.test.ts`·`config.test.ts` | 문구 사전(키·자리 표시자)·설정 | R25·M11 |
+| `launchd.test.ts`·`app-bundle.test.ts` | 서버 등록 plist·`Simless.app` 만들기·메뉴바 로그인 항목 | R11 |
+
+새 파일을 만들면 이 표에 한 줄 더한다.
+
+### 요구사항을 더하거나 바꿀 때
+
+1. `requirements.md` 의 알맞은 표에 **ID 순서대로** 한 줄 — 마지막 칸 «확인» 에 `테스트`·`화면`·`실사용`·`argent`·`미구현`·`—` 중 하나(뜻은 requirements.md «읽는 법»)
+2. `테스트` 면 테스트 이름에 그 ID 를 넣는다 — 없으면 `test/requirements.test.ts` 가 실패한다
+3. 지울 때는 줄을 지우지 않고 ~~취소선~~ + 확인 `—` — ID 를 다시 쓰지 않는다
+4. `bun run trace` 로 확인 방법별 수와 빠진 것을 본다
+
 ## 5. 화면 직접 확인
 
-웹 화면은 자동 테스트가 없다(`bun run trace --missing` 의 M2·M5·M7·M9). 바꾸면 눈으로 확인한다.
+웹 화면은 자동 테스트가 없다 — requirements.md 에서 확인이 `화면` 인 것(M2·M5·M7·M9·M12). 바꾸면 눈으로 확인한다.
 
 1. **시험 서버** — 진짜 서버(8791)·진짜 HOME 을 건드리지 않게 따로 띄운다
    ```sh

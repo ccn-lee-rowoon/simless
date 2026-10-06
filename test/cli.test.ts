@@ -17,7 +17,7 @@ async function run(args: string[], stdin = "") {
   return { stdout, stderr, exitCode };
 }
 
-describe("simless", () => {
+describe("simless CLI (R12)", () => {
   test("--version 은 package.json 버전을 출력한다", async () => {
     const { stdout, exitCode } = await run(["--version"]);
     expect(exitCode).toBe(0);
@@ -30,7 +30,7 @@ describe("simless", () => {
   });
 });
 
-describe("simless hook", () => {
+describe("simless hook (P3)", () => {
   test("claude pre-tool-use 는 입력을 읽고 아무것도 출력하지 않은 채 통과(0)", async () => {
     const input = JSON.stringify({
       session_id: "test",

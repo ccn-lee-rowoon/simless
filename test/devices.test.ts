@@ -7,7 +7,7 @@ const start = testServers();
 
 const android360 = { model: "Small 360" };
 
-describe("디바이스 명령", () => {
+describe("디바이스 명령 (R1·P1)", () => {
   test("만들면 기본 이름·슬림 적용, 같은 크기도 다시 만들고 이름만 겹치지 않는다 (M3·M4·R5)", async () => {
     const { A } = await start();
     const device = (await A("device.create", android360)) as DeviceView;
@@ -186,7 +186,7 @@ describe("디바이스 명령", () => {
   });
 });
 
-describe("슬림 재적용", () => {
+describe("슬림 재적용 (M6)", () => {
   test("켤 때 풀린 것을 찾으면 다시 적용하고, 결과에는 바뀐 상태가 나온다 (M6)", async () => {
     const { A, server, driver } = await start();
     const device = (await A("device.create", android360)) as DeviceView;
@@ -200,7 +200,7 @@ describe("슬림 재적용", () => {
   });
 });
 
-describe("기종 목록과 만들기", () => {
+describe("기종 목록과 만들기 (M1·M4)", () => {
   test("catalog 은 플랫폼별 기종·OS·슬림하면 꺼지는 것을 준다 (M1·M4)", async () => {
     const { A } = await start();
     const { platforms, problems } = await A("catalog");
@@ -234,7 +234,7 @@ describe("기종 목록과 만들기", () => {
   });
 });
 
-describe("사람(웹 UI)의 켜기·끄기", () => {
+describe("사람(웹 UI)의 켜기·끄기 (R11·P1)", () => {
   test("점유 없이 켜고 끈다 — 점유 기록이 남지 않는다", async () => {
     const { H, server, driver } = await start();
     const device = (await H("device.create", android360)) as DeviceView;
@@ -254,7 +254,7 @@ describe("사람(웹 UI)의 켜기·끄기", () => {
   });
 });
 
-describe("슬림 수치", () => {
+describe("슬림 수치 (M10)", () => {
   test("켜진 디바이스에는 뒤에서 읽어 둔 슬림 수치가 붙는다", async () => {
     const { H } = await start();
     const device = (await H("device.create", android360)) as DeviceView;
@@ -266,7 +266,7 @@ describe("슬림 수치", () => {
   });
 });
 
-describe("직접 입력", () => {
+describe("직접 입력 (M1)", () => {
   test("Android 크기를 직접 넣어 만든다 — 기종과 직접 입력은 함께 못 준다", async () => {
     const { A } = await start();
     const device = (await A("device.create", {
@@ -284,7 +284,7 @@ describe("직접 입력", () => {
   });
 });
 
-describe("슬림 전 기준값", () => {
+describe("슬림 전 기준값 (M10)", () => {
   test("만들 때 슬림 전에 켜서 재고, 끄고, 슬림한다", async () => {
     const { A, driver } = await start();
     const device = (await A("device.create", android360)) as DeviceView;

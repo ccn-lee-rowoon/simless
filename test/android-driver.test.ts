@@ -259,7 +259,7 @@ describe("AndroidDriver 슬림 확인 (M6)", () => {
   });
 });
 
-describe("parseFootprint", () => {
+describe("parseFootprint — 메모리 (M10)", () => {
   test("avdslim measure 의 Activity Monitor 메모리를 바이트로", async () => {
     const { parseFootprint } = await import("../src/server/drivers/android.ts");
     const text = "🖥️  HOST (macOS) Footprint:\n   Activity Monitor Memory (Footprint): 7583 MB\n";
@@ -328,7 +328,7 @@ describe("AndroidDriver 기종 목록·만들기 (R1·R2·M1)", () => {
   });
 });
 
-describe("parseAvdslimProfiles", () => {
+describe("parseAvdslimProfiles (M4)", () => {
   test("꺼지는 묶음과 패키지 수, 끄지 않는 것 — 공격적 모드는 뺀다 (M4 ⓘ)", () => {
     const text = [
       "📋 AVD-SLIM Slimming Categories & Packages:",

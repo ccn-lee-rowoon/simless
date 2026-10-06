@@ -20,7 +20,7 @@ describe("Simless.app (R11)", () => {
   });
 });
 
-describe("메뉴바 로그인 항목", () => {
+describe("메뉴바 로그인 항목 (R11)", () => {
   test("로그인 시 open -a 로 앱을 한 번 띄운다 (KeepAlive 없음)", () => {
     const xml = menubarAgentPlist("/Users/me/Applications/Simless.app");
     expect(xml).toContain(

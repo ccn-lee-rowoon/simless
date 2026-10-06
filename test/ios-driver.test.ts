@@ -239,7 +239,7 @@ describe("IosDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
   });
 });
 
-describe("parseSimslimProfiles", () => {
+describe("parseSimslimProfiles (M4)", () => {
   test("묶음 이름과 «When disabled» 설명, 늘 켜 두는 것 (M4 ⓘ)", () => {
     const text = [
       "siri           Siri & Intelligence",

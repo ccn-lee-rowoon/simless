@@ -196,7 +196,7 @@ describe("첫 실행 설정 (M14)", () => {
   });
 });
 
-describe("Claude Code MCP 등록", () => {
+describe("Claude Code MCP 등록 (R12)", () => {
   test("등록 인자 — 사용자 범위, simless 명령 뒤에 mcp", () => {
     expect(mcpAddArgs(["/usr/local/bin/bun", "/src/main.ts"])).toEqual([
       "mcp",

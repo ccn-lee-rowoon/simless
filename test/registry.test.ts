@@ -105,7 +105,7 @@ describe("Registry 그룹·기본 디바이스 (R21·R22)", () => {
   });
 });
 
-describe("Registry — 이름을 바꾸기 전 형식", () => {
+describe("Registry — 예전 이름 시절 형식 읽기", () => {
   test("createdByCorgi 키를 createdBySimless 로 읽는다", () => {
     const dir = mkdtempSync(join(tmpdir(), "simless-reg-"));
     const path = join(dir, "registry.json");
