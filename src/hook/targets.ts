@@ -58,7 +58,45 @@ function segments(command: string): string[][] {
     .filter((w) => w.length > 0);
 }
 
-function bashTargets(command: string): Targets | undefined {
+/**
+ * 여는 줄에 이 낱말이 있으면 heredoc 본문이 실행될 수 있다 — 셸·인터프리터·명령을 대신 실행하는 것.
+ * 없으면(`cat > 파일`·`git commit -F -`·`tee` …) 본문은 글(데이터)이라 대상을 찾지 않는다.
+ */
+const HEREDOC_EXECUTORS =
+  /(^|[\s/;|&(`$])(sh|bash|zsh|fish|dash|ksh|python[\d.]*|node|bun|bunx|deno|npx|ruby|perl|php|lua|osascript|swift|expect|tclsh|eval|source|exec|xargs|env|sudo|ssh|nohup|time|watch|adb|xcrun|simctl|emulator|simslim|avdslim)(?=$|[\s;|&)`])/;
+
+/**
+ * 실행되지 않는 heredoc 본문을 지운다 (P4, 결정 기록 «훅은 … 문자열 포함»).
+ * 파일에 쓰는 스크립트·커밋 메시지·문서 본문에 기기 이름과 adb 가 같이 들어 있으면 막히던 오탐을 없앤다.
+ * 그렇게 쓴 파일을 나중에 실행하는 호출은 원래부터 훅이 안을 볼 수 없으므로 새 구멍이 아니다.
+ */
+export function stripDataHeredocs(command: string): string {
+  const lines = command.split("\n");
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    out.push(line);
+    const opener = /<<(-?)\s*(['"]?)([A-Za-z_][\w.-]*)\2/g;
+    const ends: { tag: string; dash: boolean }[] = [];
+    for (const m of line.matchAll(opener)) ends.push({ dash: m[1] === "-", tag: m[3] ?? "" });
+    if (ends.length === 0) continue;
+    const keep = HEREDOC_EXECUTORS.test(line.replace(opener, " "));
+    // 한 줄에 heredoc 이 여럿이면 차례로 본문이 온다
+    for (const { tag, dash } of ends) {
+      while (i + 1 < lines.length) {
+        i++;
+        const body = lines[i] ?? "";
+        const done = (dash ? body.replace(/^\t+/, "") : body) === tag;
+        if (keep || done) out.push(body);
+        if (done) break;
+      }
+    }
+  }
+  return out.join("\n");
+}
+
+function bashTargets(full: string): Targets | undefined {
+  const command = stripDataHeredocs(full);
   if (!DEVICE_TOOLS.test(command)) return undefined;
   const targets: Targets = { ids: [], boots: [], allAndroid: false, allIos: false };
   // 명령 문자열 안에 보이는 낱말은 모두 후보 — 셸 문법을 파싱하지 않는다(설계 결정 기록)

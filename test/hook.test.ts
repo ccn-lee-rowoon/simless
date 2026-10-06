@@ -53,6 +53,33 @@ describe("훅 대상 뽑기 (P4·P6)", () => {
       "simless_ab12",
     ]);
   });
+
+  test("파일·커밋 메시지로 가는 heredoc 본문은 글이라 보지 않는다 — 실행되는 heredoc 은 본다 (P4)", () => {
+    // 문서를 고치는 스크립트를 파일로 쓰기만 한다 — 본문에 adb 와 AVD ID 가 있어도 통과
+    expect(
+      bash("cat > /tmp/fix.py <<'EOF'\nnote = 'run adb -s emulator-5554 for simless_ab12'\nEOF"),
+    ).toBeUndefined();
+    expect(
+      bash("git commit -q -F - <<EOF\nfix: adb reverse on simless_ab12\nEOF\necho done"),
+    ).toBeUndefined();
+    expect(bash("tee notes.md <<-EOF\n\tadb shell on simless_ab12\n\tEOF")).toBeUndefined();
+    // 본문 밖의 명령은 그대로 본다
+    const after = bash("cat > a.txt <<EOF\nsimless_ab12\nEOF\nadb -s emulator-5554 shell ls")?.ids;
+    expect(after).toContain("emulator-5554");
+    expect(after).not.toContain("simless_ab12");
+
+    // 셸·인터프리터로 들어가는 본문은 실행되므로 본다
+    expect(bash("bash <<EOF\nadb -s emulator-5554 shell ls\nEOF")?.ids).toContain("emulator-5554");
+    expect(
+      bash("python3 - <<'PY'\nimport os; os.system('adb -s emulator-5554 shell ls')\nPY")?.ids,
+    ).toContain("emulator-5554");
+    expect(bash("cat <<EOF | sh\nadb shell ls\nEOF")?.allAndroid).toBe(true);
+    expect(bash('eval "$(cat <<EOF\nadb -s emulator-5554 shell ls\nEOF\n)"')?.ids).toContain(
+      "emulator-5554",
+    );
+    // 끝 표시가 없으면 끝까지 본문
+    expect(bash("cat > a.txt <<EOF\nadb -s emulator-5554 shell ls")).toBeUndefined();
+  });
 });
 
 describe("서버가 꺼졌을 때 (P9)", () => {
