@@ -73,8 +73,12 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 ### 스킬·규칙 고치기
 
 - `integrations/skill/simless/SKILL.md`·`integrations/rules/simless.md` — 커밋 type 은 `docs`
-- 요구사항(S1~S11)을 담은 문장은 `test/skill.test.ts` 가 검사한다 — 바꾸면 테스트도 같이
+- 요구사항(S1~S12)을 담은 문장은 `test/skill.test.ts` 가 검사한다 — 바꾸면 테스트도 같이
 - 이 Mac 에 반영: `simless skill install`(넣어 둔 모든 곳). 서버는 10분마다 예전 스킬을 찾아 앱에 알린다
+
+### 이 Mac 에 설치하는 것 하나 더하기 (S1·S12)
+
+`simless install`·설정 창이 새 파일·설정 항목을 넣게 되면 **지우는 쪽도 같이** 고친다 — `src/install/uninstall.ts`(`removeIntegrations`·`dataDirs`). 안 그러면 `simless uninstall`·«Simless 제거» 뒤에 그것만 남는다. 테스트는 `test/uninstall.test.ts`. 무엇을 어디에 쓰는지는 `SECURITY.md` §3 규칙(정해 둔 위치만, Simless 항목만)을 따른다.
 
 ### 다른 에이전트 연결 (Q16)
 

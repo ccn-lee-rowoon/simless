@@ -10,6 +10,7 @@
 | `reference-design-draft.md` | 요구사항 정리 **전** 첫 설계 초안 — **확정 아님, 참고용**. `requirements.md` 와 충돌하면 그쪽이 이긴다 |
 | `HANDOFF.md` | 이 파일 — 배경, 실측으로 확인한 사실, 지금 머신 상태, 시작 프롬프트 |
 | `docs/design.md` | 설계안 — 저장소 구조·기술 선택·점유·훅·CLI·단계 (**v0.3**) |
+| `SECURITY.md` | 보안 — 지키는 것·지키지 않는 것·고칠 때 지킬 규칙·알려진 약한 점 |
 | `AGENTS.md` | 작업 규칙 정본 — 읽는 순서, 작업마다 확인할 것, 문서 규칙, **커밋 규칙** (`CLAUDE.md` 는 이것을 불러온다) |
 
 ## 진행 상태
@@ -28,7 +29,9 @@
 - **2026-10-05 이름 변경** — Corgi → **Simless**(simulator + seamless, «Make simulator management seamless.»). 이 Mac 은 `simless install` 로 옮김: 예전 서버·메뉴바·앱 내림, 데이터 폴더 `~/Library/Application Support/simless`·`~/.config/simless`·`~/Library/Logs/simless` 로 이동, 스킬·규칙·훅·MCP 를 새 이름으로. 예전 상태 백업은 세션 스크래치패드에만 있었다. 저장소 폴더는 2026-10-06 `…/corgi` → `…/simless` 로 바꿨다(서버 등록·`bun link`·Claude Code 훅·MCP 를 새 경로로 다시 설치)
 - **2026-10-05 추가** — 점유 기록 SQLite(90일 보관), 스킬: 모바일 앱 작업에서만 반응·세션마다 자기 Metro(S11)·설치 범위(기본 전역, 프로젝트 선택 — `simless skill`)·업데이트 알림(대시보드 띠·메뉴바), 기본 디바이스가 없으면 만들어서 빌려주기(`--create`)
 - **다른 에이전트 연결 구현** (2026-10-05) — Copilot CLI·Codex·Cursor·Gemini CLI: 세션 ID 로 세션 묶기, 훅 어댑터, 보호·MCP 설치(설정 창 «다른 에이전트», `simless install --agents`), 스킬은 `~/.agents/skills` 에도. **실제 에이전트로는 아직 확인 안 함**, 이 Mac 의 다른 에이전트 설정은 아무것도 켜지 않음. OpenCode 는 당분간 다루지 않는다(사용자 결정 2026-10-05). 조사는 `docs/agent-integrations.md`
-- 남은 것: U단계(배포·업데이트 — GitHub 리모트가 생긴 뒤), 다른 에이전트 실측, NOVA 로 주 흐름(R15), 차별점 후보(그룹 안 역할·결과 나란히 보기 R10·그룹에 앱·화면 정보), 병렬 개발용 «빈 기기 아무거나» 요청, 네이티브 빌드 캐시(조사만 — NOVA 쪽 A 방법 추천)
+- **2026-10-05~06 추가** — 네이티브 빌드 캐시(`simless app install·save·list·prune`, R26 — 앱의 `@expo/fingerprint` 로 지문, `~/Library/Caches/Simless/builds`, NOVA Android APK 로 보관·목록 확인, 캐시에서 실제 기기로 설치는 아직), `SECURITY.md`, 제거(`simless uninstall [--purge]`·설정 창 «Simless 제거», S12 — 이 Mac 에서 실제로 지워 보지는 않음), 버전 표기(옆 막대 «서버 연결됨» 밑·설정 맨 위 «버전 정보»), 서버를 다시 켜면 앱 창이 새 화면을 받게. 버전은 0.1.0 그대로(태그 `v0.1.0` 은 빌드 캐시 커밋, 그 뒤는 CHANGELOG «아직 내지 않은 것»)
+- 남은 것: U단계(배포·업데이트 — GitHub 리모트가 생긴 뒤), 다른 에이전트 실측, NOVA 로 주 흐름(R15)을 세션 둘로 끝까지, 차별점 후보(그룹 안 역할·결과 나란히 보기 R10·그룹에 앱·화면 정보), 병렬 개발용 «빈 기기 아무거나» 요청
+- 제안만 하고 사용자 결정 대기: 슬림할 것 고르기(iOS `--except` 카테고리, Android `--keep` 패키지·카메라·오디오 — Android 슬림도 FCM 푸시는 됨, iOS 슬림은 원격 푸시 안 됨), `simless metro`(포트·`adb reverse`·dev client 연결을 서버가 하고 반납 때 정리 — 지금은 스킬이 안내), `SECURITY.md` §5 약한 점(다른 세션 작업 폴더 숨기기·argent 버전 고정·토큰 일정 시간 비교), iOS 기본 디바이스(`zx7w`, 다른 세션이 Simless 없이 쓰는 iPhone 17 Pro)를 바꿀지, 보호 훅이 명령 **본문**(heredoc 등)에 든 기기 이름까지 잡는 오탐(2026-10-06 문서 고치는 스크립트가 막힘)
 - 남은 확인: 실제 기기로 그룹 점유·생성(기종 + OS)을 끝까지, 라이트 모드 화면, simslim 0.11.0 에서 슬림 적용·확인(정보 읽기는 확인함), 설정 창 바로 설치 중 avdslim·argent(simslim 업데이트는 됨), 웹 화면 자동 테스트 없음(`bun run trace --missing`)
 - 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `Simless.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
 - 범용 도구 → NOVA 레포(xb3-client)와 분리해 별도 프로젝트로 만든다
@@ -40,7 +43,7 @@
 - Android SDK `~/Library/Android/sdk` — `emulator`·`adb` 있음, **cmdline-tools(`avdmanager`) 없음**
 - 시스템 이미지: `android-37.1/google_apis_playstore_ps16k/arm64-v8a`, `android-36/google_apis_playstore`
 - iOS 런타임: 18.6 · 26.0 · 26.2 · 26.5
-- 설치됨: simslim **0.8.0**(최신 0.11.0) · scrcpy 4.1 · Bun · argent 0.26.0
+- 설치됨: simslim **0.11.0**(2026-10-05 설정 창에서 업데이트) · scrcpy 4.1 · Bun · argent 0.17.0(`/opt/homebrew/bin`)·0.25.1(mise node) 두 벌 — `simless doctor` 주의 1개
 - **avdslim 1.0.15 설치됨** (2026-10-02) — `brew install kdbhalala/avdslim/avdslim` 가 `brew trust` 없이 설치됐다(전에는 비공식 tap 이라 거부한다고 봤음 — brew 버전에 따라 다를 수 있어 `simless doctor` 는 둘 다 안내)
 - baguette 미설치 (iOS 화면 스트리밍용, 지금 범위 밖)
 
@@ -74,17 +77,20 @@
 
 | 항목 | 상태 | 정리 방법 |
 | --- | --- | --- |
-| Android 에뮬레이터 3대 | 켜져 있음 (`Size_Small_360dp`·`Size_Large_412dp`·`Size_Tablet_800dp`) | `adb -s <serial> emu kill` |
+| Android 에뮬레이터 | 켜진 것 없음 (2026-10-06 확인) | — |
 | AVD 3개 | `~/.android/avd/Size_*.avd` + `.ini` (약 7GB) | 필요 없으면 폴더·ini 삭제 |
 | scrcpy 4.1 | brew 설치 | 필요 없으면 `brew uninstall scrcpy` |
 | brew tap · avdslim | `kdbhalala/avdslim` tap + avdslim 1.0.15 설치됨 | Simless 가 쓰므로 유지 |
 | Simless launchd 등록 | `~/Library/LaunchAgents/simless.server.plist` (개발 모드: bun + 이 저장소의 `bin/simless.ts`) | Simless 를 쓰는 동안 유지. 지우려면 `simless uninstall` |
 | `simless` 명령 | `~/.bun/bin/simless` → 이 저장소 (`bun link`) | 유지 |
 | Simless.app (메뉴바 앱 + 앱 창) | `~/Applications/Simless.app` + 로그인 항목 `~/Library/LaunchAgents/simless.menubar.plist` | 유지. 지우려면 `simless uninstall`. Swift 를 고치면 `simless install --no-launchd --no-skill` |
-| Simless 디바이스 | 웹 UI 에서 만든 `simless Small 360x760dp`(`bakw`, Android 기본)·`simless iPhone SE (3rd generation)`(`8rav`, iOS 기본), 그 밖에 `simless_rddv`(simless Medium Tablet) AVD 가 있음 | 사용자가 만든 것 — 필요 없으면 화면에서 삭제(기본은 다른 기기를 기본으로 정한 뒤) |
-| Simless 스킬 | `~/.claude/skills/simless/SKILL.md` (`simless install` 이 씀) | 유지. 스킬을 고치면 `simless install --no-launchd` 로 다시 설치 |
+| Simless 디바이스 | `bakw`(Android 360dp, Android 기본)·`rddv`(Android 태블릿 800dp)·`8rav`(iPhone SE) — 예전 이름(Corgi) 시절에 만들어 이름 앞머리가 예전 이름이다(바꿀지 사용자 확인 대기). iOS 기본은 `zx7w`(iPhone 17 Pro, 다른 세션이 씀) | 사용자가 만든 것 — 필요 없으면 화면에서 삭제(기본은 다른 기기를 기본으로 정한 뒤) |
+| Simless 스킬 | `~/.claude/skills/simless/SKILL.md`·`~/.agents/skills/simless/SKILL.md` (전역) | 유지. 스킬을 고치면 `simless skill install` |
+| Claude Code 보호·MCP | 훅 `~/.claude/settings.json`·규칙 `~/.claude/rules/simless.md`·MCP `~/.claude.json` — 저장소 경로(`…/simless/bin/simless.ts`)를 가리킨다 | 켜 둘지 사용자 확인 대기. 끄려면 설정 창 «에이전트 연결» |
+| 옛 폴더 링크 | `~/Projects/ccn-lee-rowoon/corgi` → `simless` (2026-10-06 폴더 이름을 바꾼 세션이 쓰던 임시 링크) | 그 세션이 끝나면 `rm ~/Projects/ccn-lee-rowoon/corgi` |
+| 빌드 캐시 | `~/Library/Caches/Simless/builds` (아직 없음 — `simless app save` 가 만든다) | `simless app prune`, 제거 때 `--purge` |
 | avdslim | brew 1.0.15 | 유지 |
-| 기존 `Pixel_6a` AVD·기존 iOS 시뮬레이터 | 건드리지 않음 | — |
+| 기존 `Pixel_6a` AVD·기존 iOS 시뮬레이터 | 2026-10-06 `avdslim tune-avd --help` 가 `Pixel_6a` 의 `config.ini` 를 바꾸고 스냅샷을 지움 → `config.ini.bak` 값으로 되돌림(디스크 16G 는 원래 값). 다음 부팅은 콜드 부팅일 수 있다 | — |
 | NOVA alpha APK | 위 3대 AVD 에 설치됨 | AVD 삭제 시 함께 사라짐 |
 
 ## 시험용 앱 설정 예시 (NOVA)
@@ -111,7 +117,6 @@
 `~/Projects/ccn-lee-rowoon/simless` 에서:
 
 ```
-HANDOFF.md 와 requirements.md(맨 아래 «결정 기록» 포함)를 먼저 읽어줘. reference-design-draft.md 는 확정 아닌 참고용이야.
-크기별 디바이스 레이아웃 확인 도구(TS 상주 서버 + CLI + 웹 UI + 로컬 MCP + 스킬)를 만들려고 해.
-요구사항 정리는 끝났으니, 저장소 구조와 설계안부터 같이 잡자. 아직 구현은 하지 마.
+AGENTS.md 를 먼저 읽고, 거기 적힌 순서대로 HANDOFF.md·requirements.md(«결정 기록» 포함)·SECURITY.md 를 봐줘.
+HANDOFF.md «진행 상태» 의 «남은 것»·«제안만 하고 사용자 결정 대기» 에서 이어서 하자.
 ```
