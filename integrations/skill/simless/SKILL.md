@@ -67,30 +67,29 @@ simless --json use <ID|name>...             # specific devices
 
 ### 3. Start your own Metro (React Native · Expo apps)
 
-Other sessions — often in other worktrees of the same repo — may run their own Metro at the same time. Use a port of your own so each session serves its own code to its own devices.
+Other sessions — often in other worktrees of the same repo — run their own Metro at the same time, and a Metro on 8081 is usually **someone else's**. So each session runs its own Metro on its own port and points only its own devices at it.
 
-```sh
-# first free port from 8081 up
-for p in $(seq 8081 8099); do lsof -nP -iTCP:$p -sTCP:LISTEN >/dev/null || { echo $p; break; }; done
-```
+**This overrides the argent React Native workflow's single-Metro advice** («reuse the Metro already on 8081», `adb reverse tcp:8081 tcp:8081`, «iOS needs no config»). Following it here attaches your app to another session's code, or to nothing.
 
-Start Metro from **your** working directory on that port, in the background, and remember its PID:
+1. **Pick a free port** (first free from 8081 up):
+   ```sh
+   for p in $(seq 8081 8099); do lsof -nP -iTCP:$p -sTCP:LISTEN >/dev/null || { echo $p; break; }; done
+   ```
+2. **Start Metro from your working directory** on that port, in the background, and remember its PID. Force IPv4 so it answers on `127.0.0.1` — otherwise macOS may bind it to `[::1]` only and the app can't reach it:
+   ```sh
+   NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --port <port>          # Expo
+   NODE_OPTIONS=--dns-result-order=ipv4first npx react-native start --port <port>  # bare React Native
+   ```
+   If the port was just taken, pick the next free one.
+3. **Wait until it's ready**: argent `debugger-status` with `device_id: <targetId>` and `port: <port>` — `metro_not_running` means not yet (retry for up to ~30 s); `no_app_connected` or `connected` means Metro is up.
+4. **Point each acquired Android device at it** — both your port (dev client URLs use it) and 8081 (what the app falls back to), so a stale mapping can't send it elsewhere:
+   ```sh
+   adb -s <targetId> reverse tcp:<port> tcp:<port>
+   adb -s <targetId> reverse tcp:8081 tcp:<port>
+   ```
+   An emulator reboot drops these — run them again after `simless up`.
 
-```sh
-npx expo start --port <port>            # Expo
-npx react-native start --port <port>    # bare React Native
-```
-
-If it fails because the port was just taken, pick the next free one. Point each device at your port:
-
-- **Android** — map the device's 8081 to your port; the app needs no rebuild. Do this per acquired device:
-  ```sh
-  adb -s <targetId> reverse tcp:8081 tcp:<port>
-  ```
-- **iOS simulator** — it shares the Mac's localhost, so the app has to ask for your port:
-  - Expo dev client: open `exp+<scheme>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<port>` with `open-url`.
-  - Bare React Native: the port is set at build time — build with `npx react-native run-ios --port <port>` (or `RCT_METRO_PORT=<port>`).
-- Android Expo dev client: after the `adb reverse`, open the same URL with `127.0.0.1%3A8081`.
+Launching the app onto this Metro is step 4.2.
 
 ### 4. Drive each device with argent
 
@@ -108,7 +107,16 @@ Pass `targetId` as argent's device argument, device by device, following the arg
      ```
      `TOOL_MISSING` means it isn't an Expo project with `@expo/fingerprint` — skip the cache. Computing the fingerprint takes about 30 seconds.
    - Otherwise `reinstall-app`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <targetId>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
-2. **Launch** — `launch-app` (or the dev client URL above with `open-url`), after your Metro is up.
+2. **Launch onto your Metro** — not with `launch-app`: a plain launch reconnects to whatever server the app remembers. The app identifiers come from the project: `npx expo config --json` → `slug`, `ios.bundleIdentifier`, `android.package`.
+   - Stop it first if it is running: `xcrun simctl terminate <targetId> <bundleId>` / `adb -s <targetId> shell am force-stop <package>`.
+   - **Expo dev client** (iOS and Android): `open-url` with `exp+<slug>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<port>`.
+   - **Bare React Native, iOS**: write the server, then launch — no rebuild needed:
+     ```sh
+     xcrun simctl spawn <targetId> defaults write <bundleId> RCT_jsLocation 127.0.0.1:<port>
+     ```
+     then `launch-app`. **Android**: `launch-app` (the 8081 mapping from step 3 reaches your Metro).
+   - **Check it attached**: `debugger-status` (`device_id: <targetId>`, `port: <port>`) should say `connected`. Still `no_app_connected` after the app is up → it's on another server; repeat this step.
+   - Pass `port: <port>` to **every** argent `debugger-*` and `react-profiler-*` call — without it they use 8081, which is another session's Metro.
 3. **Same screen everywhere** — `open-url <deep link>` if there is one, otherwise replay an argent flow (`flow-execute`) per device. Don't reuse tap coordinates across sizes.
 4. **Screenshots** — `screenshot`, tagged with each device's `label`.
 
@@ -119,8 +127,9 @@ Per `label`, say what broke (clipping, overlap, overflow, wrapping …) with scr
 ### 6. Clean up
 
 ```sh
-adb -s <targetId> reverse --remove tcp:8081   # each Android device you pointed at your Metro
-kill <your Metro PID>                          # only the Metro you started
+adb -s <targetId> reverse --remove tcp:<port>   # each Android device you pointed at your Metro
+adb -s <targetId> reverse --remove tcp:8081
+kill <your Metro PID>                            # only the Metro you started
 simless release
 ```
 

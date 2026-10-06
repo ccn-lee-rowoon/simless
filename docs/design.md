@@ -257,7 +257,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | 같은 화면 | `open-url <딥링크>`, 딥링크 없는 화면은 argent 흐름 재생 | |
 | 화면 확인 | `screenshot` | 크기 라벨을 붙여 보고 |
 
-- Metro 는 **세션마다 따로** 띄운다 (S11) — 8081부터 비어 있는 포트에 자기 작업 폴더의 Metro 를 띄우고, 점유한 기기만 그 포트를 보게 한다. Android 는 기기마다 `adb reverse` 라 다시 빌드할 필요가 없고, iOS 시뮬레이터는 Mac 의 localhost 를 같이 쓰므로 dev client 주소(Expo)나 빌드 때 포트(`RCT_METRO_PORT`)로 정한다. 포트는 Simless 가 나눠 주지 않고 스킬이 비어 있는 것을 고른다 — 필요해지면 점유 대상으로 넣는다. 남의 Metro 는 끄지 않는다 (S7).
+- Metro 는 **세션마다 따로** 띄운다 (S11) — 8081부터 비어 있는 포트에 자기 작업 폴더의 Metro 를 띄우고, 점유한 기기만 그 포트를 보게 한다. Metro 는 IPv4 로 띄우고(`--dns-result-order=ipv4first` — macOS 가 `[::1]` 에만 열면 앱이 못 붙는다) argent `debugger-status`(포트 지정)로 준비를 기다린다. Android 는 기기마다 `adb reverse` 를 자기 포트와 8081 둘 다 걸어 다시 빌드할 필요가 없고, 앱은 그냥 실행하지 않는다 — Expo dev client 는 포트를 넣은 주소(`open-url`)로, Expo 없는 iOS 는 `RCT_jsLocation` 을 써 둔 뒤 실행한다. 실행한 뒤 `debugger-status` 가 `connected` 인지로 붙었는지 확인하고, argent 디버거 도구에는 항상 그 포트를 넘긴다. argent 스킬의 «8081 Metro 하나» 안내는 Simless 스킬이 덮어쓴다. 포트는 Simless 가 나눠 주지 않고 스킬이 비어 있는 것을 고른다 — 필요해지면 점유 대상으로 넣는다. 남의 Metro 는 끄지 않는다 (S7).
 - 점유한 디바이스만 argent 로 다룬다 — 5단계 훅이 지킨다 (P1·P8).
 
 **네이티브 빌드 캐시 (R26)** — 설치의 예외. 캐시를 Simless 가 가지고 있어 설치도 Simless 가 한다.

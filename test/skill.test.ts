@@ -56,8 +56,20 @@ describe("에이전트 스킬 (R16·S9)", () => {
   test("남의 기기·Metro 를 건드리지 않고, 자기 Metro 는 비어 있는 포트에 (S7·S11)", async () => {
     const text = await bundledSkill();
     expect(text).toContain("Never touch other sessions' devices or Metro");
+    expect(text).toContain("adb -s <targetId> reverse tcp:<port> tcp:<port>");
     expect(text).toContain("adb -s <targetId> reverse tcp:8081 tcp:<port>");
     expect(text).toContain("kill <your Metro PID>");
+  });
+
+  test("argent 의 Metro 하나 안내 대신 — IPv4·준비 확인·주소를 넣은 실행·붙었는지 확인·디버거 포트 (S11)", async () => {
+    const text = await bundledSkill();
+    expect(text).toContain("overrides the argent React Native workflow's single-Metro advice");
+    expect(text).toContain("NODE_OPTIONS=--dns-result-order=ipv4first");
+    expect(text).toContain("`debugger-status` with `device_id: <targetId>` and `port: <port>`");
+    expect(text).toContain("not with `launch-app`");
+    expect(text).toContain("expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<port>");
+    expect(text).toContain("RCT_jsLocation 127.0.0.1:<port>");
+    expect(text).toContain("Pass `port: <port>` to **every** argent `debugger-*`");
   });
 
   test("직접 빌드·설치할 때는 기기를 꼭 지정한다 — 남의 에뮬레이터에 깔리지 않게 (S7)", async () => {
