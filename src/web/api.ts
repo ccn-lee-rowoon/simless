@@ -44,6 +44,9 @@ export async function call<T>(method: string, params: unknown = {}): Promise<T> 
   return body.result;
 }
 
+/** 처음 연결한 서버가 뜬 시각 */
+let serverStartedAt: number | undefined;
+
 export function subscribe(handlers: {
   changed?: () => void;
   progress?: (message: string) => void;
@@ -55,7 +58,16 @@ export function subscribe(handlers: {
 }): () => void {
   const source = new EventSource(`/api/events?token=${encodeURIComponent(token ?? "")}`);
   const data = <T>(event: Event) => JSON.parse((event as MessageEvent<string>).data) as T;
-  source.addEventListener("hello", () => handlers.connection?.(true));
+  source.addEventListener("hello", (event) => {
+    // 서버가 다시 켜졌으면 화면 묶음도 바뀌었을 수 있다 — 페이지를 새로 받는다
+    const { startedAt } = data<{ startedAt?: number }>(event);
+    if (serverStartedAt !== undefined && startedAt !== serverStartedAt) {
+      location.reload();
+      return;
+    }
+    serverStartedAt = startedAt;
+    handlers.connection?.(true);
+  });
   source.addEventListener("changed", () => handlers.changed?.());
   source.addEventListener("progress", (event) =>
     handlers.progress?.(data<{ message: string }>(event).message),

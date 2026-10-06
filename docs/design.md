@@ -293,7 +293,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 **HTTP** — 웹 화면(앱 창·브라우저)·메뉴바
 
 - `127.0.0.1:<포트>`(기본 8791, 설정)에만 연다.
-- `GET /api/status`, `GET /api/events`(SSE — 점유·켜짐·슬림·그룹 변화), 웹 화면의 조작은 `POST /api/…` 가 소켓과 같은 메서드를 부른다(세션은 `human`).
+- `GET /api/status`, `GET /api/events`(SSE — 점유·켜짐·슬림·그룹 변화. 처음 보내는 `hello` 에 서버가 뜬 시각 `startedAt` 이 있어, 다시 연결했는데 값이 다르면 화면이 페이지를 새로 받는다 — 서버를 다시 켜면 열린 앱 창도 새 화면이 된다), 웹 화면의 조작은 `POST /api/…` 가 소켓과 같은 메서드를 부른다(세션은 `human`).
 - 보안(다른 웹사이트가 localhost 로 요청하는 공격 대비): `Host` 가 `127.0.0.1`·`localhost` 가 아니면 거부(DNS rebinding), `POST` 는 `Origin` 검사 + `web-token` 헤더 필수. 토큰은 앱 창·`simless ui` 가 여는 URL 로 전달한다.
 
 ## 12. CLI

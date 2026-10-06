@@ -52,6 +52,9 @@ const WEB_METHODS = new Set([
   "lease.sessions",
 ]);
 
+/** 이 서버 프로세스가 뜬 시각 — 화면이 서버가 다시 켜진 것을 알아채고 새 화면을 받게 */
+const STARTED_AT = Date.now();
+
 /** 없으면 만든다 — 같은 사용자만 읽을 수 있다 */
 export function ensureToken(path: string): string {
   if (existsSync(path)) return readFileSync(path, "utf8").trim();
@@ -133,7 +136,9 @@ function events(server: SimlessServer): Response {
     start(controller) {
       const encoder = new TextEncoder();
       const send = (text: string) => controller.enqueue(encoder.encode(text));
-      send(`event: hello\ndata: ${JSON.stringify({ version: VERSION })}\n\n`);
+      send(
+        `event: hello\ndata: ${JSON.stringify({ version: VERSION, startedAt: STARTED_AT })}\n\n`,
+      );
       const unsubscribe = server.subscribe((event) =>
         send(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`),
       );

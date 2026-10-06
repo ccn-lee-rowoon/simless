@@ -420,7 +420,9 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
 
   @objc func reload() {
     retries = 0
-    load()
+    // 같은 주소(#token 만 붙은)를 다시 load 하면 같은 페이지 안 이동으로 끝나 새로 받지 않는다 —
+    // 이미 떠 있으면 캐시를 건너뛰고 다시 받는다
+    if webView?.url != nil { webView?.reloadFromOrigin() } else { load() }
   }
 
   func windowWillClose(_ notification: Notification) {
