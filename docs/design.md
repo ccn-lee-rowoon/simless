@@ -88,6 +88,7 @@ simless/
 │                            agent-integrations.md(다른 에이전트 조사)
 ├── README.md                처음 보는 사람용 — 무엇을 하나·설치·쓰는 법
 ├── requirements.md · HANDOFF.md
+├── SECURITY.md              지키는 것·지키지 않는 것·고칠 때 지킬 보안 규칙
 ├── AGENTS.md                작업 규칙 정본 (커밋 규칙 포함) — 모든 에이전트
 └── CLAUDE.md                Claude Code 용 — AGENTS.md 를 불러온다
 ```

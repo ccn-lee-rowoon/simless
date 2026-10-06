@@ -52,6 +52,8 @@ simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·
 | `simless skill status` · `simless skill install --project <폴더>` | 스킬을 넣은 곳 |
 | `simless config` · `simless doctor` · `simless ui` | 설정 · 점검 · 웹 화면 |
 
+보안 — 외부로 데이터를 보내지 않고, 이 Mac 안에서만 열린다. 자세한 것은 [`SECURITY.md`](SECURITY.md).
+
 ## 지원하는 에이전트
 
 | 에이전트 | 지금 |

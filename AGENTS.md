@@ -13,13 +13,16 @@
 3. `docs/design.md` — 설계. 저장소 구조·폴더 경계는 §3
 4. `docs/development.md` — «무엇을 바꾸려면 어디를 고치나», 테스트 쓰는 법, 화면 확인, 이 Mac 에 반영
 5. `docs/protocol.md` — 서버 메서드·오류 코드 · `docs/agent-integrations.md` — 다른 에이전트 연결 조사
-6. `reference-design-draft.md` — 요구사항 정리 전 초안(예전 이름 Corgi 시절). 참고만 한다
+6. **`SECURITY.md`** — 지키는 것·지키지 않는 것, 고칠 때 깨면 안 되는 규칙. HTTP·소켓·외부 명령·설정 창의 설치·에이전트 설정 파일·기록·빌드 캐시·의존성·네트워크를 고치기 전에 반드시 본다
+7. `reference-design-draft.md` — 요구사항 정리 전 초안(예전 이름 Corgi 시절). 참고만 한다
 
 ## 2. 작업할 때마다 확인할 것
 
 - [ ] 바꾸려는 것의 요구사항 ID 를 찾았다 — 없으면 요구사항부터 정한다(사용자에게 묻는다)
 - [ ] 고칠 곳은 `docs/development.md` §3 의 순서를 따른다(메서드·오류 코드·설정·문구·화면·드라이버·스킬·에이전트)
 - [ ] 폴더 경계(설계 §3)를 지킨다 — `test/architecture.test.ts` 가 검사한다
+- [ ] 보안 규칙(`SECURITY.md` §3)을 깨지 않았다 — 외부로 보내는 데이터 없음, HTTP 는 루프백 + 토큰·Host·Origin, 외부 명령은 인자 배열, 웹이 보낸 명령을 실행하지 않음, 상태 파일 `0600`. 깨야 하면 결정 기록과 `SECURITY.md` 를 같은 커밋에서
+- [ ] 토큰·비밀·다른 MCP 의 `env`·`args` 를 출력·로그·커밋·대화에 남기지 않았다
 - [ ] 문구는 `src/shared/i18n/ko.ts`(정본)와 `en.ts` 둘 다. 스킬·규칙 문서는 영어
 - [ ] 요구사항·설계·메시지가 바뀌면 `requirements.md`·`docs/design.md`·`docs/protocol.md` 를 **같은 커밋에서**
 - [ ] `bun run check`·`bun run test` 가 **종료 코드로** 통과했다(출력을 `grep` 에 넘기면 실패해도 성공처럼 보일 수 있다)
@@ -105,7 +108,7 @@ feat(server): 점유 대기열과 세션 종료 시 자동 해제 추가
 
 ### 하지 않는 것
 
-- 생성물(`node_modules/`, `dist/`, 컴파일된 메뉴바 바이너리, 로그)·비밀·로컬 경로가 박힌 설정(`*.local.json`) 커밋
+- 생성물(`node_modules/`, `dist/`, 컴파일된 메뉴바 바이너리, 로그)·비밀(`web-token` 등)·로컬 경로가 박힌 설정(`*.local.json`)·캐시된 빌드 커밋
 - `--no-verify` 로 검사 건너뛰기
 - 리모트에 올린 커밋의 `--amend`·리베이스·강제 푸시
 
