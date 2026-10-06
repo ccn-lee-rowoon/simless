@@ -1,3 +1,4 @@
+import { createInterface } from "node:readline/promises";
 import { kickstart } from "../install/launchd.ts";
 import type { BusyData } from "../shared/api.ts";
 import { call, RemoteError, ServerDownError } from "../shared/client.ts";
@@ -98,4 +99,13 @@ export async function request<T>(
 /** --json 이면 JSON 을, 아니면 사람이 읽는 문장을 stdout 에 */
 export function output(ctx: Context, data: unknown, human: () => string): void {
   console.log(ctx.json ? JSON.stringify(data, null, 2) : human());
+}
+
+/** 터미널에서 묻는다 — 터미널이 아니면(에이전트) 묻지 않고 false */
+export async function confirm(question: string): Promise<boolean> {
+  if (!process.stdin.isTTY) return false;
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
+  const answer = await rl.question(`${question} [y/N] `);
+  rl.close();
+  return /^y(es)?$/i.test(answer.trim());
 }

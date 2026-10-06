@@ -26,6 +26,7 @@ const WEB_METHODS = new Set([
   "setup.cancel",
   "setup.openTerminal",
   "setup.finish",
+  "setup.uninstall",
   "device.list",
   "catalog",
   "device.create",

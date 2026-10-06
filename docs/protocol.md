@@ -81,6 +81,7 @@
 | `setup.jobs` | `{}` | `JobView[]` | 돌고 있거나 끝난 설치 (항목마다 마지막 하나) |
 | `setup.cancel` | `{ job }` | `JobView` | 돌던 것을 멈춘다 |
 | `setup.openTerminal` | `{ fix }` | `{ opened }` | 입력이 필요할 때 — Terminal 앱에 같은 명령을 띄운다 |
+| `setup.uninstall` | `{ purge = false }` | `{ steps: [{ what, ok, error? }], devicesLeft, purge }` | Simless 제거 (S12). 사람만(`NOT_ALLOWED`). 스킬·모든 에이전트의 훅·규칙·MCP 를 지우고 답한 뒤, 1.5초 뒤 앱·(purge 면) 데이터 폴더·서버 등록을 지운다 — 서버가 끝난다 |
 | `setup.finish` | `{}` | `{ finished: true }` | `…/simless/setup.json` 에 끝낸 시각을 남긴다 — 앱이 다시 띄우지 않는다 |
 | `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, historyRetentionDays, androidRamMb, simslimProfile? }` | 설정 화면·`simless config` (M11) |
 | `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·기록 보관 일수(1~3650)·Android RAM·simslim 프로필 (R25) |

@@ -109,6 +109,12 @@ export async function uninstall(paths: Paths): Promise<void> {
   rmSync(paths.launchAgent, { force: true });
 }
 
+/** 서버가 자기 등록을 지울 때 — 내리는 순간 이 프로세스가 끝나므로 파일을 먼저 지운다 (S12) */
+export async function uninstallSelf(paths: Paths): Promise<void> {
+  rmSync(paths.launchAgent, { force: true });
+  await run(["launchctl", "bootout", `${domain()}/${LAUNCH_LABEL}`]);
+}
+
 /** 등록돼 있으면 서버를 켜고 소켓이 생길 때까지 기다린다 (Q10). 켰으면 true */
 export async function kickstart(paths: Paths, waitMs = 5000): Promise<boolean> {
   if (!isInstalled(paths)) return false;

@@ -42,8 +42,10 @@ export class BuildCacheError extends Error {
 }
 
 export function cacheRoot(env: NodeJS.ProcessEnv = process.env): string {
-  return (
-    env.SIMLESS_BUILD_CACHE ?? join(env.HOME ?? homedir(), "Library", "Caches", "Simless", "builds")
+  if (env.SIMLESS_BUILD_CACHE) return env.SIMLESS_BUILD_CACHE;
+  return join(
+    env.SIMLESS_CACHE_DIR ?? join(env.HOME ?? homedir(), "Library", "Caches", "Simless"),
+    "builds",
   );
 }
 

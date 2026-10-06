@@ -44,6 +44,8 @@ export const en: Record<keyof typeof ko, string> = {
   "err.installNoDevice": "No held {platform} device — hold and boot one with simless use",
   "err.installPlatform": "Some of the chosen devices are not {platform}",
   "err.installNotBooted": "{name} is off — boot it with simless up",
+  "err.uninstallHumanOnly":
+    "Only a person removes Simless — from the settings window or with simless uninstall",
   "err.noModel": "No such model: {model} — see simless catalog",
   "err.modelBothPlatforms": "Both platforms have a model named {model} — pick one with --platform",
   "err.nameTaken": "Name already in use: {name}",
@@ -103,8 +105,19 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.install.menubar": "{path} (menu bar app)",
   "cli.install.done": "Installed ({what}): {path}",
   "cli.uninstall":
-    "Remove the launchd registration, Simless.app, hooks, rules and MCP registrations (all agents) — devices and the skill stay",
-  "cli.uninstall.done": "Registration removed",
+    "Remove Simless — the skill (every location), hooks, rules and MCP (all agents), Simless.app and the server registration. Created devices stay",
+  "cli.uninstall.purge": "Also delete the data, history, log, settings and build cache folders",
+  "cli.uninstall.yes": "Don't ask before --purge (for agents and scripts)",
+  "cli.uninstall.confirmPurge":
+    "These folders will be deleted — this can't be undone:\n  {dirs}\nContinue?",
+  "cli.uninstall.needYes": "Canceled — pass --yes when not in a terminal",
+  "cli.uninstall.done": "Simless removed",
+  "cli.uninstall.someFailed": "Some items couldn't be removed",
+  "cli.uninstall.dataKept": "Data kept ({dirs}) — to delete it too, run simless uninstall --purge",
+  "cli.uninstall.devicesLeft":
+    "{count} devices created by Simless stay on this Mac — delete them in Xcode or Android Studio",
+  "cli.uninstall.cliLeft":
+    "The simless command itself is still here — delete the file `which simless` points to",
   "cli.ui": "Open the web view in a browser (starts the server if needed)",
   "cli.ui.print": "Print the address instead of opening it",
   "cli.ui.opened": "Opened {url}",
@@ -538,6 +551,26 @@ export const en: Record<keyof typeof ko, string> = {
   "web.setup.back": "Back",
   "web.setup.next": "Next",
   "web.setup.finish": "Done",
+  "web.uninstall.title": "Remove Simless",
+  "web.uninstall.hint":
+    "Remove Simless from this Mac. Trashing only the app leaves the skill, hooks and server behind.",
+  "web.uninstall.open": "Remove…",
+  "web.uninstall.removes": "This removes:",
+  "web.uninstall.itemSkill": "The Simless skill — global and every project it was added to",
+  "web.uninstall.itemAgents": "Protection (hooks), rules and MCP for every agent",
+  "web.uninstall.itemApp": "Simless.app, the menu bar and the server — the app window closes",
+  "web.uninstall.purge": "Also delete data, history, logs, settings and the build cache",
+  "web.uninstall.purgeHint":
+    "This can't be undone. Groups, default devices and lease history are lost.",
+  "web.uninstall.keepHint":
+    "Data is kept — reinstalling brings back your groups and default devices.",
+  "web.uninstall.devices":
+    "{count} devices created by Simless stay on this Mac. To delete them, do it from the Devices screen first.",
+  "web.uninstall.cli":
+    "The simless command itself stays — in a terminal, delete the file that «which simless» points to.",
+  "web.uninstall.confirm": "Remove",
+  "web.uninstall.doneTitle": "Simless removed",
+  "web.uninstall.done": "The app will close shortly.",
   "web.settings.setup": "First-run setup",
   "web.settings.setupHint": "Check tools, agent connections and default devices again.",
   "web.settings.openSetup": "Open setup",

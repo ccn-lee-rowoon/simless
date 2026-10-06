@@ -46,6 +46,7 @@ export const ko = {
   "err.installNoDevice": "점유한 {platform} 디바이스가 없습니다 — simless use 로 점유하고 켜세요",
   "err.installPlatform": "고른 디바이스 중 {platform} 이 아닌 것이 있습니다",
   "err.installNotBooted": "{name} 이 꺼져 있습니다 — simless up 으로 켜세요",
+  "err.uninstallHumanOnly": "Simless 제거는 사람이 설정 창이나 simless uninstall 로 합니다",
   "err.noModel": "없는 기종: {model} — simless catalog",
   "err.modelBothPlatforms":
     "두 플랫폼에 같은 이름의 기종이 있습니다 — --platform 으로 고르세요: {model}",
@@ -108,8 +109,19 @@ export const ko = {
   "cli.install.menubar": "{path} (메뉴바 앱)",
   "cli.install.done": "설치했습니다 ({what}): {path}",
   "cli.uninstall":
-    "launchd 등록·Simless.app·훅·규칙·MCP 등록(모든 에이전트)을 지운다 — 만든 디바이스·스킬은 지우지 않는다",
-  "cli.uninstall.done": "등록을 지웠습니다",
+    "Simless 제거 — 스킬(모든 위치)·훅·규칙·MCP(모든 에이전트)·Simless.app·서버 등록. 만든 디바이스는 남긴다",
+  "cli.uninstall.purge": "데이터·기록·로그·설정·빌드 캐시 폴더도 지운다",
+  "cli.uninstall.yes": "--purge 를 묻지 않고 진행 (에이전트·스크립트용)",
+  "cli.uninstall.confirmPurge": "이 폴더들을 지웁니다 — 되돌릴 수 없습니다:\n  {dirs}\n계속할까요?",
+  "cli.uninstall.needYes": "취소했습니다 — 터미널이 아니면 --yes 를 붙이세요",
+  "cli.uninstall.done": "Simless 를 제거했습니다",
+  "cli.uninstall.someFailed": "지우지 못한 것이 있습니다",
+  "cli.uninstall.dataKept":
+    "데이터는 남겼습니다 ({dirs}) — 함께 지우려면 simless uninstall --purge",
+  "cli.uninstall.devicesLeft":
+    "Simless 가 만든 디바이스 {count}대는 이 Mac 에 남습니다 — Xcode·Android Studio 에서 지울 수 있습니다",
+  "cli.uninstall.cliLeft":
+    "simless 명령 자체는 남아 있습니다 — 지우려면 `which simless` 가 가리키는 파일을 지우세요",
   "cli.ui": "웹 화면을 브라우저로 연다 (서버가 꺼져 있으면 켠다)",
   "cli.ui.print": "열지 않고 주소만 출력",
   "cli.ui.opened": "열었습니다: {url}",
@@ -546,6 +558,25 @@ export const ko = {
   "web.setup.back": "이전",
   "web.setup.next": "다음",
   "web.setup.finish": "완료",
+  "web.uninstall.title": "Simless 제거",
+  "web.uninstall.hint":
+    "이 Mac 에서 Simless 를 지웁니다. 앱만 휴지통에 버리면 스킬·훅·서버가 남습니다.",
+  "web.uninstall.open": "제거…",
+  "web.uninstall.removes": "다음을 지웁니다.",
+  "web.uninstall.itemSkill": "Simless 스킬 — 전역과, 넣어 둔 모든 프로젝트",
+  "web.uninstall.itemAgents": "모든 에이전트의 보호(훅)·규칙·MCP 연결",
+  "web.uninstall.itemApp": "Simless.app·메뉴바·서버 — 앱 창이 닫힙니다",
+  "web.uninstall.purge": "데이터·기록·로그·설정·빌드 캐시도 지우기",
+  "web.uninstall.purgeHint": "되돌릴 수 없습니다. 그룹·기본 디바이스·점유 기록이 사라집니다.",
+  "web.uninstall.keepHint":
+    "데이터는 남겨 둡니다 — 다시 설치하면 그룹·기본 디바이스를 그대로 씁니다.",
+  "web.uninstall.devices":
+    "Simless 가 만든 디바이스 {count}대는 이 Mac 에 남습니다. 지우려면 먼저 디바이스 화면에서 삭제하세요.",
+  "web.uninstall.cli":
+    "simless 명령 자체는 남습니다 — 터미널에서 «which simless» 가 가리키는 파일을 지우세요.",
+  "web.uninstall.confirm": "제거",
+  "web.uninstall.doneTitle": "Simless 를 제거했습니다",
+  "web.uninstall.done": "잠시 뒤 앱이 닫힙니다.",
   "web.settings.setup": "첫 실행 설정",
   "web.settings.setupHint": "도구 점검·에이전트 연결·기본 디바이스를 다시 확인합니다.",
   "web.settings.openSetup": "설정 안내 열기",

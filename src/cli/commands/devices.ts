@@ -1,9 +1,8 @@
-import { createInterface } from "node:readline/promises";
 import type { Command } from "commander";
 import type { CatalogResult, DeviceOpResult, DeviceView } from "../../shared/api.ts";
 import { ExitCode } from "../../shared/exit-codes.ts";
 import { t } from "../../shared/i18n.ts";
-import { CliError, type Context, output, type Run, request } from "../context.ts";
+import { CliError, type Context, confirm, output, type Run, request } from "../context.ts";
 import { catalogText, devicesTable } from "../format.ts";
 import { type AcquireOptions, acquire, acquireOptions } from "./lease.ts";
 
@@ -30,14 +29,6 @@ function finish(
   if (result.results.some((r) => !r.ok)) {
     throw new CliError(t("cli.someFailed", { verb }), ExitCode.failed, "FAILED", result.results);
   }
-}
-
-async function confirm(question: string): Promise<boolean> {
-  if (!process.stdin.isTTY) return false;
-  const rl = createInterface({ input: process.stdin, output: process.stderr });
-  const answer = await rl.question(`${question} [y/N] `);
-  rl.close();
-  return /^y(es)?$/i.test(answer.trim());
 }
 
 export function registerDevices(program: Command, run: Run) {

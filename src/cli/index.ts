@@ -14,7 +14,7 @@ import { registerGroups } from "./commands/groups.ts";
 import { registerLease } from "./commands/lease.ts";
 import { registerSkill } from "./commands/skill.ts";
 import { registerStatus } from "./commands/status.ts";
-import { CliError, makeContext, output, type Run } from "./context.ts";
+import { CliError, confirm, makeContext, output, type Run, request } from "./context.ts";
 
 /** 설정 언어 — 명령 설명(--help)도 이 언어로 나오도록 명령을 만들기 전에 정한다 (R25) */
 function applyLanguage(): void {
@@ -163,23 +163,40 @@ export async function runCli(argv: string[]): Promise<number> {
   program
     .command("uninstall")
     .description(t("cli.uninstall"))
+    .option("--purge", t("cli.uninstall.purge"))
+    .option("--yes", t("cli.uninstall.yes"))
     .action(
-      run(async (ctx) => {
-        const { uninstall } = await import("../install/launchd.ts");
-        await uninstall(ctx.paths);
-        await (await import("../install/app-bundle.ts")).uninstallApp(ctx.paths);
-        const { uninstallHook, uninstallRule } = await import("../install/claude-hook.ts");
-        uninstallHook();
-        uninstallRule();
-        await (await import("../install/claude-mcp.ts")).uninstallMcp();
-        // 다른 에이전트에 넣은 것도 — 읽지 못하는 설정 파일은 건드리지 않고 넘어간다
-        for (const a of (await import("../install/agents.ts")).AGENT_INTEGRATIONS) {
-          for (const step of [a.uninstallHook, a.uninstallRule, a.uninstallMcp])
-            await step(process.env).catch((e: unknown) =>
-              console.error(`${a.label}: ${String(e)}`),
-            );
+      run(async (ctx, o: { purge?: boolean; yes?: boolean }) => {
+        const u = await import("../install/uninstall.ts");
+        if (o.purge && !o.yes) {
+          const dirs = u.dataDirs(ctx.paths).join("\n  ");
+          if (!(await confirm(t("cli.uninstall.confirmPurge", { dirs }))))
+            throw new CliError(t("cli.uninstall.needYes"), ExitCode.usage, "INVALID");
         }
-        output(ctx, { uninstalled: ctx.paths.launchAgent }, () => t("cli.uninstall.done"));
+        // 서버가 떠 있으면 남게 될 기기 수를 알려 준다 — 기기는 지우지 않는다
+        const devicesLeft = await request<{ createdBySimless: boolean }[]>(ctx, "device.list", {})
+          .then((list) => list.filter((d) => d.createdBySimless).length)
+          .catch(() => undefined);
+        const steps = [
+          ...(await u.removeIntegrations(ctx.paths)),
+          ...(await u.removeApp(ctx.paths)),
+          ...(await u.removeLaunchd(ctx.paths)),
+          ...(o.purge ? u.purgeData(ctx.paths) : []),
+        ];
+        const failed = steps.filter((s) => !s.ok);
+        output(ctx, { steps, devicesLeft, purged: o.purge ?? false }, () =>
+          [
+            t("cli.uninstall.done"),
+            ...failed.map((s) => t("cli.failedFor", { name: s.what, error: s.error ?? "" })),
+            o.purge ? "" : t("cli.uninstall.dataKept", { dirs: u.dataDirs(ctx.paths).join(", ") }),
+            devicesLeft ? t("cli.uninstall.devicesLeft", { count: devicesLeft }) : "",
+            t("cli.uninstall.cliLeft"),
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        );
+        if (failed.length > 0)
+          throw new CliError(t("cli.uninstall.someFailed"), ExitCode.failed, "FAILED", steps);
       }),
     );
 

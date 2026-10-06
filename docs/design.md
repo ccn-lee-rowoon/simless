@@ -113,6 +113,7 @@ simless/
 | --- | --- |
 | (배포) | `dist/simless` 를 `~/.local/share/simless/versions/<버전>/simless` 에 두고 `~/.local/bin/simless` 를 그 파일로 링크한다(§19). 혼자 쓸 땐 저장소에서 `bun link`. 동료와는 **프라이빗 GitHub Release** 에 올리고, 설치 스크립트가 `gh release download`(또는 `curl`)로 받아 배치 → `simless install` 까지 한다. 브라우저로 받으면 격리 속성 때문에 실행이 막히므로 스크립트로 받는다 |
 | `simless install` | LaunchAgent(`~/Library/LaunchAgents/simless.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`simless`·Android SDK 경로를 절대 경로로** 적는다. 스킬 설치, `~/Applications/Simless.app` 생성 → 앱을 띄우면 **첫 실행 설정 창**(M14)이 뜬다. 보호(훅·규칙)와 MCP 는 그 창에서 고른다 — 터미널만 쓸 때는 `--hook`·`--mcp`. 훅·MCP 명령은 절대 경로로 적는다 |
+| 제거 (S12) | `simless uninstall` 또는 설정 창 «Simless 제거» — 둘 다 `src/install/uninstall.ts`. 순서는 에이전트 연결(스킬·훅·규칙·MCP) → 앱·메뉴바 → (`--purge`) 데이터 폴더 → 서버 등록. 창에서 할 때는 서버(`setup.uninstall`)가 에이전트 연결을 지우고 답한 뒤, 1.5초 뒤 앱·데이터를 지우고 plist 를 먼저 지운 다음 자기를 `bootout` 한다(내리는 순간 프로세스가 끝나므로). 만든 디바이스와 `simless` 명령 자체는 남긴다 |
 | `simless uninstall` | 위를 되돌린다(훅·규칙·MCP 등록 포함). 만든 디바이스는 지우지 않는다 |
 | 첫 실행 설정 (M14) | 앱이 뜰 때 `status.setupNeeded` 면 설정 창(`?window=setup`)을 연다 — ① 이 Mac 점검(`simless doctor` 와 같은 점검. 점검 결과의 `action` 이 있으면 «설치·업데이트·열기» 버튼 — `setup.run` 이 `install/fixes.ts` 에 정해 둔 명령만 뒤에서 돌리고(`server/jobs.ts`, 묻지 않는 모드 `NONINTERACTIVE=1`·`HOMEBREW_NO_AUTO_UPDATE=1`), 출력은 SSE `output` 으로 한 줄씩, 상태는 `job` 으로. 출력에 «trust» 가 있으면 `brew trust` 후 다시. 끝나면 다시 점검. 실패하면 «터미널에서 열기»(osascript 로 Terminal 에 같은 명령). 버튼으로 못 고치는 것만 복사 버튼) ② 에이전트 연결(스킬 권장 · 보호 권장 · MCP 선택 — 버튼 하나로 설치·제거, 서버가 한다) ③ 기본 디바이스(없으면 목록에서 고르거나 생성 창). «완료» 면 `setup.json` 을 남기고 대시보드를 연다. 끝내지 않고 닫으면 다음에 또 뜬다. 설정 창에서 다시 연다 |
 | `Simless.app` | 메뉴바 앱 + 앱 창(§14). `tray/SimlessTray.swift` 를 컴파일한 실행 파일 + `Info.plist`(`LSUIElement` — 평소엔 Dock 아이콘 없음) + 아이콘, ad-hoc 서명. 더블클릭·Spotlight·Launchpad 에서 연다. Xcode 가 없어 컴파일을 못 하면 브라우저로 웹 화면을 여는 스크립트로 대신한다 |
@@ -304,7 +305,8 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | --- | --- | --- |
 | `simless status` | 서버 연결, 디바이스, 그룹, 점유·대기 한눈에 | S2·R13 |
 | `simless doctor [--fix]` | 서버·launchd·Android SDK·시스템 이미지·avdslim·Xcode·simslim·argent(여러 버전)·스킬 점검과 고치는 방법. `--fix` 는 launchd·스킬만 고친다. 훅 점검은 5단계 | S1·S2 |
-| `simless install [--no-launchd] [--no-skill] [--no-app]` · `uninstall` | launchd 등록 + 스킬 + `Simless.app` (§4) | S1 |
+| `simless install [--no-launchd] [--no-skill] [--no-app]` | launchd 등록 + 스킬 + `Simless.app` (§4) | S1 |
+| `simless uninstall [--purge] [--yes]` | 제거 — 스킬(모든 위치)·모든 에이전트의 훅·규칙·MCP·앱·서버 등록, `--purge` 면 데이터·로그·설정·빌드 캐시까지. 만든 디바이스는 남긴다(§4) | S12 |
 | `simless ui` | 웹 화면을 브라우저로 연다 (앱 창은 `Simless.app`) | R11 |
 | `simless list [--platform] [--group <그룹>] [--created]` | **이 Mac 의 디바이스 전부** — 폭·이름·켜짐·SLIM·기본·그룹·메모·사용 중인 세션·argent ID | M5·R20 |
 | `simless catalog [--platform]` | 만들 수 있는 기종·OS 목록 | M1 |

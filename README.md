@@ -70,7 +70,17 @@ simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·
 
 ## 데이터
 
-서버 하나가 저장한다 — `~/Library/Application Support/simless/`(레지스트리·점유는 JSON, 점유 기록은 SQLite), 설정 `~/.config/simless/config.json`, 로그 `~/Library/Logs/simless/`. 기기 목록 자체는 저장하지 않고 매번 이 Mac 에서 읽는다.
+서버 하나가 저장한다 — `~/Library/Application Support/Simless/`(레지스트리·점유는 JSON, 점유 기록은 SQLite), 설정 `~/.config/simless/config.json`, 로그 `~/Library/Logs/Simless/`, 빌드 캐시 `~/Library/Caches/Simless/`. 기기 목록 자체는 저장하지 않고 매번 이 Mac 에서 읽는다.
+
+## 제거하기
+
+**앱만 휴지통에 버리지 마세요.** 스킬·훅·서버 등록이 남고, 서버가 꺼진 채 남은 훅이 시뮬레이터·에뮬레이터 명령을 막을 수 있습니다.
+
+- 앱에서: 설정 → 맨 아래 **Simless 제거** — 무엇을 지우는지 보여 주고, 데이터까지 지울지 고릅니다.
+- 터미널에서: `simless uninstall` (데이터·기록·로그·설정·빌드 캐시까지 지우려면 `--purge`)
+
+지우는 것: 스킬(전역과 넣어 둔 모든 프로젝트), 모든 에이전트의 보호(훅)·규칙·MCP, `Simless.app`·메뉴바·서버 등록.
+남는 것: Simless 가 만든 디바이스(지우려면 먼저 디바이스 화면에서 삭제), `simless` 명령 자체(`which simless` 가 가리키는 파일을 지운다 — 개발용으로 `bun link` 했다면 그 링크).
 
 ## 개발
 

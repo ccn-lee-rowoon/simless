@@ -945,6 +945,17 @@ summary:focus-visible {
   border: 0;
 }
 
+.button-danger-outline {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.uninstall-list {
+  margin: 4px 0 10px;
+  padding-left: 18px;
+  line-height: 1.7;
+}
+
 .settings-footer {
   display: flex;
   align-items: center;

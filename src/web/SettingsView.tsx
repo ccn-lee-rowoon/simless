@@ -4,6 +4,7 @@ import { t } from "../shared/i18n.ts";
 import { call } from "./api.ts";
 import { openSetup } from "./bridge.ts";
 import type { Act } from "./types.ts";
+import { Dialog } from "./ui.tsx";
 
 const RAM_CHOICES = [1536, 2048, 3072, 4096];
 
@@ -18,6 +19,9 @@ export function SettingsView({
   onSaved: () => void;
 }) {
   const [settings, setSettings] = useState<SettingsResult | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [purge, setPurge] = useState(false);
+  const [removed, setRemoved] = useState(false);
   const [draft, setDraft] = useState<SettingsResult | null>(null);
 
   useEffect(() => {
@@ -27,7 +31,15 @@ export function SettingsView({
     });
   }, []);
 
+  if (removed)
+    return (
+      <section className="panel settings-section">
+        <h3>{t("web.uninstall.doneTitle")}</h3>
+        <p className="sub">{t("web.uninstall.done")}</p>
+      </section>
+    );
   if (!draft || !settings) return <p className="sub">{t("web.loading")}</p>;
+  const createdCount = status.devices.filter((d) => d.createdBySimless).length;
 
   const changed = JSON.stringify(draft) !== JSON.stringify(settings);
   const systemName = status.systemLanguage === "ko" ? "한국어" : "English";
@@ -163,6 +175,61 @@ export function SettingsView({
           {t("web.save")}
         </button>
       </footer>
+
+      <section className="panel settings-section">
+        <h3>{t("web.uninstall.title")}</h3>
+        <div className="setup-intro">
+          <p className="sub">{t("web.uninstall.hint")}</p>
+          <button
+            type="button"
+            className="button button-small button-danger-outline"
+            onClick={() => setRemoving(true)}
+          >
+            {t("web.uninstall.open")}
+          </button>
+        </div>
+      </section>
+
+      <Dialog open={removing} onClose={() => setRemoving(false)} title={t("web.uninstall.title")}>
+        <div className="dialog-body">
+          <p>{t("web.uninstall.removes")}</p>
+          <ul className="uninstall-list">
+            <li>{t("web.uninstall.itemSkill")}</li>
+            <li>{t("web.uninstall.itemAgents")}</li>
+            <li>{t("web.uninstall.itemApp")}</li>
+          </ul>
+          <label className="check">
+            <input type="checkbox" checked={purge} onChange={(e) => setPurge(e.target.checked)} />
+            {t("web.uninstall.purge")}
+          </label>
+          <p className="sub">
+            {purge ? t("web.uninstall.purgeHint") : t("web.uninstall.keepHint")}
+          </p>
+          {createdCount > 0 && (
+            <p className="sub">{t("web.uninstall.devices", { count: createdCount })}</p>
+          )}
+          <p className="sub">{t("web.uninstall.cli")}</p>
+          <footer className="dialog-footer">
+            <span className="spacer" />
+            <button type="button" className="button" onClick={() => setRemoving(false)}>
+              {t("web.cancel")}
+            </button>
+            <button
+              type="button"
+              className="button button-danger"
+              onClick={() => {
+                setRemoving(false);
+                void act(t("web.uninstall.title"), async () => {
+                  await call("setup.uninstall", { purge });
+                  setRemoved(true);
+                });
+              }}
+            >
+              {t("web.uninstall.confirm")}
+            </button>
+          </footer>
+        </div>
+      </Dialog>
     </form>
   );
 }

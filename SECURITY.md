@@ -34,6 +34,7 @@ Simless 는 **한 사용자의 Mac 안에서만** 도는 도구다. 기본 약�
 | 소켓·상태 파일 | 소켓·`registry`·`leases`·`history.db`·`web-token` 은 `0600`, 폴더는 `0700` | `socket.ts`·`history.ts`·`store.ts` |
 | 외부 명령 | `Bun.spawn` 에 **인자 배열**로. `sh -c`·문자열 이어 붙이기 금지. 사용자 값(이름·경로)은 인자 하나로만 넘긴다 | `shared/exec.ts` |
 | 설정 창의 설치 (`setup.run`·`setup.openTerminal`) | 웹은 **수정 ID** 만 보내고 서버의 `FIXES` 표에서 찾는다(`Object.hasOwn`). 웹이 보낸 명령을 실행하는 메서드를 만들지 않는다. 새 수정 항목은 출처(공식 tap·패키지)를 확인하고 `docs/development.md` 에 적는다 | `install/fixes.ts`, `isFixId` |
+| 제거 (`setup.uninstall`, S12) | 사람 세션만. 지우는 곳은 코드에 정해 둔 위치뿐(스킬 위치 파일에 적힌 곳·에이전트 설정의 Simless 항목·`Paths` 의 폴더) — 웹에서 경로를 받지 않는다. 테스트는 `finishUninstall` 을 가짜로 두어 진짜 launchd·앱을 내리지 않는다 | `install/uninstall.ts` |
 | AppleScript (`setup.openTerminal`) | 정해 둔 명령만, `\`·`"` 를 이스케이프해서 | `setup.ts` |
 | 경로를 받는 메서드 (`device.install`·`setup.skillScope`) | 확장자·존재·폴더인지 확인하고, 그 경로로는 정해 둔 일만 한다(설치·스킬 파일 쓰기). 경로로 받은 파일을 실행하지 않는다 | `devices.ts`·`setup.ts` |
 | 에이전트 설정 파일 (`~/.claude`·`~/.codex`·`~/.cursor`·`~/.gemini`·`~/.copilot`) | Simless 항목만 넣고 뺀다. 읽지 못하는 파일은 건드리지 않는다. 다른 MCP 의 `env`·`args`(토큰이 있을 수 있음)는 출력하지 않는다. 사용자가 고르기 전에는 넣지 않는다(`simless install` 기본에 훅·MCP 없음) | `install/agents.ts`·`claude-*.ts` |

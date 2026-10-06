@@ -44,6 +44,11 @@ export interface ServerDeps {
   /** 설정 창의 설치 명령 — 기본은 install/fixes.ts. 테스트는 가짜 명령으로 바꾼다 */
   fixes?: Partial<Record<FixId, Fix>>;
   isAlive?: (pid: number, startedAt: number | undefined) => boolean;
+  /**
+   * Simless 제거의 뒷부분 — 답을 보낸 뒤 앱·데이터(purge)·서버 등록을 지운다(서버가 끝난다, S12).
+   * 테스트는 진짜 launchd·앱을 건드리지 않게 바꾼다
+   */
+  finishUninstall?: (purge: boolean) => Promise<void>;
 }
 
 type Method = (params: unknown, session: SessionInfo, connection: Connection) => Promise<unknown>;
@@ -182,7 +187,10 @@ export class SimlessServer {
   }
 
   /** 첫 실행 설정 창이 쓰는 것 (M14) */
-  get setupDeps(): Pick<ServerDeps, "env" | "selfCommand" | "setupChecks" | "fixes"> {
+  get setupDeps(): Pick<
+    ServerDeps,
+    "env" | "selfCommand" | "setupChecks" | "fixes" | "finishUninstall"
+  > {
     return this.deps;
   }
 

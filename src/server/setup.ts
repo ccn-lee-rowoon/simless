@@ -34,6 +34,7 @@ import {
   saveSkillLocations,
   uninstallSkillAt,
 } from "../install/skill.ts";
+import { purgeData, removeApp, removeIntegrations, removeLaunchd } from "../install/uninstall.ts";
 import type { FixId, SetupAgents, SetupStatus, SkillLocation } from "../shared/api.ts";
 import { run } from "../shared/exec.ts";
 import { t } from "../shared/i18n.ts";
@@ -59,6 +60,7 @@ const ScopeParams = z.discriminatedUnion("kind", [
 ]);
 
 const FixParams = z.object({ fix: z.string() });
+const UninstallParams = z.object({ purge: z.boolean().default(false) });
 const JobParams = z.object({ job: z.string() });
 
 const ApplyParams = z.object({
@@ -225,6 +227,25 @@ export function registerSetupMethods(server: SimlessServer): void {
     const result = await run(["osascript", "-e", script], { timeoutMs: 10_000 });
     if (result.code !== 0) throw new HandlerError("FAILED", result.stderr.trim() || "osascript");
     return { opened: true };
+  });
+
+  /** Simless 제거 (S12) — 사람(설정 창)만. 에이전트 연결을 지우고 답한 뒤, 앱·데이터·서버 등록을 지운다 */
+  server.addMethod("setup.uninstall", async (p, session) => {
+    if (!session.human) throw new HandlerError("NOT_ALLOWED", t("err.uninstallHumanOnly"));
+    const { purge } = parse(UninstallParams, p);
+    const devicesLeft = (await server.devices()).filter((d) => d.createdBySimless).length;
+    const steps = await removeIntegrations(server.paths, env);
+    const finish =
+      deps.finishUninstall ??
+      (async (purgeData_: boolean) => {
+        await removeApp(server.paths);
+        if (purgeData_) purgeData(server.paths, env);
+        await removeLaunchd(server.paths, true);
+        process.exit(0); // 등록을 내렸는데 아직 살아 있으면 — launchd 가 다시 켜지 않는다
+      });
+    // 답(과 화면의 «제거했습니다»)이 먼저 닿도록 조금 뒤에 — 앱 창도 이때 닫힌다
+    setTimeout(() => void finish(purge).catch(() => process.exit(1)), 1500);
+    return { steps, devicesLeft, purge };
   });
 
   server.addMethod("setup.finish", async () => {

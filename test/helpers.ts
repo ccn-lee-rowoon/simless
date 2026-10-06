@@ -231,7 +231,13 @@ export function testServers(): (options?: StartOptions) => Promise<TestServer> {
     options.prepare?.(env);
     const driver = fakeDriver();
     const deps = typeof options.deps === "function" ? options.deps(env) : options.deps;
-    const server = new SimlessServer({ ...env, drivers: [driver], ...deps });
+    // Simless 제거의 뒷부분(앱·launchd)은 진짜 것을 건드리므로 테스트에서는 기본으로 아무것도 안 한다
+    const server = new SimlessServer({
+      ...env,
+      drivers: [driver],
+      finishUninstall: async () => {},
+      ...deps,
+    });
     options.seed?.(server, driver);
     const listener = await listen(env.paths.socket, VERSION, server.handle);
     cleanups.push(
