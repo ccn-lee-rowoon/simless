@@ -88,6 +88,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 
 - **서버 시나리오** — 파일 맨 위에서 `const start = testServers();` 한 번, 테스트마다 `const { A, B, H, server, driver } = await start({ seed })`. `A`·`B` 는 에이전트 세션, `H` 는 사람(웹). 결과와 오류(`code`·`message`·`data`)를 같은 값으로 받는다
 - **준비 도구**(`test/helpers.ts`) — `tempEnv()` 임시 상태·HOME·짧은 소켓 경로, `fakeDriver()` 아무것도 켜지 않는 드라이버, `seedDevice()` 디바이스 넣기, `session()` 세션 정보
+- **점검(`runChecks`, S1·S2)** — `probe: { run, which, env }` 로 가짜 명령·임시 HOME 을 준다(`test/checks.test.ts`). 진짜 `brew`·`xcrun`·`launchctl` 을 부르지 않는다
 - **이 Mac 을 건드리지 않는다** — 설치·훅·MCP 를 부르는 테스트는 `deps: (env) => ({ env: { ...env.env, PATH: "" } })` 로 HOME 을 임시 폴더로, PATH 를 비워 진짜 `claude` 등을 못 쓰게 한다. 실제 기기는 테스트에서 켜지 않는다
 - **이름에 요구사항 ID** — `describe("그룹 (R21)")` 처럼. `bun run trace` 가 이걸 센다
 - **문서도 검사한다** — 스킬처럼 요구사항을 담은 문서는 꼭 있어야 할 문장을 테스트로(`test/skill.test.ts`)

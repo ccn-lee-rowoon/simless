@@ -23,6 +23,13 @@ describe("디바이스 명령", () => {
     });
   });
 
+  test("만들 때 이름을 정하면 그 이름으로, 기기에도 그 이름이 붙는다 (R3)", async () => {
+    const { A, driver } = await start();
+    const device = (await A("device.create", { ...android360, name: "계정 A 폰" })) as DeviceView;
+    expect(device.name).toBe("계정 A 폰");
+    expect(driver.existing.find((e) => e.native === device.native)?.name).toBe("계정 A 폰");
+  });
+
   test("--no-slim 이면 슬림 미적용", async () => {
     const { A } = await start();
     expect(await A("device.create", { ...android360, slim: false })).toMatchObject({
