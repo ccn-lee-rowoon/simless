@@ -107,9 +107,20 @@ Pass `targetId` as argent's device argument, device by device, following the arg
      ```
      `TOOL_MISSING` means it isn't an Expo project with `@expo/fingerprint` — skip the cache. Computing the fingerprint takes about 30 seconds.
    - Otherwise `reinstall-app`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <targetId>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
-2. **Launch onto your Metro** — not with `launch-app`: a plain launch reconnects to whatever server the app remembers. The app identifiers come from the project: `npx expo config --json` → `slug`, `ios.bundleIdentifier`, `android.package`.
+2. **Launch onto your Metro** — not with `launch-app`: a plain launch reconnects to whatever server the app remembers. The bundle ID and Android package come from the project: `npx expo config --json` → `ios.bundleIdentifier`, `android.package`.
+   - **Find the dev client scheme the app actually registers** — don't build it from the slug: many apps change the slug per environment, but the scheme was fixed when the native project was generated (e.g. slug `NOVA_DEV_A`, scheme `exp+novadeva`). A wrong scheme leaves the app on the dev client's home screen.
+     ```sh
+     grep -rho 'exp+[A-Za-z0-9.+-]*' android/app/src/main/AndroidManifest.xml ios/*/Info.plist | sort -u
+     adb -s <targetId> shell dumpsys package <package> | grep -o 'exp+[A-Za-z0-9.+-]*' | sort -u   # what the installed Android app handles
+     ```
    - Stop it first if it is running: `xcrun simctl terminate <targetId> <bundleId>` / `adb -s <targetId> shell am force-stop <package>`.
-   - **Expo dev client** (iOS and Android): `open-url` with `exp+<slug>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<port>`.
+   - **Expo dev client**, the URL: `<scheme>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<port>`.
+     - iOS: `open-url` with it.
+     - Android: start it for the package, and read the output — `Error: Activity not started, unable to resolve Intent` means the scheme is wrong:
+       ```sh
+       adb -s <targetId> shell "am start -W -a android.intent.action.VIEW -d '<url>' <package>"
+       ```
+     - Still on the dev client's home screen: tap **Enter URL manually** (or «New development server») and type `http://127.0.0.1:<port>`. **Don't tap the listed servers** — `192.168.…:8081`/`8082` and «Recently opened» entries are usually other sessions' Metros.
    - **Bare React Native, iOS**: write the server, then launch — no rebuild needed:
      ```sh
      xcrun simctl spawn <targetId> defaults write <bundleId> RCT_jsLocation 127.0.0.1:<port>

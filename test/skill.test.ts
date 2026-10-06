@@ -69,6 +69,10 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("not with `launch-app`");
     expect(text).toContain("expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<port>");
     expect(text).toContain("RCT_jsLocation 127.0.0.1:<port>");
+    // 스킴은 slug 로 만들지 않고 앱이 등록한 것을 찾는다 — 환경마다 slug 가 바뀌는 앱(NOVA)에서 실제로 틀렸다
+    expect(text).toContain("Find the dev client scheme the app actually registers");
+    expect(text).toContain("unable to resolve Intent");
+    expect(text).toContain("Don't tap the listed servers");
     expect(text).toContain("Pass `port: <port>` to **every** argent `debugger-*`");
   });
 
