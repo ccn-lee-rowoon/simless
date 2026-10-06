@@ -191,9 +191,8 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     let dashboard = action(Strings.get("dashboard"), #selector(openDashboard))
     dashboard.keyEquivalent = "d"
     menu.addItem(dashboard)
-    let settings = action(Strings.get("openSettings"), #selector(openSettings))
-    settings.keyEquivalent = ","
-    menu.addItem(settings)
+    // ⌘, 와 표준 설정 동작이면 macOS 26 이 톱니 아이콘을 붙인다 — 메뉴바 메뉴에서는 글자만
+    menu.addItem(action(Strings.get("openSettings"), #selector(openSettingsFromTray)))
     menu.addItem(.separator())
     let quit = action(Strings.get("quitMenubar"), #selector(quit))
     quit.keyEquivalent = "q"
@@ -317,6 +316,10 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
   }
 
   /// 설정 창 — 메인 창과 따로 (macOS 앱의 설정 창처럼)
+  @objc private func openSettingsFromTray() {
+    openSettings()
+  }
+
   @objc func openSettings() {
     if settingsWindow == nil {
       settingsWindow = makeAuxWindow(
