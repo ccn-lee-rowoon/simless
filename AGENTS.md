@@ -34,7 +34,7 @@
 - 제품·앱 이름은 **Simless**(대문자로 시작 — `Simless.app`, 화면·문서의 제품 이름). 사람이나 에이전트가 **입력하는 것**은 소문자 **`simless`** — CLI 명령, 스킬 이름, MCP 이름(`simless_*` 도구), 패키지 이름, 서버 등록(`simless.server`), `~/.config/simless`. simulator + seamless, 슬로건 «Make simulator management seamless.»
 - 슬림 디바이스 이름 앞머리는 소문자 `simless …`(예: `simless iPhone 17`)
 - 예전 이름 **Corgi** 는 `src/install/legacy.ts`(예전 설치를 찾아 옮기기)와 «결정 기록» 에만 남긴다. 다른 곳에 새로 쓰지 않는다.
-- 저장소 폴더 이름(`…/corgi`)은 그대로다.
+- 저장소 폴더는 `…/simless` 다(2026-10-06 `…/corgi` 에서 바꿈). 서버 등록·훅·MCP·`bun link` 가 이 경로를 가리키므로, 폴더를 옮기면 새 위치에서 `bun link` → `simless install --hook --mcp`(켜 둔 것만) → `mise trust` 를 다시 한다.
 
 ## 4. 빌드·검사
 
