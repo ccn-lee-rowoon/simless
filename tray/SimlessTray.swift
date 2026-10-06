@@ -316,6 +316,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
   /// 웹 화면을 띄운 보조 창 하나 — 설정·세션 기록
   private func makeAuxWindow(title: String, query: String, size: NSSize, autosave: String) -> NSWindow {
     let web = WKWebView(frame: .zero, configuration: webConfiguration())
+    web.navigationDelegate = self
     web.setValue(false, forKey: "drawsBackground")
     let window = NSWindow(
       contentRect: NSRect(origin: .zero, size: size),
@@ -410,9 +411,26 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     retries = 0
   }
 
+  /// 창 안에서는 이 앱의 화면(127.0.0.1:<포트>)만 연다 — 그 밖의 주소로는 옮겨 가지 않고,
+  /// 사람이 누른 링크면 기본 브라우저로 연다 (SECURITY.md §3)
+  func webView(
+    _ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+    decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+  ) {
+    guard let url = navigationAction.request.url else { return decisionHandler(.cancel) }
+    let local = (url.host == "127.0.0.1" || url.host == "localhost") && url.port == port
+    if local || url.scheme == "about" { return decisionHandler(.allow) }
+    if navigationAction.navigationType == .linkActivated, ["http", "https"].contains(url.scheme ?? "") {
+      NSWorkspace.shared.open(url)
+    }
+    decisionHandler(.cancel)
+  }
+
   func webView(
     _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error
   ) {
+    // 보조 창(설정·세션)은 대시보드를 다시 열지 않는다
+    guard webView === self.webView else { return }
     // 서버가 꺼져 있다 — 켜고 다시
     startServer()
     retryLoad()

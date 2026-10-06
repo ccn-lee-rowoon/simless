@@ -67,6 +67,8 @@
 
 `holders` 항목: `{ deviceId, sessionKey, agent, cwd, human, since, reason: "held" | "queued" }` (`since` 는 ms).
 
+**작업 폴더(`cwd`)** — 에이전트 세션이 받는 결과·오류 data·진행 알림에서 **다른 세션의** `cwd` 는 마지막 폴더 이름만 온다(예: `app`). 자기 세션과 사람(웹 화면)에게는 전체 경로. 출력이 AI 제공사로 넘어가기 때문이다(`SECURITY.md`).
+
 ## 메서드
 
 디바이스는 Simless ID·AVD ID·UDID·이름으로 가리킨다. 목록·점유는 **Simless 목록**(만든 것 + 이 Mac 에서 추가한 것, `listed: true`)만 다룬다(R20) — Simless 가 만든 것은 `createdBySimless: true`. 목록에 없는 이 Mac 의 디바이스를 가리키면 `NOT_FOUND`(추가하라는 안내). `devices` 를 비우면 메서드마다 정한 기본값을 쓴다.

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { SessionInfo } from "../shared/protocol.ts";
@@ -65,6 +66,14 @@ export function ensureToken(path: string): string {
   return token;
 }
 
+/** 걸린 시간으로 토큰을 한 글자씩 맞혀 보지 못하게 — 길이가 다르면 바로 false */
+function sameToken(given: string | null, token: string): boolean {
+  if (given === null) return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(token);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export function checkRequest(
   request: Request,
   port: number,
@@ -75,7 +84,7 @@ export function checkRequest(
     return { status: 403, message: "허용하지 않는 Host" };
   const url = new URL(request.url);
   const given = request.headers.get("x-simless-token") ?? url.searchParams.get("token");
-  if (given !== token)
+  if (!sameToken(given, token))
     return { status: 401, message: "토큰이 없거나 틀립니다 — simless ui 로 여세요" };
   const origin = request.headers.get("origin");
   if (request.method !== "GET" && origin !== null && !hosts.some((h) => origin === `http://${h}`)) {

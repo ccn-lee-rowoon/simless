@@ -22,7 +22,7 @@ Simless 는 **한 사용자의 Mac 안에서만** 도는 도구다. 기본 약�
   - 에이전트가 하는 빌드(`npx expo run:*`)도 마찬가지다.
 - **AI 서비스로 넘어가는 대화.**
   - 에이전트가 실행한 `simless` 출력은 대화에 들어가 AI 제공사로 간다.
-  - 그 출력에는 기기 이름, 다른 세션의 에이전트 이름·작업 폴더 경로가 들어 있다.
+  - 그 출력에는 기기 이름과 다른 세션의 에이전트 이름이 들어 있다. 다른 세션의 작업 폴더는 마지막 폴더 이름만 보인다(경로에 든 사용자 이름 등은 감춘다).
   - 비밀은 들어가지 않게 한다(§3).
 
 ## 3. 고칠 때 지킬 규칙
@@ -30,8 +30,8 @@ Simless 는 **한 사용자의 Mac 안에서만** 도는 도구다. 기본 약�
 | 곳 | 규칙 | 지금 구현 |
 | --- | --- | --- |
 | HTTP (`src/server/http.ts`) | `127.0.0.1` 에만 연다. `/api/*` 는 토큰 + Host(`127.0.0.1`·`localhost`) 확인, `GET` 이 아니면 Origin 확인. 웹이 부를 메서드는 `WEB_METHODS` 에 하나씩 넣는다 — 와일드카드 금지 | `checkRequest`, `WEB_METHODS` |
-| 토큰 (`web-token`) | 32바이트 무작위, `0600`. 로그·화면·에이전트 출력·커밋에 찍지 않는다. 페이지에는 주소의 `#token=`(서버로 안 감)으로 넘긴다 | `ensureToken` |
-| 소켓·상태 파일 | 소켓·`registry`·`leases`·`history.db`·`web-token` 은 `0600`, 폴더는 `0700` | `socket.ts`·`history.ts`·`store.ts` |
+| 토큰 (`web-token`) | 32바이트 무작위, `0600`. 로그·화면·에이전트 출력·커밋에 찍지 않는다. 페이지에는 주소의 `#token=`(서버로 안 감)으로 넘긴다. 비교는 일정 시간 비교(`timingSafeEqual`) | `ensureToken`·`sameToken` |
+| 소켓·상태·설정·로그 | 소켓·`registry`·`leases`·`history.db`·`web-token`·`config.json` 은 `0600`, 상태·설정·로그 폴더는 `0700` | `socket.ts`·`history.ts`·`store.ts`·`shared/config.ts`·`install/launchd.ts` |
 | 외부 명령 | `Bun.spawn` 에 **인자 배열**로. `sh -c`·문자열 이어 붙이기 금지. 사용자 값(이름·경로)은 인자 하나로만 넘긴다 | `shared/exec.ts` |
 | 설정 창의 설치 (`setup.run`·`setup.openTerminal`) | 웹은 **수정 ID** 만 보내고 서버의 `FIXES` 표에서 찾는다(`Object.hasOwn`). 웹이 보낸 명령을 실행하는 메서드를 만들지 않는다. 새 수정 항목은 출처(공식 tap·패키지)를 확인하고 `docs/development.md` 에 적는다 | `install/fixes.ts`, `isFixId` |
 | 제거 (`setup.uninstall`, S12) | 사람 세션만. 지우는 곳은 코드에 정해 둔 위치뿐(스킬 위치 파일에 적힌 곳·에이전트 설정의 Simless 항목·`Paths` 의 폴더) — 웹에서 경로를 받지 않는다. 테스트는 `finishUninstall` 을 가짜로 두어 진짜 launchd·앱을 내리지 않는다 | `install/uninstall.ts` |
@@ -41,6 +41,8 @@ Simless 는 **한 사용자의 Mac 안에서만** 도는 도구다. 기본 약�
 | 훅 (`src/hook`) | 서버에는 **기기 ID 만** 보낸다. 에이전트의 명령 내용·도구 입력은 저장하지 않는다 | `hook.check` |
 | 기록 (`history.db`) | 사건 종류·세션·에이전트·작업 폴더·기기 ID 만. 명령·환경 변수·화면 내용은 넣지 않는다. 기본 90일 뒤 지운다 | `history.ts` |
 | 웹 화면 (`src/web`) | 외부 글꼴·스크립트·CDN·분석 도구를 넣지 않는다. `dangerouslySetInnerHTML` 금지(React 가 글자를 이스케이프하게) | — |
+| 앱 창 (`tray/SimlessTray.swift`) | 창 안에서는 이 앱의 화면(`127.0.0.1:<포트>`)만 연다. 그 밖의 주소로는 옮겨 가지 않고, 사람이 누른 링크면 기본 브라우저로 연다 | `decidePolicyFor` |
+| 에이전트에게 보이는 출력 | 다른 세션의 작업 폴더(`cwd`)는 마지막 폴더 이름만 — 출력이 AI 제공사로 넘어간다. 자기 세션과 사람(웹 화면)에게는 그대로. 서버의 응답 출구 한 곳에서 한다 — 새 메서드도 따로 할 일 없음 | `app.ts` `redactCwd` |
 | 빌드 캐시 (`src/builds`) | `~/Library/Caches/Simless`(사용자만 읽음) 아래에만. 캐시의 빌드에는 앱 번들의 `EXPO_PUBLIC_*` 같은 값이 들어 있을 수 있으므로 다른 곳에 복사·업로드하지 않는다 | `cache.ts` |
 | 네트워크 요청 | 새로 외부에 요청하는 코드를 넣으려면 요구사항·결정 기록에 무엇을 어디로 보내는지 먼저 적는다(업데이트 확인 R19 가 처음이 될 것 — GitHub Releases 로 버전만 묻고, 받은 파일은 체크섬 확인) | 없음 |
 | 의존성 | 늘릴 때는 필요한지 먼저 본다. 설치 스크립트(postinstall)·네트워크를 쓰는 패키지는 피한다. 버전은 `bun.lock` 으로 고정 | `package.json` |
@@ -63,13 +65,9 @@ Simless 는 **한 사용자의 Mac 안에서만** 도는 도구다. 기본 약�
 
 | 내용 | 위험 | 고치는 법 |
 | --- | --- | --- |
-| 에이전트 출력(`status`·`who`)에 다른 세션의 작업 폴더 경로가 보인다 → AI 제공사로 감 | 낮음 | 에이전트 세션에는 다른 세션의 `cwd` 를 숨긴다 |
 | argent 를 `@latest` 로 설치 | 중간 (공급망) | 확인한 버전으로 고정 |
 | avdslim 이 개인 저장소 tap + `brew trust` | 중간 (공급망) | 설정 창에 출처를 보여 주고, 공식 배포처가 생기면 바꾼다 |
-| 토큰 비교가 일정 시간 비교가 아님 | 매우 낮음 (루프백) | `crypto.timingSafeEqual` |
 | SSE 는 토큰을 주소의 `?token=` 으로 받는다(EventSource 가 헤더를 못 붙임) | 매우 낮음 (로그에 안 남김) | 짧게 쓰는 SSE 전용 토큰 |
-| `~/.config/simless/config.json`·`~/Library/Logs/Simless/*.log` 가 `644` | 매우 낮음 (비밀 없음, 상위 폴더가 막힘) | `600` 으로 |
-| `Simless.app` 의 WKWebView 가 이동할 주소를 제한하지 않는다 | 낮음 (로컬 페이지만, 외부 링크 없음) | `decidePolicyFor` 로 `127.0.0.1` 만 허용 |
 
 ## 6. 문제를 찾았을 때
 

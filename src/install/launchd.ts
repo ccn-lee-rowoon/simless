@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { run } from "../shared/exec.ts";
 import { APP_BUNDLE_ID, LAUNCH_LABEL, type Paths } from "../shared/paths.ts";
@@ -82,7 +82,8 @@ export function isInstalled(paths: Paths): boolean {
 
 export async function install(paths: Paths): Promise<void> {
   mkdirSync(dirname(paths.launchAgent), { recursive: true });
-  mkdirSync(paths.logDir, { recursive: true });
+  mkdirSync(paths.logDir, { recursive: true, mode: 0o700 });
+  chmodSync(paths.logDir, 0o700); // 로그에는 기기 이름·작업 폴더가 남는다
   // 이미 등록돼 있으면 내렸다가 새 설정으로 다시 올린다 (업데이트 후 재시작 포함)
   await bootout();
   writeFileSync(paths.launchAgent, plist(paths, selfCommand()));

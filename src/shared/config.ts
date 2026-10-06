@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { z } from "zod";
 
@@ -71,8 +71,11 @@ export function saveSettings(path: string, patch: SettingsPatch): Config {
   }
   const next = { ...raw, android, ios };
   const parsed = Config.parse(next);
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
+  // 예전에 755·644 로 만든 것도 — 같은 그룹 사용자가 읽지 못하게
+  chmodSync(dirname(path), 0o700);
+  chmodSync(path, 0o600);
   return parsed;
 }
 

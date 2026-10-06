@@ -434,7 +434,7 @@ export class AndroidDriver implements Driver {
     // 포트를 정해 켜면 시리얼이 emulator-<포트> 로 정해진다 (설계 결정 기록)
     const port = await this.freePort(new Set([...running.values()].map((r) => r.serial)));
     const serial = `emulator-${port}`;
-    mkdirSync(this.options.logDir, { recursive: true });
+    mkdirSync(this.options.logDir, { recursive: true, mode: 0o700 });
     const logPath = join(this.options.logDir, `emulator-${device.native}.log`);
     progress(t("progress.booting", { name: `${device.name} (${serial})` }));
     const proc = this.spawnEmulator(

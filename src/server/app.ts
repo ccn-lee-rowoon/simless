@@ -1,3 +1,4 @@
+import { basename } from "node:path";
 import type { Fix } from "../install/fixes.ts";
 import type {
   CheckView,
@@ -52,6 +53,18 @@ export interface ServerDeps {
 }
 
 type Method = (params: unknown, session: SessionInfo, connection: Connection) => Promise<unknown>;
+
+/** 값 안의 `cwd` 중 자기 것이 아닌 것을 마지막 폴더 이름으로 — 누구인지는 알되 경로(사용자 이름 등)는 감춘다 */
+export function redactCwd(value: unknown, own: string): unknown {
+  if (Array.isArray(value)) return value.map((v) => redactCwd(v, own));
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, v]) => [
+      key,
+      key === "cwd" && typeof v === "string" && v !== own ? basename(v) : redactCwd(v, own),
+    ]),
+  );
+}
 
 export interface InventoryProblem {
   platform: Device["platform"];
@@ -133,8 +146,24 @@ export class SimlessServer {
     // 요청이 곧 «사용» 이다 — 마지막 사용 시각 갱신 (R17). 웹 UI(사람)는 점유 기록을 남기지 않는다
     if (!request.session.human || this.leases.session(request.session.key))
       this.leases.touch(request.session);
+    const { session } = request;
+    // 에이전트에게는 다른 세션의 작업 폴더를 폴더 이름만 보인다 — 출력이 AI 제공사로 넘어간다 (SECURITY.md §5)
+    const shown = session.human ? (v: unknown) => v : (v: unknown) => redactCwd(v, session.cwd);
+    const conn: Connection = session.human
+      ? connection
+      : {
+          emit: (event, data) => connection.emit(event, shown(data)),
+          get closed() {
+            return connection.closed;
+          },
+          onClose: (listener) => connection.onClose(listener),
+        };
     try {
-      return await method(request.params, request.session, connection);
+      return shown(await method(request.params, session, conn));
+    } catch (error) {
+      if (error instanceof HandlerError && error.data !== undefined && !session.human)
+        throw new HandlerError(error.code, error.message, shown(error.data));
+      throw error;
     } finally {
       // 읽기만 하는 메서드가 아니면 화면(웹 UI·메뉴바)에 바뀌었다고 알린다
       if (!READ_ONLY.has(request.method)) {
