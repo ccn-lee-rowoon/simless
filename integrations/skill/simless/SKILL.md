@@ -63,6 +63,8 @@ simless --json use <ID|name>...             # specific devices
 - `NO_DEFAULT`: no default device yet. `data.missing` tells, per platform, how many devices exist:
   - `devices: 0` — there is nothing to choose from: tell the user you're creating one (slim, a few minutes), then `simless --json use --default <platform> --create`.
   - more than 0 — ask the user which device to use (`simless default <device>` makes it the default).
+- **Run `simless use` on its own** — not chained with device commands (`simless use … && adb …`): the hook checks the whole command before the lease exists and blocks all of it. Device commands go in the next call.
+- A lease can be released while you wait for the user (session end, or idle with someone waiting). If a device command is blocked with «… only after acquiring», check `simless --json status` (`mine`) and run `use` again — and redo the Android `adb reverse` from step 3.
 - From `devices[]` remember each device's **`targetId`** (argent `udid`/`device_id` — iOS UDID, Android `emulator-<port>`) and **`label`** (e.g. `Android 360dp`, `iOS 402pt`). `simless --json list` shows them again.
 
 ### 3. Start your own Metro (React Native · Expo apps)
@@ -75,19 +77,24 @@ Other sessions — often in other worktrees of the same repo — run their own M
    ```sh
    for p in $(seq 8081 8099); do lsof -nP -iTCP:$p -sTCP:LISTEN >/dev/null || { echo $p; break; }; done
    ```
-2. **Start Metro from your working directory** on that port, in the background, and remember its PID. Force IPv4 so it answers on `127.0.0.1` — otherwise macOS may bind it to `[::1]` only and the app can't reach it:
-   ```sh
-   NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --port <port>          # Expo
-   NODE_OPTIONS=--dns-result-order=ipv4first npx react-native start --port <port>  # bare React Native
-   ```
-   If the port was just taken, pick the next free one.
+2. **Start Metro from your working directory** on that port, in the background, and remember its PID. Force IPv4 so it answers on `127.0.0.1` — otherwise macOS may bind it to `[::1]` only and the app can't reach it. If the port was just taken, pick the next free one.
+   - **Expo with one Android device — let Metro launch it.** `--android` does what Metro's `a` key does: `adb reverse` for your port and opening the dev client at your Metro with the scheme the installed app registers. **Always pin the device with `ANDROID_SERIAL`** — without it, it runs on every connected emulator, other sessions' included:
+     ```sh
+     ANDROID_SERIAL=<targetId> NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port> --android
+     ```
+     Success in the Metro log: `Opening exp+<scheme>://expo-development-client/?url=…%3A<port>` and then `Android Bundled`. Then skip to 4.2's «Check it attached».
+   - **Otherwise** (iOS, several Android devices, bare React Native) start Metro alone and launch per device in 4.2:
+     ```sh
+     NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port>   # Expo
+     NODE_OPTIONS=--dns-result-order=ipv4first npx react-native start --port <port>        # bare React Native
+     ```
 3. **Wait until it's ready**: argent `debugger-status` with `device_id: <targetId>` and `port: <port>` — `metro_not_running` means not yet (retry for up to ~30 s); `no_app_connected` or `connected` means Metro is up.
-4. **Point each acquired Android device at it** — both your port (dev client URLs use it) and 8081 (what the app falls back to), so a stale mapping can't send it elsewhere:
+4. **Point each acquired Android device at it** — both your port (dev client URLs use it) and 8081 (what the app falls back to), so a stale mapping can't send it elsewhere. `--android` sets only `tcp:<port>`, so add 8081 there too:
    ```sh
    adb -s <targetId> reverse tcp:<port> tcp:<port>
    adb -s <targetId> reverse tcp:8081 tcp:<port>
    ```
-   An emulator reboot drops these — run them again after `simless up`.
+   **These mappings disappear** when the emulator reboots, the app is reinstalled, or the adb server restarts. A red screen «Unable to load script … adb reverse tcp:8081» means exactly that — set them again, then Reload.
 
 Launching the app onto this Metro is step 4.2.
 
@@ -108,7 +115,7 @@ Pass `targetId` as argent's device argument, device by device, following the arg
      `TOOL_MISSING` means it isn't an Expo project with `@expo/fingerprint` — skip the cache. Computing the fingerprint takes about 30 seconds.
    - Otherwise `reinstall-app`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <targetId>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
 2. **Launch onto your Metro** — not with `launch-app`: a plain launch reconnects to whatever server the app remembers. The bundle ID and Android package come from the project: `npx expo config --json` → `ios.bundleIdentifier`, `android.package`.
-   - **Find the dev client scheme the app actually registers** — don't build it from the slug: many apps change the slug per environment, but the scheme was fixed when the native project was generated (e.g. slug `NOVA_DEV_A`, scheme `exp+novadeva`). A wrong scheme leaves the app on the dev client's home screen.
+   - **Find the dev client scheme the app actually registers** — don't build it from the slug: many apps change the slug per environment, but the scheme was fixed when the native project was generated (e.g. slug `MyApp_Dev_A` while the app registers `exp+myapp`). A wrong scheme leaves the app on the dev client's home screen.
      ```sh
      grep -rho 'exp+[A-Za-z0-9.+-]*' android/app/src/main/AndroidManifest.xml ios/*/Info.plist | sort -u
      adb -s <targetId> shell dumpsys package <package> | grep -o 'exp+[A-Za-z0-9.+-]*' | sort -u   # what the installed Android app handles
@@ -126,7 +133,12 @@ Pass `targetId` as argent's device argument, device by device, following the arg
      xcrun simctl spawn <targetId> defaults write <bundleId> RCT_jsLocation 127.0.0.1:<port>
      ```
      then `launch-app`. **Android**: `launch-app` (the 8081 mapping from step 3 reaches your Metro).
-   - **Check it attached**: `debugger-status` (`device_id: <targetId>`, `port: <port>`) should say `connected`. Still `no_app_connected` after the app is up → it's on another server; repeat this step.
+   - **Check it attached — in the app, not in the Metro log.** `debugger-status` (`device_id: <targetId>`, `port: <port>`) should say `connected`; then confirm where the app really is:
+     - Android: open the dev menu (`adb -s <targetId> shell input keyevent 82`) and scroll down to **Connected to: http://…:<port>**.
+     - iOS: `iOS Bundled` in your Metro log right after the launch.
+     - Device console lines flowing into your Metro log don't prove it — after the app moves to another Metro the old socket keeps sending logs for a while.
+     - Not your port → it's on another server; repeat this step.
+   - **An Android deep link can restart the app** — `am start … -d <url>` may recreate the activity even when the app is up, and the dev client then falls back to its saved default server (usually 8081 or a LAN address). Check the dev menu again after any deep link (step 4.3 too); if it fell back, the quickest fix is restarting your Metro with `--android` (step 3).
    - Pass `port: <port>` to **every** argent `debugger-*` and `react-profiler-*` call — without it they use 8081, which is another session's Metro.
 3. **Same screen everywhere** — `open-url <deep link>` if there is one, otherwise replay an argent flow (`flow-execute`) per device. Don't reuse tap coordinates across sizes.
 4. **Screenshots** — `screenshot`, tagged with each device's `label`.
@@ -140,12 +152,27 @@ Per `label`, say what broke (clipping, overlap, overflow, wrapping …) with scr
 ```sh
 adb -s <targetId> reverse --remove tcp:<port>   # each Android device you pointed at your Metro
 adb -s <targetId> reverse --remove tcp:8081
-kill <your Metro PID>                            # only the Metro you started
+kill <your Metro PID>                            # only the Metro you started — same PID when started with --android
 simless release
 ```
 
+- argent `stop-all-simulator-servers`: only with `devices: [<this session's devices>]` — the tool-server is shared, and an unscoped call stops other sessions' devices.
+
 - Release after reporting. You may keep the lease while waiting for the user or rebuilding — an idle lease (30 min) is released automatically only when someone is waiting.
 - **Ask the user** whether to shut the devices down. If yes, `simless down` before `release`.
+
+## When things go wrong
+
+- **argent gestures fail on an Android emulator** with `simulator-server exited … emulator "emulator-5554" not found … grpc.token`: they keep failing for the rest of the session. `describe`, `debugger-*` and `launch-app` still work. Fall back to adb — coordinates are **pixels**, so multiply `describe`'s 0–1 frame by `wm size`:
+  ```sh
+  adb -s <targetId> shell wm size
+  adb -s <targetId> shell input tap <x> <y>
+  adb -s <targetId> shell input swipe <x1> <y1> <x2> <y2> 300
+  adb -s <targetId> shell input keyevent 82          # dev menu (4 = Back)
+  adb -s <targetId> exec-out screencap -p > shot.png
+  ```
+- **argent on iOS reports a sandbox error** — `launch-app` → `init_failed`, `screenshot` → `Connection refused … CoreSimulatorService … sandbox profile`: the argent tool-server was started inside a sandbox. Restarting it from an unsandboxed shell fixes it (`argent server stop && argent server start --detach`), but **the tool-server is shared by every session on this Mac — ask the user before restarting it.** Meanwhile use `xcrun simctl launch` / `openurl` / `io <targetId> screenshot`.
+- **`debugger-connect` refuses the device when iOS and Android share one Metro**: the error lists each device's `logicalDeviceId`. Pass that as `device_id` (with `port: <port>`) to `debugger-connect` and every later `debugger-*` call.
 
 ## Device groups (only when the user asks)
 

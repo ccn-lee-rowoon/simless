@@ -15,6 +15,15 @@ function home() {
 }
 
 describe("에이전트 스킬 (R16·S9)", () => {
+  test("특정 앱에 묶이지 않는다 — 앱 이름·번들 ID·저장소 이름을 쓰지 않는다 (R16)", async () => {
+    // 스킬은 모든 모바일 앱 프로젝트에서 쓴다. 예시는 MyApp 처럼 지어낸 이름으로
+    for (const text of [
+      await bundledSkill(),
+      await Bun.file("integrations/rules/simless.md").text(),
+    ])
+      expect(text).not.toMatch(/nova|xb3|cocone|ensapia/i);
+  });
+
   test("들어 있는 스킬은 simless 스킬 문서다 (이름·트리거 포함)", async () => {
     const text = await bundledSkill();
     expect(text).toStartWith("---\nname: simless\n");
@@ -69,10 +78,24 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("not with `launch-app`");
     expect(text).toContain("expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<port>");
     expect(text).toContain("RCT_jsLocation 127.0.0.1:<port>");
-    // 스킴은 slug 로 만들지 않고 앱이 등록한 것을 찾는다 — 환경마다 slug 가 바뀌는 앱(NOVA)에서 실제로 틀렸다
+    // 스킴은 slug 로 만들지 않고 앱이 등록한 것을 찾는다 — 환경마다 slug 가 바뀌는 앱에서 실제로 틀렸다
     expect(text).toContain("Find the dev client scheme the app actually registers");
     expect(text).toContain("unable to resolve Intent");
     expect(text).toContain("Don't tap the listed servers");
+  });
+
+  test("Android 실측 보충 — --android 는 ANDROID_SERIAL 로, 앱에서 확인, 딥링크 재기동, reverse 사라짐, 점유는 따로 (S7·S11)", async () => {
+    const text = await bundledSkill();
+    expect(text).toContain(
+      "ANDROID_SERIAL=<targetId> NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port> --android",
+    );
+    expect(text).toContain("Check it attached — in the app, not in the Metro log.");
+    expect(text).toContain("Connected to: http://…:<port>");
+    expect(text).toContain("An Android deep link can restart the app");
+    expect(text).toContain("These mappings disappear");
+    expect(text).toContain("Run `simless use` on its own");
+    expect(text).toContain("ask the user before restarting it");
+    expect(text).toContain("logicalDeviceId");
     expect(text).toContain("Pass `port: <port>` to **every** argent `debugger-*`");
   });
 
