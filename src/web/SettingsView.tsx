@@ -52,6 +52,18 @@ export function SettingsView({
       }}
     >
       <section className="panel settings-section">
+        <h3>{t("web.settings.about")}</h3>
+        <dl className="about-list">
+          <dt>{t("web.settings.version")}</dt>
+          <dd>{t("web.server.version", { version: status.serverVersion })}</dd>
+          <dt>{t("web.settings.configFile")}</dt>
+          <dd>
+            <code>~/.config/simless/config.json</code>
+          </dd>
+        </dl>
+      </section>
+
+      <section className="panel settings-section">
         <h3>{t("web.settings.setup")}</h3>
         <div className="setup-intro">
           <p className="sub">{t("web.settings.setupHint")}</p>
@@ -138,9 +150,6 @@ export function SettingsView({
       </section>
 
       <footer className="settings-footer">
-        <span className="sub">
-          simless {status.serverVersion} · {t("web.settings.file")}
-        </span>
         <span className="spacer" />
         <button
           type="button"

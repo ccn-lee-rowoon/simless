@@ -279,17 +279,26 @@ function App() {
         </button>
         <div
           className="server-state"
-          title={status ? t("web.server.connected", { version: status.serverVersion }) : undefined}
+          title={
+            status
+              ? `${t("web.server.connected")} · ${t("web.server.version", { version: status.serverVersion })}`
+              : undefined
+          }
         >
           <span className={online ? "dot dot-on" : "dot dot-bad"} />
           <span className="side-text">
             {status && online
-              ? t("web.server.connected", { version: status.serverVersion })
+              ? t("web.server.connected")
               : online
                 ? t("web.loading")
                 : t("web.server.offline")}
           </span>
         </div>
+        {status && (
+          <div className="server-version side-text">
+            {t("web.server.version", { version: status.serverVersion })}
+          </div>
+        )}
       </aside>
 
       <main className="content">

@@ -210,6 +210,14 @@ h4 {
   font-size: 12px;
 }
 
+/* 서버 연결됨 밑 — 점(dot) 너비만큼 들여 글자 시작을 맞춘다 */
+.server-version {
+  padding: 2px 10px 0 23px;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
 .page-header {
   display: flex;
   align-items: center;
@@ -909,6 +917,23 @@ summary:focus-visible {
 
 .settings-section p {
   margin: 0;
+}
+
+.about-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.about-list dt {
+  color: var(--muted);
+}
+
+.about-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .radio-list {
