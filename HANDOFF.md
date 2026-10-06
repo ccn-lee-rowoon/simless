@@ -84,7 +84,7 @@
 | Simless launchd 등록 | `~/Library/LaunchAgents/simless.server.plist` (개발 모드: bun + 이 저장소의 `bin/simless.ts`) | Simless 를 쓰는 동안 유지. 지우려면 `simless uninstall` |
 | `simless` 명령 | `~/.bun/bin/simless` → 이 저장소 (`bun link`) | 유지 |
 | Simless.app (메뉴바 앱 + 앱 창) | `~/Applications/Simless.app` + 로그인 항목 `~/Library/LaunchAgents/simless.menubar.plist` | 유지. 지우려면 `simless uninstall`. Swift 를 고치면 `simless install --no-launchd --no-skill` |
-| Simless 디바이스 | `bakw`(Android 360dp, Android 기본)·`rddv`(Android 태블릿 800dp)·`8rav`(iPhone SE) — 예전 이름(Corgi) 시절에 만들어 이름 앞머리가 예전 이름이다(바꿀지 사용자 확인 대기). iOS 기본은 `zx7w`(iPhone 17 Pro, 다른 세션이 씀) | 사용자가 만든 것 — 필요 없으면 화면에서 삭제(기본은 다른 기기를 기본으로 정한 뒤) |
+| Simless 디바이스 | `bakw`(Android 360dp, Android 기본)·`rddv`(Android 태블릿 800dp)·`8rav`(iPhone SE) — 2026-10-06 이름 앞머리를 예전 이름에서 `simless …` 로 바꿈. Android AVD ID(`corgi_` 로 시작)는 AVD 폴더 이름이라 그대로 둔다(Simless 는 ID 로 기억하므로 동작에는 상관없음). iOS 기본은 `zx7w`(iPhone 17 Pro, 다른 세션이 씀) | 사용자가 만든 것 — 필요 없으면 화면에서 삭제(기본은 다른 기기를 기본으로 정한 뒤) |
 | Simless 스킬 | `~/.claude/skills/simless/SKILL.md`·`~/.agents/skills/simless/SKILL.md` (전역) | 유지. 스킬을 고치면 `simless skill install` |
 | Claude Code 보호·MCP | 훅 `~/.claude/settings.json`·규칙 `~/.claude/rules/simless.md`·MCP `~/.claude.json` — 저장소 경로(`…/simless/bin/simless.ts`)를 가리킨다 | 켜 둘지 사용자 확인 대기. 끄려면 설정 창 «에이전트 연결» |
 | 옛 폴더 링크 | `~/Projects/ccn-lee-rowoon/corgi` → `simless` (2026-10-06 폴더 이름을 바꾼 세션이 쓰던 임시 링크) | 그 세션이 끝나면 `rm ~/Projects/ccn-lee-rowoon/corgi` |
