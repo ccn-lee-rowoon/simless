@@ -425,7 +425,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | 5 ✅ | 보호 — Claude Code 훅(`simless hook claude pre-tool-use`), 규칙(`~/.claude/rules/simless.md`), 서버 꺼짐 처리, `simless install`·`doctor` 연동. 대상은 Simless 목록의 디바이스(P1). 설치는 사용자가 고른다 — 첫 실행 설정 창 또는 `--hook`(이 Mac 의 Claude Code 에는 켜져 있음). 다른 에이전트(Copilot·Codex·Cursor·Gemini) 어댑터도 만들었다 — 실제 에이전트로는 아직 확인 안 함(Q16) | 다른 세션이 남의 디바이스를 못 건드린다 |
 | 5.5 ✅ | 첫 실행 설정 창 (M14, 2026-10-05) — 앱을 처음 열면 점검 → 에이전트 연결(스킬·보호·MCP) → 기본 디바이스를 차례로. 서버 `setup.*`, `simless install` 은 보호·MCP 를 기본으로 넣지 않음(`--hook`·`--mcp`) | 터미널 없이 앱에서 설정을 끝낸다 |
 | 6 ✅ | MCP 래퍼 — `simless mcp`(stdio). 도구: `simless_status`·`simless_use`(디바이스·그룹·기본, all·available, 기다리기는 45초씩 나눠 «STILL_QUEUED → 다시 호출»)·`simless_release`·`simless_down`·`simless_catalog`·`simless_create`·`simless_group_save`. 오류는 코드부터(`BUSY: …`). 세션은 CLI 처럼 프로세스 트리, 서버가 꺼져 있으면 켠다. **등록은 사용자 결정** — 첫 실행 설정 창의 «MCP 도구» 또는 `simless install --mcp` | 에이전트가 사용법 없이 바로 쓴다 |
-| 6.5 ✅ | 쓰면서 더한 것 (2026-10-05~06) — 네이티브 빌드 캐시(`simless app`, R26), 보안 문서(`SECURITY.md`), 제거(`simless uninstall [--purge]`·설정 창 «Simless 제거», S12), 버전 표기·앱 창 새로 고침 | 빌드를 건너뛰고, 깔끔하게 지울 수 있다 |
+| 6.5 ✅ | 쓰면서 더한 것 (2026-10-05~06) — 네이티브 빌드 캐시(`simless app`, R26), 보안 문서(`SECURITY.md`), 제거(`simless uninstall [--purge]`·설정 창 «Simless 제거», S12), 버전 표기·앱 창 새로 고침, 보안 약한 점 정리(다른 세션 작업 폴더 감추기·토큰 비교·파일 권한·앱 창 이동 제한), 훅 heredoc 오탐, 요구사항 «확인» 칸과 요구사항↔테스트 검사, Metro 연결 순서(스킬 — argent 의 «8081 하나» 덮어쓰기·dev client 스킴·`--android`·앱에서 확인), 메뉴바 메뉴 줄이기 | 빌드를 건너뛰고, 깔끔하게 지울 수 있다. 앱이 자기 Metro 에 붙는다 |
 | U | 업데이트 — `scripts/release.ts`, 확인·알림, `simless update`·되돌리기 (§19). **리모트·첫 Release 가 생긴 뒤**, 5단계 이후 아무 때나 | 새 버전을 알림 받고 명령 한 번으로 올린다 |
 | 나중 | 스크린샷 모아 보기 (화면 탭) · 일괄 설치·실행·딥링크 (L1~L3 — 캐시된 빌드 설치는 R26 으로 들어감) · 슬림된 디바이스 복제 (L4) — 필요하면 | — |
 

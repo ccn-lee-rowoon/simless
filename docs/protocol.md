@@ -33,6 +33,7 @@
 ```
 
 - `session` 은 클라이언트가 프로세스 트리에서 찾는다 (`docs/design.md` §7). 서버는 이 값으로 점유자를 구분하고, 요청이 올 때마다 그 세션의 마지막 사용 시각을 갱신한다(R17).
+- 웹 화면·메뉴바는 HTTP(`127.0.0.1`, 토큰)로 같은 메서드를 부른다 — `POST /api/call { method, params }`(웹이 부를 수 있는 메서드만, `WEB_METHODS`), 변화는 `GET /api/events`(SSE)로 받는다. SSE 이벤트: `hello { version, startedAt }`(연결할 때 — `startedAt` 은 서버가 뜬 시각, 다시 연결했는데 다르면 화면이 페이지를 새로 받는다) · `changed`(다시 읽어라) · `progress { message }` · `output { job, line }`·`job { job }`(설정 창의 설치, M14)
 - 버전 확인: 요청마다 `clientVersion` 을, 응답마다 `serverVersion` 을 싣는다. 다르면 CLI 가 «서버를 다시 시작하세요» 를 한 번 알린다. (설계안의 별도 `hello` 대신 이 방식으로 했다.)
 
 **진행 알림** — 응답 전에 여러 번 올 수 있다
