@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { CheckView, StatusResult } from "../shared/api.ts";
 import { call } from "../shared/client.ts";
 import type { Config } from "../shared/config.ts";
-import { run, which } from "../shared/exec.ts";
+import { run as defaultRun, which as defaultWhich, type Runner } from "../shared/exec.ts";
 import { t } from "../shared/i18n.ts";
 import { LAUNCH_LABEL, type Paths } from "../shared/paths.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
@@ -19,13 +19,21 @@ import { combineStates, loadSkillLocations, locationStatus, locationText } from 
 
 export type Check = CheckView;
 
-async function version(command: string[]): Promise<string | undefined> {
-  const result = await run(command, { timeoutMs: 5000 });
+/** 이 Mac 을 보는 방법 — 테스트는 가짜 명령·HOME 으로 바꾼다 */
+export interface Probe {
+  run: Runner;
+  which: (name: string) => string | undefined;
+  env: NodeJS.ProcessEnv;
+}
+
+async function version(probe: Probe, command: string[]): Promise<string | undefined> {
+  const result = await probe.run(command, { timeoutMs: 5000 });
   return result.code === 0 ? result.stdout.trim().split("\n")[0] : undefined;
 }
 
 /** brew 로 설치한 도구 중 새 버전이 있는 것 — brew 가 없으면 빈 목록 */
-async function brewOutdated(names: string[]): Promise<Map<string, string>> {
+async function brewOutdated(probe: Probe, names: string[]): Promise<Map<string, string>> {
+  const { run, which } = probe;
   const brew = which("brew");
   const outdated = new Map<string, string>();
   if (!brew) return outdated;
@@ -44,8 +52,8 @@ async function brewOutdated(names: string[]): Promise<Map<string, string>> {
   return outdated;
 }
 
-function pathDirs(): string[] {
-  return (process.env.PATH ?? "").split(":").filter(Boolean);
+function pathDirs(env: NodeJS.ProcessEnv): string[] {
+  return (env.PATH ?? "").split(":").filter(Boolean);
 }
 
 /**
@@ -53,8 +61,15 @@ function pathDirs(): string[] {
  */
 export async function runChecks(
   ctx: { paths: Paths; config: Config; session: SessionInfo },
-  options: { serverVersion?: string } = {},
+  options: { serverVersion?: string; probe?: Partial<Probe> } = {},
 ): Promise<Check[]> {
+  const env = options.probe?.env ?? process.env;
+  const probe: Probe = {
+    run: options.probe?.run ?? defaultRun,
+    which: options.probe?.which ?? ((name) => defaultWhich(name, env)),
+    env,
+  };
+  const { run, which } = probe;
   const checks: Check[] = [];
   const add = (check: Check) => checks.push(check);
 
@@ -114,7 +129,7 @@ export async function runChecks(
     });
   }
 
-  const outdated = await brewOutdated(["avdslim", "simslim"]);
+  const outdated = await brewOutdated(probe, ["avdslim", "simslim"]);
 
   // Android
   const sdk = androidSdk(ctx.config);
@@ -143,7 +158,7 @@ export async function runChecks(
     action: images.length > 0 ? undefined : { fix: "androidStudio.open", kind: "open" },
   });
   const avdslim = which("avdslim");
-  const avdslimVersion = avdslim ? await version([avdslim, "version"]) : undefined;
+  const avdslimVersion = avdslim ? await version(probe, [avdslim, "version"]) : undefined;
   add({
     id: "avdslim",
     group: "Android",
@@ -173,13 +188,13 @@ export async function runChecks(
     status: simctl.code === 0 ? "ok" : "fail",
     detail:
       simctl.code === 0
-        ? ((await version(["xcodebuild", "-version"])) ?? t("doctor.present"))
+        ? ((await version(probe, ["xcodebuild", "-version"])) ?? t("doctor.present"))
         : t("common.none"),
     fix: simctl.code === 0 ? undefined : installHints().xcode,
     action: simctl.code === 0 ? undefined : { fix: "xcode.open", kind: "open" },
   });
   const simslim = which("simslim");
-  const simslimVersion = simslim ? await version([simslim, "version"]) : undefined;
+  const simslimVersion = simslim ? await version(probe, [simslim, "version"]) : undefined;
   add({
     id: "simslim",
     group: "iOS",
@@ -203,13 +218,13 @@ export async function runChecks(
   // 에이전트 연동
   const argents = [
     ...new Set(
-      pathDirs()
+      pathDirs(env)
         .map((d) => join(d, "argent"))
         .filter((p) => existsSync(p)),
     ),
   ];
   const versions = await Promise.all(
-    argents.map(async (p) => `${p} (${(await version([p, "--version"])) ?? "?"})`),
+    argents.map(async (p) => `${p} (${(await version(probe, [p, "--version"])) ?? "?"})`),
   );
   const distinct = new Set(versions.map((v) => v.replace(/^.* \(/, "")));
   add({
@@ -232,7 +247,7 @@ export async function runChecks(
     action: argents.length === 0 ? { fix: "argent.install", kind: "install" } : undefined,
   });
   const skillViews = await Promise.all(
-    loadSkillLocations(ctx.paths.skills).map((l) => locationStatus(l)),
+    loadSkillLocations(ctx.paths.skills).map((l) => locationStatus(l, env)),
   );
   const skill = combineStates(skillViews.map((v) => v.state));
   add({
@@ -250,7 +265,7 @@ export async function runChecks(
     autofix: skill === "current" ? undefined : "skill",
   });
 
-  const hook = hookStatus(selfCommand());
+  const hook = hookStatus(selfCommand(), env);
   add({
     id: "hook",
     group: t("doctor.group.agents"),
@@ -258,7 +273,7 @@ export async function runChecks(
     status: hook === "current" ? "ok" : "warn",
     detail:
       hook === "current"
-        ? settingsPath()
+        ? settingsPath(env)
         : hook === "missing"
           ? t("doctor.hook.missing")
           : t("doctor.hook.outdated"),
@@ -266,7 +281,7 @@ export async function runChecks(
     fix: hook === "current" ? undefined : "simless install --no-launchd --no-app --hook",
     autofix: hook === "outdated" ? "hook" : undefined,
   });
-  const rule = await ruleStatus();
+  const rule = await ruleStatus(env);
   add({
     id: "rule",
     group: t("doctor.group.agents"),
@@ -274,7 +289,7 @@ export async function runChecks(
     status: rule === "current" ? "ok" : "warn",
     detail:
       rule === "current"
-        ? ruleTarget()
+        ? ruleTarget(env)
         : rule === "missing"
           ? t("doctor.skill.missing")
           : t("doctor.skill.outdated"),
