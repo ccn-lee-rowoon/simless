@@ -5,12 +5,6 @@
 import AppKit
 import WebKit
 
-struct DeviceRow {
-  let label: String
-  let name: String
-  let holder: String?
-}
-
 /// 메뉴 문구 — 서버의 언어 설정(status.language)을 따른다 (R25). 웹 화면은 공용 사전을 쓰고, 여기는 몇 줄뿐이라 따로 둔다
 enum Strings {
   static var lang = Locale.preferredLanguages.first?.hasPrefix("ko") == true ? "ko" : "en"
@@ -23,10 +17,6 @@ enum Strings {
       "badResponse": ("서버 응답을 읽지 못했습니다", "Couldn't read the server's answer"),
       "connecting": ("연결 중…", "Connecting…"),
       "startServer": ("서버 켜기", "Start server"),
-      "noneBooted": ("켜진 디바이스가 없습니다", "No devices running"),
-      "booted": ("켜진 디바이스", "Running devices"),
-      "using": ("%@ 사용 중", "in use by %@"),
-      "human": ("사람", "person"),
       "dashboard": ("대시보드 열기", "Open Dashboard"),
       "quitMenubar": ("Simless 종료", "Quit Simless"),
       "close": ("창 닫기", "Close Window"),
@@ -42,6 +32,8 @@ enum Strings {
       "reload": ("새로 고침", "Reload"),
       "view": ("보기", "View"),
       "settings": ("설정…", "Settings…"),
+      // 메뉴바 메뉴에서는 «설정…» 대신 — macOS 26 이 표준 이름(설정…) 항목 옆에 톱니 아이콘을 붙인다
+      "openSettings": ("설정 열기", "Open Settings"),
       "settingsTitle": ("Simless 설정", "Simless Settings"),
       "setupTitle": ("Simless 시작하기", "Get started with Simless"),
       "skillUpdate": ("스킬 업데이트 있음 — 업데이트", "Skill update available — Update"),
@@ -94,7 +86,6 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
 {
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let menu = NSMenu()
-  private var devices: [DeviceRow] = []
   private var serverVersion: String?
   private var lastError: String?
   private var window: NSWindow?
@@ -165,8 +156,6 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
           self.serverVersion = result["serverVersion"] as? String
           self.setupNeeded = (result["setupNeeded"] as? Bool) == true
           self.skillUpdate = (result["skillUpdate"] as? Bool) == true
-          let all = (result["devices"] as? [[String: Any]]) ?? []
-          self.devices = all.filter { ($0["booted"] as? Bool) == true }.map(Self.row)
           self.lastError = nil
         } else {
           self.serverVersion = nil
@@ -175,18 +164,6 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
         completion?()
       }
     }.resume()
-  }
-
-  private static func row(_ d: [String: Any]) -> DeviceRow {
-    let holder = d["holder"] as? [String: Any]
-    let who = holder.map {
-      ($0["human"] as? Bool) == true ? Strings.get("human") : (($0["agent"] as? String) ?? "?")
-    }
-    return DeviceRow(
-      label: (d["label"] as? String) ?? "",
-      name: (d["name"] as? String) ?? "",
-      holder: who
-    )
   }
 
   // MARK: 메뉴바 메뉴
@@ -206,19 +183,6 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     }
     menu.addItem(.separator())
 
-    if serverVersion != nil {
-      if devices.isEmpty {
-        menu.addItem(disabled(Strings.get("noneBooted")))
-      } else {
-        menu.addItem(disabled(Strings.get("booted")))
-        for device in devices {
-          let who = device.holder.map { " · " + String(format: Strings.get("using"), $0) } ?? ""
-          menu.addItem(disabled("●  \(device.label)  \(device.name)\(who)"))
-        }
-      }
-      menu.addItem(.separator())
-    }
-
     if skillUpdate {
       menu.addItem(action(Strings.get("skillUpdate"), #selector(updateSkill)))
       menu.addItem(.separator())
@@ -227,7 +191,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     let dashboard = action(Strings.get("dashboard"), #selector(openDashboard))
     dashboard.keyEquivalent = "d"
     menu.addItem(dashboard)
-    let settings = action(Strings.get("settings"), #selector(openSettings))
+    let settings = action(Strings.get("openSettings"), #selector(openSettings))
     settings.keyEquivalent = ","
     menu.addItem(settings)
     menu.addItem(.separator())
