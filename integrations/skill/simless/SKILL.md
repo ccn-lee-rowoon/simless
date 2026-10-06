@@ -163,6 +163,8 @@ simless release
 
 ## When things go wrong
 
+- **Parsing `simless --json` output**: progress lines («… booting», «… booted») go to **stderr**, the JSON to stdout. Drop stderr when piping — `simless --json use … 2>/dev/null | jq …`. Merging it (`2>&1 | jq`) breaks the parse (`Invalid numeric literal`).
+- **A screenshot is entirely black**: the app blocks capture on that screen (Android `FLAG_SECURE`) — not a tool error. Read that screen's state from `describe` (accessibility tree: text and frames) and take screenshots on the next screen that allows capture.
 - **argent gestures fail on an Android emulator** with `simulator-server exited … emulator "emulator-5554" not found … grpc.token`: they keep failing for the rest of the session. `describe`, `debugger-*` and `launch-app` still work. Fall back to adb — coordinates are **pixels**, so multiply `describe`'s 0–1 frame by `wm size`:
   ```sh
   adb -s <targetId> shell wm size

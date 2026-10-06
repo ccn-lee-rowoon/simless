@@ -96,6 +96,8 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("Run `simless use` on its own");
     expect(text).toContain("ask the user before restarting it");
     expect(text).toContain("logicalDeviceId");
+    expect(text).toContain("simless --json use … 2>/dev/null | jq");
+    expect(text).toContain("A screenshot is entirely black");
     expect(text).toContain("Pass `port: <port>` to **every** argent `debugger-*`");
   });
 

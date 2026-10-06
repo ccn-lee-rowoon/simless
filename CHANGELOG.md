@@ -19,7 +19,7 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 
 ### 고침
 
-- 스킬 Android 보충(실제 세션에서 겪은 것) — Expo 는 `ANDROID_SERIAL` 로 고정한 `expo start --android` 로 연결·실행, 연결은 앱의 Dev 메뉴 «Connected to» 로 확인, 딥링크가 앱을 재기동하면 기본 서버로 돌아감, `adb reverse` 가 사라지는 때, `simless use` 는 따로 호출, 점유가 쉬는 사이 풀렸을 때, argent 제스처·iOS 샌드박스·`logicalDeviceId` 문제 해결
+- 스킬 Android 보충(실제 세션에서 겪은 것) — Expo 는 `ANDROID_SERIAL` 로 고정한 `expo start --android` 로 연결·실행, 연결은 앱의 Dev 메뉴 «Connected to» 로 확인, 딥링크가 앱을 재기동하면 기본 서버로 돌아감, `adb reverse` 가 사라지는 때, `simless use` 는 따로 호출, 점유가 쉬는 사이 풀렸을 때, argent 제스처·iOS 샌드박스·`logicalDeviceId` 문제 해결, `--json` 을 jq 로 읽을 때 stderr 버리기, 스크린샷이 검게 나오면(캡처 차단) `describe` 로
 - 앱이 다른 세션의 Metro 에 붙거나 Metro 를 못 찾던 것 — 스킬이 argent 의 «8081 Metro 하나» 안내 대신 IPv4 로 자기 포트에 띄우고, 준비를 기다리고, Android 는 자기 포트와 8081 을 모두 내 Metro 로, 앱은 포트를 넣은 주소로 실행하고 붙었는지 확인하게 했다. dev client 스킴은 slug 로 만들지 않고 앱이 등록한 것(`exp+…`)을 찾는다(Android 가 dev client 첫 화면에서 멈추던 것). 전역 규칙에도 한 줄
 - 서버를 다시 켜도 열린 앱 창이 옛 화면을 보이던 것
 - 보호(훅)가 파일에 쓰는 스크립트·커밋 메시지 같은 heredoc 본문에 기기 이름과 `adb` 가 같이 있으면 막던 것 — 셸·인터프리터로 들어가는 본문은 그대로 본다
