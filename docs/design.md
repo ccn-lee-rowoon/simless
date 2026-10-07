@@ -137,7 +137,7 @@ simless/
 | `~/Library/Logs/Simless/` | 서버 로그 | 서버 |
 | `~/.local/share/simless/versions/<버전>/simless` · `~/.local/bin/simless`(링크) | 설치된 버전들과 지금 쓰는 버전 (§19) | `simless update` |
 | `~/Library/Caches/Simless/builds/<앱>/<플랫폼>/<지문>/` | 캐시된 네이티브 빌드(.app·.apk) + `meta.json`. 앱·플랫폼마다 최근 5개 (R26). `SIMLESS_BUILD_CACHE` 로 바꿀 수 있다 | CLI |
-| `~/.config/simless/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`, 기본 `system`), 자동 해제 시간(기본 30분), 시작 애니메이션(`launchAnimation`, 기본 켜짐), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다 | 사람·서버 |
+| `~/.config/simless/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`, 기본 `system`), 자동 해제 시간(기본 30분), 시작 애니메이션(`launchAnimation`, 기본 켜짐), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다(`launchAnimation` 은 `simless config` 로만) | 사람·서버 |
 | `~/.config/simless/apps/<name>.json` | 앱별 설정 (Q8) | 사람 |
 | `~/.android/avd/<AVD ID>.avd` · `.ini` | Android 디바이스 본체 — Simless 가 만든 것은 `simless_<id>` | Android Studio·서버 |
 | CoreSimulator 기본 device set | iOS 디바이스 본체 | Xcode·서버(simctl) |
@@ -255,7 +255,7 @@ simless/
   - iOS: `simslim on --except <묶음,…>`. 설정의 simslim 프로필(`--profile`)은 전체 슬림일 때만 쓴다(둘은 함께 못 준다). 이미 슬림한 기기의 남길 묶음이 바뀌면 `simslim off` 뒤 다시 `on`. 확인은 `simslim verify --except …`.
   - Android: 항목은 `avdslim profiles` 의 패키지 묶음(이름에서 만든 ID, 예: `assistant-search`) + 기기 설정 `location`·`sync`·`bglimit`·`bluetooth`·`setup` + 하드웨어 `camera`·`audio`. 기기 안 정리는 `avdslim on --skip=<남길 설정>` → 남길 설정을 `avdslim enable <설정>` 으로 되돌림(`setup` 은 되돌리는 명령이 없다) → 남길 묶음의 설치된 패키지를 `avdslim enable <패키지>`. 이 순서라 남길 항목이 바뀌어도 풀지 않고 그대로 맞춰진다. 하드웨어는 `tune-avd` 뒤 `avdslim enable camera|audio <AVD>`, 소리를 남기면 켤 때 `-no-audio` 를 뺀다. 슬림 확인·수치는 남긴 패키지를 세지 않는다.
   - 앱에 필요한 기능 찾기는 스킬이 한다 — simless 스킬의 «Finding what the app needs»(device-slim 스킬 4단계·기능 표를 Simless 항목 ID 로 옮긴 것, `.device-slim.json` 을 같이 씀). Simless 는 남길 ID 만 받는다.
-- **슬림 내역** (M16): 서버의 2초 주기 작업이 15초마다 켜진 기기 전부의 슬림 수치를 읽고(목록을 볼 때도), 수치가 바뀌었거나 내역이 없거나 10분이 지났으면 꺼진 항목을 읽어 `slimSeen.off` 에 적는다(적으면 기기 목록 캐시를 비운다). iOS 는 `simslim status <udid> --dropped` 의 묶음 ID. Android 는 avdslim 에 상태 조회가 없어 — 패키지 묶음은 설치된 패키지의 절반 이상이 꺼졌으면, `location`·`bluetooth`·`sync` 는 avdslim 이 바꾸는 기기 설정(`location_mode`·`bluetooth_on`·`auto_sync` 가 0), `camera` 는 config.ini 의 앞뒤 카메라가 `none`, `audio` 는 켤 때 `-no-audio` 를 줬거나 `hw.audioOutput=no`, `bglimit`·`setup` 은 읽을 수 없어 Simless 가 슬림했고 남기지 않았으면 꺼진 것으로. 앱 창은 목록 «슬림» 칸의 `SLIM ↗` 버튼이나 ⋯ «슬림 내역» 으로 새 창.
+- **슬림 내역** (M16): 서버의 2초 주기 작업이 15초마다 켜진 기기 전부의 슬림 수치를 읽고(목록을 볼 때도), 수치가 바뀌었거나 내역이 없거나 10분이 지났으면 꺼진 항목을 읽어 `slimSeen.off` 에 적는다(적으면 기기 목록 캐시를 비운다). iOS 는 `simslim status <udid> --dropped` 의 묶음 ID. Android 는 avdslim 에 상태 조회가 없어 — 패키지 묶음은 설치된 패키지의 절반 이상이 꺼졌으면, `location`·`bluetooth`·`sync` 는 avdslim 이 바꾸는 기기 설정(`location_mode`·`bluetooth_on`·`auto_sync` 가 0), `camera` 는 config.ini 의 앞뒤 카메라가 `none`, `audio` 는 켤 때 `-no-audio` 를 줬거나 `hw.audioOutput=no`, `bglimit`·`setup` 은 읽을 수 없어 Simless 가 슬림했고 남기지 않았으면 꺼진 것으로. 앱 창은 목록 «슬림» 칸의 `SLIM ↗` 버튼이나 ⋯ «슬림 내역» 으로 창(대화 상자).
 - 생성·슬림화는 멱등 — 이미 맞으면 아무것도 안 한다.
 
 ## 10. 앱 설치·실행·같은 화면 이동 (R8·R9·R10) — argent 로
@@ -321,7 +321,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | `simless uninstall [--purge] [--yes]` | 제거 — 스킬(모든 위치)·모든 에이전트의 훅·규칙·MCP·앱·서버 등록, `--purge` 면 데이터·로그·설정·빌드 캐시까지. 만든 디바이스는 남긴다(§4) | S12 |
 | `simless ui` | 웹 화면을 브라우저로 연다 (앱 창은 `Simless.app`) | R11 |
 | `simless list [--platform] [--created] [--available]` | **Simless 목록** — 폭·이름·켜짐·SLIM·기본·사용 중인 세션·argent ID. `--json` 에는 슬림 내역(`slimOff`)도. `--available` 은 목록에 없는 이 Mac 의 디바이스 | M5·R20·M16 |
-| `simless catalog [--platform]` | 만들 수 있는 기종·OS 목록 | M1 |
+| `simless catalog [--platform]` | 만들 수 있는 기종·OS 목록과 슬림 항목(`slimOff` — 커스텀 슬림에서 남길 ID) | M1·M15 |
 | `simless create <기종> [--os] [--name] [--no-slim \| --slim-keep <ID,…>] [--no-baseline]` · `simless create --width --height --density [--os]` | 새로 만들기. 슬림이면 `simless …` 이름, `--slim-keep` 은 남길 슬림 항목 | R1~R3·R5·M4·M15 |
 | `simless rename <dev> <name>` · `default [<dev>]` · `delete <dev> [-y]` · `add <dev>` · `unlist <dev>` | 관리. 삭제는 Simless 가 만든 것만, `add`·`unlist` 는 이 Mac 의 디바이스를 목록에 넣고 빼기 | M7·M8·R20·R22 |
 | `simless slim [<dev>…] [--off] [--check] [--keep <ID,…> \| --full]` | 슬림 적용·해제·확인, 남길 항목 바꾸기 (simless 가 만든 것만) | M6·M7·M15 |
@@ -333,7 +333,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | `simless up` · `simless down` | 점유한 디바이스 켜기·끄기 | R7 |
 | **`simless use [<dev>… \| --group … \| --default …] [--available] [--wait]`** | **acquire + up 한 번에** — 주 흐름의 첫 단계 | R15 |
 | `simless app install [<dev>…] [--platform] [--project]` · `app save [--platform] [--path] [--project]` · `app list` · `app prune [--keep 5]` | 네이티브 빌드 캐시 — 지문이 같으면 점유한 켜진 기기에 설치, 빌드한 것 보관 (§10) | R26 |
-| `simless config [get\|set <키> <값>]` | 설정 (언어 등) — 앱 창 설정 화면과 같은 값 | M11·R25 |
+| `simless config [<키> [<값>]]` | 설정 보기·바꾸기 (언어 등) — 앱 창 설정 화면과 같은 값, `launchAnimation` 은 CLI 에서만 | M11·R25·M17 |
 | `simless skill status` · `skill install [--global] [--project <폴더>…]` · `skill uninstall` | 스킬 설치 위치·상태 (폴더째 — SKILL.md + `reference/app-*.md`) | S9 |
 | `simless update [--check] [--rollback]` | 새 버전 확인·업데이트·이전 버전으로 되돌리기 — **U단계, 아직 없음** | R19 |
 | `simless serve` · `simless hook <에이전트> pre-tool-use` · `simless mcp` | 서버·훅·MCP 진입점 (사람이 직접 쓰지 않음) | — |
@@ -392,14 +392,14 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 **메인 화면** (M5·M9)
 - Simless 목록 — 위에 **All · Android · iOS 탭**(마지막 탭 기억)과 그룹 거르기, 검색.
-- 한 줄에 `폭 · 이름 · 슬림 · 켜짐 · 태그(기본 Android/iOS, 그룹들) · 사용 중인 세션`. «슬림» 칸은 슬림된 기기에만 `SLIM ↗` 버튼 — 누르면 «슬림 내역» 새 창(M16).
+- 한 줄에 `폭 · 이름 · 슬림 · 켜짐 · 태그(기본 Android/iOS, 그룹들) · 사용 중인 세션`. «슬림» 칸은 슬림된 기기에만 `SLIM ↗` 버튼 — 누르면 «슬림 내역» 창(대화 상자, M16).
 - 정렬: 켜진 것 → 기본 → 플랫폼 → 폭.
 - `SLIM` 배지에 마우스를 올리면 꺼진 항목 수·메모리·슬림 전후(«7.8GB → 1.6GB (−79%)», M10). 재적용 실패는 `SLIM ⚠` + 이유. 꺼진 기기는 마지막으로 본 수치와 «마지막 확인» 시각, Simless 밖에서 한 슬림이면 배지가 흐리다(M6).
 - 켜기·끄기는 점유 없이(사람), 다른 세션이 쓰는 중이면 막는다. SSE 로 바로 반영된다.
 
-**생성(+)** (M1·M4) — 위에 «새로 만들기 · 이 Mac 의 디바이스» 탭. «이 Mac 의 디바이스» 는 Simless 목록에 없는 기기(`device.available`)를 플랫폼·검색으로 거르고 «추가»(`device.add`). «새로 만들기» 는 번호 붙은 네 단계(구분선으로 나눔, «만들기» 버튼은 아래에 고정): ① 플랫폼 → ② 기종(iOS 기기 종류 / Android 기기 정의(Android Studio, 없으면 대표 프로필)·직접 입력) → ③ OS·이름(런타임·시스템 이미지는 기본값을 미리 골라 둠, 이름 기본값 `simless <기종>` 또는 `<기종>`, 겹치면 번호) → ④ **슬림**(«슬림 안 함 · 전체 슬림(UI 확인용, 기본) · 커스텀» 세 카드 중 하나. 전체 슬림은 «꺼지는 것 보기» 로 펼치고, 커스텀은 플랫폼마다 다른 항목에서 **남길 것**을 체크한다 — Android 는 앱·서비스 묶음 / 기기 설정 / 에뮬레이터 하드웨어로 나눠 보인다, M15)과 슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다(N4).
+**생성(+)** (M1·M4) — 위에 «새로 만들기 · 이 Mac 의 디바이스» 탭. «이 Mac 의 디바이스» 는 Simless 목록에 없는 기기(`device.available`)를 플랫폼·검색으로 거르고 «추가»(`device.add`). «새로 만들기» 는 번호 붙은 네 단계(구분선으로 나눔, «만들기» 버튼은 아래에 고정): ① 플랫폼 → ② 기종(iOS 기기 종류 / Android 기기 정의(Android Studio + 대표 프로필)·직접 입력) → ③ OS·이름(런타임·시스템 이미지는 기본값을 미리 골라 둠, 이름 기본값 `simless <기종>` 또는 `<기종>`, 겹치면 번호) → ④ **슬림**(«슬림 안 함 · 전체 슬림(UI 확인용, 기본) · 커스텀» 세 카드 중 하나. 전체 슬림은 «꺼지는 것 보기» 로 펼치고, 커스텀은 플랫폼마다 다른 항목에서 **남길 것**을 체크한다 — Android 는 앱·서비스 묶음 / 기기 설정 / 에뮬레이터 하드웨어로 나눠 보인다, M15)과 슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다(N4).
 
-**더보기(⋯) 메뉴** (M7·M8) — 이름 변경(원래 있던 디바이스도) · 그룹에 넣기/빼기 · 기본 디바이스로 · 슬림 내역(꺼진 것·켜진 것, M16) · 슬림 설정…(슬림 안 함·전체 슬림·커스텀을 고르는 창, 바꾸면 다시 맞춤 — simless 가 만든 것만) · 점유 강제 해제(다른 세션이 쓰는 중일 때, 사람만) · 목록에서 빼기(이 Mac 에서 추가한 것) · 삭제(simless 가 만든 것만, 확인 창. 기본 디바이스·켜짐·사용 중이면 이유와 함께 막음). 바깥을 누르거나 Esc 로 닫힌다.
+**더보기(⋯) 메뉴** (M7·M8) — 이름 변경(원래 있던 디바이스도) · 그룹에 넣기/빼기 · 기본 디바이스로 · 슬림 내역(꺼진 것·켜진 것 창, M16) · 슬림 설정…(슬림 안 함·전체 슬림·커스텀을 고르는 창, 바꾸면 다시 맞춤 — simless 가 만든 것만) · 점유 강제 해제(다른 세션이 쓰는 중일 때, 사람만) · 목록에서 빼기(이 Mac 에서 추가한 것) · 삭제(simless 가 만든 것만, 확인 창. 기본 디바이스·켜짐·사용 중이면 이유와 함께 막음). 바깥을 누르거나 Esc 로 닫힌다.
 
 **그룹 화면** (M9·R21) — 그룹 목록(이름·설명·디바이스 수·마지막으로 고친 사람/에이전트), 만들기·고치기(이름·설명·디바이스 고르기 — 목록에서 체크), 삭제. 없는 디바이스(밖에서 지워짐)는 표시하고 빼게 한다.
 
@@ -409,7 +409,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 **첫 실행 설정 창** (M14) — `?window=setup`, 앱에서는 Swift 별도 창(처음 뜰 때 서버가 아직 안 떴으면 2초 간격으로 다시 물어본다). 단계 표시 + 단계마다 한 화면, 아래에 이전·다음(창 아래에 붙음). 생성 창(M1)을 그 창 안에서 연다. «완료» → 앱이면 Swift 에 `{open:"dashboard"}`·`{close:"setup"}`, 브라우저면 `/` 로.
 
-**디자인** (M12) — 귀엽지 않고 단정하게. 촘촘한 표 형태 목록, 시스템 글꼴, 숫자(폭·해상도·메모리)는 고정폭, 강조색 하나. 아이콘은 폰 하나에 점 눈·작은 미소만 넣은 모양(입 밑 홈 표시줄 같은 다른 선은 없음) — 앱 아이콘·탭 아이콘·화면 로고·메뉴바가 모두 같은 모양이고(옆 막대 «디바이스» 메뉴는 단순한 폰 선 아이콘), `src/web/icon.svg` 하나가 정본이고, 앱 아이콘(`scripts/icon.sh` → `assets/simless.icns`, 잉크 바탕 + 민트, 바탕 바깥은 투명 — `scripts/icon-render.swift` 가 AppKit 으로 그린다. qlmanage 는 투명한 곳을 흰색으로 채워 흰 테두리가 생겼다)·웹 로고·탭 아이콘(`ui.tsx` 의 `Logo` 가 `icon.svg` 를 그대로 보여 준다)·메뉴바 템플릿(Swift `devicesTemplate`, 같은 경로를 단색으로)이 같은 경로를 쓴다. **구현 전에 시안을 보고 정한다.**
+**디자인** (M12) — 귀엽지 않고 단정하게. 촘촘한 표 형태 목록, 시스템 글꼴, 숫자(폭·해상도·메모리)는 고정폭, 강조색 하나. 아이콘은 폰 하나에 점 눈·작은 미소만 넣은 모양(입 밑 홈 표시줄 같은 다른 선은 없음) — 앱 아이콘·탭 아이콘·화면 로고·메뉴바가 모두 같은 모양이고(옆 막대 «디바이스» 메뉴는 단순한 폰 선 아이콘), `src/web/icon.svg` 하나가 정본이고, 앱 아이콘(`scripts/icon.sh` → `assets/simless.icns`, 잉크 바탕 + 민트, 바탕 바깥은 투명 — `scripts/icon-render.swift` 가 AppKit 으로 그린다. qlmanage 는 투명한 곳을 흰색으로 채워 흰 테두리가 생겼다)·웹 로고·탭 아이콘(`ui.tsx` 의 `Logo` 가 `icon.svg` 를 그대로 보여 준다)·메뉴바 템플릿(Swift `devicesTemplate`, 같은 모양을 단색으로 — 18px 에서도 보이게 눈·입 위치와 굵기를 살짝 조정)이 같은 경로를 쓴다. **구현 전에 시안을 보고 정한다.**
 
 **메뉴바** — 아이콘(단색 템플릿, 숫자 없음) → 메뉴: 서버 상태 · 스킬 업데이트가 있으면 «업데이트» · «대시보드 열기»(앱 창) · «설정 열기» · 서버가 꺼져 있으면 «서버 켜기» · 종료. 켜진 디바이스 목록은 넣지 않는다(대시보드에서 본다, 2026-10-06 사용자 결정). «설정 열기» 에는 ⌘, 단축키를 달지 않고 자기 동작을 쓴다 — 표준 설정 항목으로 보이면 macOS 26 이 톱니 아이콘을 자동으로 붙인다(메뉴바 메뉴는 글자만). 문구는 설정 언어를 따른다(Swift 안의 작은 사전, 언어는 `status` 응답으로 받음). 서버 HTTP API(토큰은 파일에서)만 읽고 로직은 없다. 로그인 시 뜨게 등록한다(launchd `simless.menubar`, `open -a`).
 
