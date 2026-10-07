@@ -9,7 +9,7 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 
 ### 추가
 
-- 지원 범위를 적었다 — 앱은 **React Native (Expo)** 하나(스킬의 Metro·dev client·빌드 캐시가 이것을 전제로 한다), 에이전트는 Claude Code·Copilot CLI·Codex·Cursor·Gemini CLI. OpenCode 는 지원하지 않는다(화면의 OpenCode 아이콘도 뺐다)
+- 지원 범위를 적었다 — 앱은 **React Native (Expo)** 하나(스킬의 Metro·dev client·빌드 캐시가 이것을 전제로 한다), 에이전트는 Claude Code·Copilot CLI·Codex·Cursor·Gemini CLI.
 - **Simless 제거** — 설정 창의 «Simless 제거» 와 `simless uninstall` 이 스킬(모든 위치)·훅·규칙·MCP·앱·서버 등록을 한 번에 지운다. `--purge`(창에서는 체크)로 데이터·기록·로그·빌드 캐시까지
 
 ### 바뀜
