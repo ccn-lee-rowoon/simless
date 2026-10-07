@@ -108,6 +108,15 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("#### Choosing how to slim");
     expect(text).toContain("--slim-keep <id,…>");
     expect(text).toContain("simless slim <device> --keep <id,…>");
+    // 앱에 필요한 기능 찾기 — device-slim 스킬 없이도 (M15)
+    expect(text).toContain("## Finding what the app needs");
+    expect(text).toContain(".device-slim.json");
+    expect(text).toContain(
+      "| Remote push notifications | `aps-environment` entitlement, notification library | `store` |",
+    );
+    expect(text).toContain(
+      "| Location | `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` | `location` |",
+    );
     expect(text).toContain(
       "through a Metro you start on this Mac, on this Mac's simulators and emulators",
     );

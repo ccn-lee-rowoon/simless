@@ -58,9 +58,8 @@ When you create a slim device, or the user asks to change how one is slimmed, pi
 
 1. **Full slim** (the default) — for UI and layout checks. Everything that can be turned off is off.
 2. **Keep what the app needs** — for testing an app feature that relies on the device (push notifications, universal links, photo picker, contacts, location, camera …).
-   - Find the features the app needs. If a skill for this is installed (for example `device-slim`), follow its step for finding the app's features: it reads the app and records them in `.device-slim.json` at the app root. Reuse that file when it is still valid.
-   - Without such a skill, check the app's config and native dependencies yourself, or ask the user which features the test needs.
-   - Map each feature to the platform's slim items in `simless --json catalog` (`slimOff[]`: `id`, `name`, and `detail` saying what stops working). Items differ per platform: iOS has simslim categories (e.g. `store` for remote push, `web` for universal links, `photos` for the photo picker, `pim` for contacts and calendars); Android has avdslim package groups, device settings (`location`, `sync`, `bglimit`, `bluetooth`, `setup`) and emulator hardware (`camera`, `audio`). Android never turns off push (FCM).
+   - Find the features the app needs and map them to slim items — follow «Finding what the app needs» below. It reuses `.device-slim.json` at the app root when it is still current.
+   - Items differ per platform (`simless --json catalog` → `slimOff[]`: `id`, `name`, and `detail` saying what stops working): iOS has simslim categories, Android has avdslim package groups, device settings and emulator hardware.
    - Tell the user which items you keep and why, then create with `--slim-keep <id,…>`.
 3. **Custom** — the user names what to keep. Pass those IDs.
 
@@ -197,6 +196,114 @@ simless release
 
 - Release after reporting. You may keep the lease while waiting for the user or rebuilding — an idle lease (30 min) is released automatically only when someone is waiting.
 - **Ask the user** whether to shut the devices down. If yes, `simless down` before `release`.
+
+## Finding what the app needs (for «keep what the app needs»)
+
+Used by «Choosing how to slim» option 2. The result is a short list of app features, each with its evidence, mapped to Simless slim item IDs.
+
+### Reuse a previous result
+
+If the app root (the folder with `app.json` / `package.json`; in a monorepo, the app's folder) has `.device-slim.json`, check whether it is still current before reading the app again:
+
+```json
+{
+  "features": {
+    "push": "app.config.ts: aps-environment",
+    "photos": "package.json: expo-image-picker (3 files import it)",
+    "sign-in-with-apple": "app.config.ts: only when APP_ENV=prod"
+  },
+  "sources": ["app.config.ts", "package.json", "patches/"],
+  "sourcesHash": "sha256:9f2c…"
+}
+```
+
+Hash the `sources` (paths are relative to the app root) the same way it was made:
+
+```sh
+find <sources…> -type f | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256 | cut -d' ' -f1
+```
+
+1. Same hash, and no new evidence file since (a new patch, local module, extension target or config plugin — the places listed below) → use `features` as is.
+2. Otherwise → read the app again (below) and **write the file from scratch**, so features and sources that are gone disappear. Tell the user what changed («added location, dropped camera»).
+3. A feature whose evidence says «only when …» → ask which environment is being tested before keeping it.
+
+Write or update `.device-slim.json` only if the user agrees. If they don't want it in the repository, add `/.device-slim.json` to `.git/info/exclude`.
+
+### Read the app
+
+Read the project — don't guess. A feature can enter the app from several places, and dependency names alone miss most of them. Go through these in order and note where each feature came from:
+
+1. **Built app, if there is one** — the most reliable, because it is everything below combined. Use the build that matches what will be tested.
+   - Find an app already installed on a simulator:
+     ```sh
+     find ~/Library/Developer/CoreSimulator/Devices -maxdepth 8 -path '*Bundle/Application*' -name '*.app' |
+       while read -r a; do /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$a/Info.plist" 2>/dev/null | sed "s|$| $a|"; done |
+       grep '<bundle-id-prefix>'
+     ```
+   - iOS `Info.plist`: `plutil -p <App>.app/Info.plist`.
+   - iOS entitlements: a device build answers `codesign -d --entitlements - <App>.app`; **a simulator build usually returns nothing** — its entitlements are a plist embedded in the executable:
+     ```sh
+     python3 -I - "<App>.app/<Executable>" <<'PY'
+     import sys, re
+     b = open(sys.argv[1], 'rb').read()
+     for m in re.finditer(rb'<\?xml[^\0]{0,4000}?</plist>', b):
+         s = m.group().decode('utf8', 'replace')
+         if 'application-identifier' in s: print(s); break
+     PY
+     ```
+   - Android: `aapt dump permissions <app>.apk` (or `apkanalyzer manifest permissions`).
+2. **Dependencies** — `package.json`, `Podfile` / `Podfile.lock`, `build.gradle`: notification, in-app purchase, location, camera, image picker, contacts, calendar, maps, health, sign-in, widget / live-activity libraries. **A dependency isn't proof the app uses it** — count the source files that import it (`grep -rlF -- '<package>' src app` …) and drop it if none do.
+3. **Config plugins** (Expo) — `plugins` in `app.json` / `app.config.*`, the local plugin files they point to, and permission settings there (`ios.infoPlist`, `ios.entitlements`, `android.permissions`, `android.blockedPermissions`). Plugins add entitlements, permissions and `Info.plist` keys at build time.
+4. **Local modules** — modules inside the repo that aren't in the dependency list: Expo modules (`modules/*/expo-module.config.json`) and other local native modules. Read their `ios/` and `android/` sources for the frameworks they import (UserNotifications, StoreKit, CoreLocation, Photos/PhotosUI, HealthKit, HomeKit, WidgetKit, ActivityKit …) and the permissions they request.
+5. **Native project files** — `ios/**/*.entitlements` (`aps-environment` → push, `com.apple.developer.associated-domains` → universal links, in-app payments, HealthKit, HomeKit, iCloud, Sign in with Apple), `ios/**/Info.plist` usage descriptions (`NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`, `NSLocation…`, `NSContactsUsageDescription`, `NSCalendarsUsageDescription`, `NSMicrophoneUsageDescription` …), app extensions (widgets, notification service), `android/app/src/**/AndroidManifest.xml` permissions (`CAMERA`, `RECORD_AUDIO`, `ACCESS_FINE_LOCATION`, `POST_NOTIFICATIONS`, `BLUETOOTH_CONNECT` …) and intents fired at other apps (maps, gallery, browser, dialer), plus `import`s in native source.
+   - **In Expo (CNG) projects these folders may be missing or stale.** If `ios/` / `android/` are in `.gitignore`, absent, or older than the app config, they are a past prebuild — trust the app config and the built app over them (a stale manifest can still list permissions the config now blocks).
+6. **Patches** — `patches/*.patch` (patch-package) and `patchedDependencies` in `package.json` (pnpm, Bun, Yarn). A patch can add or remove a permission, entitlement or framework in a library.
+
+**Build environment matters.** Many apps change entitlements and permissions per environment or variant (e.g. Sign in with Apple only in production, associated domains from an environment variable). Ask which environment will be tested and note it with the evidence.
+
+List the features with their evidence (file and line, or «built app») and **confirm with the user** — they may only need some of them for this test. Then map them with the tables below.
+
+### Features → Simless slim items
+
+Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keeps whole items (a simslim category, an avdslim package group, setting or hardware) — not single daemons or packages. The IDs below were checked with simslim 0.11.0 and avdslim 1.0.15; if the catalog shows different ones, use the catalog and its `detail` text.
+
+**iOS**
+
+| App feature | Evidence to look for | Keep |
+| --- | --- | --- |
+| Remote push notifications | `aps-environment` entitlement, notification library | `store` |
+| In-app purchases (StoreKit) · Wallet · Apple Pay | in-app purchase library, StoreKit config, PassKit | `store` |
+| Universal links / associated domains | `com.apple.developer.associated-domains` | `web` |
+| Photo picker / photo library | `NSPhotoLibraryUsageDescription`, image picker library | `photos` |
+| Contacts · Calendar · Reminders · Mail compose | `NSContactsUsageDescription`, `NSCalendarsUsageDescription`, `NSRemindersUsageDescription`, mail composer | `pim` |
+| iCloud sync · Sign in with Apple · iCloud Keychain | iCloud / Sign in with Apple entitlements **in the build being tested** | `icloud` |
+| HealthKit · HomeKit | HealthKit / HomeKit entitlements | `health` |
+| Widgets · Live Activities | widget extension, live activity library | `widgets` (about 675 MB — the heaviest) |
+| Siri · speech recognition | SiriKit, `NSSpeechRecognitionUsageDescription` | `siri` |
+| Spotlight / in-app search indexing | Core Spotlight usage | `search` |
+| Maps background data · Weather · News · Game Center | MapKit, WeatherKit, GameKit | `apps` |
+| iMessage · FaceTime | — | `messaging` |
+| AirDrop · Continuity · Find My | sharing / nearby features | `connectivity` |
+| Screen Time · Family | Family Controls entitlement | `family` |
+
+**Never slimmed on iOS** — nothing to keep: camera, microphone, location, sign-in services (AuthenticationServices / web auth sessions), Face ID, App Tracking Transparency. **Check by hand after slimming**: the tracking prompt, Face ID, web sign-in sessions (Google / Firebase sign-in). Don't keep `web` «for sign-in» — no sign-in service is in it. The Contacts, Photos and Calendar pickers can act up without their categories — keep `pim` / `photos` when a test opens them.
+
+**Android**
+
+| App feature | Evidence to look for | Keep |
+| --- | --- | --- |
+| Location | `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` | `location` |
+| Background work, timely push while the app is in the background | background tasks, FCM | `bglimit` (otherwise 4 background processes) |
+| Account sync | sync adapters, Google account sign-in | `sync` |
+| Bluetooth | `BLUETOOTH_*` permissions | `bluetooth` |
+| First-run setup state | apps that read setup state (rare) | `setup` |
+| Camera | `CAMERA` permission, camera library | `camera` (emulator hardware — takes effect at the next boot) |
+| Microphone · audio playback | `RECORD_AUDIO`, audio / video playback | `audio` (emulator hardware — next boot) |
+| Opens Google Maps, the gallery / Photos app, YouTube | `geo:` / maps / gallery intents | `media-consumer-apps` |
+| Opens the dialer, contacts or messaging app | `tel:` / `sms:` intents, contacts intents | `telephony-emergency-satellite` |
+| Opens the calendar, clock or calculator app | calendar / alarm intents | `telemetry-feedback-screensavers` |
+| Text-to-speech · accessibility tests | TTS, TalkBack testing | `accessibility-speech` |
+| Push (FCM) · Google Sign-In · WebView | Firebase messaging, Google sign-in | nothing — never turned off; pair push with `bglimit` |
 
 ## When things go wrong
 

@@ -250,7 +250,7 @@ simless/
 - **슬림 항목 고르기** (M15): 기기마다 `slimKeep`(남길 항목 ID)을 기억하고, 처음 슬림·변경·풀렸을 때 다시 적용 모두 이것으로 한다.
   - iOS: `simslim on --except <묶음,…>`. 설정의 simslim 프로필(`--profile`)은 전체 슬림일 때만 쓴다(둘은 함께 못 준다). 이미 슬림한 기기의 남길 묶음이 바뀌면 `simslim off` 뒤 다시 `on`. 확인은 `simslim verify --except …`.
   - Android: 항목은 `avdslim profiles` 의 패키지 묶음(이름에서 만든 ID, 예: `assistant-search`) + 기기 설정 `location`·`sync`·`bglimit`·`bluetooth`·`setup` + 하드웨어 `camera`·`audio`. 기기 안 정리는 `avdslim on --skip=<남길 설정>` → 남길 설정을 `avdslim enable <설정>` 으로 되돌림(`setup` 은 되돌리는 명령이 없다) → 남길 묶음의 설치된 패키지를 `avdslim enable <패키지>`. 이 순서라 남길 항목이 바뀌어도 풀지 않고 그대로 맞춰진다. 하드웨어는 `tune-avd` 뒤 `avdslim enable camera|audio <AVD>`, 소리를 남기면 켤 때 `-no-audio` 를 뺀다. 슬림 확인·수치는 남긴 패키지를 세지 않는다.
-  - 앱에 필요한 기능 찾기는 스킬이 한다 — Simless 는 남길 ID 만 받는다.
+  - 앱에 필요한 기능 찾기는 스킬이 한다 — simless 스킬의 «Finding what the app needs»(device-slim 스킬 4단계·기능 표를 Simless 항목 ID 로 옮긴 것, `.device-slim.json` 을 같이 씀). Simless 는 남길 ID 만 받는다.
 - 생성·슬림화는 멱등 — 이미 맞으면 아무것도 안 한다.
 
 ## 10. 앱 설치·실행·같은 화면 이동 (R8·R9·R10) — argent 로
