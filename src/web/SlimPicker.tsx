@@ -229,3 +229,107 @@ export function SlimDialog({
     </Dialog>
   );
 }
+
+/**
+ * 슬림 내역 (M16) — 꺼진 항목과 켜진 항목. 켜져 있을 때 실제로 읽은 것인지, Simless 가 슬림한 내용으로
+ * 계산한 것인지도 보인다. Simless 가 만든 기기면 «슬림 설정…» 으로 이어진다
+ */
+export function SlimDetailDialog({
+  device,
+  onClose,
+  onEdit,
+}: {
+  device: DeviceView | null;
+  onClose: () => void;
+  onEdit?: (device: DeviceView) => void;
+}) {
+  const [catalog, setCatalog] = useState<PlatformCatalog | undefined>();
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!device) return;
+    setCatalog(undefined);
+    setError("");
+    call<CatalogResult>("catalog", { platform: device.platform }).then(
+      (result) => setCatalog(result.platforms.find((p) => p.platform === device.platform)),
+      (e: unknown) => setError(String((e as Error).message)),
+    );
+  }, [device]);
+
+  const off = new Set(device?.slimOff ?? []);
+  const items = catalog?.slimOff ?? [];
+  const offItems = items.filter((i) => off.has(i.id));
+  const onItems = items.filter((i) => !off.has(i.id));
+  const seenAt = device?.slimSeen?.seenAt;
+
+  return (
+    <Dialog open={device !== null} onClose={onClose} title={t("web.slimDetail.title")} wide>
+      {device && (
+        <div className="dialog-body">
+          <p className="sub">
+            {device.slimOffObserved && seenAt
+              ? t("web.slimDetail.observed", {
+                  name: device.name,
+                  when: new Date(seenAt).toLocaleString(undefined, {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  }),
+                })
+              : t("web.slimDetail.planned", { name: device.name })}
+          </p>
+          {error && <p className="notice-inline">{error}</p>}
+          {!catalog && !error && <p className="sub">{t("web.loading")}</p>}
+          {catalog && (
+            <div className="slim-items">
+              <div className="slim-items-head">
+                <span>{t("web.slimDetail.off")}</span>
+                <span className="slim-count">
+                  {t("web.slimDetail.count", { off: offItems.length, total: items.length })}
+                </span>
+              </div>
+              <ul>
+                {offItems.map((i) => (
+                  <li key={i.id} className="slim-item slim-item-static">
+                    <span className="slim-tag">{t("web.slim.tagOff")}</span>
+                    <span className="slim-item-text">
+                      <span className="slim-item-name">{i.name}</span>
+                      {i.detail && <span className="sub">{i.detail}</span>}
+                    </span>
+                    <span className="sub mono">{i.id}</span>
+                  </li>
+                ))}
+              </ul>
+              {onItems.length > 0 && (
+                <>
+                  <p className="slim-kind">{t("web.slimDetail.on")}</p>
+                  <ul>
+                    {onItems.map((i) => (
+                      <li key={i.id} className="slim-item slim-item-static">
+                        <span className="slim-tag slim-tag-kept">{t("web.slim.tagKept")}</span>
+                        <span className="slim-item-text">
+                          <span className="slim-item-name">{i.name}</span>
+                        </span>
+                        <span className="sub mono">{i.id}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+          <footer className="dialog-footer">
+            <span className="spacer" />
+            {onEdit && (
+              <button type="button" className="button" onClick={() => onEdit(device)}>
+                {t("web.device.slimSettings")}
+              </button>
+            )}
+            <button type="button" className="button button-primary" onClick={onClose}>
+              {t("web.close")}
+            </button>
+          </footer>
+        </div>
+      )}
+    </Dialog>
+  );
+}

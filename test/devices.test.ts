@@ -305,6 +305,51 @@ describe("슬림 항목 고르기 (M15)", () => {
   });
 });
 
+describe("슬림 내역 (M16)", () => {
+  test("켜서 읽기 전에는 Simless 가 슬림한 내용으로, 읽은 뒤에는 실제 꺼진 항목으로", async () => {
+    const { A, H, driver, server } = await start();
+    const device = (await A("device.create", {
+      ...android360,
+      baseline: false,
+      slimKeep: ["location"],
+    })) as DeviceView;
+    let [view] = (await H("device.list")) as DeviceView[];
+    expect(view).toMatchObject({
+      slimOff: ["assistant-search", "media-consumer-apps"],
+      slimOffObserved: false,
+    });
+    driver.observedOff = ["assistant-search"];
+    await H("device.up", { devices: [device.id] });
+    await H("device.list");
+    await Bun.sleep(20);
+    [view] = (await H("device.list")) as DeviceView[];
+    expect(view).toMatchObject({ slimOff: ["assistant-search"], slimOffObserved: true });
+    // 끈 뒤에도 기록한 내역을 보여 준다
+    await H("device.down", { devices: [device.id] });
+    [view] = (await H("device.list")) as DeviceView[];
+    expect(view).toMatchObject({ slimOff: ["assistant-search"], slimOffObserved: true });
+  });
+
+  test("목록을 보지 않아도 서버가 15초마다 읽어 기록한다", async () => {
+    const { H, server, driver } = await start();
+    seedDevice(server, driver, "pix6", "Pixel 6a", false);
+    await H("device.up", { devices: ["pix6"] });
+    server.tick();
+    await Bun.sleep(30);
+    expect(server.registry.get("pix6")?.slimSeen).toMatchObject({
+      disabled: 49,
+      off: ["assistant-search", "media-consumer-apps"],
+    });
+  });
+
+  test("슬림하지 않은 기기는 내역이 없다", async () => {
+    const { A, H } = await start();
+    await A("device.create", { ...android360, slim: false });
+    const [view] = (await H("device.list")) as DeviceView[];
+    expect(view?.slimOff).toBeUndefined();
+  });
+});
+
 describe("Simless 가 하지 않은 슬림 (M6)", () => {
   /** 켜고 목록을 두 번 — 첫 목록이 뒤에서 읽기를 시작한다 */
   async function listAfterRead(H: (m: string, p?: unknown) => Promise<unknown>) {

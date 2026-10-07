@@ -67,6 +67,10 @@ export interface Driver {
   ): Promise<{ memoryBytes?: number; processes?: number }>;
   /** 켜진 디바이스가 얼마나 슬림화됐는지 — 화면 표시용, 느릴 수 있어 서버가 뒤에서 읽어 둔다 */
   slimStats(devices: Device[], states: Map<string, RuntimeState>): Promise<Map<string, SlimStats>>;
+  /**
+   * 켜진 디바이스에서 실제로 꺼져 있는 슬림 항목 ID (M16) — 누가 슬림했든. 읽을 수 없으면 undefined
+   */
+  slimOff(device: Device, state: RuntimeState): Promise<string[] | undefined>;
   /** 켜져 있어야 알 수 있으면 undefined */
   checkSlim(device: Device, state: RuntimeState): Promise<SlimState | undefined>;
 }

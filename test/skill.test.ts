@@ -174,6 +174,15 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("ANDROID_SERIAL=<targetId>");
   });
 
+  test("테스트에 맞는 기기 — 레이아웃은 아무 기기나, 기능 테스트는 slimOff 를 보고, 맞는 기기가 없으면 묻는다 (S13)", async () => {
+    const text = await bundledSkill();
+    expect(text).toContain("#### Does the test need device features?");
+    expect(text).toContain("**UI and layout checks** need nothing");
+    expect(text).toContain("A device fits when **none of those IDs is in its `slimOff`**");
+    expect(text).toContain("wait for it (`--wait`) and tell the user");
+    expect(text).toContain("No device fits → **ask the user**");
+  });
+
   test("그룹은 사용자가 요청할 때만 (S10)", async () => {
     expect(await bundledSkill()).toContain(
       "Create or edit device groups **only when the user asks**",

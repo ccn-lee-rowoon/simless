@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { IosDriver, parseSimslimProfiles } from "../src/server/drivers/ios.ts";
+import { IosDriver, parseSimslimDropped, parseSimslimProfiles } from "../src/server/drivers/ios.ts";
 import { Config } from "../src/shared/config.ts";
 import type { RunResult } from "../src/shared/exec.ts";
 import type { Device } from "../src/shared/model.ts";
@@ -246,6 +246,22 @@ describe("IosDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
     calls.length = 0;
     await driver.checkSlim(custom, { booted: true });
     expect(calls).toContain("/bin/simslim verify UDID-1 --except store,web");
+  });
+
+  test("slimOff — simslim status --dropped 의 묶음 ID, 꺼진 기기는 알 수 없다 (M16)", async () => {
+    const text = [
+      "UDID-1: 146/170 managed launchd labels disabled (partially slim)",
+      "  widgets        Widgets & Wallpaper — Home and Lock Screen widgets stop updating.",
+      "    com.apple.PosterBoard",
+      "  photos         Photos & Media Analysis — Photo picker may fail.",
+      "    com.apple.photoanalysisd",
+    ].join("\n");
+    expect(parseSimslimDropped(text)).toEqual(["widgets", "photos"]);
+    const { runner, calls } = fakeRunner({ "/bin/simslim status": { stdout: text } });
+    const driver = new IosDriver(config, runner, () => "/bin/simslim");
+    expect(await driver.slimOff(device, { booted: false })).toBeUndefined();
+    expect(await driver.slimOff(device, { booted: true })).toEqual(["widgets", "photos"]);
+    expect(calls).toContain("/bin/simslim status UDID-1 --dropped");
   });
 
   test("checkSlim — 켜져 있을 때만 verify 결과로 판단", async () => {

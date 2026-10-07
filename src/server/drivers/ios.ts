@@ -84,6 +84,19 @@ export function parseSimslimProfiles(text: string): { off: SlimCategory[]; keeps
   return { off, keeps };
 }
 
+/**
+ * `simslim status <udid> --dropped` — 꺼진 데몬이 든 묶음마다 «  <ID>   <이름> — …» 줄, 그 아래 데몬 이름.
+ * 묶음 ID 만 돌려준다 (M16)
+ */
+export function parseSimslimDropped(text: string): string[] {
+  const ids: string[] = [];
+  for (const line of text.split("\n")) {
+    const m = /^ {2}([a-z][a-z0-9-]*)\s{2,}\S/.exec(line);
+    if (m?.[1]) ids.push(m[1]);
+  }
+  return ids;
+}
+
 export class IosDriver implements Driver {
   readonly platform = "ios" as const;
   private readonly profiles = new Map<string, ScreenProfile>();
@@ -432,6 +445,14 @@ export class IosDriver implements Driver {
       });
     }
     return stats;
+  }
+
+  async slimOff(device: Device, state: RuntimeState): Promise<string[] | undefined> {
+    if (!state.booted || !this.simslimPath()) return undefined;
+    const result = await this.runner([this.simslim(), "status", device.native, "--dropped"], {
+      timeoutMs: 30_000,
+    });
+    return result.code === 0 ? parseSimslimDropped(result.stdout) : undefined;
   }
 
   async checkSlim(device: Device, state: RuntimeState): Promise<SlimState | undefined> {
