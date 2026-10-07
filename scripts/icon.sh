@@ -4,8 +4,9 @@ set -eu
 cd "$(dirname "$0")/.."
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-qlmanage -t -s 1024 -o "$work" src/web/icon.svg >/dev/null 2>&1
-png="$work/icon.svg.png"
+# 바탕(둥근 사각형) 바깥은 투명하게 — qlmanage 는 흰색으로 채워 흰 테두리가 생긴다
+png="$work/icon.png"
+xcrun swift scripts/icon-render.swift src/web/icon.svg "$png" 1024
 iconset="$work/simless.iconset"
 mkdir "$iconset"
 for size in 16 32 128 256 512; do
