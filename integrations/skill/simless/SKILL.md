@@ -231,33 +231,11 @@ Write or update `.device-slim.json` only if the user agrees. If they don't want 
 
 ### Read the app
 
-Read the project — don't guess. A feature can enter the app from several places, and dependency names alone miss most of them. Go through these in order and note where each feature came from:
+Read the project — don't guess. A feature can enter the app from several places, and dependency names alone miss most of them. Read these files next to this skill, in order, and note where each feature came from (file and line, or «built app»):
 
-1. **Built app, if there is one** — the most reliable, because it is everything below combined. Use the build that matches what will be tested.
-   - Find an app already installed on a simulator:
-     ```sh
-     find ~/Library/Developer/CoreSimulator/Devices -maxdepth 8 -path '*Bundle/Application*' -name '*.app' |
-       while read -r a; do /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$a/Info.plist" 2>/dev/null | sed "s|$| $a|"; done |
-       grep '<bundle-id-prefix>'
-     ```
-   - iOS `Info.plist`: `plutil -p <App>.app/Info.plist`.
-   - iOS entitlements: a device build answers `codesign -d --entitlements - <App>.app`; **a simulator build usually returns nothing** — its entitlements are a plist embedded in the executable:
-     ```sh
-     python3 -I - "<App>.app/<Executable>" <<'PY'
-     import sys, re
-     b = open(sys.argv[1], 'rb').read()
-     for m in re.finditer(rb'<\?xml[^\0]{0,4000}?</plist>', b):
-         s = m.group().decode('utf8', 'replace')
-         if 'application-identifier' in s: print(s); break
-     PY
-     ```
-   - Android: `aapt dump permissions <app>.apk` (or `apkanalyzer manifest permissions`).
-2. **Dependencies** — `package.json`, `Podfile` / `Podfile.lock`, `build.gradle`: notification, in-app purchase, location, camera, image picker, contacts, calendar, maps, health, sign-in, widget / live-activity libraries. **A dependency isn't proof the app uses it** — count the source files that import it (`grep -rlF -- '<package>' src app` …) and drop it if none do.
-3. **Config plugins** (Expo) — `plugins` in `app.json` / `app.config.*`, the local plugin files they point to, and permission settings there (`ios.infoPlist`, `ios.entitlements`, `android.permissions`, `android.blockedPermissions`). Plugins add entitlements, permissions and `Info.plist` keys at build time.
-4. **Local modules** — modules inside the repo that aren't in the dependency list: Expo modules (`modules/*/expo-module.config.json`) and other local native modules. Read their `ios/` and `android/` sources for the frameworks they import (UserNotifications, StoreKit, CoreLocation, Photos/PhotosUI, HealthKit, HomeKit, WidgetKit, ActivityKit …) and the permissions they request.
-5. **Native project files** — `ios/**/*.entitlements` (`aps-environment` → push, `com.apple.developer.associated-domains` → universal links, in-app payments, HealthKit, HomeKit, iCloud, Sign in with Apple), `ios/**/Info.plist` usage descriptions (`NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`, `NSLocation…`, `NSContactsUsageDescription`, `NSCalendarsUsageDescription`, `NSMicrophoneUsageDescription` …), app extensions (widgets, notification service), `android/app/src/**/AndroidManifest.xml` permissions (`CAMERA`, `RECORD_AUDIO`, `ACCESS_FINE_LOCATION`, `POST_NOTIFICATIONS`, `BLUETOOTH_CONNECT` …) and intents fired at other apps (maps, gallery, browser, dialer), plus `import`s in native source.
-   - **In Expo (CNG) projects these folders may be missing or stale.** If `ios/` / `android/` are in `.gitignore`, absent, or older than the app config, they are a past prebuild — trust the app config and the built app over them (a stale manifest can still list permissions the config now blocks).
-6. **Patches** — `patches/*.patch` (patch-package) and `patchedDependencies` in `package.json` (pnpm, Bun, Yarn). A patch can add or remove a permission, entitlement or framework in a library.
+1. [reference/app-expo.md](reference/app-expo.md) — app config, config plugins, Expo modules, stale native folders (CNG), build profiles. Skip it for bare React Native.
+2. [reference/app-react-native.md](reference/app-react-native.md) — JavaScript dependencies (and whether source files import them), local native modules, patches.
+3. The platform you're slimming: [reference/app-ios.md](reference/app-ios.md) for an iOS simulator, [reference/app-android.md](reference/app-android.md) for an Android emulator — the built app first (the most reliable evidence), then the native project.
 
 **Build environment matters.** Many apps change entitlements and permissions per environment or variant (e.g. Sign in with Apple only in production, associated domains from an environment variable). Ask which environment will be tested and note it with the evidence.
 
