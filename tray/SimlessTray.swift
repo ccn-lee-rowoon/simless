@@ -295,12 +295,29 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     return item
   }
 
+  /// 서버 켜기 — launchd 에서 내려가 있으면(bootout) kickstart 가 실패하므로 다시 등록하고 켠다
   @objc private func startServer() {
+    let domain = "gui/\(getuid())"
+    if launchctl(["kickstart", "\(domain)/\(launchLabel)"]) != 0 {
+      let plist = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/LaunchAgents/\(launchLabel).plist").path
+      _ = launchctl(["bootstrap", domain, plist])
+      _ = launchctl(["kickstart", "\(domain)/\(launchLabel)"])
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.refresh() }
+  }
+
+  private func launchctl(_ arguments: [String]) -> Int32 {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-    process.arguments = ["kickstart", "gui/\(getuid())/\(launchLabel)"]
-    try? process.run()
-    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.refresh() }
+    process.arguments = arguments
+    do {
+      try process.run()
+      process.waitUntilExit()
+      return process.terminationStatus
+    } catch {
+      return -1
+    }
   }
 
   /// 서버에 스킬 업데이트를 부탁한다 — 넣어 둔 모든 곳을 새 스킬로
