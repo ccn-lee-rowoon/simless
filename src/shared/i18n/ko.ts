@@ -262,6 +262,7 @@ export const ko = {
   "slim.unit.daemons": "데몬",
   "slim.unit.packages": "패키지",
   "slim.stats": "{unit} {disabled}/{total} 꺼짐",
+  "cli.slim.seen": "({ago} 확인)",
   "catalog.android": "Android 대표 프로필",
   "catalog.ios": "iOS 기기 종류",
   "catalog.images": "시스템 이미지 (* 기본)",
@@ -393,6 +394,7 @@ export const ko = {
   "web.delete.confirm": "지우기",
   "web.slim.applied": "슬림 적용됨",
   "web.slim.statsWhenOn": "켜면 슬림 수치가 보입니다",
+  "web.slim.seenAt": "마지막 확인: {when} (꺼져 있어 지금은 못 읽음)",
   "web.groups.intro":
     "용도별로 디바이스를 묶어 둡니다. 에이전트는 그룹 이름으로 요청하고, 설명을 읽고 판단합니다.",
   "web.groups.new": "새 그룹",

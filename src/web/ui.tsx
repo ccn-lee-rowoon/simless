@@ -1,5 +1,11 @@
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
-import { type DeviceView, type HolderView, memoryChange, type SlimStats } from "../shared/api.ts";
+import {
+  type DeviceView,
+  type HolderView,
+  memoryChange,
+  observedSlim,
+  type SlimStats,
+} from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import iconUrl from "./icon.svg";
 
@@ -45,7 +51,7 @@ export function osText(device: DeviceView): string {
   return /android-[\w.]+/.exec(spec.systemImage)?.[0] ?? "Android";
 }
 
-export function slimStatsText(stats: SlimStats): string {
+export function slimStatsText(stats: Pick<SlimStats, "disabled" | "total" | "unit">): string {
   return t("slim.stats", {
     unit: t(stats.unit === "packages" ? "slim.unit.packages" : "slim.unit.daemons"),
     disabled: stats.disabled,
@@ -53,9 +59,32 @@ export function slimStatsText(stats: SlimStats): string {
   });
 }
 
+function seenText(seenAt: string): string {
+  return t("web.slim.seenAt", {
+    when: new Date(seenAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" }),
+  });
+}
+
 /** `SLIM` 배지 (M6) — 마우스를 올리면 슬림 수치·전후 비교 (M10), 실패면 이유 */
 export function SlimBadge({ device }: { device: DeviceView }) {
-  if (device.slim === "none") return null;
+  if (device.slim === "none") {
+    // Simless 가 하지 않은 슬림 — 꺼져 있으면 마지막으로 본 값이라 흐리게
+    const seen = observedSlim(device);
+    if (!seen) return null;
+    return (
+      <span className={device.booted ? "slim" : "slim slim-stale"}>
+        SLIM
+        <span className="tip" role="tooltip">
+          <strong>{t("web.slim.applied")}</strong>
+          <span>{slimStatsText(seen)}</span>
+          {device.booted && device.slimStats?.memoryBytes ? (
+            <span className="mono">{gigabytes(device.slimStats.memoryBytes)}</span>
+          ) : null}
+          {!device.booted && seen.seenAt && <span>{seenText(seen.seenAt)}</span>}
+        </span>
+      </span>
+    );
+  }
   const failed = device.slim === "failed";
   const applying = device.slim === "applying";
   const stats = device.slimStats;
@@ -74,7 +103,13 @@ export function SlimBadge({ device }: { device: DeviceView }) {
         ) : stats?.memoryBytes ? (
           <span className="mono">{gigabytes(stats.memoryBytes)}</span>
         ) : null}
-        {!stats && !failed && <span>{t("web.slim.statsWhenOn")}</span>}
+        {!stats && !failed && device.slimSeen && (
+          <>
+            <span>{slimStatsText(device.slimSeen)}</span>
+            <span>{seenText(device.slimSeen.seenAt)}</span>
+          </>
+        )}
+        {!stats && !failed && !device.slimSeen && <span>{t("web.slim.statsWhenOn")}</span>}
       </span>
     </span>
   );

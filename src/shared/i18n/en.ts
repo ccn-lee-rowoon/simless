@@ -257,6 +257,7 @@ export const en: Record<keyof typeof ko, string> = {
   "slim.unit.daemons": "daemons",
   "slim.unit.packages": "packages",
   "slim.stats": "{disabled}/{total} {unit} off",
+  "cli.slim.seen": "(checked {ago})",
   "catalog.android": "Android profiles",
   "catalog.ios": "iOS device types",
   "catalog.images": "System images (* default)",
@@ -383,6 +384,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.delete.confirm": "Delete",
   "web.slim.applied": "Slim applied",
   "web.slim.statsWhenOn": "Slim stats appear once it's running",
+  "web.slim.seenAt": "Last checked {when} (off, so it can't be read now)",
   "web.groups.intro":
     "Bundle devices by purpose. Agents ask for a group by name and read its description to decide.",
   "web.groups.new": "New group",

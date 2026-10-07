@@ -189,6 +189,27 @@ export function memoryChange(before?: number, after?: number): string | undefine
   return `${gb(before)} → ${gb(after)} (${percent <= 0 ? "−" : "+"}${Math.abs(percent)}%)`;
 }
 
+/**
+ * Simless 가 슬림하지 않았지만 슬림돼 있는 것으로 보이는 기기 (M6) — simslim·avdslim 을 직접 썼거나
+ * 다른 도구로 슬림한 것. 켜져 있으면 지금 읽은 값, 꺼져 있으면 마지막으로 본 값(`seenAt`)으로 판단한다
+ */
+export function observedSlim(
+  device: DeviceView,
+): { disabled: number; total: number; unit: SlimStats["unit"]; seenAt?: string } | undefined {
+  if (device.slim !== "none") return undefined;
+  const stats = device.booted ? device.slimStats : device.slimSeen;
+  return stats && looksSlim(stats) ? stats : undefined;
+}
+
+/**
+ * 슬림돼 보이는지 — iOS 는 simslim 이 끈 데몬이 하나라도 있으면, Android 는 avdslim 프로필 패키지가
+ * 절반 이상 꺼져 있으면(슬림 안 한 기기에도 몇 개는 꺼져 있을 수 있다 — docs/design.md §9 와 같은 기준)
+ */
+function looksSlim(stats: Pick<SlimStats, "disabled" | "total" | "unit">): boolean {
+  if (stats.unit === "daemons") return stats.disabled > 0;
+  return stats.total > 0 && stats.disabled * 2 >= stats.total;
+}
+
 /** 점유 기록 한 줄 (M13) — 세션 화면의 «기록» */
 export type HistoryKind =
   /** 바로 점유 */

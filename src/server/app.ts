@@ -389,8 +389,8 @@ export class SimlessServer {
    * 15초가 지났으면 뒤에서 다시 읽은 뒤 화면에 바뀌었다고 알린다.
    */
   private refreshSlimStats(all: Device[], states: Map<string, RuntimeState>): void {
-    // 슬림 수치는 simless 가 슬림화한 기기만 본다
-    const devices = all.filter((d) => d.createdBySimless && states.get(d.id)?.booted);
+    // 켜진 기기는 누가 슬림했든 모두 읽는다 — simslim·avdslim 을 직접 쓴 기기도 슬림으로 보이게 (M6)
+    const devices = all.filter((d) => states.get(d.id)?.booted);
     // 켜진 디바이스가 바뀌면 시간과 상관없이 다시 읽는다
     const booted = devices.map((d) => d.id).join(",");
     if (this.slimStatsRefreshing) return;
@@ -409,6 +409,7 @@ export class SimlessServer {
       .then((maps) => {
         this.slimStatsCache.clear();
         for (const map of maps) for (const [id, stats] of map) this.slimStatsCache.set(id, stats);
+        for (const device of devices) this.rememberSlim(device);
         this.slimStatsAt = Date.now();
         this.slimStatsBooted = booted;
         if (devices.length > 0) this.notify();
@@ -416,6 +417,31 @@ export class SimlessServer {
       .finally(() => {
         this.slimStatsRefreshing = false;
       });
+  }
+
+  /**
+   * 읽은 슬림 수치를 기기 정보에 적어 둔다 — 꺼진 뒤에도 «마지막 확인» 으로 보이게 (M6).
+   * 값이 같으면 10분에 한 번만 적는다(15초마다 파일을 쓰지 않으려고)
+   */
+  private rememberSlim(device: Device): void {
+    const stats = this.slimStatsCache.get(device.id);
+    if (!stats) return;
+    const seen = device.slimSeen;
+    const same =
+      seen?.disabled === stats.disabled && seen.total === stats.total && seen.unit === stats.unit;
+    if (same && Date.now() - Date.parse(seen.seenAt) < 10 * 60_000) return;
+    try {
+      this.registry.update(device.id, {
+        slimSeen: {
+          disabled: stats.disabled,
+          total: stats.total,
+          unit: stats.unit,
+          seenAt: new Date().toISOString(),
+        },
+      });
+    } catch {
+      // 읽는 사이에 지워진 기기
+    }
   }
 
   async deviceViews(session: SessionInfo, only?: Device[]): Promise<DeviceView[]> {

@@ -77,4 +77,27 @@ describe("표 출력 — 슬림 실패 이유 (M6)", () => {
     );
     expect(devicesTable([device])).not.toContain("자세한 내용");
   });
+
+  test("Simless 가 하지 않은 슬림도 SLIM — 꺼져 있으면 마지막으로 본 값과 시각", async () => {
+    const { devicesTable } = await import("../src/cli/format.ts");
+    const device = {
+      ...androidDevice("dddd"),
+      createdBySimless: false,
+      slim: "none" as const,
+      slimSeen: {
+        disabled: 49,
+        total: 52,
+        unit: "packages" as const,
+        seenAt: new Date().toISOString(),
+      },
+      label: "Android 360dp",
+      layoutWidth: 360,
+      layoutHeight: 760,
+      booted: false,
+      mine: false,
+      default: false,
+      groups: [],
+    };
+    expect(devicesTable([device])).toContain("SLIM 49/52 packages (checked just now)");
+  });
 });

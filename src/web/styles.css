@@ -584,6 +584,11 @@ summary:focus-visible {
   border-style: dashed;
 }
 
+/* 꺼진 기기 — 마지막으로 켜졌을 때 본 슬림 (M6) */
+.slim-stale {
+  opacity: 0.55;
+}
+
 .slim .tip {
   position: absolute;
   top: calc(100% + 6px);
