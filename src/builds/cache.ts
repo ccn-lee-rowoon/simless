@@ -63,7 +63,7 @@ export function projectKey(projectDir: string): string {
   return name.replace(/[^\w.-]+/g, "_");
 }
 
-/** 앱 프로젝트의 지문 도구로 네이티브 지문을 계산한다 (NOVA 기준 약 30초) */
+/** 앱 프로젝트의 지문 도구로 네이티브 지문을 계산한다 (큰 앱 기준 약 30초) */
 export async function computeFingerprint(
   projectDir: string,
   platform: Platform,

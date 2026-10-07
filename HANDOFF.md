@@ -1,6 +1,6 @@
 # 인계 — Simless (시뮬레이터·에뮬레이터 중개·관리 도구)
 
-> 2026-10-01~02, xb3-client(NOVA) 세션에서 정리한 내용. 이 폴더에서 새 세션을 시작할 때 **이 파일과 `requirements.md` 를 먼저 읽는다.**
+> 2026-10-01~02 에 처음 정리한 내용. 이 폴더에서 새 세션을 시작할 때 **이 파일과 `requirements.md` 를 먼저 읽는다.**
 
 ## 이 폴더
 
@@ -19,7 +19,7 @@
 - 설계안 v0.2 작성(`docs/design.md`)
 - **0단계(저장소 뼈대) 완료** — `bun link` 로 `simless` 등록됨(`~/.bun/bin/simless` → 이 저장소). 다음은 1단계(서버 + CLI 코어), 세션 구분은 에이전트 무관(프로세스 트리) — 에이전트별 실측 항목은 `docs/design.md` §17
 - **1단계(서버 + CLI 코어) 완료** — `simless serve`·`install`·`status`·`catalog`·`create`·`list`·`use`·`up`·`down`·`acquire`·`release`·`who` 등. 실제 Android·iOS 디바이스로 만들기·켜기·점유를 확인하고 시험 디바이스는 지웠다. 남은 확인(에이전트별 프로세스 트리)은 `docs/design.md` §17
-- **2단계(doctor + 스킬) 완료** — 앱 설치·실행·딥링크는 argent 로 하기로 하고 Simless 일괄 기능은 «나중에»(L1~L3). 스킬은 `~/.claude/skills/simless` 에 설치됨. 남은 확인: NOVA 로 «심리스로 확인해 줘» 처음부터 끝까지
+- **2단계(doctor + 스킬) 완료** — 앱 설치·실행·딥링크는 argent 로 하기로 하고 Simless 일괄 기능은 «나중에»(L1~L3). 스킬은 `~/.claude/skills/simless` 에 설치됨. 남은 확인: 실제 Expo 앱으로 «심리스로 확인해 줘» 처음부터 끝까지
 - **3단계(웹 UI + `Simless.app`) 완료** — 순서를 앞당겼다(훅은 4단계로). 웹 UI(`simless ui`·메뉴바 «대시보드 열기»): 만든 디바이스 목록(All·Android·iOS 탭), 생성(+)은 iOS 시뮬레이터·Android 대표 프로필·직접 입력, 같은 크기 여러 대 허용(이름만 안 겹치게), 슬림 수치와 슬림 전후 비교(만들 때 기준값 측정). `Simless.app` 은 메뉴바 앱(지금 아이콘은 폰에 눈·입을 살짝 넣은 모양 — M12)
 - **2026-10-05 사양 변경** — 레이아웃 확인 전용 → 이 Mac 의 디바이스 전부를 중개(R20). 용도별 **그룹**·**기본 디바이스**(Android·iOS 1대씩)·디바이스 메모, 만들 때 슬림 선택(슬림만 `simless` 접두사), 그룹 점유는 에이전트가 판단(R23), «사용 안 함» 제거, 슬림은 자동 재적용 + `SLIM` 배지, 화면은 `Simless.app` 창(WKWebView), 귀엽지 않은 디자인, 한국어·영어(설정에서 선택). 이름 변경은 나중에(Q17 — SimPool 은 bitomule/simpool 과 겹침)
 - **4단계(사양 변경) 완료** — Simless 목록(만든 것 + 이 Mac 에서 추가한 것, 레지스트리 v2 — Simless 가 붙인 정보만, v1 은 읽어서 옮기고 처음 만든 것을 기본으로), 왼쪽 메뉴(디바이스·그룹·세션 — 세션은 점유·대기와 기록), 설정은 새 창, 기종 + OS 생성·슬림 선택·ⓘ, 그룹·기본 디바이스·메모, 그룹 점유(all·available·대기·교착 검사), 한국어·영어(설정), 새 화면(디바이스·그룹·설정), `Simless.app` 창(WKWebView)·새 아이콘, 영어 스킬. 실제 서버에 적용해 확인함(기존 `bakw`·`8rav` 가 그대로 기본 디바이스로)
@@ -29,14 +29,14 @@
 - **2026-10-05 이름 변경** — Corgi → **Simless**(simulator + seamless, «Make simulator management seamless.»). 이 Mac 은 `simless install` 로 옮김: 예전 서버·메뉴바·앱 내림, 데이터 폴더 `~/Library/Application Support/simless`·`~/.config/simless`·`~/Library/Logs/simless` 로 이동, 스킬·규칙·훅·MCP 를 새 이름으로. 예전 상태 백업은 세션 스크래치패드에만 있었다. 저장소 폴더는 2026-10-06 `…/corgi` → `…/simless` 로 바꿨다(서버 등록·`bun link`·Claude Code 훅·MCP 를 새 경로로 다시 설치)
 - **2026-10-05 추가** — 점유 기록 SQLite(90일 보관), 스킬: 모바일 앱 작업에서만 반응·세션마다 자기 Metro(S11)·설치 범위(기본 전역, 프로젝트 선택 — `simless skill`)·업데이트 알림(대시보드 띠·메뉴바), 기본 디바이스가 없으면 만들어서 빌려주기(`--create`)
 - **다른 에이전트 연결 구현** (2026-10-05) — Copilot CLI·Codex·Cursor·Gemini CLI: 세션 ID 로 세션 묶기, 훅 어댑터, 보호·MCP 설치(설정 창 «다른 에이전트», `simless install --agents`), 스킬은 `~/.agents/skills` 에도. **실제 에이전트로는 아직 확인 안 함**, 이 Mac 의 다른 에이전트 설정은 아무것도 켜지 않음. OpenCode 는 당분간 다루지 않는다(사용자 결정 2026-10-05). 조사는 `docs/agent-integrations.md`
-- **2026-10-05~06 추가** — 네이티브 빌드 캐시(`simless app install·save·list·prune`, R26 — 앱의 `@expo/fingerprint` 로 지문, `~/Library/Caches/Simless/builds`, NOVA Android APK 로 보관·목록 확인, 캐시에서 실제 기기로 설치는 아직), `SECURITY.md`, 제거(`simless uninstall [--purge]`·설정 창 «Simless 제거», S12 — 이 Mac 에서 실제로 지워 보지는 않음), 버전 표기(옆 막대 «서버 연결됨» 밑·설정 맨 위 «버전 정보»), 서버를 다시 켜면 앱 창이 새 화면을 받게. 버전은 0.1.0 그대로(태그 `v0.1.0` 은 빌드 캐시 커밋, 그 뒤는 CHANGELOG «아직 내지 않은 것»)
+- **2026-10-05~06 추가** — 네이티브 빌드 캐시(`simless app install·save·list·prune`, R26 — 앱의 `@expo/fingerprint` 로 지문, `~/Library/Caches/Simless/builds`, 실제 Expo 앱의 Android APK 로 보관·목록 확인, 캐시에서 실제 기기로 설치는 아직), `SECURITY.md`, 제거(`simless uninstall [--purge]`·설정 창 «Simless 제거», S12 — 이 Mac 에서 실제로 지워 보지는 않음), 버전 표기(옆 막대 «서버 연결됨» 밑·설정 맨 위 «버전 정보»), 서버를 다시 켜면 앱 창이 새 화면을 받게. 버전은 0.1.0 그대로(태그 `v0.1.0` 은 빌드 캐시 커밋, 그 뒤는 CHANGELOG «아직 내지 않은 것»)
 - **2026-10-06 추가** — 보호 훅 heredoc 오탐 고침, 보안 약한 점 넷 정리(다른 세션 작업 폴더 감추기·토큰 비교·파일 권한·앱 창 이동 제한), 요구사항 «확인» 칸 + `test/requirements.test.ts`(테스트여야 하는 48개 모두 테스트 있음), 점검(`runChecks`)을 가짜 명령으로 테스트, 기존 기기 이름 `simless …` 로, **Metro 연결 순서를 스킬에**(argent 의 «8081 하나» 덮어쓰기, IPv4, 준비 대기, Android `reverse` 내 포트+8081, dev client 스킴은 앱이 등록한 것, Expo+Android 한 대는 `ANDROID_SERIAL` 고정 `expo start --android`, 연결은 앱에서 확인 — 다른 세션의 실측 보충안 반영. 스킬은 특정 앱에 묶지 않는다), 메뉴바 메뉴 줄이기(켜진 디바이스 빼고 «설정 열기» 글자만 — 아이콘이 사라졌는지 사용자 확인 대기)
-- 남은 것: U단계(배포·업데이트 — GitHub 리모트가 생긴 뒤), 다른 에이전트 실측, NOVA 로 주 흐름(R15)을 세션 둘로 끝까지, 차별점 후보(그룹 안 역할·결과 나란히 보기 R10·그룹에 앱·화면 정보), 병렬 개발용 «빈 기기 아무거나» 요청
+- 남은 것: U단계(배포·업데이트 — GitHub 리모트가 생긴 뒤), 다른 에이전트 실측, 실제 앱으로 주 흐름(R15)을 세션 둘로 끝까지, 차별점 후보(그룹 안 역할·결과 나란히 보기 R10·그룹에 앱·화면 정보), 병렬 개발용 «빈 기기 아무거나» 요청
 - **하던 중**: 점유할 때 스킬이 오래됐으면 **사용자에게 물어보게** 하기(자동 업데이트는 안 됨 — 사용자 결정 2026-10-06). 오래된 스킬에는 이 안내가 없으므로 `simless use` 결과 메시지에 «무엇을 묻고, 원하면 `simless skill install` 뒤 스킬을 다시 읽기» 를 다 담는다. 코드는 아직 안 바꿈
 - 제안만 하고 사용자 결정 대기: 슬림할 것 고르기(iOS `--except` 카테고리 15개·`--keep` 데몬·`doctor --requires` 기능 24개, Android `--keep` 패키지·`--skip` 설정 묶음 6개·`enable` 카메라·오디오 — Android 슬림은 위치·자동 동기화·블루투스를 끄고 백그라운드를 4개로 제한한다. 2026-10-06 사용자 생각: **기기마다 무엇을 슬림했는지 기억**해 점유할 때 필요한 기능이 있는 기기를 고를 수 있어야 하고, **필요한 기능을 남기고 만드는** 기능도 필요할 수 있다 — «알고만 있어», 아직 만들지 않음), `simless metro`(2단계 — 스킬로 안 풀리면: 반납 때 `adb reverse` 자동 정리·`simless metro check`, 그다음 Metro 를 Simless 가 띄우기), 훅이 `simless use … && adb …` 한 줄을 막는 것(지금은 스킬이 따로 부르라고 안내 — 훅이 같은 명령의 `simless use` 를 알아보게 고칠지), `SECURITY.md` §5 남은 약한 점(argent 버전 고정 — 어느 버전으로 할지), iOS 기본 디바이스(`zx7w`, 다른 세션이 Simless 없이 쓰는 iPhone 17 Pro)를 바꿀지
 - 남은 확인: 실제 기기로 그룹 점유·생성(기종 + OS)을 끝까지, 라이트 모드 화면, simslim 0.11.0 에서 슬림 적용·확인(정보 읽기는 확인함), 설정 창 바로 설치 중 avdslim·argent(simslim 업데이트는 됨), 웹 화면 자동 테스트 없음(`bun run trace --missing`)
 - 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `Simless.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
-- 범용 도구 → NOVA 레포(xb3-client)와 분리해 별도 프로젝트로 만든다
+- 범용 도구 → 특정 앱 저장소에 넣지 않고 별도 프로젝트로 만든다
 
 ## 실측으로 확인한 사실 (이 머신)
 
@@ -63,11 +63,11 @@
 - argent `boot-device` 로 iOS 2대를 **동시에** 켜면 중단(abort) 오류 — 부팅 자체는 됐다
 
 **`wm size/density` 를 안 쓰는 이유 (실측)**
-- NOVA MainActivity 가 `resizeableActivity="false"` + 세로 고정이라, 실행 중 바꾸면 호환 모드(«Tap to restart this app») 로 떨어지고 앱을 재시작해야 반영된다
+- `resizeableActivity="false"` + 세로 고정인 앱은 실행 중 바꾸면 호환 모드(«Tap to restart this app») 로 떨어지고 앱을 재시작해야 반영된다
 - 바꾼 값은 재부팅해도 남는다(`wm … reset` 전까지)
 
 **화면 확인 관련**
-- NOVA 는 `FLAG_SECURE` 가 켜진 화면이 있어 scrcpy·녹화 스트림에 검게 나온다. `adb exec-out screencap` 도 막힐 수 있음 — 스크린샷 방식은 앱마다 확인 필요
+- `FLAG_SECURE` 가 켜진 화면이 있는 앱은 scrcpy·녹화 스트림에 검게 나온다. `adb exec-out screencap` 도 막힐 수 있음 — 스크린샷 방식은 앱마다 확인 필요
 - scrcpy 4.x 는 3.x 와 스트림 헤더가 달라 3.x 기준 파서는 깨진다. 스트리밍을 만들게 되면 버전 확인
 
 **세션 구분**
@@ -93,26 +93,7 @@
 | 빌드 캐시 | `~/Library/Caches/Simless/builds` (아직 없음 — `simless app save` 가 만든다) | `simless app prune`, 제거 때 `--purge` |
 | avdslim | brew 1.0.15 | 유지 |
 | 기존 `Pixel_6a` AVD·기존 iOS 시뮬레이터 | 2026-10-06 `avdslim tune-avd --help` 가 `Pixel_6a` 의 `config.ini` 를 바꾸고 스냅샷을 지움 → `config.ini.bak` 값으로 되돌림(디스크 16G 는 원래 값). 다음 부팅은 콜드 부팅일 수 있다 | — |
-| NOVA alpha APK | 위 3대 AVD 에 설치됨 | AVD 삭제 시 함께 사라짐 |
-
-## 시험용 앱 설정 예시 (NOVA)
-
-범용 도구의 «앱별 설정» 첫 예시로 쓴다.
-
-```jsonc
-{
-  "name": "nova",
-  "androidPackage": "com.ensapia.nova.alpha",
-  "androidApk": "<xb3-client>/rn/android/app/build/outputs/apk/debug/app-debug.apk",
-  "devClientScheme": "exp+novadeva",   // dev client 실행: exp+novadeva://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081
-  "deepLinkScheme": "novaa",           // 앱 화면 딥링크
-  "metroPort": 8081                    // 예시 — 실제로는 세션마다 비어 있는 포트(S11)
-}
-```
-
-- iOS 번들 ID `com.ensapia.nova.alpha`(2026-10-02 확인) · 시뮬레이터용 빌드 `~/Library/Developer/Xcode/DerivedData/NOVADEVA-*/Build/Products/Debug-iphonesimulator/NOVADEVA.app` · URL 스킴 `novaa`·`exp+novadeva`
-- Metro 는 세션마다 따로 띄운다(S11) — 비어 있는 포트에 띄우고 Android 는 `adb reverse tcp:8081 tcp:<포트>`, iOS dev client 는 주소에 포트를 넣는다
-- 2026-10-05 확인: iOS 시뮬레이터용 `NOVADEVA.app` 은 DerivedData 에서 지워져 없다(다시 빌드해야 함). Android 디버그 APK 는 있다(2026-10-02, 166MB). 빌드 캐시(`buildCacheProvider`)는 설정돼 있지 않다
+| 시험 앱 | 위 3대 AVD 에 설치됨 | AVD 삭제 시 함께 사라짐 |
 
 ## 새 세션 시작 프롬프트
 

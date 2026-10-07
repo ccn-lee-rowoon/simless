@@ -599,7 +599,7 @@ export const ko = {
   "web.setup.skill.scopeProject": "프로젝트",
   "web.setup.skill.scopeProjectHint":
     "고른 폴더에서만. 작업 트리마다 넣고, 저장소에는 흔적을 남기지 않습니다(.git/info/exclude)",
-  "web.setup.skill.projectPlaceholder": "예: ~/Projects/xb3-client",
+  "web.setup.skill.projectPlaceholder": "예: ~/Projects/my-app",
   "web.setup.skill.add": "추가",
   "web.setup.skill.applyScope": "프로젝트에 넣기",
   "web.setup.skill.worktrees": "작업 트리 {count}개",

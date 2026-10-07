@@ -596,7 +596,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.setup.skill.scopeProject": "Projects",
   "web.setup.skill.scopeProjectHint":
     "Only in the folders you pick. One copy per worktree, and nothing shows up in the repository (.git/info/exclude)",
-  "web.setup.skill.projectPlaceholder": "e.g. ~/Projects/xb3-client",
+  "web.setup.skill.projectPlaceholder": "e.g. ~/Projects/my-app",
   "web.setup.skill.add": "Add",
   "web.setup.skill.applyScope": "Install in these projects",
   "web.setup.skill.worktrees": "{count} worktree(s)",

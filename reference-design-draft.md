@@ -50,7 +50,7 @@
   "android": { "systemImage": "system-images/android-37.1/google_apis_playstore_ps16k/arm64-v8a/", "ramMb": 2048, "avdslimArgs": [] },
   "ios": { "simslimProfile": "~/.config/devfleet/simslim-profile.json" },
   "apps": {
-    "nova": { "androidPackage": "com.ensapia.nova.alpha", "iosBundleId": "…", "devClientScheme": "exp+novadeva", "deepLinkScheme": "novaa", "metroPort": 8081 }
+    "myapp": { "androidPackage": "com.example.myapp", "iosBundleId": "com.example.myapp", "devClientScheme": "exp+myapp", "deepLinkScheme": "myapp", "metroPort": 8081 }
   }
 }
 ```
@@ -105,7 +105,7 @@
 | --- | --- |
 | `install <앱> [--apk 경로 \| --app 경로]` | 점유한(또는 지정) 디바이스 전부에 설치. 경로 생략 시 최근 빌드 산출물 탐색 |
 | `launch <앱>` | Android `adb reverse <metroPort>` → dev client 딥링크, iOS `simctl openurl` |
-| `open <url>` | 전부에 같은 딥링크(`novaa://…`) 전송 — 같은 화면 이동 |
+| `open <url>` | 전부에 같은 딥링크(`myapp://…`) 전송 — 같은 화면 이동 |
 | `shot [--out 경로]` | 전부 캡처 → 크기 라벨을 붙여 한 장으로 합본(PNG) + 개별 파일 |
 
 - Metro 는 띄우지 않는다. 지정 포트에 없으면 오류로 알려 준다(다른 세션 Metro 보호).
@@ -149,7 +149,7 @@ devfleet install | launch | open <url> | shot
 
 ## 10. 미결정
 
-- 저장소: 별도 레포(추천) vs `xb3-client/tools/`
+- 저장소: 별도 레포(추천) vs 앱 저장소의 `tools/`
 - 이름: `devfleet` 가칭
 - Android 프리셋 높이·밀도 값(위는 임시), 600dp 를 태블릿 프로필로 할지
 - iOS 프리셋 목록·런타임 고정 여부
