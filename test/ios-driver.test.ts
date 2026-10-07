@@ -231,6 +231,23 @@ describe("IosDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
     expect(calls).toContain("/bin/simslim on UDID-1 --preserve-boot-state");
   });
 
+  test("slim — 남길 묶음은 --except 로, 바뀌었으면 풀고 다시 (M15)", async () => {
+    const { runner, calls } = fakeRunner();
+    const driver = new IosDriver(config, runner, () => "/bin/simslim");
+    const custom = { ...device, slimKeep: ["store", "web"] };
+    await driver.slim(custom, () => {});
+    expect(calls).toContain("/bin/simslim on UDID-1 --except store,web --preserve-boot-state");
+    calls.length = 0;
+    await driver.slim(custom, () => {}, { reset: true });
+    expect(calls).toEqual([
+      "/bin/simslim off UDID-1 --preserve-boot-state",
+      "/bin/simslim on UDID-1 --except store,web --preserve-boot-state",
+    ]);
+    calls.length = 0;
+    await driver.checkSlim(custom, { booted: true });
+    expect(calls).toContain("/bin/simslim verify UDID-1 --except store,web");
+  });
+
   test("checkSlim — 켜져 있을 때만 verify 결과로 판단", async () => {
     const { runner } = fakeRunner({ "/bin/simslim verify": { code: 1 } });
     const driver = new IosDriver(config, runner, () => "/bin/simslim");
@@ -254,10 +271,12 @@ describe("parseSimslimProfiles (M4)", () => {
     expect(parseSimslimProfiles(text)).toEqual({
       off: [
         {
+          id: "siri",
           name: "Siri & Intelligence",
           detail: "Siri, speech features, and Apple Intelligence services are unavailable.",
         },
         {
+          id: "connectivity",
           name: "Sharing & Device Connectivity",
           detail: "AirDrop and Continuity will not work.",
         },

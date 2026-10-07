@@ -74,28 +74,56 @@ function readProps(path: string): Record<string, string> {
  * `avdslim profiles` 출력 — «📦 <묶음> (~… RAM):» 아래 «• <패키지>» 줄들, 공격적 모드(🔥)는 빼고,
  * «✓ <끄지 않는 것>» 은 남는 것으로.
  */
-export function parseAvdslimProfiles(text: string): { off: SlimCategory[]; keeps: string[] } {
+export function parseAvdslimProfiles(text: string): {
+  off: SlimCategory[];
+  keeps: string[];
+  /** 묶음 ID → 패키지 — 남길 묶음의 패키지를 다시 켤 때 (M15) */
+  packages: Map<string, string[]>;
+} {
   const off: SlimCategory[] = [];
   const keeps: string[] = [];
-  let current: { name: string; count: number } | undefined;
+  const packages = new Map<string, string[]>();
+  let current: { name: string; packages: string[] } | undefined;
   const flush = () => {
-    if (current) off.push({ name: current.name, count: current.count });
+    if (current) {
+      const id = slimId(current.name);
+      off.push({ id, kind: "packages", name: current.name, count: current.packages.length });
+      packages.set(id, current.packages);
+    }
     current = undefined;
   };
   for (const line of text.split("\n")) {
     const head = /^\s*(\S+)\s+(.+?)(?:\s*\(~[^)]*\))?:\s*$/u.exec(line);
     if (head?.[1] && head[2] && /📦|🔥|🔒|📋/u.test(head[1])) {
       flush();
-      if (head[1].includes("📦")) current = { name: head[2].trim(), count: 0 };
+      if (head[1].includes("📦")) current = { name: head[2].trim(), packages: [] };
       continue;
     }
-    if (current && /^\s*•\s*\S+/.test(line)) current.count += 1;
+    const pkg = /^\s*•\s*(\S+)/.exec(line)?.[1];
+    if (current && pkg) current.packages.push(pkg);
     const keep = /^\s*✓\s*(.+)$/.exec(line);
     if (keep?.[1]) keeps.push(keep[1].trim());
   }
   flush();
-  return { off, keeps };
+  return { off, keeps, packages };
 }
+
+/** 묶음 이름 → 남길 때 쓰는 ID — «Assistant & Search» → `assistant-search` */
+export function slimId(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * avdslim 이 바꾸는 기기 설정 — `on --skip=<묶음>` 으로 건너뛴다 (M15).
+ * `setup` 외에는 `avdslim enable <묶음>` 으로 되돌릴 수 있다
+ */
+export const ANDROID_SLIM_SETTINGS = ["location", "sync", "bglimit", "bluetooth", "setup"] as const;
+const ENABLEABLE_SETTINGS = new Set(["location", "sync", "bglimit", "bluetooth"]);
+/** 에뮬레이터 하드웨어 — tune-avd 가 끄고 `avdslim enable <기능> <AVD>` 로 켠다 (M15) */
+export const ANDROID_SLIM_HOST = ["camera", "audio"] as const;
 
 /** `avdslim measure` 의 «Activity Monitor Memory (Footprint): 7583 MB» → 바이트 */
 export function parseFootprint(text: string): number | undefined {
@@ -261,17 +289,48 @@ export class AndroidDriver implements Driver {
     };
   }
 
-  private slimCache?: { off: SlimCategory[]; keeps: string[] };
+  private slimCache?: ReturnType<typeof parseAvdslimProfiles>;
 
-  /** `avdslim profiles` — 꺼지는 묶음(📦)과 끄지 않는 것(✓). 공격적 모드(🔥)는 쓰지 않아 뺀다 */
+  /**
+   * `avdslim profiles` — 꺼지는 묶음(📦)과 끄지 않는 것(✓). 공격적 모드(🔥)는 쓰지 않아 뺀다.
+   * 고를 수 있는 항목에는 패키지 묶음 뒤에 기기 설정·에뮬레이터 하드웨어를 붙인다 (M15)
+   */
   private async slimCategories(): Promise<{ off: SlimCategory[]; keeps: string[] }> {
-    if (this.slimCache) return this.slimCache;
-    const path = this.avdslimPath();
-    if (!path) return { off: [], keeps: [] };
-    const result = await this.runner([path, "profiles"]);
-    if (result.code !== 0) return { off: [], keeps: [] };
-    this.slimCache = parseAvdslimProfiles(result.stdout);
-    return this.slimCache;
+    const empty = { off: [], keeps: [] };
+    if (!this.slimCache) {
+      const path = this.avdslimPath();
+      if (!path) return empty;
+      const result = await this.runner([path, "profiles"]);
+      if (result.code !== 0) return empty;
+      this.slimCache = parseAvdslimProfiles(result.stdout);
+    }
+    const extra: SlimCategory[] = [
+      ...ANDROID_SLIM_SETTINGS.map((id) => ({
+        id,
+        kind: "settings" as const,
+        name: t(`slim.android.${id}`),
+        detail: t(`slim.android.${id}.detail`),
+      })),
+      ...ANDROID_SLIM_HOST.map((id) => ({
+        id,
+        kind: "host" as const,
+        name: t(`slim.android.${id}`),
+        detail: t(`slim.android.${id}.detail`),
+      })),
+    ];
+    return { off: [...this.slimCache.off, ...extra], keeps: this.slimCache.keeps };
+  }
+
+  async slimItems(): Promise<SlimCategory[]> {
+    return (await this.slimCategories()).off;
+  }
+
+  /** 남길 패키지 묶음에 든 패키지 */
+  private async keptPackages(device: Device): Promise<Set<string>> {
+    const keep = device.slimKeep ?? [];
+    if (keep.length === 0) return new Set();
+    await this.slimCategories();
+    return new Set(keep.flatMap((id) => this.slimCache?.packages.get(id) ?? []));
   }
 
   /**
@@ -426,6 +485,13 @@ export class AndroidDriver implements Driver {
     throw new HandlerError("FAILED", t("err.noFreePort"));
   }
 
+  /** 슬림하면서 소리를 남기기로 했으면 `-no-audio` 를 뺀다 (M15) */
+  private emulatorArgs(device: Device): string[] {
+    const args = this.config.android.emulatorArgs;
+    const audio = device.slim !== "none" && device.slimKeep?.includes("audio");
+    return audio ? args.filter((a) => a !== "-no-audio") : args;
+  }
+
   async boot(device: Device, progress: Progress): Promise<RuntimeState> {
     const running = await this.running();
     const already = running.get(device.native);
@@ -438,14 +504,7 @@ export class AndroidDriver implements Driver {
     const logPath = join(this.options.logDir, `emulator-${device.native}.log`);
     progress(t("progress.booting", { name: `${device.name} (${serial})` }));
     const proc = this.spawnEmulator(
-      [
-        this.emulator,
-        "-avd",
-        device.native,
-        "-port",
-        String(port),
-        ...this.config.android.emulatorArgs,
-      ],
+      [this.emulator, "-avd", device.native, "-port", String(port), ...this.emulatorArgs(device)],
       logPath,
     );
 
@@ -511,6 +570,11 @@ export class AndroidDriver implements Driver {
       device.native,
       `--ram=${this.config.android.ramMb}`,
     ]);
+    // tune-avd 가 끈 하드웨어 중 남길 것을 다시 켠다 — 다음에 켤 때부터 (M15)
+    for (const host of ANDROID_SLIM_HOST) {
+      if (device.slimKeep?.includes(host))
+        await runOk(this.runner, [avdslim, "enable", host, device.native]);
+    }
     const state = (await this.states([device])).get(device.id);
     if (state?.booted && state.targetId) await this.slimGuest(device, state.targetId, progress);
   }
@@ -521,9 +585,29 @@ export class AndroidDriver implements Driver {
     }
   }
 
+  /**
+   * 기기 안 정리 — 남길 설정은 `--skip`, 남길 묶음의 패키지는 `on` 뒤에 `avdslim enable` 로 다시 켠다.
+   * 예전에 끈 설정도 되돌리므로, 남길 항목이 바뀌어도 풀지 않고 그대로 맞춰진다 (M15)
+   */
   private async slimGuest(device: Device, serial: string, progress: Progress): Promise<void> {
+    const avdslim = this.avdslim();
+    const keep = new Set(device.slimKeep ?? []);
+    const skip = ANDROID_SLIM_SETTINGS.filter((id) => keep.has(id));
     progress(t("progress.slimGuest", { name: device.name }));
-    await runOk(this.runner, [this.avdslim(), "on", serial], { timeoutMs: 5 * 60_000 });
+    await runOk(
+      this.runner,
+      [avdslim, "on", serial, ...(skip.length > 0 ? [`--skip=${skip.join(",")}`] : [])],
+      { timeoutMs: 5 * 60_000 },
+    );
+    for (const id of skip) {
+      if (ENABLEABLE_SETTINGS.has(id)) await runOk(this.runner, [avdslim, "enable", id, serial]);
+    }
+    const kept = await this.keptPackages(device);
+    if (kept.size === 0) return;
+    const installed = await this.packages(serial, false);
+    for (const pkg of kept) {
+      if (installed.has(pkg)) await runOk(this.runner, [avdslim, "enable", pkg, serial]);
+    }
   }
 
   async unslim(device: Device, progress: Progress): Promise<void> {
@@ -577,20 +661,25 @@ export class AndroidDriver implements Driver {
    * 표준 프리셋도 Chrome·Play 스토어 등 일부는 남기므로(실측 52개 중 49개) 절반 이상이면 적용됨.
    */
   /** 설치된 avdslim 프로필 패키지 중 꺼진 수 — 기기에 프로필 패키지가 없으면 undefined */
-  private async slimCounts(serial: string): Promise<{ off: number; relevant: number } | undefined> {
-    const [profile, installed, disabled] = await Promise.all([
+  private async slimCounts(
+    serial: string,
+    device?: Device,
+  ): Promise<{ off: number; relevant: number } | undefined> {
+    const [profile, installed, disabled, kept] = await Promise.all([
       this.slimPackages(),
       this.packages(serial, false),
       this.packages(serial, true),
+      device ? this.keptPackages(device) : new Set<string>(),
     ]);
-    const relevant = [...profile].filter((pkg) => installed.has(pkg));
+    // 남기기로 한 패키지는 세지 않는다 — 커스텀 슬림도 «다 꺼짐» 으로 보이게 (M15)
+    const relevant = [...profile].filter((pkg) => installed.has(pkg) && !kept.has(pkg));
     if (relevant.length === 0) return undefined;
     return { off: relevant.filter((pkg) => disabled.has(pkg)).length, relevant: relevant.length };
   }
 
-  async checkSlim(_device: Device, state: RuntimeState): Promise<SlimState | undefined> {
+  async checkSlim(device: Device, state: RuntimeState): Promise<SlimState | undefined> {
     if (!state.booted || !state.targetId || !this.avdslimPath()) return undefined;
-    const counts = await this.slimCounts(state.targetId);
+    const counts = await this.slimCounts(state.targetId, device);
     if (!counts) return undefined;
     return counts.off / counts.relevant >= 0.5 ? "applied" : "drifted";
   }
@@ -615,7 +704,7 @@ export class AndroidDriver implements Driver {
         const serial = states.get(device.id)?.targetId;
         if (!serial) return;
         const [counts, measure] = await Promise.all([
-          this.slimCounts(serial).catch(() => undefined),
+          this.slimCounts(serial, device).catch(() => undefined),
           this.runner([this.avdslim(), "measure", serial], { timeoutMs: 30_000 }),
         ]);
         if (!counts) return;

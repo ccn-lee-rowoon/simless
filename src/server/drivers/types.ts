@@ -1,4 +1,4 @@
-import type { PlatformCatalog, SlimStats } from "../../shared/api.ts";
+import type { PlatformCatalog, SlimCategory, SlimStats } from "../../shared/api.ts";
 import type { Device, DeviceSpec, Platform, SlimState } from "../../shared/model.ts";
 
 /** 켜짐 여부 — 저장하지 않고 매번 드라이버에게 묻는다 */
@@ -50,7 +50,13 @@ export interface Driver {
   shutdown(device: Device, state: RuntimeState): Promise<void>;
   /** 켜진 디바이스에 앱을 설치한다 — iOS 는 .app, Android 는 .apk (R26) */
   install(device: Device, state: RuntimeState, path: string): Promise<void>;
-  slim(device: Device, progress: Progress): Promise<void>;
+  /**
+   * 슬림한다 — `device.slimKeep` 에 든 항목은 남긴다 (M15). 이미 슬림한 기기의 남길 항목이 바뀌었으면
+   * `reset` — 남길 것이 늘어도 그대로 맞춰지게(iOS 는 풀었다 다시)
+   */
+  slim(device: Device, progress: Progress, options?: { reset?: boolean }): Promise<void>;
+  /** 슬림할 때 고를 수 있는 항목 — `catalog` 의 `slimOff` 와 같다 (M15) */
+  slimItems(): Promise<SlimCategory[]>;
   unslim(device: Device, progress: Progress): Promise<void>;
   /** 켠 직후 할 일 — Android 는 슬림화된 기기의 기기 안 정리를 다시 한다 */
   afterBoot?(device: Device, state: RuntimeState, progress: Progress): Promise<void>;

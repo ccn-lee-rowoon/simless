@@ -46,6 +46,11 @@ export const DeviceMeta = z.object({
   listed: z.boolean().optional(),
   slim: SlimState,
   slimError: z.string().optional(),
+  /**
+   * 슬림해도 남길 항목 ID (M15) — 비었거나 없으면 전체 슬림(UI 확인용).
+   * iOS 는 simslim 묶음 ID, Android 는 avdslim 패키지 묶음·기기 설정·에뮬레이터 하드웨어 (`catalog` 의 `slimOff[].id`)
+   */
+  slimKeep: z.array(z.string()).optional(),
   /** 슬림하기 전에 잰 기준값 — 슬림 후 메모리와 비교한다 (M10) */
   slimBaseline: z
     .object({

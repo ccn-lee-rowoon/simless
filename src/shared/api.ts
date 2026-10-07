@@ -149,6 +149,10 @@ export interface CatalogOs {
 
 /** 슬림화하면 꺼지는 것 한 묶음 (M4 ⓘ) — simslim·avdslim 이 알려 주는 그대로 */
 export interface SlimCategory {
+  /** 남길 때 주는 ID (M15) — iOS 는 simslim 묶음 ID, Android 는 묶음 이름에서 만든 ID·설정·하드웨어 이름 */
+  id: string;
+  /** Android 만 — packages: 패키지 묶음, settings: 기기 설정, host: 에뮬레이터 하드웨어 */
+  kind?: "packages" | "settings" | "host";
   name: string;
   /** 꺼지면 안 되는 것 — iOS 는 simslim 의 «When disabled: …» 설명 */
   detail?: string;

@@ -157,6 +157,7 @@ simless/
 | `listed` | 레지스트리 | Simless 목록에 있는지 (R20). 만든 기기는 늘, 원래 있던 기기는 생성 화면에서 추가했을 때만. 값이 없으면(이전 형식) `createdBySimless` 와 같다. 빼면 그룹 소속·기본 지정·점유도 푼다 |
 | `slim` | 레지스트리 | `none`·`applying`·`applied`·`failed` (+ `slimError`). 풀림은 켤 때 자동 재적용하므로 따로 두지 않는다 (M6) |
 | `slimBaseline` | 레지스트리 | 슬림 전 메모리 기준값 (M10) |
+| `slimKeep` | 레지스트리 | 슬림해도 남길 항목 ID — 없으면 전체 슬림 (M15) |
 | `slimSeen` | 레지스트리 | 켜져 있을 때 마지막으로 읽은 슬림 수치 `{ disabled, total, unit, seenAt }` — 누가 슬림했든 적는다. 값이 같으면 10분에 한 번만 쓴다 (M6) |
 | `memo` | 레지스트리 | 디바이스 메모 (R24) |
 | `default` | 레지스트리 | 이 플랫폼의 기본 디바이스인지 (R22) |
@@ -246,6 +247,10 @@ simless/
 - 에뮬레이터·시뮬레이터는 서버의 자식으로 묶지 않는다 — 서버가 재시작해도 디바이스는 계속 돈다.
 - **슬림 확인과 자동 재적용** (M6): 슬림한 기기를 켤 때마다(서버 시작 시엔 켜진 것) 확인하고, 풀렸으면 바로 다시 적용한다. 실패하면 `slim: failed` + 이유를 남겨 `SLIM ⚠` 로 보인다. 원래 있던 기기(`createdBySimless: false`)는 슬림화하지 않는다 (N5).
 - **Simless 밖에서 한 슬림** (M6): 켜진 기기는 모두(만든 것·추가한 것) 15초마다 슬림 수치를 뒤에서 읽고 `slimSeen` 에 적는다. `slim: none` 인데 슬림돼 보이면(iOS 는 끈 데몬이 하나라도, Android 는 프로필 패키지가 절반 이상 꺼짐 — 위 «슬림 확인» 과 같은 기준) `SLIM` 으로 보인다. 꺼진 기기는 `slimSeen` 으로 판단해 흐리게, «마지막 확인» 시각과 함께. 이 슬림은 다시 적용하지 않는다. 판단은 `observedSlim()`(`src/shared/api.ts`) 하나를 화면·CLI·MCP 가 같이 쓴다.
+- **슬림 항목 고르기** (M15): 기기마다 `slimKeep`(남길 항목 ID)을 기억하고, 처음 슬림·변경·풀렸을 때 다시 적용 모두 이것으로 한다.
+  - iOS: `simslim on --except <묶음,…>`. 설정의 simslim 프로필(`--profile`)은 전체 슬림일 때만 쓴다(둘은 함께 못 준다). 이미 슬림한 기기의 남길 묶음이 바뀌면 `simslim off` 뒤 다시 `on`. 확인은 `simslim verify --except …`.
+  - Android: 항목은 `avdslim profiles` 의 패키지 묶음(이름에서 만든 ID, 예: `assistant-search`) + 기기 설정 `location`·`sync`·`bglimit`·`bluetooth`·`setup` + 하드웨어 `camera`·`audio`. 기기 안 정리는 `avdslim on --skip=<남길 설정>` → 남길 설정을 `avdslim enable <설정>` 으로 되돌림(`setup` 은 되돌리는 명령이 없다) → 남길 묶음의 설치된 패키지를 `avdslim enable <패키지>`. 이 순서라 남길 항목이 바뀌어도 풀지 않고 그대로 맞춰진다. 하드웨어는 `tune-avd` 뒤 `avdslim enable camera|audio <AVD>`, 소리를 남기면 켤 때 `-no-audio` 를 뺀다. 슬림 확인·수치는 남긴 패키지를 세지 않는다.
+  - 앱에 필요한 기능 찾기는 스킬이 한다 — Simless 는 남길 ID 만 받는다.
 - 생성·슬림화는 멱등 — 이미 맞으면 아무것도 안 한다.
 
 ## 10. 앱 설치·실행·같은 화면 이동 (R8·R9·R10) — argent 로

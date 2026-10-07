@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { type DeviceOpResult, type DeviceView, observedSlim } from "../src/shared/api.ts";
-import { seedDevice, testServers } from "./helpers.ts";
+import { FAKE_SLIM_ITEMS, seedDevice, testServers } from "./helpers.ts";
 
 const start = testServers();
 
@@ -209,7 +209,7 @@ describe("기종 목록과 만들기 (M1·M4)", () => {
       platform: "android",
       models: [{ id: "small-360" }, { id: "large-412" }],
       os: [{ recommended: true }],
-      slimOff: [{ name: "Assistant & Search", count: 3 }],
+      slimOff: FAKE_SLIM_ITEMS,
     });
   });
 
@@ -263,6 +263,45 @@ describe("슬림 수치 (M10)", () => {
     await Bun.sleep(20);
     const [view] = (await H("device.list")) as DeviceView[];
     expect(view?.slimStats).toMatchObject({ disabled: 49, total: 52, unit: "packages" });
+  });
+});
+
+describe("슬림 항목 고르기 (M15)", () => {
+  test("만들 때 남길 항목을 주면 기억하고 그대로 슬림한다 — 없는 ID 는 INVALID", async () => {
+    const { A, driver } = await start();
+    const device = (await A("device.create", {
+      ...android360,
+      baseline: false,
+      slimKeep: ["location", "media-consumer-apps"],
+    })) as DeviceView;
+    expect(device.slimKeep).toEqual(["location", "media-consumer-apps"]);
+    expect(driver.slimmed).toEqual([[device.id, ["location", "media-consumer-apps"], false]]);
+    expect(
+      await A("device.create", { ...android360, name: "b", slimKeep: ["nope"] }),
+    ).toMatchObject({ code: "INVALID" });
+  });
+
+  test("슬림한 기기의 남길 항목을 바꾸면 다시 맞춘다 — 빈 목록은 전체 슬림", async () => {
+    const { A, driver } = await start();
+    const device = (await A("device.create", { ...android360, baseline: false })) as DeviceView;
+    expect(device.slimKeep).toBeUndefined();
+    const changed = await A("device.slim", { devices: [device.id], keep: ["location"] });
+    expect(changed.devices[0]).toMatchObject({ slim: "applied", slimKeep: ["location"] });
+    expect(driver.slimmed.at(-1)).toEqual([device.id, ["location"], true]);
+    // 같은 항목이면 풀지 않고 다시 적용만
+    await A("device.slim", { devices: [device.id], keep: ["location"] });
+    expect(driver.slimmed.at(-1)).toEqual([device.id, ["location"], false]);
+    const full = await A("device.slim", { devices: [device.id], keep: [] });
+    expect(full.devices[0].slimKeep).toBeUndefined();
+    expect(driver.slimmed.at(-1)).toEqual([device.id, [], true]);
+  });
+
+  test("남길 항목은 슬림을 적용할 때만", async () => {
+    const { A } = await start();
+    const device = (await A("device.create", { ...android360, baseline: false })) as DeviceView;
+    expect(
+      await A("device.slim", { devices: [device.id], mode: "off", keep: ["location"] }),
+    ).toMatchObject({ code: "INVALID" });
   });
 });
 
