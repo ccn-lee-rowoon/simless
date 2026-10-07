@@ -13,12 +13,13 @@ const base = {
   strokeLinejoin: "round" as const,
 };
 
-/** 디바이스 — 폰 */
+/** 디바이스 — 앱 아이콘과 같은 폰에 눈·입 (M12) */
 export function DevicesIcon() {
   return (
     <svg {...base} aria-hidden="true">
       <rect x="4" y="1.5" width="8" height="13" rx="1.8" />
-      <path d="M7 12h2" />
+      <path d="M6.6 6.1v0.8M9.4 6.1v0.8" strokeWidth={1.6} />
+      <path d="M6.7 8.9q1.3 1.1 2.6 0" strokeWidth={1.2} />
     </svg>
   );
 }
