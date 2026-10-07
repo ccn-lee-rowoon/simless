@@ -85,7 +85,7 @@ describe("Claude Code 훅 설치 (P3)", () => {
     expect(text).toContain("simless use --default ios|android");
     // 켜기·끄기는 Simless 로
     expect(text).toContain("Boot and shut down with `simless use` / `simless down`");
-    expect(text).toContain("never `simless release --force`");
+    expect(text).toContain("never force-release it — only a person can");
   });
 
   test("규칙 파일은 ~/.claude/rules/simless.md", async () => {

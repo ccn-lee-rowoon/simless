@@ -194,7 +194,7 @@ export function registerLeaseMethods(server: SimlessServer): void {
     return { released: leases.release(session.key, ids) };
   });
 
-  /** 강제 해제 — 사람(웹 UI·CLI --force)만 (docs/design.md §8) */
+  /** 강제 해제 — 사람(앱 창)만 (docs/design.md §8) */
   server.addMethod("lease.forceRelease", async (p, session) => {
     const params = parse(ForceParams, p);
     if (!session.human) throw new HandlerError("INVALID", t("err.forceHumanOnly"));

@@ -153,7 +153,7 @@ export interface CatalogOs {
   recommended: boolean;
 }
 
-/** 슬림화하면 꺼지는 것 한 묶음 (M4 ⓘ) — simslim·avdslim 이 알려 주는 그대로 */
+/** 슬림화하면 꺼지는 것 한 묶음 (M4·M15) — simslim·avdslim 이 알려 주는 그대로 */
 export interface SlimCategory {
   /** 남길 때 주는 ID (M15) — iOS 는 simslim 묶음 ID, Android 는 묶음 이름에서 만든 ID·설정·하드웨어 이름 */
   id: string;
@@ -172,7 +172,7 @@ export interface PlatformCatalog {
   os: CatalogOs[];
   /** 폭·높이·밀도를 직접 넣을 수 있다 — Android 만 */
   custom: boolean;
-  /** 슬림화하면 꺼지는 것 (M4 ⓘ) */
+  /** 슬림화하면 꺼지는 것 — 커스텀 슬림의 항목이기도 하다 (M4·M15) */
   slimOff: SlimCategory[];
   /** 슬림화해도 남는 것 */
   slimKeeps: string[];

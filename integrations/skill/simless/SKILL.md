@@ -20,7 +20,7 @@ simless lets several agent sessions and people share this Mac's simulators and e
 - Touch a device with argent, adb or simctl **only after acquiring it**. Reads (screenshot, describe) count too.
 - Boot and shut down with **`simless use` / `simless down`**, not argent `boot-device`.
 - Never touch other sessions' devices or Metro. **Run your own Metro on a free port** (step 3) — never reuse, stop or kill a Metro you didn't start, and never assume 8081 is yours.
-- Never run `simless release --force` (people only).
+- Never force-release another session's device — only a person can, from the Simless app window.
 - Create or edit device groups **only when the user asks**. Don't change groups someone else made.
 - Decide on error **codes** (`--json` output), not on message text — messages follow the user's language setting.
 - If `simless` isn't found (`command -v simless`), tell the user to install it — don't drive devices without it. `simless --help` lists exit codes, error codes and examples.
