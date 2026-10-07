@@ -4,7 +4,7 @@ import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
 import { Agent } from "./agents.tsx";
 import { call } from "./api.ts";
-import { PlatformIcon } from "./icons.tsx";
+import { ExternalIcon, PlatformIcon } from "./icons.tsx";
 import { SlimDetailDialog, SlimDialog } from "./SlimPicker.tsx";
 import type { Act } from "./types.ts";
 import {
@@ -126,26 +126,28 @@ export function DevicesView({
         <td className="name-cell">
           <div className="strong name-line">
             <PlatformIcon platform={d.platform} />
-            <span>
-              {d.name}{" "}
-              {d.slimOff && (d.slim !== "none" || observedSlim(d)) ? (
-                <button
-                  type="button"
-                  className="slim-open"
-                  aria-label={t("web.slimDetail.open", { name: d.name })}
-                  onClick={() => setSlimDetail(d)}
-                >
-                  <SlimBadge device={d} />
-                </button>
-              ) : (
-                <SlimBadge device={d} />
-              )}
-            </span>
+            <span>{d.name}</span>
           </div>
           <div className="sub name-sub">
             {osText(d)}
             {d.createdBySimless ? ` · ${t("web.device.createdBySimless")}` : ""}
           </div>
+        </td>
+        <td className="col-slim">
+          {/* 슬림된 기기만 — 누르면 슬림 내역 새 창 (M16) */}
+          {d.slimOff && (d.slim !== "none" || observedSlim(d)) ? (
+            <button
+              type="button"
+              className="slim-open"
+              aria-label={t("web.slimDetail.open", { name: d.name })}
+              onClick={() => setSlimDetail(d)}
+            >
+              <SlimBadge device={d} />
+              <ExternalIcon />
+            </button>
+          ) : (
+            <SlimBadge device={d} />
+          )}
         </td>
         <td>
           <span className={d.booted ? "dot dot-on" : "dot"} />
@@ -336,6 +338,7 @@ export function DevicesView({
                 <tr>
                   <th className="col-width">{t("table.width")}</th>
                   <th>{t("table.name")}</th>
+                  <th className="col-slim">{t("table.slim")}</th>
                   <th className="col-state">{t("table.state")}</th>
                   <th>{t("web.tags")}</th>
                   <th>{t("web.holder")}</th>
