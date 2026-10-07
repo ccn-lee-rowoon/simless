@@ -73,6 +73,8 @@ simless --json use <ID|name>...             # specific devices
 
 Other sessions — often in other worktrees of the same repo — run their own Metro at the same time, and a Metro on 8081 is usually **someone else's**. So each session runs its own Metro on its own port and points only its own devices at it.
 
+**The app always talks to `127.0.0.1:<your port>` — never the Mac's LAN IP.** Expo's default dev URL is `http://<Mac's LAN IP>:8081`, made for physical phones on the same network; on a simulator it reaches whatever Metro holds 8081 (often another session's), it breaks when the network changes, and the dev client lists other Macs' Metros found on the same network. `127.0.0.1` reaches only this Mac: an iOS simulator shares the Mac's network, and an Android emulator gets there through `adb reverse tcp:<port> tcp:<port>` (its own `127.0.0.1` is the emulator itself, so the mapping is required).
+
 **This overrides the argent React Native workflow's single-Metro advice** («reuse the Metro already on 8081», `adb reverse tcp:8081 tcp:8081`, «iOS needs no config»). Following it here attaches your app to another session's code, or to nothing.
 
 1. **Pick a free port** (first free from 8081 up):

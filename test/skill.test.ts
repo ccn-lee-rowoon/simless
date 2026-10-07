@@ -102,6 +102,8 @@ describe("에이전트 스킬 (R16·S9)", () => {
     );
     // Expo 는 ANDROID_SERIAL 을 무시하고 첫 기기에 열고, run:android --device 는 AVD 이름 (Expo CLI 57 코드로 확인)
     expect(text).toContain("ignores `ANDROID_SERIAL`");
+    // 원칙: 127.0.0.1 만, LAN IP 는 쓰지 않는다
+    expect(text).toContain("never the Mac's LAN IP");
     expect(text).toContain("npx expo run:android --device <AVD name> --port <port>");
     expect(text).not.toContain("run:android --device <targetId>");
     expect(text).toContain("Don't use `--no-bundler`.");
