@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
-import type { DeviceOpResult, DeviceView } from "../src/shared/api.ts";
+import { type DeviceOpResult, type DeviceView, observedSlim } from "../src/shared/api.ts";
 import { seedDevice, testServers } from "./helpers.ts";
 
 const start = testServers();
@@ -263,6 +263,54 @@ describe("슬림 수치 (M10)", () => {
     await Bun.sleep(20);
     const [view] = (await H("device.list")) as DeviceView[];
     expect(view?.slimStats).toMatchObject({ disabled: 49, total: 52, unit: "packages" });
+  });
+});
+
+describe("Simless 가 하지 않은 슬림 (M6)", () => {
+  /** 켜고 목록을 두 번 — 첫 목록이 뒤에서 읽기를 시작한다 */
+  async function listAfterRead(H: (m: string, p?: unknown) => Promise<unknown>) {
+    await H("device.list");
+    await Bun.sleep(20);
+    return (await H("device.list")) as DeviceView[];
+  }
+
+  test("이 Mac 의 기기도 켜져 있으면 슬림 수치를 읽고 슬림으로 본다", async () => {
+    const { H, server, driver } = await start();
+    seedDevice(server, driver, "pix6", "Pixel 6a", false);
+    await H("device.up", { devices: ["pix6"] });
+    const view = (await listAfterRead(H)).find((d) => d.id === "pix6");
+    expect(view?.slim).toBe("none"); // Simless 가 한 슬림이 아니므로 다시 걸지 않는다
+    expect(view?.slimStats).toMatchObject({ disabled: 49, total: 52 });
+    expect(view && observedSlim(view)).toMatchObject({ disabled: 49, total: 52 });
+  });
+
+  test("꺼진 뒤에는 마지막으로 본 값과 시각을 보여 준다", async () => {
+    const { H, server, driver } = await start();
+    seedDevice(server, driver, "pix6", "Pixel 6a", false);
+    await H("device.up", { devices: ["pix6"] });
+    await listAfterRead(H);
+    await H("device.down", { devices: ["pix6"] });
+    const view = ((await H("device.list")) as DeviceView[]).find((d) => d.id === "pix6");
+    expect(view?.slimStats).toBeUndefined();
+    expect(view?.slimSeen).toMatchObject({ disabled: 49, total: 52, unit: "packages" });
+    expect(view && observedSlim(view)?.seenAt).toBeString();
+  });
+
+  test("Android 는 프로필 패키지가 절반 넘게 꺼져야 슬림 — 켜진 적 없는 기기도 표시하지 않는다", async () => {
+    const { H, server, driver } = await start();
+    seedDevice(server, driver, "pix6", "Pixel 6a", false);
+    seedDevice(server, driver, "pix7", "Pixel 7", false);
+    driver.slimStats = async (devices) =>
+      new Map(
+        devices.map((d) => [
+          d.id,
+          { disabled: 20, total: 52, unit: "packages" as const, measuredAt: 0 },
+        ]),
+      );
+    await H("device.up", { devices: ["pix6"] });
+    const views = await listAfterRead(H);
+    expect(observedSlim(views.find((d) => d.id === "pix6") as DeviceView)).toBeUndefined();
+    expect(observedSlim(views.find((d) => d.id === "pix7") as DeviceView)).toBeUndefined();
   });
 });
 

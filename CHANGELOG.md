@@ -21,6 +21,7 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 
 ### 고침
 
+- simslim·avdslim 을 직접 쓰거나 다른 도구로 슬림한 기기가 목록에서 슬림이 아닌 것처럼 보이던 것 — 켜진 기기는 모두 15초마다 슬림 상태를 읽어 `SLIM` 으로 보이고, 꺼진 뒤에는 마지막으로 본 값을 «마지막 확인» 시각과 함께 흐리게 보여 준다(앱 창·`simless list`·MCP). 다시 적용은 Simless 가 한 슬림만
 - 스킬 — Android 안내 두 가지가 틀렸던 것(Expo CLI 코드로 확인): `expo start --android` 는 `ANDROID_SERIAL` 을 무시하고 첫 기기에 열고 모든 에뮬레이터에 `adb reverse` 를 걸므로, 켜진 에뮬레이터가 내 것 하나일 때만 쓴다. `expo run:android --device` 는 시리얼이 아니라 AVD 이름(`simless list` 의 `native`). Android 빌드도 iOS 처럼 `--port` 로 자기 Metro 를 다시 쓰고 127.0.0.1 로 연다
 - 스킬 — iOS 빌드·첫 실행이 오래 걸리던 것: `expo run:ios` 는 `--port <포트>` 로 이미 띄운 자기 Metro 를 다시 쓰고 `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1` 로 자기 포트에서 열게(`--no-bundler` 는 LAN IP :8081 — 다른 세션의 Metro 로 열려 금지), 빌드하는 동안 매니페스트의 번들 주소로 첫 번들을 미리 만들고, 고정 sleep 대신 Metro 로그의 «iOS Bundled» 를 기다린다
 - 스킬 Android 보충(실제 세션에서 겪은 것) — Expo 는 `ANDROID_SERIAL` 로 고정한 `expo start --android` 로 연결·실행, 연결은 앱의 Dev 메뉴 «Connected to» 로 확인, 딥링크가 앱을 재기동하면 기본 서버로 돌아감, `adb reverse` 가 사라지는 때, `simless use` 는 따로 호출, 점유가 쉬는 사이 풀렸을 때, argent 제스처·iOS 샌드박스·`logicalDeviceId` 문제 해결, `--json` 을 jq 로 읽을 때 stderr 버리기, 스크린샷이 검게 나오면(캡처 차단) `describe` 로

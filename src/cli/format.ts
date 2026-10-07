@@ -3,6 +3,7 @@ import {
   type DeviceView,
   type HolderView,
   memoryChange,
+  observedSlim,
 } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 
@@ -65,7 +66,16 @@ export function formatHolder(holder: HolderView & { deviceId?: string }): string
 
 /** 슬림 표시 (M6) — SLIM 하나, 켜져 있으면 수치와 슬림 전후 비교, 실패만 따로 */
 function slimText(d: DeviceView): string {
-  if (d.slim === "none") return "";
+  if (d.slim === "none") {
+    // Simless 가 하지 않은 슬림 — 꺼져 있으면 마지막으로 본 값과 그 시각
+    const seen = observedSlim(d);
+    if (!seen) return "";
+    const unit = t(seen.unit === "packages" ? "slim.unit.packages" : "slim.unit.daemons");
+    const text = `${t("slim.applied")} ${seen.disabled}/${seen.total} ${unit}`;
+    return seen.seenAt
+      ? `${text} ${t("cli.slim.seen", { ago: ago(Date.parse(seen.seenAt)) })}`
+      : text;
+  }
   if (d.slim === "failed") return t("slim.failed");
   if (d.slim === "applying") return t("slim.applying");
   const stats = d.slimStats;

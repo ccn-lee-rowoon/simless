@@ -2,12 +2,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { kickstart } from "../install/launchd.ts";
-import type {
-  AcquireResult,
-  CatalogResult,
-  DeviceOpResult,
-  DeviceView,
-  StatusResult,
+import {
+  type AcquireResult,
+  type CatalogResult,
+  type DeviceOpResult,
+  type DeviceView,
+  observedSlim,
+  type StatusResult,
 } from "../shared/api.ts";
 import { call, RemoteError, ServerDownError } from "../shared/client.ts";
 import { loadConfig } from "../shared/config.ts";
@@ -45,7 +46,8 @@ function brief(d: DeviceView) {
     label: d.label,
     booted: d.booted,
     targetId: d.targetId,
-    slim: d.slim,
+    // Simless 가 하지 않은 슬림도 슬림으로 (M6)
+    slim: observedSlim(d) ? "applied" : d.slim,
     default: d.default,
     groups: d.groups,
     holder: d.holder

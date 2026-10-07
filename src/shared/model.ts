@@ -54,6 +54,18 @@ export const DeviceMeta = z.object({
       measuredAt: z.string(),
     })
     .optional(),
+  /**
+   * 켜져 있을 때 마지막으로 읽은 슬림 상태 — 누가 슬림했든(simslim·avdslim 을 직접 써도) 적는다.
+   * 슬림은 켜진 기기에서만 읽히므로, 꺼진 기기는 이 값을 «마지막 확인» 으로 보여 준다 (M6)
+   */
+  slimSeen: z
+    .object({
+      disabled: z.number(),
+      total: z.number(),
+      unit: z.enum(["daemons", "packages"]),
+      seenAt: z.string(),
+    })
+    .optional(),
   /** 디바이스 메모 — 로그인한 계정 등 (R24) */
   memo: z.string().optional(),
   /** simless 가 처음 본(또는 만든) 시각 */

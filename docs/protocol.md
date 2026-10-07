@@ -89,7 +89,7 @@
 | `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, historyRetentionDays, androidRamMb, simslimProfile? }` | 설정 화면·`simless config` (M11) |
 | `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·기록 보관 일수(1~3650)·Android RAM·simslim 프로필 (R25) |
 | `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff`)·남는 것(`slimKeeps`) (M1·M4) |
-| `device.list` | `{}` | `DeviceView[]` | Simless 목록. 켜짐·argent ID(`targetId`)·점유자·메모(`memo`)·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20) |
+| `device.list` | `{}` | `DeviceView[]` | Simless 목록. 켜짐·argent ID(`targetId`)·점유자·메모(`memo`)·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20). 슬림 수치 `slimStats` 는 켜진 기기만(뒤에서 15초마다 읽음), `slimSeen` 은 마지막으로 읽은 값 `{ disabled, total, unit, seenAt }` — 누가 슬림했든 (M6·M10) |
 | `device.create` | `{ platform?, model \| custom, os?, name?, slim = true, baseline = true }` | `DeviceView` | `model` = 기종 ID·이름(`platform` 을 안 주면 두 플랫폼에서 찾고, 양쪽에 있으면 `INVALID`), `custom` = `{ widthDp, heightDp, density }`(Android). `os` 를 안 주면 기본값. 앱 없이 만들고 `slim` 이면 기준값을 잰 뒤 슬림화. 기본 이름은 슬림이면 `simless <기종>`, 아니면 `<기종>` — 겹치면 번호를 붙인다. 진행 알림 있음 |
 | `device.rename` | `{ device, name }` | `DeviceView` | 원래 있던 디바이스도 된다. 다른 세션이 쓰는 중이면 `BUSY` |
 | `device.available` | `{}` | `DeviceView[]` | 이 Mac 에 있지만 Simless 목록에 없는 디바이스 — 생성 화면의 «이 Mac 의 디바이스» (M1) |
