@@ -17,7 +17,12 @@ import { t } from "../../shared/i18n.ts";
 import type { Device, DeviceSpec, SlimState } from "../../shared/model.ts";
 import { androidSdk } from "../../shared/tools.ts";
 import { HandlerError } from "../socket.ts";
-import { ANDROID_PROFILES } from "./android-profiles.ts";
+import {
+  ANDROID_PROFILES,
+  type AndroidProfile,
+  mergeProfiles,
+  parseDeviceDefinitions,
+} from "./android-profiles.ts";
 import type { Discovered, Driver, ModelRequest, Progress, RuntimeState } from "./types.ts";
 
 // Android 에뮬레이터 — 원본 AVD 의 하드웨어 설정을 복사해 AVD 파일을 직접 쓰고(avdmanager 불필요),
@@ -36,7 +41,30 @@ export interface AndroidDriverOptions {
   isPortFree?: (port: number) => Promise<boolean>;
   bootTimeoutMs?: number;
   pollMs?: number;
+  /** 기기 정의 XML — 기본은 Android Studio 의 sdklib.jar 와 ~/.android/devices.xml (M1) */
+  deviceDefinitions?: () => Promise<{ user: string[]; studio: string[] }>;
 }
+
+/** Android Studio 가 있을 만한 곳 — 정식·미리 보기, /Applications·~/Applications */
+function studioJars(home: string): string[] {
+  const roots = ["/Applications", join(home, "Applications")];
+  const jars: string[] = [];
+  for (const root of roots) {
+    if (!existsSync(root)) continue;
+    for (const app of readdirSync(root)) {
+      if (!/^Android Studio.*\.app$/.test(app)) continue;
+      const jar = join(root, app, "Contents", "plugins", "android", "lib", "sdklib.jar");
+      if (existsSync(jar)) jars.push(jar);
+    }
+  }
+  return jars;
+}
+
+/** sdklib.jar 안의 폰·태블릿 정의 파일 — 워치·TV·자동차·XR·데스크톱 파일은 읽지 않는다 */
+const STUDIO_FILES = [
+  "com/android/sdklib/devices/devices.xml",
+  "com/android/sdklib/devices/nexus.xml",
+];
 
 const FIRST_PORT = 5554;
 const LAST_PORT = 5682;
@@ -231,12 +259,51 @@ export class AndroidDriver implements Driver {
     return image;
   }
 
+  private profilesCache?: { at: number; list: Promise<AndroidProfile[]> };
+
+  /**
+   * 만들 수 있는 기종 — 사람이 Android Studio 에서 만든 정의, Android Studio 의 기기 정의, 대표 프로필 순.
+   * 10분 동안 기억한다(Android Studio 를 업데이트하면 그 뒤에 새 기종이 보인다)
+   */
+  private profiles(): Promise<AndroidProfile[]> {
+    if (this.profilesCache && Date.now() - this.profilesCache.at < 10 * 60_000) {
+      return this.profilesCache.list;
+    }
+    const list = (this.options.deviceDefinitions ?? (() => this.readDefinitions()))()
+      .then(({ user, studio }) =>
+        mergeProfiles(
+          user.flatMap(parseDeviceDefinitions),
+          studio.flatMap(parseDeviceDefinitions),
+          ANDROID_PROFILES,
+        ),
+      )
+      .catch(() => ANDROID_PROFILES);
+    this.profilesCache = { at: Date.now(), list };
+    return list;
+  }
+
+  private async readDefinitions(): Promise<{ user: string[]; studio: string[] }> {
+    const home = this.env.HOME ?? homedir();
+    const userFile = join(this.env.ANDROID_USER_HOME ?? join(home, ".android"), "devices.xml");
+    const user = existsSync(userFile) ? [readFileSync(userFile, "utf8")] : [];
+    const studio: string[] = [];
+    const [jar] = studioJars(home);
+    if (jar) {
+      for (const file of STUDIO_FILES) {
+        const result = await this.runner(["unzip", "-p", jar, file], { timeoutMs: 10_000 });
+        if (result.code === 0) studio.push(result.stdout);
+      }
+    }
+    return { user, studio };
+  }
+
   async catalog(): Promise<PlatformCatalog> {
     const images = this.systemImages();
     const slim = await this.slimCategories();
+    const profiles = await this.profiles();
     return {
       platform: "android",
-      models: ANDROID_PROFILES.map((p) => ({
+      models: profiles.map((p) => ({
         id: p.id,
         name: p.name,
         form: (p.widthPx * 160) / p.density >= 600 ? "tablet" : "phone",
@@ -272,7 +339,7 @@ export class AndroidDriver implements Driver {
       };
     }
     const wanted = (request.model ?? "").toLowerCase();
-    const profile = ANDROID_PROFILES.find(
+    const profile = (await this.profiles()).find(
       (p) => p.id === wanted || p.name.toLowerCase() === wanted,
     );
     if (!profile)

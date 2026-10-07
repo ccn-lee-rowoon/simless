@@ -237,7 +237,7 @@ simless/
 | 단계 | Android | iOS |
 | --- | --- | --- |
 | 목록 (R20) | `~/.android/avd/*.ini` + 각 `config.ini` 를 읽는다 | `simctl list devices available -j` + 기기 종류 profile.plist(폭) |
-| 생성 — 고를 것 (M1) | 기종: 대표 프로필(`src/server/drivers/android-profiles.ts`, Android Studio 기기 정의를 본뜸) 또는 직접 입력(폭·높이·밀도). OS: 설치된 시스템 이미지(추천: 4KB 페이지·API 높은 순) | 기종: `simctl list devicetypes` 중 설치된 런타임이 지원하는 것. OS: 설치된 런타임(기본: 최신) |
+| 생성 — 고를 것 (M1) | 기종: **Android Studio 의 기기 정의** — `/Applications`·`~/Applications` 의 `Android Studio*.app/Contents/plugins/android/lib/sdklib.jar` 안 `devices.xml`·`nexus.xml`(폰·태블릿, `unzip -p` 로 읽음)과 사람이 만든 `~/.android/devices.xml`(`ANDROID_USER_HOME`), 없으면 대표 프로필(`android-profiles.ts`). 사람 정의 → Android Studio → 대표 프로필 순으로 합치고 같은 ID(정의 ID 를 `pixel-9` 처럼 바꾼 것)는 앞의 것. 워치·TV·자동차·XR·데스크톱(`tag-id`)은 뺀다. 10분 기억. 또는 직접 입력(폭·높이·밀도). OS: 설치된 시스템 이미지(추천: 4KB 페이지·API 높은 순) | 기종: `simctl list devicetypes` 중 설치된 런타임이 지원하는 것. OS: 설치된 런타임(기본: 최신) |
 | 생성 — 만들기 | `simless_<id>.ini` + `.avd/config.ini` 를 새로 쓴다(`hw.lcd.width/height/density`, `image.sysdir.1`) | `simctl create <이름> <종류> <런타임>` → UDID. `simctl clone` 은 앱·데이터가 따라와 쓰지 않는다 |
 | 슬림화 (R5) | `avdslim tune-avd` + 켠 뒤 `avdslim on <시리얼>` | `simslim on <udid> --preserve-boot-state` |
 | 슬림화하면 꺼지는 기능 (M4 — 생성 화면 «꺼지는 것 보기»·커스텀 목록) | avdslim 프로필이 끄는 패키지 목록(`avdslim profiles`)을 사람이 읽을 이름으로 묶어 보여 준다 | simslim 프로필이 끄는 서비스 목록을 묶어 보여 준다(Siri·Spotlight·iCloud·Wallet …) |

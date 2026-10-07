@@ -7,6 +7,11 @@ import {
   type AndroidDriverOptions,
   parseAvdslimProfiles,
 } from "../src/server/drivers/android.ts";
+import {
+  mergeProfiles,
+  parseDeviceDefinitions,
+  profileId,
+} from "../src/server/drivers/android-profiles.ts";
 import { Config } from "../src/shared/config.ts";
 import type { RunResult } from "../src/shared/exec.ts";
 import type { Device } from "../src/shared/model.ts";
@@ -79,6 +84,8 @@ function driver(
     env,
     logDir: join(env.HOME ?? "", "logs"),
     avdslimPath: () => undefined,
+    // 진짜 Android Studio 를 읽지 않는다 — 대표 프로필만
+    deviceDefinitions: async () => ({ user: [], studio: [] }),
     isPortFree: async () => true,
     pollMs: 1,
     ...extra,
@@ -390,6 +397,82 @@ describe("parseFootprint — 메모리 (M10)", () => {
     const text = "🖥️  HOST (macOS) Footprint:\n   Activity Monitor Memory (Footprint): 7583 MB\n";
     expect(parseFootprint(text)).toBe(7583 * 1024 * 1024);
     expect(parseFootprint("nothing")).toBeUndefined();
+  });
+});
+
+describe("Android Studio 기기 정의 (M1)", () => {
+  const studio = `<?xml version="1.0"?>
+<d:devices xmlns:d="http://schemas.android.com/sdk/devices/7">
+  <d:device>
+    <d:name>Pixel 9</d:name>
+    <d:hardware><d:screen><d:pixel-density>420dpi</d:pixel-density>
+      <d:dimensions><d:x-dimension>1080</d:x-dimension><d:y-dimension>2424</d:y-dimension></d:dimensions>
+    </d:screen></d:hardware>
+    <d:id>pixel_9</d:id>
+  </d:device>
+  <d:device deprecated="true">
+    <d:name>Nexus 9</d:name>
+    <d:hardware><d:screen><d:pixel-density>xhdpi</d:pixel-density>
+      <d:dimensions><d:x-dimension>2048</d:x-dimension><d:y-dimension>1536</d:y-dimension></d:dimensions>
+    </d:screen></d:hardware>
+    <d:id>Nexus 9</d:id>
+  </d:device>
+  <d:device>
+    <d:name>Medium Phone</d:name>
+    <d:hardware><d:screen><d:pixel-density>420dpi</d:pixel-density>
+      <d:dimensions><d:x-dimension>1080</d:x-dimension><d:y-dimension>2400</d:y-dimension></d:dimensions>
+    </d:screen></d:hardware>
+    <d:id>medium_phone</d:id>
+  </d:device>
+  <d:device>
+    <d:name>Wear OS Small Round</d:name>
+    <d:hardware><d:screen><d:pixel-density>hdpi</d:pixel-density>
+      <d:dimensions><d:x-dimension>384</d:x-dimension><d:y-dimension>384</d:y-dimension></d:dimensions>
+    </d:screen></d:hardware>
+    <d:id>wearos_small_round</d:id>
+    <d:tag-id>android-wear</d:tag-id>
+  </d:device>
+</d:devices>`;
+
+  test("폰·태블릿을 세로 기준으로 꺼내고, 밀도 이름은 dpi 로, 워치·TV 등은 뺀다", () => {
+    expect(parseDeviceDefinitions(studio)).toEqual([
+      { id: "pixel-9", name: "Pixel 9", widthPx: 1080, heightPx: 2424, density: 420 },
+      { id: "nexus-9", name: "Nexus 9", widthPx: 1536, heightPx: 2048, density: 320 },
+      { id: "medium-phone", name: "Medium Phone", widthPx: 1080, heightPx: 2400, density: 420 },
+    ]);
+    expect(profileId("pixel_9_pro_xl")).toBe("pixel-9-pro-xl");
+  });
+
+  test("사람이 만든 정의 → Android Studio → 대표 프로필 순으로, 같은 ID 는 앞의 것", () => {
+    const user = [{ id: "pixel-9", name: "My Pixel 9", widthPx: 1, heightPx: 2, density: 3 }];
+    const merged = mergeProfiles(user, parseDeviceDefinitions(studio), [
+      { id: "small-320", name: "Small Phone 320dp", widthPx: 480, heightPx: 854, density: 240 },
+    ]);
+    expect(merged.map((p) => `${p.id}:${p.name}`)).toEqual([
+      "pixel-9:My Pixel 9",
+      "nexus-9:Nexus 9",
+      "medium-phone:Medium Phone",
+      "small-320:Small Phone 320dp",
+    ]);
+  });
+
+  test("catalog·resolve 가 Android Studio 의 기종을 쓴다 — 없으면 대표 프로필만", async () => {
+    const { env } = sdkWithImages();
+    const d = driver(env, { deviceDefinitions: async () => ({ user: [], studio: [studio] }) });
+    const catalog = await d.catalog();
+    expect(catalog.models.find((m) => m.id === "pixel-9")).toMatchObject({
+      name: "Pixel 9",
+      layoutWidth: 411,
+      form: "phone",
+    });
+    expect(catalog.models.find((m) => m.id === "nexus-9")?.form).toBe("tablet");
+    expect(catalog.models.some((m) => m.id === "small-320")).toBe(true); // 대표 프로필도 남는다
+    expect((await d.resolve({ model: "Pixel 9" })).spec).toMatchObject({
+      widthPx: 1080,
+      density: 420,
+    });
+    const plain = await driver(env).catalog();
+    expect(plain.models.some((m) => m.id === "pixel-9")).toBe(false);
   });
 });
 
