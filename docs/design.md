@@ -158,6 +158,7 @@ simless/
 | `slim` | 레지스트리 | `none`·`applying`·`applied`·`failed` (+ `slimError`). 풀림은 켤 때 자동 재적용하므로 따로 두지 않는다 (M6) |
 | `slimBaseline` | 레지스트리 | 슬림 전 메모리 기준값 (M10) |
 | `slimKeep` | 레지스트리 | 슬림해도 남길 항목 ID — 없으면 전체 슬림 (M15) |
+| `slimSeen.off` | 레지스트리 | 켜져 있을 때 실제로 읽은 꺼진 슬림 항목 ID — `DeviceView.slimOff`(못 읽었으면 `slimKeep` 으로 계산, `slimOffObserved: false`) (M16) |
 | `slimSeen` | 레지스트리 | 켜져 있을 때 마지막으로 읽은 슬림 수치 `{ disabled, total, unit, seenAt }` — 누가 슬림했든 적는다. 값이 같으면 10분에 한 번만 쓴다 (M6) |
 | `memo` | 레지스트리 | 디바이스 메모 (R24) |
 | `default` | 레지스트리 | 이 플랫폼의 기본 디바이스인지 (R22) |
@@ -251,6 +252,7 @@ simless/
   - iOS: `simslim on --except <묶음,…>`. 설정의 simslim 프로필(`--profile`)은 전체 슬림일 때만 쓴다(둘은 함께 못 준다). 이미 슬림한 기기의 남길 묶음이 바뀌면 `simslim off` 뒤 다시 `on`. 확인은 `simslim verify --except …`.
   - Android: 항목은 `avdslim profiles` 의 패키지 묶음(이름에서 만든 ID, 예: `assistant-search`) + 기기 설정 `location`·`sync`·`bglimit`·`bluetooth`·`setup` + 하드웨어 `camera`·`audio`. 기기 안 정리는 `avdslim on --skip=<남길 설정>` → 남길 설정을 `avdslim enable <설정>` 으로 되돌림(`setup` 은 되돌리는 명령이 없다) → 남길 묶음의 설치된 패키지를 `avdslim enable <패키지>`. 이 순서라 남길 항목이 바뀌어도 풀지 않고 그대로 맞춰진다. 하드웨어는 `tune-avd` 뒤 `avdslim enable camera|audio <AVD>`, 소리를 남기면 켤 때 `-no-audio` 를 뺀다. 슬림 확인·수치는 남긴 패키지를 세지 않는다.
   - 앱에 필요한 기능 찾기는 스킬이 한다 — simless 스킬의 «Finding what the app needs»(device-slim 스킬 4단계·기능 표를 Simless 항목 ID 로 옮긴 것, `.device-slim.json` 을 같이 씀). Simless 는 남길 ID 만 받는다.
+- **슬림 내역** (M16): 서버의 2초 주기 작업이 15초마다 켜진 기기 전부의 슬림 수치를 읽고(목록을 볼 때도), 수치가 바뀌었거나 내역이 없거나 10분이 지났으면 꺼진 항목을 읽어 `slimSeen.off` 에 적는다(적으면 기기 목록 캐시를 비운다). iOS 는 `simslim status <udid> --dropped` 의 묶음 ID. Android 는 avdslim 에 상태 조회가 없어 — 패키지 묶음은 설치된 패키지의 절반 이상이 꺼졌으면, `location`·`bluetooth`·`sync` 는 avdslim 이 바꾸는 기기 설정(`location_mode`·`bluetooth_on`·`auto_sync` 가 0), `camera` 는 config.ini 의 앞뒤 카메라가 `none`, `audio` 는 켤 때 `-no-audio` 를 줬거나 `hw.audioOutput=no`, `bglimit`·`setup` 은 읽을 수 없어 Simless 가 슬림했고 남기지 않았으면 꺼진 것으로. 앱 창은 `SLIM` 배지를 누르거나 ⋯ «슬림 내역» 으로 새 창.
 - 생성·슬림화는 멱등 — 이미 맞으면 아무것도 안 한다.
 
 ## 10. 앱 설치·실행·같은 화면 이동 (R8·R9·R10) — argent 로

@@ -36,6 +36,12 @@ export interface DeviceView extends Device {
   targetId?: string;
   holder?: HolderView;
   slimStats?: SlimStats;
+  /**
+   * 꺼진 슬림 항목 ID (M16) — 켜져 있을 때 실제로 읽은 것(`slimOffObserved`), 아직 못 읽었으면
+   * Simless 가 슬림한 내용(남긴 항목 빼고 전부)으로 계산한 것. 슬림이 아니면 없다
+   */
+  slimOff?: string[];
+  slimOffObserved?: boolean;
   /** 이 세션이 점유 중 */
   mine: boolean;
   /** 이 플랫폼의 기본 디바이스 (R22) */

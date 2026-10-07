@@ -1,11 +1,11 @@
 import { useEffect, useId, useMemo, useState } from "react";
-import type { DeviceView, StatusResult } from "../shared/api.ts";
+import { type DeviceView, observedSlim, type StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
 import { Agent } from "./agents.tsx";
 import { call } from "./api.ts";
 import { PlatformIcon } from "./icons.tsx";
-import { SlimDialog } from "./SlimPicker.tsx";
+import { SlimDetailDialog, SlimDialog } from "./SlimPicker.tsx";
 import type { Act } from "./types.ts";
 import {
   ago,
@@ -72,6 +72,7 @@ export function DevicesView({
   const [grouping, setGrouping] = useState<DeviceView | null>(null);
   const [deleting, setDeleting] = useState<DeviceView | null>(null);
   const [slimming, setSlimming] = useState<DeviceView | null>(null);
+  const [slimDetail, setSlimDetail] = useState<DeviceView | null>(null);
 
   const setPlatform = (next: Platform) => {
     setPlatformState(next);
@@ -126,7 +127,19 @@ export function DevicesView({
           <div className="strong name-line">
             <PlatformIcon platform={d.platform} />
             <span>
-              {d.name} <SlimBadge device={d} />
+              {d.name}{" "}
+              {d.slimOff && (d.slim !== "none" || observedSlim(d)) ? (
+                <button
+                  type="button"
+                  className="slim-open"
+                  aria-label={t("web.slimDetail.open", { name: d.name })}
+                  onClick={() => setSlimDetail(d)}
+                >
+                  <SlimBadge device={d} />
+                </button>
+              ) : (
+                <SlimBadge device={d} />
+              )}
             </span>
           </div>
           <div className="sub name-sub">
@@ -213,16 +226,17 @@ export function DevicesView({
             >
               {t("web.device.makeDefault")}
             </MenuItem>
+            {(d.createdBySimless || d.slimOff) && <MenuSeparator />}
+            {d.slimOff && (
+              <MenuItem onClick={() => setSlimDetail(d)}>{t("web.slimDetail.title")}</MenuItem>
+            )}
             {d.createdBySimless && (
-              <>
-                <MenuSeparator />
-                <MenuItem
-                  disabled={lockedByOther || d.slim === "applying"}
-                  onClick={() => setSlimming(d)}
-                >
-                  {t("web.device.slimSettings")}
-                </MenuItem>
-              </>
+              <MenuItem
+                disabled={lockedByOther || d.slim === "applying"}
+                onClick={() => setSlimming(d)}
+              >
+                {t("web.device.slimSettings")}
+              </MenuItem>
             )}
             {lockedByOther && (
               <>
@@ -350,6 +364,20 @@ export function DevicesView({
               call("device.rename", { device: d.id, name: name.trim() }),
             );
         }}
+      />
+      <SlimDetailDialog
+        device={slimDetail}
+        onClose={() => setSlimDetail(null)}
+        onEdit={
+          slimDetail?.createdBySimless &&
+          !(slimDetail.holder !== undefined && !slimDetail.mine) &&
+          slimDetail.slim !== "applying"
+            ? (d) => {
+                setSlimDetail(null);
+                setSlimming(d);
+              }
+            : undefined
+        }
       />
       <SlimDialog
         device={slimming}

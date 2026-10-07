@@ -48,8 +48,10 @@ function brief(d: DeviceView) {
     targetId: d.targetId,
     // Simless 가 하지 않은 슬림도 슬림으로 (M6)
     slim: observedSlim(d) ? "applied" : d.slim,
-    // 커스텀 슬림에서 남긴 항목 (M15)
+    // 커스텀 슬림에서 남긴 항목 (M15), 꺼진 항목 — 테스트에 맞는 기기를 고를 때 (M16)
     slimKeep: d.slimKeep,
+    slimOff: d.slimOff,
+    slimOffObserved: d.slimOffObserved,
     default: d.default,
     groups: d.groups,
     holder: d.holder

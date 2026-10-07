@@ -65,6 +65,17 @@ When you create a slim device, or the user asks to change how one is slimmed, pi
 
 Change an existing device (only one Simless created) with `simless slim <device> --keep <id,…>` (or `--full` to go back to full slim, `--off` to remove slimming). iOS re-slims in 1–2 minutes; Android camera and audio take effect at the next boot. Use `--no-slim` only when the test needs a stock device.
 
+#### Does the test need device features?
+
+Slimmed devices have some features off. `simless --json list` shows, per device, **`slimOff`** — the slim item IDs that are off (none if the device isn't slimmed). `slimOffObserved: true` means it was read from the device; `false` means it was worked out from Simless's slim settings and will be read once the device is on.
+
+- **UI and layout checks** need nothing — any device that fits the purpose is fine, including a fully slimmed one.
+- **Testing a feature that relies on the device** (push notifications, universal links, photo picker, contacts, location, camera …): find what the app needs («Finding what the app needs» below — reuse `.device-slim.json` when it's current) and map it to slim item IDs. A device fits when **none of those IDs is in its `slimOff`**.
+  1. The device the purpose points to (group, default, named) fits → use it.
+  2. It doesn't fit → look for another device in the list that fits (same platform), tell the user which one and why, and request it by ID.
+  3. A fitting device is busy → if no other fitting device is free, wait for it (`--wait`) and tell the user.
+  4. No device fits → **ask the user**: change a Simless-made device's slim (`simless slim <device> --keep <id,…>`, only if nobody is using it) or create one with `--slim-keep`. Don't change or create a device without asking — other sessions use them.
+
 ### 2. Acquire and boot
 
 ```sh
@@ -308,7 +319,7 @@ simless default <device>                       # make it its platform's default 
 
 ## MCP tools
 
-If the `simless` MCP server is registered, the same steps are available as tools: `simless_status`, `simless_use` (devices, group, or default; `mode: "available"`; `wait` — call again while it answers `STILL_QUEUED`), `simless_release`, `simless_down`, `simless_catalog`, `simless_create` (`slimKeep`), `simless_slim` (`keep`, `off`), `simless_group_save`. Errors start with the code (`BUSY: …`). Use either the CLI or the tools — they share the same session.
+If the `simless` MCP server is registered, the same steps are available as tools: `simless_status` (devices with `slimOff`), `simless_use` (devices, group, or default; `mode: "available"`; `wait` — call again while it answers `STILL_QUEUED`), `simless_release`, `simless_down`, `simless_catalog`, `simless_create` (`slimKeep`), `simless_slim` (`keep`, `off`), `simless_group_save`. Errors start with the code (`BUSY: …`). Use either the CLI or the tools — they share the same session.
 
 ## Command summary
 

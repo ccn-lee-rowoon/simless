@@ -85,6 +85,8 @@ export type FakeDriver = Driver & {
   installed: [string, string][];
   /** slim() 을 부른 기록 — [디바이스 ID, 남길 항목, reset] (M15) */
   slimmed: [string, string[], boolean][];
+  /** slimOff() 가 돌려줄 값 — 켜진 기기에서 실제로 꺼진 항목 (M16) */
+  observedOff: string[];
 };
 
 /** 아무것도 실제로 켜지 않는 드라이버 — 켜짐 상태만 기억한다 */
@@ -101,6 +103,7 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
     existing,
     installed: [],
     slimmed: [],
+    observedOff: ["assistant-search", "media-consumer-apps"],
     missingTools: async () => [],
     list: async () => [...driver.existing],
     catalog: async () => ({
@@ -158,6 +161,7 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
       driver.slimmed.push([d.id, d.slimKeep ?? [], options?.reset ?? false]);
     },
     slimItems: async () => FAKE_SLIM_ITEMS,
+    slimOff: async (d) => (booted.has(d.id) ? driver.observedOff : undefined),
     unslim: async () => {},
     checkSlim: async () => "applied",
     measure: async () => ({ memoryBytes: 7.8 * 1024 ** 3, processes: 167 }),

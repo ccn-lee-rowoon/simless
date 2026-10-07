@@ -205,6 +205,12 @@ export class SimlessServer {
     }
     this.leases.sweepIdle();
     this.history.pruneIfDue();
+    // 아무도 목록을 보지 않아도 15초마다 슬림 상태·내역을 읽어 둔다 (M6·M16)
+    if (Date.now() - this.slimStatsAt >= 15_000 && !this.slimStatsRefreshing) {
+      void this.devices()
+        .then(async (all) => this.refreshSlimStats(all, await this.runtimeStates(all)))
+        .catch(() => {});
+    }
   }
 
   get config(): Config {
@@ -386,7 +392,8 @@ export class SimlessServer {
 
   /**
    * 슬림 수치는 읽는 데 몇 초 걸린다(simslim list 등) — 목록은 기다리지 않고 지난 값을 붙이고,
-   * 15초가 지났으면 뒤에서 다시 읽은 뒤 화면에 바뀌었다고 알린다.
+   * 15초가 지났으면 뒤에서 다시 읽은 뒤 화면에 바뀌었다고 알린다. 2초마다 도는 tick 도 부른다.
+   * 늘 Simless 목록 전체로 부른다 — 일부만 주면 나머지 기기의 수치가 지워진다
    */
   private refreshSlimStats(all: Device[], states: Map<string, RuntimeState>): void {
     // 켜진 기기는 누가 슬림했든 모두 읽는다 — simslim·avdslim 을 직접 쓴 기기도 슬림으로 보이게 (M6)
@@ -406,10 +413,16 @@ export class SimlessServer {
           .catch(() => new Map<string, SlimStats>()),
       ),
     )
-      .then((maps) => {
+      .then(async (maps) => {
         this.slimStatsCache.clear();
         for (const map of maps) for (const [id, stats] of map) this.slimStatsCache.set(id, stats);
-        for (const device of devices) this.rememberSlim(device);
+        let recorded = false;
+        for (const device of devices) {
+          const state = states.get(device.id);
+          if (state && (await this.rememberSlim(device, state))) recorded = true;
+        }
+        // 기기 목록은 레지스트리를 읽어 둔 것을 쓴다 — 적었으면 다시 읽게
+        if (recorded) this.invalidate();
         this.slimStatsAt = Date.now();
         this.slimStatsBooted = booted;
         if (devices.length > 0) this.notify();
@@ -420,16 +433,21 @@ export class SimlessServer {
   }
 
   /**
-   * 읽은 슬림 수치를 기기 정보에 적어 둔다 — 꺼진 뒤에도 «마지막 확인» 으로 보이게 (M6).
-   * 값이 같으면 10분에 한 번만 적는다(15초마다 파일을 쓰지 않으려고)
+   * 읽은 슬림 수치와 꺼진 항목을 기기 정보에 적어 둔다 — 꺼진 뒤에도 «마지막 확인» 으로 보이게 (M6·M16).
+   * 꺼진 항목은 수치가 바뀌었거나 아직 없을 때만 읽고, 값이 같으면 10분에 한 번만 적는다
+   * (15초마다 기기에 묻거나 파일을 쓰지 않으려고)
    */
-  private rememberSlim(device: Device): void {
+  private async rememberSlim(device: Device, state: RuntimeState): Promise<boolean> {
     const stats = this.slimStatsCache.get(device.id);
-    if (!stats) return;
+    if (!stats) return false;
     const seen = device.slimSeen;
     const same =
       seen?.disabled === stats.disabled && seen.total === stats.total && seen.unit === stats.unit;
-    if (same && Date.now() - Date.parse(seen.seenAt) < 10 * 60_000) return;
+    if (same && seen.off && Date.now() - Date.parse(seen.seenAt) < 10 * 60_000) return false;
+    // 수치가 같아도 10분이 지났으면 다시 읽는다 — Android 설정처럼 수치에 안 잡히는 변화가 있다
+    const off = await this.driver(device.spec.platform)
+      .slimOff(device, state)
+      .catch(() => undefined);
     try {
       this.registry.update(device.id, {
         slimSeen: {
@@ -437,19 +455,63 @@ export class SimlessServer {
           total: stats.total,
           unit: stats.unit,
           seenAt: new Date().toISOString(),
+          off: off ?? seen?.off,
         },
       });
+      return true;
     } catch {
       // 읽는 사이에 지워진 기기
+      return false;
     }
+  }
+
+  /** Simless 가 슬림한 기기 — 남긴 항목 빼고 전부 꺼진 것으로 (아직 켜서 읽지 못했을 때) (M16) */
+  private async plannedSlimOff(devices: Device[]): Promise<Map<string, string[]>> {
+    const planned = new Map<string, string[]>();
+    const items = new Map<string, string[]>();
+    for (const device of devices) {
+      if (device.slim === "none" || device.slim === "failed") continue;
+      const platform = device.spec.platform;
+      if (!items.has(platform)) {
+        const list = await this.driverOrUndefined(platform)
+          ?.slimItems()
+          .catch(() => []);
+        items.set(
+          platform,
+          (list ?? []).map((i) => i.id),
+        );
+      }
+      const keep = new Set(device.slimKeep ?? []);
+      planned.set(
+        device.id,
+        (items.get(platform) ?? []).filter((id) => !keep.has(id)),
+      );
+    }
+    return planned;
+  }
+
+  /** 읽은 것이 있으면 그것, 없으면 계산한 것. 슬림이 아니고 꺼진 것도 없으면 붙이지 않는다 (M16) */
+  private slimOffView(
+    device: Device,
+    planned: Map<string, string[]>,
+  ): Pick<DeviceView, "slimOff" | "slimOffObserved"> {
+    const seen = device.slimSeen?.off;
+    if (seen && (seen.length > 0 || device.slim !== "none")) {
+      return { slimOff: seen, slimOffObserved: true };
+    }
+    const plan = planned.get(device.id);
+    return plan ? { slimOff: plan, slimOffObserved: false } : {};
   }
 
   async deviceViews(session: SessionInfo, only?: Device[]): Promise<DeviceView[]> {
     const all = await this.devices();
     const devices = only ?? all;
     const states = await this.runtimeStates(devices);
-    if (!only) this.writeManagedIndex(all, states);
-    this.refreshSlimStats(devices, states);
+    if (!only) {
+      this.writeManagedIndex(all, states);
+      this.refreshSlimStats(all, states);
+    }
+    const planned = await this.plannedSlimOff(devices);
     const leases = new Map(this.leases.snapshot().leases.map((l) => [l.deviceId, l]));
     const defaults = this.registry.defaults();
     const groups = this.registry.groups();
@@ -474,6 +536,7 @@ export class SimlessServer {
               })
             : undefined,
         slimStats: state?.booted ? this.slimStatsCache.get(device.id) : undefined,
+        ...this.slimOffView(device, planned),
         mine: lease?.sessionKey === session.key,
         default: defaults[device.platform] === device.id,
         groups: groups.filter((g) => g.deviceIds.includes(device.id)).map((g) => g.id),

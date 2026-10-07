@@ -677,6 +677,66 @@ export class AndroidDriver implements Driver {
     return { off: relevant.filter((pkg) => disabled.has(pkg)).length, relevant: relevant.length };
   }
 
+  /** 기기 설정 하나 — 읽지 못하면 undefined */
+  private async setting(serial: string, scope: "global" | "secure", key: string) {
+    const result = await this.runner([
+      this.adb,
+      "-s",
+      serial,
+      "shell",
+      "settings",
+      "get",
+      scope,
+      key,
+    ]);
+    return result.code === 0 ? result.stdout.trim() : undefined;
+  }
+
+  /**
+   * 실제로 꺼진 슬림 항목 (M16). 패키지 묶음은 설치된 패키지의 절반 이상이 꺼졌으면,
+   * 위치·블루투스·계정 동기화는 기기 설정으로(avdslim 이 바꾸는 값), 카메라는 config.ini, 소리는 켤 때
+   * `-no-audio` 를 줬는지로. 백그라운드 제한·초기 설정은 읽을 방법이 없어 Simless 가 슬림한 내용으로 본다
+   */
+  async slimOff(device: Device, state: RuntimeState): Promise<string[] | undefined> {
+    const serial = state.targetId;
+    if (!state.booted || !serial || !this.avdslimPath()) return undefined;
+    await this.slimCategories();
+    const packages = this.slimCache?.packages;
+    if (!packages) return undefined;
+    const [installed, disabled] = await Promise.all([
+      this.packages(serial, false),
+      this.packages(serial, true),
+    ]);
+    const off: string[] = [];
+    for (const [id, list] of packages) {
+      const present = list.filter((pkg) => installed.has(pkg));
+      const gone = present.filter((pkg) => disabled.has(pkg));
+      if (present.length > 0 && gone.length * 2 >= present.length) off.push(id);
+    }
+    const [location, bluetooth, sync] = await Promise.all([
+      this.setting(serial, "secure", "location_mode"),
+      this.setting(serial, "global", "bluetooth_on"),
+      this.setting(serial, "global", "auto_sync"),
+    ]);
+    if (location === "0") off.push("location");
+    if (sync === "0") off.push("sync");
+    if (bluetooth === "0") off.push("bluetooth");
+    const keep = new Set(device.slimKeep ?? []);
+    if (device.slim !== "none") {
+      for (const id of ["bglimit", "setup"]) if (!keep.has(id)) off.push(id);
+    }
+    const config = existsSync(this.configPath(device.native))
+      ? readProps(this.configPath(device.native))
+      : {};
+    if (config["hw.camera.back"] === "none" && (config["hw.camera.front"] ?? "none") === "none") {
+      off.push("camera");
+    }
+    if (this.emulatorArgs(device).includes("-no-audio") || config["hw.audioOutput"] === "no") {
+      off.push("audio");
+    }
+    return off;
+  }
+
   async checkSlim(device: Device, state: RuntimeState): Promise<SlimState | undefined> {
     if (!state.booted || !state.targetId || !this.avdslimPath()) return undefined;
     const counts = await this.slimCounts(state.targetId, device);

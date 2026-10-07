@@ -69,6 +69,8 @@ export const DeviceMeta = z.object({
       total: z.number(),
       unit: z.enum(["daemons", "packages"]),
       seenAt: z.string(),
+      /** 실제로 꺼져 있던 슬림 항목 ID — `catalog` 의 `slimOff[].id` (M16) */
+      off: z.array(z.string()).optional(),
     })
     .optional(),
   /** 디바이스 메모 — 로그인한 계정 등 (R24) */

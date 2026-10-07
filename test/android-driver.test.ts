@@ -345,6 +345,39 @@ describe("AndroidDriver 커스텀 슬림 (M15)", () => {
     expect(spawned[1]).toContain("-no-audio");
   });
 
+  test("slimOff — 묶음은 설치된 패키지 절반 이상 꺼짐, 설정은 기기 값, 읽을 수 없는 것은 남긴 항목으로 (M16)", async () => {
+    const settings: Record<string, string> = {
+      "secure location_mode": "0",
+      "global bluetooth_on": "1",
+      "global auto_sync": "0",
+    };
+    const runner = async (command: string[]): Promise<RunResult> => {
+      const line = command.join(" ");
+      if (line === "/bin/avdslim profiles") return { code: 0, stdout: profiles, stderr: "" };
+      const setting = /settings get (\w+ \w+)$/.exec(line)?.[1];
+      if (setting) return { code: 0, stdout: `${settings[setting] ?? "null"}\n`, stderr: "" };
+      const list = line.endsWith("packages -d")
+        ? ["app.s"]
+        : line.endsWith("packages")
+          ? ["app.a", "app.s"]
+          : [];
+      return { code: 0, stdout: list.map((p) => `package:${p}\r`).join("\n"), stderr: "" };
+    };
+    const { env } = sdkWithImages();
+    const d = driver(env, { runner, avdslimPath: () => "/bin/avdslim" });
+    // media-apps 는 설치된 app.a 가 켜져 있어 남음, search 는 꺼짐. 위치·동기화 꺼짐, 블루투스 켜짐.
+    // 백그라운드 제한은 남기기로 했고 초기 설정은 슬림. 소리는 -no-audio 로 켜므로 꺼짐
+    const keepBg = { ...device, slimKeep: ["bglimit"] } as Device;
+    expect(await d.slimOff(keepBg, { booted: true, targetId: "emulator-5554" })).toEqual([
+      "search",
+      "location",
+      "sync",
+      "setup",
+      "audio",
+    ]);
+    expect(await d.slimOff(keepBg, { booted: false })).toBeUndefined();
+  });
+
   test("슬림 확인은 남긴 패키지를 세지 않는다", async () => {
     const { d } = setup(["app.a", "app.z", "app.s"], ["app.s"]);
     expect(await d.checkSlim(device, { booted: true, targetId: "emulator-5554" })).toBe("applied");

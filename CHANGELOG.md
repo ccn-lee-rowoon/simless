@@ -9,6 +9,7 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 
 ### 추가
 
+- **슬림 내역** — 기기마다 꺼진 슬림 항목을 기록한다(켜진 기기를 15초마다 확인, Simless 밖에서 한 슬림도). 앱 창은 `SLIM` 배지·⋯ «슬림 내역» 에서 꺼진 것·켜진 것을 새 창으로, `simless --json list`·MCP 에는 `slimOff`. 스킬은 기기 기능을 쓰는 테스트면 필요한 항목이 켜진 기기를 골라 요청한다(레이아웃 확인은 아무 기기나)
 - **슬림 항목 고르기** — 전체 슬림(UI 확인용) 말고 남길 항목을 골라 슬림할 수 있다. iOS 는 simslim 묶음, Android 는 avdslim 패키지 묶음·기기 설정(위치 등)·카메라·소리. 기기마다 기억해 풀렸을 때 같은 내용으로 다시 적용하고, 만든 뒤에도 바꿀 수 있다 — 앱 창의 생성 화면·⋯ «슬림 설정…», `simless create --slim-keep`·`simless slim --keep|--full`, MCP `simless_create`(`slimKeep`)·`simless_slim`. 스킬은 전체 · 앱에 필요한 기능을 남기고 · 커스텀 중에서 고른다
 - 지원 범위를 적었다 — 앱은 **React Native (Expo)** 하나(스킬의 Metro·dev client·빌드 캐시가 이것을 전제로 한다), 에이전트는 Claude Code·Copilot CLI·Codex·Cursor·Gemini CLI.
 - **Simless 제거** — 설정 창의 «Simless 제거» 와 `simless uninstall` 이 스킬(모든 위치)·훅·규칙·MCP·앱·서버 등록을 한 번에 지운다. `--purge`(창에서는 체크)로 데이터·기록·로그·빌드 캐시까지
@@ -23,7 +24,7 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 
 ### 고침
 
-- simslim·avdslim 을 직접 쓰거나 다른 도구로 슬림한 기기가 목록에서 슬림이 아닌 것처럼 보이던 것 — 켜진 기기는 모두 15초마다 슬림 상태를 읽어 `SLIM` 으로 보이고, 꺼진 뒤에는 마지막으로 본 값을 «마지막 확인» 시각과 함께 흐리게 보여 준다(앱 창·`simless list`·MCP). 다시 적용은 Simless 가 한 슬림만
+- simslim·avdslim 을 직접 쓰거나 다른 도구로 슬림한 기기가 목록에서 슬림이 아닌 것처럼 보이던 것 — 켜진 기기는 모두 15초마다(서버가 뒤에서) 슬림 상태를 읽어 `SLIM` 으로 보이고, 꺼진 뒤에는 마지막으로 본 값을 «마지막 확인» 시각과 함께 흐리게 보여 준다(앱 창·`simless list`·MCP). 다시 적용은 Simless 가 한 슬림만
 - 스킬 — Android 안내 두 가지가 틀렸던 것(Expo CLI 코드로 확인): `expo start --android` 는 `ANDROID_SERIAL` 을 무시하고 첫 기기에 열고 모든 에뮬레이터에 `adb reverse` 를 걸므로, 켜진 에뮬레이터가 내 것 하나일 때만 쓴다. `expo run:android --device` 는 시리얼이 아니라 AVD 이름(`simless list` 의 `native`). Android 빌드도 iOS 처럼 `--port` 로 자기 Metro 를 다시 쓰고 127.0.0.1 로 연다
 - 스킬 — iOS 빌드·첫 실행이 오래 걸리던 것: `expo run:ios` 는 `--port <포트>` 로 이미 띄운 자기 Metro 를 다시 쓰고 `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1` 로 자기 포트에서 열게(`--no-bundler` 는 LAN IP :8081 — 다른 세션의 Metro 로 열려 금지), 빌드하는 동안 매니페스트의 번들 주소로 첫 번들을 미리 만들고, 고정 sleep 대신 Metro 로그의 «iOS Bundled» 를 기다린다
 - 스킬 Android 보충(실제 세션에서 겪은 것) — Expo 는 `ANDROID_SERIAL` 로 고정한 `expo start --android` 로 연결·실행, 연결은 앱의 Dev 메뉴 «Connected to» 로 확인, 딥링크가 앱을 재기동하면 기본 서버로 돌아감, `adb reverse` 가 사라지는 때, `simless use` 는 따로 호출, 점유가 쉬는 사이 풀렸을 때, argent 제스처·iOS 샌드박스·`logicalDeviceId` 문제 해결, `--json` 을 jq 로 읽을 때 stderr 버리기, 스크린샷이 검게 나오면(캡처 차단) `describe` 로
