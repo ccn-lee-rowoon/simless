@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import type { CatalogModel, CatalogResult, DeviceView, PlatformCatalog } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import { call } from "./api.ts";
@@ -155,20 +155,22 @@ export function CreateDialog({
             void create();
           }}
         >
-          <fieldset className="segmented" aria-label={t("web.platform")}>
-            {(["ios", "android"] as const).map((p) => (
-              <button
-                key={p}
-                type="button"
-                aria-pressed={platform === p}
-                className={platform === p ? "segment segment-active" : "segment"}
-                disabled={creating}
-                onClick={() => setPlatform(p)}
-              >
-                {p === "ios" ? "iOS" : "Android"}
-              </button>
-            ))}
-          </fieldset>
+          <Section step={1} title={t("web.platform")}>
+            <fieldset className="segmented" aria-label={t("web.platform")}>
+              {(["ios", "android"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  aria-pressed={platform === p}
+                  className={platform === p ? "segment segment-active" : "segment"}
+                  disabled={creating}
+                  onClick={() => setPlatform(p)}
+                >
+                  {p === "ios" ? "iOS" : "Android"}
+                </button>
+              ))}
+            </fieldset>
+          </Section>
 
           {!catalog && <p className="sub">{t("web.create.loading")}</p>}
           {problems.map((p) => (
@@ -177,140 +179,146 @@ export function CreateDialog({
             </p>
           ))}
 
-          <fieldset className="models" disabled={creating}>
-            <legend>{t("table.model")}</legend>
-            {(["phone", "tablet"] as const).map((form) =>
-              group(form).length === 0 ? null : (
-                <div key={form} className="model-group">
-                  <h4>{t(form === "phone" ? "web.create.phones" : "web.create.tablets")}</h4>
-                  <ul className="picker">
-                    {group(form).map((m) => (
-                      <li key={m.id}>
-                        <button
-                          type="button"
-                          className={
-                            m.id === modelId ? "picker-row picker-row-active" : "picker-row"
-                          }
-                          aria-pressed={m.id === modelId}
-                          onClick={() => setModelId(m.id)}
-                        >
-                          <span className="size mono">
-                            {Math.round(m.layoutWidth)}
-                            {unit}
-                          </span>
-                          <span className="picker-name">{m.name}</span>
-                          <span className="sub mono">{m.detail}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ),
-            )}
-            {current?.custom && (
-              <div className="model-group">
-                <ul className="picker">
-                  <li>
-                    <button
-                      type="button"
-                      className={custom ? "picker-row picker-row-active" : "picker-row"}
-                      aria-pressed={custom}
-                      onClick={() => setModelId(CUSTOM)}
-                    >
-                      <span className="size mono">—</span>
-                      <span className="picker-name">{t("web.create.custom")}</span>
-                      <span className="sub">{t("web.create.customHint")}</span>
-                    </button>
-                  </li>
-                </ul>
-                {custom && (
-                  <div className="grid3">
-                    <label className="field">
-                      <span>{t("web.create.widthDp")}</span>
-                      <input
-                        inputMode="numeric"
-                        value={size.widthDp}
-                        onChange={(e) => setSize({ ...size, widthDp: e.target.value })}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>{t("web.create.heightDp")}</span>
-                      <input
-                        inputMode="numeric"
-                        value={size.heightDp}
-                        onChange={(e) => setSize({ ...size, heightDp: e.target.value })}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>{t("web.create.density")}</span>
-                      <select
-                        value={size.density}
-                        onChange={(e) => setSize({ ...size, density: e.target.value })}
-                      >
-                        {["160", "240", "320", "420", "440", "480", "560", "640"].map((d) => (
-                          <option key={d} value={d}>
-                            {d}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+          <Section step={2} title={t("table.model")}>
+            <fieldset className="models" disabled={creating}>
+              <legend className="visually-hidden">{t("table.model")}</legend>
+              {(["phone", "tablet"] as const).map((form) =>
+                group(form).length === 0 ? null : (
+                  <div key={form} className="model-group">
+                    <h4>{t(form === "phone" ? "web.create.phones" : "web.create.tablets")}</h4>
+                    <ul className="picker">
+                      {group(form).map((m) => (
+                        <li key={m.id}>
+                          <button
+                            type="button"
+                            className={
+                              m.id === modelId ? "picker-row picker-row-active" : "picker-row"
+                            }
+                            aria-pressed={m.id === modelId}
+                            onClick={() => setModelId(m.id)}
+                          >
+                            <span className="size mono">
+                              {Math.round(m.layoutWidth)}
+                              {unit}
+                            </span>
+                            <span className="picker-name">{m.name}</span>
+                            <span className="sub mono">{m.detail}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                )}
-              </div>
+                ),
+              )}
+              {current?.custom && (
+                <div className="model-group">
+                  <ul className="picker">
+                    <li>
+                      <button
+                        type="button"
+                        className={custom ? "picker-row picker-row-active" : "picker-row"}
+                        aria-pressed={custom}
+                        onClick={() => setModelId(CUSTOM)}
+                      >
+                        <span className="size mono">—</span>
+                        <span className="picker-name">{t("web.create.custom")}</span>
+                        <span className="sub">{t("web.create.customHint")}</span>
+                      </button>
+                    </li>
+                  </ul>
+                  {custom && (
+                    <div className="grid3">
+                      <label className="field">
+                        <span>{t("web.create.widthDp")}</span>
+                        <input
+                          inputMode="numeric"
+                          value={size.widthDp}
+                          onChange={(e) => setSize({ ...size, widthDp: e.target.value })}
+                        />
+                      </label>
+                      <label className="field">
+                        <span>{t("web.create.heightDp")}</span>
+                        <input
+                          inputMode="numeric"
+                          value={size.heightDp}
+                          onChange={(e) => setSize({ ...size, heightDp: e.target.value })}
+                        />
+                      </label>
+                      <label className="field">
+                        <span>{t("web.create.density")}</span>
+                        <select
+                          value={size.density}
+                          onChange={(e) => setSize({ ...size, density: e.target.value })}
+                        >
+                          {["160", "240", "320", "420", "440", "480", "560", "640"].map((d) => (
+                            <option key={d} value={d}>
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+            </fieldset>
+          </Section>
+
+          <Section step={3} title={t("web.create.step.details")}>
+            <div className="grid2">
+              <label className="field">
+                <span>{t(platform === "ios" ? "web.create.runtime" : "web.create.image")}</span>
+                <select
+                  value={os?.id ?? ""}
+                  disabled={creating || osChoices.length === 0}
+                  onChange={(e) => setOsId(e.target.value)}
+                >
+                  {osChoices.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                      {o.recommended ? t("web.create.recommended") : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>{t("table.name")}</span>
+                <input
+                  value={name}
+                  placeholder={defaultName}
+                  disabled={creating}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </label>
+            </div>
+          </Section>
+
+          <Section step={4} title={t("web.slim.legend")}>
+            <fieldset className="slim-field">
+              <legend className="visually-hidden">{t("web.slim.legend")}</legend>
+              <SlimPicker
+                catalog={current}
+                mode={slimMode}
+                keep={slimKeep}
+                disabled={creating}
+                onChange={(m, k) => {
+                  setSlimMode(m);
+                  setSlimKeep(k);
+                }}
+              />
+            </fieldset>
+            {slim && (
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={baseline}
+                  disabled={creating}
+                  onChange={(e) => setBaseline(e.target.checked)}
+                />
+                {t("web.create.baseline")}
+              </label>
             )}
-          </fieldset>
-
-          <div className="grid2">
-            <label className="field">
-              <span>{t(platform === "ios" ? "web.create.runtime" : "web.create.image")}</span>
-              <select
-                value={os?.id ?? ""}
-                disabled={creating || osChoices.length === 0}
-                onChange={(e) => setOsId(e.target.value)}
-              >
-                {osChoices.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                    {o.recommended ? t("web.create.recommended") : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>{t("table.name")}</span>
-              <input
-                value={name}
-                placeholder={defaultName}
-                disabled={creating}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </label>
-          </div>
-
-          <fieldset className="field slim-field">
-            <legend>{t("web.slim.legend")}</legend>
-            <SlimPicker
-              catalog={current}
-              mode={slimMode}
-              keep={slimKeep}
-              disabled={creating}
-              onChange={(m, k) => {
-                setSlimMode(m);
-                setSlimKeep(k);
-              }}
-            />
-          </fieldset>
-          {slim && (
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={baseline}
-                disabled={creating}
-                onChange={(e) => setBaseline(e.target.checked)}
-              />
-              {t("web.create.baseline")}
-            </label>
-          )}
+          </Section>
 
           {creating && <Progress log={log} logStart={logStart} />}
           <footer className="dialog-footer">
@@ -444,6 +452,19 @@ function MacDevices({
         </ul>
       )}
     </div>
+  );
+}
+
+/** 생성 화면의 한 단계 — 번호와 제목, 위에 구분선 */
+function Section({ step, title, children }: { step: number; title: string; children: ReactNode }) {
+  return (
+    <section className="create-section">
+      <h3 className="create-step">
+        <span className="create-step-num">{step}</span>
+        {title}
+      </h3>
+      {children}
+    </section>
   );
 }
 

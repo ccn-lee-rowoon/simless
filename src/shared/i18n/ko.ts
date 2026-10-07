@@ -405,6 +405,7 @@ export const ko = {
   "web.device.makeDefault": "기본 디바이스로 정하기",
   "web.device.slimOff": "슬림 끄기",
   "web.device.slimSettings": "슬림 설정…",
+  "web.create.step.details": "OS·이름",
   "web.slim.legend": "슬림",
   "web.slim.none": "슬림 안 함",
   "web.slim.noneHint": "일반 디바이스. 모든 기능이 켜져 있습니다",

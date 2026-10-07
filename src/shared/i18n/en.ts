@@ -397,6 +397,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.device.makeDefault": "Make default",
   "web.device.slimOff": "Turn slim off",
   "web.device.slimSettings": "Slim settings…",
+  "web.create.step.details": "OS and name",
   "web.slim.legend": "Slim",
   "web.slim.none": "No slim",
   "web.slim.noneHint": "A regular device with every feature on",
