@@ -141,7 +141,7 @@ describe("첫 실행 설정 (M14)", () => {
     );
   });
 
-  test("넣어 둔 스킬이 예전 것이면 status 가 알리고, 업데이트하면 꺼진다 (S9)", async () => {
+  test("넣어 둔 스킬이 예전 것이면 status 가 알리고(스킬 지문과 함께), 업데이트하면 꺼진다 (S9·M18)", async () => {
     const env = tempEnv();
     mkdirSync(join(env.env.HOME, ".claude", "skills", "simless"), { recursive: true });
     writeFileSync(join(env.env.HOME, ".claude", "skills", "simless", "SKILL.md"), "old");
@@ -158,7 +158,10 @@ describe("첫 실행 설정 (M14)", () => {
     const H = (method: string, params: unknown = {}): Promise<any> =>
       call(env.paths.socket, method, params, session("web", { human: true })).then((r) => r.result);
     await Bun.sleep(50); // 켤 때 확인이 끝나기를
-    expect(((await H("status")) as StatusResult).skillUpdate).toBe(true);
+    const before = (await H("status")) as StatusResult;
+    expect(before.skillUpdate).toBe(true);
+    // 메뉴바 앱이 스킬 버전마다 알림을 한 번만 띄우도록 들어 있는 스킬의 지문을 준다 (M18)
+    expect(before.skillHash).toMatch(/^[0-9a-f]+$/);
     await H("setup.apply", { item: "skill", enabled: true });
     expect(((await H("status")) as StatusResult).skillUpdate).toBe(false);
   });

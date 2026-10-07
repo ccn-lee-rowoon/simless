@@ -26,6 +26,7 @@ import {
 import { FIXES, type Fix, fixCommandLine } from "../install/fixes.ts";
 import { selfCommand } from "../install/launchd.ts";
 import {
+  bundledFiles,
   combineStates,
   installSkillAt,
   loadSkillLocations,
@@ -126,6 +127,13 @@ export function registerSetupMethods(server: SimlessServer): void {
     }
   };
   void checkSkillUpdate();
+  // 스킬 지문 — 메뉴바 앱이 «스킬 업데이트» 알림을 스킬 버전마다 한 번만 띄운다 (M18)
+  void bundledFiles()
+    .then((files) => {
+      const text = [...files].map(([path, body]) => `${path}\0${body}`).join("\0");
+      server.skillHash = Bun.hash(text).toString(16);
+    })
+    .catch(() => {});
   setInterval(() => void checkSkillUpdate(), SKILL_CHECK_MS).unref();
 
   server.addMethod("setup.status", async (): Promise<SetupStatus> => {
