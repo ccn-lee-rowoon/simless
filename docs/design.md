@@ -262,7 +262,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 **네이티브 빌드 캐시 (R26)** — 설치의 예외. 캐시를 Simless 가 가지고 있어 설치도 Simless 가 한다.
 
-1. `simless app install` — CLI 가 지금 폴더에서 위로 `node_modules/.bin/fingerprint` 가 있는 앱 프로젝트를 찾고, 이 세션이 점유한 켜진 기기의 플랫폼마다 `fingerprint fingerprint:generate --platform <p>` 로 지문을 계산한다(NOVA 약 30초). 호출한 셸의 환경 변수 그대로 — 앱 설정이 환경에 따라 바뀌면 지문도 바뀐다.
+1. `simless app install` — CLI 가 지금 폴더에서 위로 `node_modules/.bin/fingerprint` 가 있는 앱 프로젝트를 찾고, 이 세션이 점유한 켜진 기기의 플랫폼마다 `fingerprint fingerprint:generate --platform <p>` 로 지문을 계산한다(큰 앱 약 30초). 호출한 셸의 환경 변수 그대로 — 앱 설정이 환경에 따라 바뀌면 지문도 바뀐다.
 2. 캐시(`~/Library/Caches/Simless/builds/<package.json name>/<플랫폼>/<지문>/`)에 있으면 서버의 `device.install` 이 기기마다 설치한다(iOS `simctl install`, Android `adb -s <시리얼> install -r -t`). 서버는 점유·켜짐·플랫폼을 확인한다.
 3. 없으면 `hit: false` 와 빌드 명령(`npx expo run:<p> --device <targetId>`)을 돌려준다. 에이전트가 빌드한 뒤 `simless app save` 가 방금 빌드한 것을 찾아 지문으로 보관한다 — iOS 는 `ios/*.xcworkspace` 이름의 DerivedData `…/Build/Products/Debug-iphonesimulator/*.app`(또는 `ios/build` 아래), Android 는 `android/app/build/outputs/apk/debug/*.apk`. 보관할 때 앱·플랫폼마다 최근 5개만 남긴다.
 - 지문은 Expo 앱에 이미 든 도구로 계산하므로 앱 저장소는 고치지 않는다(결정 기록). Expo 가 아닌 앱은 `TOOL_MISSING` — 캐시 없이 빌드한다.
@@ -277,7 +277,6 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 - `adb shell` 은 인자를 이어 붙여 기기 셸에 넘기므로 주소의 `?`·`&` 가 해석되지 않게 작은따옴표로 감싼다.
 - 앱별 설정 `~/.config/simless/apps/<이름>.json` (Q8): `android.package`·`android.apk`·`ios.bundleId`·`ios.app`·`devClientScheme`(→ `<스킴>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<metroPort>`)·`deepLinkScheme`(`/home` → `<스킴>://home`)·`metroPort`(기본 8081, 응답이 없으면 경고만).
-- NOVA 값(2026-10-02 확인): Android `com.ensapia.nova.alpha` · APK `<xb3-client>/rn/android/app/build/outputs/apk/debug/app-debug.apk` · iOS 번들 ID `com.ensapia.nova.alpha` · `.app` 은 DerivedData 의 `NOVADEVA.app` · dev client 스킴 `exp+novadeva` · 딥링크 스킴 `novaa`.
 
 ## 11. 통신 (요약 — 상세는 `docs/protocol.md`)
 
@@ -419,7 +418,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | --- | --- | --- |
 | 0 ✅ | 저장소 뼈대 — `package.json`·`tsconfig`·Biome·`mise.toml`, `bin/simless.ts`·`main.ts` 서브커맨드 틀, `scripts/build.ts`, 검사 통과. **컴파일한 바이너리에서 파일 포함·훅 시작 시간 확인** | `bun link` 와 `dist/simless` 양쪽에서 `simless --version` 이 돈다 |
 | 1 ✅ | 서버 + CLI 코어 — 레지스트리, Android·iOS 드라이버(생성·목록·이름·사용 안 함·삭제·켜기·끄기·슬림), 점유·대기·자동 해제, 소켓, launchd, `protocol.md`. **실제 디바이스로 확인**: iOS 생성+슬림 2분 22초, Android·iOS 동시 켜기 29초. 남은 확인은 §17 | CLI 로 크기별 디바이스를 만들고 점유해서 켠다 |
-| 2 ✅ | `doctor` + 스킬 — 설치·연결 점검(S1·S2), 스킬(S3~S8 — 앱 설치·실행·화면 이동은 argent 로 안내), `simless install` 이 스킬도 설치. **남은 확인**: 실제 앱(NOVA)으로 «심리스로 확인해 줘» 흐름을 처음부터 끝까지 돌려 보기 | «심리스로 확인해 줘» 로 주 흐름(R15)이 돈다 |
+| 2 ✅ | `doctor` + 스킬 — 설치·연결 점검(S1·S2), 스킬(S3~S8 — 앱 설치·실행·화면 이동은 argent 로 안내), `simless install` 이 스킬도 설치. **남은 확인**: 실제 앱으로 «심리스로 확인해 줘» 흐름을 처음부터 끝까지 돌려 보기 | «심리스로 확인해 줘» 로 주 흐름(R15)이 돈다 |
 | 3 ✅ | 웹 UI + `Simless.app` (앞당김 — 사람이 직접 보고 확인하려고) — HTTP API·SSE·토큰, 메인 목록(All·Android·iOS 탭), 생성(+)(iOS 시뮬레이터·Android 대표 프로필·직접 입력), 슬림 수치와 슬림 전후 비교, 메뉴바 앱(단색 아이콘·«대시보드 열기»), `simless ui` | 사람이 메뉴바·브라우저로 전부 관리한다 |
 | 4 ✅ | **사양 변경 (2026-10-05)** — ① 시안(디자인 M12)으로 화면 확정 (사용자 요청으로 건너뛰고 A안 — 라이트 그래파이트 + 파랑, 다크 잉크 + 민트 — 으로 바로 구현) ② 이 Mac 디바이스 전부 목록·레지스트리 재구성(R20, 사용 안 함 제거) ③ 생성: 기종 + OS, 슬림 선택·ⓘ(M1·M4) ④ 메모·기본 디바이스·그룹(R21·R22·R24) ⑤ 그룹 점유 모드·교착(R23, §8) ⑥ 슬림 자동 재적용·`SLIM` 배지(M6) ⑦ 오류 코드·현지화·설정(R25·M11) ⑧ 앱 창(WKWebView, R11) ⑨ 스킬 영어로 다시 쓰기. 항목마다 커밋 | 용도별 그룹·기본 디바이스로 요청하고, 앱 창에서 전부 관리한다 |
 | 5 ✅ | 보호 — Claude Code 훅(`simless hook claude pre-tool-use`), 규칙(`~/.claude/rules/simless.md`), 서버 꺼짐 처리, `simless install`·`doctor` 연동. 대상은 Simless 목록의 디바이스(P1). 설치는 사용자가 고른다 — 첫 실행 설정 창 또는 `--hook`(이 Mac 의 Claude Code 에는 켜져 있음). 다른 에이전트(Copilot·Codex·Cursor·Gemini) 어댑터도 만들었다 — 실제 에이전트로는 아직 확인 안 함(Q16) | 다른 세션이 남의 디바이스를 못 건드린다 |

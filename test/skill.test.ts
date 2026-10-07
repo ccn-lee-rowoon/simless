@@ -20,8 +20,21 @@ describe("에이전트 스킬 (R16·S9)", () => {
     for (const text of [
       await bundledSkill(),
       await Bun.file("integrations/rules/simless.md").text(),
-    ])
-      expect(text).not.toMatch(/nova|xb3|cocone|ensapia/i);
+    ]) {
+      // 번들 ID·패키지는 com.example 만, dev client 스킴은 지어낸 exp+myapp 이나 <자리 표시자> 만
+      const bundleIds = [...text.matchAll(/\bcom\.[a-z0-9]+\.[a-z0-9.]+/gi)].map((m) => m[0]);
+      expect(
+        bundleIds.filter(
+          (id) =>
+            !id.startsWith("com.example.") &&
+            !id.startsWith("com.apple.") &&
+            !id.startsWith("com.android.") &&
+            !id.startsWith("com.google."),
+        ),
+      ).toEqual([]);
+      const schemes = [...text.matchAll(/exp\+[A-Za-z0-9.-]+/g)].map((m) => m[0]);
+      expect(schemes.filter((s) => s !== "exp+myapp")).toEqual([]);
+    }
   });
 
   test("들어 있는 스킬은 simless 스킬 문서다 (이름·트리거 포함)", async () => {

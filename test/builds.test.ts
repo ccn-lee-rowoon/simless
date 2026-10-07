@@ -22,7 +22,7 @@ function temp(): string {
 }
 
 /** 가짜 .app (폴더) */
-function fakeApp(dir: string, name = "NOVADEVA.app"): string {
+function fakeApp(dir: string, name = "MyApp.app"): string {
   const app = join(dir, name);
   mkdirSync(app, { recursive: true });
   writeFileSync(join(app, "Info.plist"), "plist");
@@ -34,8 +34,8 @@ describe("네이티브 빌드 캐시 (R26)", () => {
   test("앱 이름은 package.json 의 name, 없으면 폴더 이름", () => {
     const dir = temp();
     expect(projectKey(dir)).toMatch(/^simless-builds-/);
-    writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "@cocone/nova app" }));
-    expect(projectKey(dir)).toBe("_cocone_nova_app");
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "@acme/my app" }));
+    expect(projectKey(dir)).toBe("_acme_my_app");
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -63,13 +63,13 @@ describe("네이티브 빌드 캐시 (R26)", () => {
     const root = temp();
     const build = temp();
     const app = fakeApp(build);
-    const meta = saveBuild(root, "nova", "ios", "fp1", app);
-    expect(meta).toMatchObject({ project: "nova", platform: "ios", fingerprint: "fp1" });
+    const meta = saveBuild(root, "myapp", "ios", "fp1", app);
+    expect(meta).toMatchObject({ project: "myapp", platform: "ios", fingerprint: "fp1" });
     expect(meta.bytes).toBe(105);
     rmSync(build, { recursive: true, force: true }); // DerivedData 를 지운 것처럼
-    expect(findCached(root, "nova", "ios", "fp1")?.path).toBe(meta.path);
-    expect(findCached(root, "nova", "ios", "fp2")).toBeUndefined();
-    expect(findCached(root, "nova", "android", "fp1")).toBeUndefined();
+    expect(findCached(root, "myapp", "ios", "fp1")?.path).toBe(meta.path);
+    expect(findCached(root, "myapp", "ios", "fp2")).toBeUndefined();
+    expect(findCached(root, "myapp", "android", "fp1")).toBeUndefined();
     rmSync(root, { recursive: true, force: true });
   });
 
@@ -78,11 +78,11 @@ describe("네이티브 빌드 캐시 (R26)", () => {
     const build = temp();
     const app = fakeApp(build);
     for (let i = 0; i < 4; i++)
-      saveBuild(root, "nova", "ios", `fp${i}`, app, new Date(2026, 9, 5, 10, i));
+      saveBuild(root, "myapp", "ios", `fp${i}`, app, new Date(2026, 9, 5, 10, i));
     saveBuild(root, "other", "ios", "x", app);
     const removed = pruneBuilds(root, 2);
     expect(removed.map((b) => b.fingerprint).sort()).toEqual(["fp0", "fp1"]);
-    expect(listBuilds(root, "nova").map((b) => b.fingerprint)).toEqual(["fp3", "fp2"]);
+    expect(listBuilds(root, "myapp").map((b) => b.fingerprint)).toEqual(["fp3", "fp2"]);
     expect(listBuilds(root, "other")).toHaveLength(1);
     rmSync(root, { recursive: true, force: true });
     rmSync(build, { recursive: true, force: true });
@@ -91,7 +91,7 @@ describe("네이티브 빌드 캐시 (R26)", () => {
   test("방금 빌드한 것 찾기 — iOS 는 워크스페이스 이름의 DerivedData, Android 는 apk", () => {
     const home = temp();
     const project = join(home, "app");
-    mkdirSync(join(project, "ios", "NOVADEVA.xcworkspace"), { recursive: true });
+    mkdirSync(join(project, "ios", "MyApp.xcworkspace"), { recursive: true });
     const products = (name: string) =>
       join(
         home,
@@ -99,8 +99,8 @@ describe("네이티브 빌드 캐시 (R26)", () => {
         name,
         "Build/Products/Debug-iphonesimulator",
       );
-    const old = fakeApp(products("NOVADEVA-aaa"));
-    const fresh = fakeApp(products("NOVADEVA-bbb"));
+    const old = fakeApp(products("MyApp-aaa"));
+    const fresh = fakeApp(products("MyApp-bbb"));
     fakeApp(products("Other-ccc"), "Other.app");
     utimesSync(old, new Date(2026, 0, 1), new Date(2026, 0, 1));
     const env = { HOME: home };
