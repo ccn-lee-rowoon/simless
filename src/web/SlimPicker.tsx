@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CatalogResult, DeviceView, PlatformCatalog, SlimCategory } from "../shared/api.ts";
 import { type MessageKey, t } from "../shared/i18n.ts";
+import { when } from "../shared/time.ts";
 import { call } from "./api.ts";
 import { Dialog } from "./ui.tsx";
 
@@ -270,10 +271,7 @@ export function SlimDetailDialog({
             {device.slimOffObserved && seenAt
               ? t("web.slimDetail.observed", {
                   name: device.name,
-                  when: new Date(seenAt).toLocaleString(undefined, {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  }),
+                  when: when(Date.parse(seenAt)),
                 })
               : t("web.slimDetail.planned", { name: device.name })}
           </p>

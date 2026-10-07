@@ -6,6 +6,7 @@ import {
   observedSlim,
 } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
+import { when } from "../shared/time.ts";
 
 /** 한글 등 넓은 글자는 터미널에서 두 칸을 쓴다 */
 function displayWidth(text: string): number {
@@ -39,11 +40,9 @@ export function table(header: string[], rows: string[][]): string {
     .join("\n");
 }
 
+/** 언제 — 가까우면 «N분 전», 지난 것은 «오늘 14:05»·날짜 (shared/time.ts) */
 export function ago(since: number, now = Date.now()): string {
-  const minutes = Math.floor((now - since) / 60_000);
-  if (minutes < 1) return t("common.justNow");
-  if (minutes < 60) return t("common.minutesAgo", { minutes });
-  return t("common.hoursAgo", { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
+  return when(since, { now });
 }
 
 function shortPath(path: string): string {

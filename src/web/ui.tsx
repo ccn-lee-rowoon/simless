@@ -7,14 +7,8 @@ import {
   type SlimStats,
 } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
+import { when } from "../shared/time.ts";
 import iconUrl from "./icon.svg";
-
-export function ago(since: number): string {
-  const minutes = Math.floor((Date.now() - since) / 60_000);
-  if (minutes < 1) return t("common.justNow");
-  if (minutes < 60) return t("common.minutesAgo", { minutes });
-  return t("common.hoursAgo", { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
-}
 
 export function shortPath(path: string): string {
   return path.replace(/^\/Users\/[^/]+/, "~");
@@ -25,7 +19,7 @@ export function who(holder: { human: boolean; agent: string }): string {
 }
 
 export function holderText(holder: HolderView): string {
-  return `${who(holder)} · ${ago(holder.since)}`;
+  return `${who(holder)} · ${when(holder.since)}`;
 }
 
 export function gigabytes(bytes: number): string {
@@ -61,7 +55,7 @@ export function slimStatsText(stats: Pick<SlimStats, "disabled" | "total" | "uni
 
 function seenText(seenAt: string): string {
   return t("web.slim.seenAt", {
-    when: new Date(seenAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" }),
+    when: when(Date.parse(seenAt)),
   });
 }
 

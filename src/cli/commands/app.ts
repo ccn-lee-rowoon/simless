@@ -16,8 +16,9 @@ import {
 import type { DeviceOpResult, DeviceView } from "../../shared/api.ts";
 import { run as defaultRun } from "../../shared/exec.ts";
 import { ExitCode } from "../../shared/exit-codes.ts";
-import { language, t } from "../../shared/i18n.ts";
+import { t } from "../../shared/i18n.ts";
 import type { Platform } from "../../shared/model.ts";
+import { when } from "../../shared/time.ts";
 import { CliError, type Context, output, type Run, request } from "../context.ts";
 
 // simless app — 네이티브 빌드 캐시 (R26). 지문 계산·보관은 CLI 가(호출한 셸의 환경 변수·작업 트리로),
@@ -56,7 +57,7 @@ async function fingerprint(ctx: Context, project: string, platform: Platform): P
 
 const short = (fp: string) => fp.slice(0, 12);
 const size = (bytes: number) => `${(bytes / 1024 ** 2).toFixed(0)}MB`;
-const when = (iso: string) => new Date(iso).toLocaleString(language() === "ko" ? "ko-KR" : "en-US");
+const at = (iso: string) => when(Date.parse(iso));
 
 interface InstallEntry {
   platform: Platform;
@@ -204,7 +205,7 @@ export function registerApp(program: Command, run: Run) {
             : builds
                 .map(
                   (b) =>
-                    `${b.project}  ${b.platform.padEnd(7)}  ${short(b.fingerprint)}  ${size(b.bytes).padStart(6)}  ${when(b.savedAt)}`,
+                    `${b.project}  ${b.platform.padEnd(7)}  ${short(b.fingerprint)}  ${size(b.bytes).padStart(6)}  ${at(b.savedAt)}`,
                 )
                 .join("\n"),
         );

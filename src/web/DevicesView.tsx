@@ -2,13 +2,13 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { type DeviceView, observedSlim, type StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
+import { fullTime, when } from "../shared/time.ts";
 import { Agent } from "./agents.tsx";
 import { call } from "./api.ts";
 import { ExternalIcon, PlatformIcon } from "./icons.tsx";
 import { SlimDetailDialog, SlimDialog } from "./SlimPicker.tsx";
 import type { Act } from "./types.ts";
 import {
-  ago,
   Dialog,
   Menu,
   MenuItem,
@@ -188,7 +188,10 @@ export function DevicesView({
                 ) : (
                   <>
                     <Agent agent={d.holder.agent} human={d.holder.human} />
-                    <span className="sub"> · {ago(d.holder.since)}</span>
+                    <span className="sub" title={fullTime(d.holder.since)}>
+                      {" "}
+                      · {when(d.holder.since)}
+                    </span>
                   </>
                 )}
               </div>
