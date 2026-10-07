@@ -4,21 +4,13 @@ import { t } from "../shared/i18n.ts";
 // 에이전트별 아이콘 — 세션·사용 중 칸에서 어떤 AI 인지 한눈에 (M13).
 // 각 도구의 대표 색에 단순한 기호를 얹은 배지다(실제 로고를 따라 그리지 않는다).
 
-export type AgentKind =
-  | "claude"
-  | "codex"
-  | "gemini"
-  | "copilot"
-  | "cursor"
-  | "opencode"
-  | "human"
-  | "unknown";
+export type AgentKind = "claude" | "codex" | "gemini" | "copilot" | "cursor" | "human" | "unknown";
 
 /** 세션의 에이전트 이름(`claude-code`·`codex`·`cursor-agent` …)을 종류로 */
 export function agentKind(agent: string, human = false): AgentKind {
   if (human || agent === "human" || agent === "web") return "human";
   const name = agent.toLowerCase();
-  for (const kind of ["claude", "codex", "gemini", "copilot", "cursor", "opencode"] as const) {
+  for (const kind of ["claude", "codex", "gemini", "copilot", "cursor"] as const) {
     if (name.includes(kind)) return kind;
   }
   return "unknown";
@@ -30,7 +22,6 @@ const LABEL: Record<Exclude<AgentKind, "human" | "unknown">, string> = {
   gemini: "Gemini CLI",
   copilot: "Copilot CLI",
   cursor: "Cursor",
-  opencode: "OpenCode",
 };
 
 /** 화면에 보일 이름 — 알려진 에이전트는 제품 이름, 사람은 «사람» */
@@ -85,11 +76,6 @@ const GLYPH: Record<AgentKind, { color: string; glyph: ReactNode }> = {
   cursor: {
     color: "#2B2F36",
     glyph: <path fill="#ffffff" d="M5 3.6l6.6 3.6-2.9.9 1.7 3.1-1.3.7-1.7-3.1-2.1 2.2z" />,
-  },
-  // 꺾쇠
-  opencode: {
-    color: "#0E9F8E",
-    glyph: <path {...stroke} d="M6 5l-2.6 3L6 11M10 5l2.6 3L10 11" />,
   },
   // 사람
   human: {
