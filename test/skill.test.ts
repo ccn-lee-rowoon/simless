@@ -100,15 +100,19 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain(
       "REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo run:ios --device <targetId> --port <port>",
     );
+    // Expo 는 ANDROID_SERIAL 을 무시하고 첫 기기에 열고, run:android --device 는 AVD 이름 (Expo CLI 57 코드로 확인)
+    expect(text).toContain("ignores `ANDROID_SERIAL`");
+    expect(text).toContain("npx expo run:android --device <AVD name> --port <port>");
+    expect(text).not.toContain("run:android --device <targetId>");
     expect(text).toContain("Don't use `--no-bundler`.");
     expect(text).toContain("launchAsset.url");
     expect(text).toContain("grep -q 'iOS Bundled' <metro.log>");
   });
 
-  test("Android 실측 보충 — --android 는 ANDROID_SERIAL 로, 앱에서 확인, 딥링크 재기동, reverse 사라짐, 점유는 따로 (S7·S11)", async () => {
+  test("Android 실측 보충 — --android 는 에뮬레이터가 하나일 때만, 앱에서 확인, 딥링크 재기동, reverse 사라짐, 점유는 따로 (S7·S11)", async () => {
     const text = await bundledSkill();
     expect(text).toContain(
-      "ANDROID_SERIAL=<targetId> NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port> --android",
+      "NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port> --android",
     );
     expect(text).toContain("Check it attached — in the app, not in the Metro log.");
     expect(text).toContain("Connected to: http://…:<port>");
