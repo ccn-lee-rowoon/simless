@@ -48,6 +48,8 @@ function brief(d: DeviceView) {
     targetId: d.targetId,
     // Simless 가 하지 않은 슬림도 슬림으로 (M6)
     slim: observedSlim(d) ? "applied" : d.slim,
+    // 커스텀 슬림에서 남긴 항목 (M15)
+    slimKeep: d.slimKeep,
     default: d.default,
     groups: d.groups,
     holder: d.holder
@@ -229,13 +231,19 @@ export async function runMcp(): Promise<void> {
     {
       title: "Create a device",
       description:
-        "Create a new simulator or emulator from a model (and optional OS). Slim by default (named `simless …`); set slim false when the test needs push notifications, iCloud and so on. Only when the user asks. Takes several minutes.",
+        "Create a new simulator or emulator from a model (and optional OS). Slim by default (named `simless …`): full slim for UI and layout checks, or pass slimKeep to keep what the app needs (push, photos, location …). Only when the user asks. Takes several minutes.",
       inputSchema: {
         model: z.string().describe("Model name or ID from simless_catalog"),
         platform: z.enum(["android", "ios"]).optional(),
         os: z.string().optional(),
         name: z.string().optional(),
         slim: z.boolean().optional(),
+        slimKeep: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Slim item IDs to keep on (simless_catalog slimOff[].id, per platform). Omit for full slim",
+          ),
       },
     },
     guard(async (args) => {
@@ -245,9 +253,39 @@ export async function runMcp(): Promise<void> {
         os: args.os,
         name: args.name,
         slim: args.slim ?? true,
+        slimKeep: args.slimKeep,
         baseline: false,
       });
       return json(`Created ${device.name} (${device.id}).`, brief(device));
+    }),
+  );
+
+  server.registerTool(
+    "simless_slim",
+    {
+      title: "Change how a device is slimmed",
+      description:
+        "Slim a device Simless created, change what it keeps, or remove slimming. keep: [] is full slim (UI checks); keep: [ids] keeps those items (simless_catalog slimOff[].id); off: true restores it. Only when the user asks. iOS takes 1–2 minutes.",
+      inputSchema: {
+        devices: z.array(z.string()).min(1).describe("Device IDs or names"),
+        keep: z.array(z.string()).optional(),
+        off: z.boolean().optional(),
+      },
+    },
+    guard(async (args) => {
+      const result = await request<{ results: DeviceOpResult[]; devices: DeviceView[] }>(
+        "device.slim",
+        {
+          devices: args.devices,
+          mode: args.off ? "off" : "on",
+          keep: args.off ? undefined : args.keep,
+        },
+      );
+      const failed = result.results.filter((r) => !r.ok);
+      return text(
+        `${failed.length > 0 ? `Failed: ${failed.map((r) => `${r.name}: ${r.error}`).join("; ")}` : "Slim updated."}\n\n${JSON.stringify(result.devices.map(brief), null, 2)}`,
+        failed.length > 0,
+      );
     }),
   );
 

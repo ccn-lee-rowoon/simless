@@ -29,6 +29,8 @@ const CreateParams = z
     os: z.string().min(1).optional(),
     name: z.string().min(1).optional(),
     slim: z.boolean().default(true),
+    /** 슬림해도 남길 항목 ID (M15) — 비우면 전체 슬림(UI 확인용). `catalog` 의 `slimOff[].id` */
+    slimKeep: z.array(z.string()).optional(),
     /** 슬림하기 전에 한 번 켜서 기준 메모리를 잰다 — 슬림 후와 비교한다 (1~2분 더 걸림) */
     baseline: z.boolean().default(true),
   })
@@ -40,7 +42,11 @@ const DeviceRef = z.object({ device: z.string() });
 const RenameParams = DeviceRef.extend({ name: z.string().min(1) });
 const MemoParams = DeviceRef.extend({ memo: z.string().max(500) });
 const DevicesParams = z.object({ devices: z.array(z.string()).default([]) });
-const SlimParams = DevicesParams.extend({ mode: z.enum(["on", "off", "check"]).default("on") });
+const SlimParams = DevicesParams.extend({
+  mode: z.enum(["on", "off", "check"]).default("on"),
+  /** 남길 항목 ID (M15) — 주면 바꾸고 다시 슬림한다. 빈 배열이면 전체 슬림 */
+  keep: z.array(z.string()).optional(),
+});
 /** 앱 설치 — 이 세션이 점유한, 켜진 디바이스 중 path 의 플랫폼에 맞는 것에 (R26) */
 const InstallParams = DevicesParams.extend({ path: z.string().min(1) });
 const CatalogParams = z.object({ platform: z.enum(["android", "ios"]).optional() });
@@ -136,10 +142,14 @@ export function registerDeviceMethods(server: SimlessServer): void {
     ...server.registry.update(device.id, patch),
   });
 
-  const applySlim = async (device: Device, progress: Progress): Promise<Device> => {
+  const applySlim = async (
+    device: Device,
+    progress: Progress,
+    options?: { reset?: boolean },
+  ): Promise<Device> => {
     update(device, { slim: "applying", slimError: undefined });
     try {
-      await server.driver(device.spec.platform).slim(device, progress);
+      await server.driver(device.spec.platform).slim(device, progress, options);
       return update(device, { slim: "applied", slimError: undefined });
     } catch (error) {
       return update(device, { slim: "failed", slimError: message(error) });
@@ -260,9 +270,27 @@ export function registerDeviceMethods(server: SimlessServer): void {
     return found[0] as (typeof found)[number];
   };
 
+  /** 남길 항목 ID 가 이 플랫폼에 있는지 (M15) — 도구가 없어 목록을 못 읽으면 슬림할 때 TOOL_MISSING 으로 */
+  const checkKeep = async (platform: Platform, keep: string[] | undefined): Promise<string[]> => {
+    const ids = [...new Set(keep ?? [])];
+    if (ids.length === 0) return ids;
+    const items = await server.driver(platform).slimItems();
+    if (items.length === 0) return ids;
+    const known = new Set(items.map((i) => i.id));
+    const unknown = ids.filter((id) => !known.has(id));
+    if (unknown.length > 0) {
+      throw new HandlerError(
+        "INVALID",
+        t("err.slimKeepUnknown", { ids: unknown.join(", "), valid: [...known].join(", ") }),
+      );
+    }
+    return ids;
+  };
+
   server.addMethod("device.create", async (p, session, connection) => {
     const params = parse(CreateParams, p);
     const { platform, spec, modelName } = await resolveModel(params);
+    const slimKeep = params.slim ? await checkKeep(platform, params.slimKeep) : [];
     const all = await server.devices();
     // 같은 크기도 여러 대 만들 수 있다 — 막는 건 이름 중복뿐 (M3)
     const taken = new Set(all.map((d) => d.name.toLowerCase()));
@@ -285,6 +313,7 @@ export function registerDeviceMethods(server: SimlessServer): void {
       createdBySimless: true,
       listed: true,
       slim: "none",
+      slimKeep: slimKeep.length > 0 ? slimKeep : undefined,
       createdAt: new Date().toISOString(),
     });
     // 그 플랫폼에 기본 디바이스가 없으면 처음 만든 것이 기본이 된다 (R22)
@@ -409,10 +438,28 @@ export function registerDeviceMethods(server: SimlessServer): void {
     const progress = progressOf(connection);
     for (const device of devices) guardCreated(device, "slim");
     if (params.mode !== "check") for (const device of devices) guardOthers(device, session);
+    if (params.keep && params.mode !== "on") {
+      throw new HandlerError("INVALID", t("err.slimKeepOnlyOn"));
+    }
+    // 없는 항목이면 어느 기기도 건드리기 전에 INVALID (M15)
+    const keepFor = new Map<Platform, string[]>();
+    if (params.keep) {
+      for (const platform of new Set(devices.map((d) => d.spec.platform))) {
+        keepFor.set(platform, await checkKeep(platform, params.keep));
+      }
+    }
     const results = await forEach(devices, async (device) => {
       const driver = server.driver(device.spec.platform);
       if (params.mode === "on") {
-        const updated = await applySlim(device, progress);
+        let reset = false;
+        if (params.keep) {
+          // 남길 항목을 바꾼다 — 이미 슬림했으면 바뀐 것까지 맞춰 다시 (M15)
+          const keep = keepFor.get(device.spec.platform) ?? [];
+          const before = [...(device.slimKeep ?? [])].sort().join(",");
+          reset = device.slim !== "none" && before !== [...keep].sort().join(",");
+          device = update(device, { slimKeep: keep.length > 0 ? keep : undefined });
+        }
+        const updated = await applySlim(device, progress, { reset });
         if (updated.slim === "failed") throw new Error(updated.slimError);
       } else if (params.mode === "off") {
         await driver.unslim(device, progress);

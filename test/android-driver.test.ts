@@ -259,6 +259,98 @@ describe("AndroidDriver 슬림 확인 (M6)", () => {
   });
 });
 
+describe("AndroidDriver 커스텀 슬림 (M15)", () => {
+  const profiles = `📦 Media & Apps:\n   • app.a\n   • app.z\n📦 Search:\n   • app.s\n🔒 GUARANTEED FUNCTIONAL (Never Disabled):\n   ✓ Core\n`;
+  const device = {
+    id: "x",
+    native: "simless_x",
+    name: "x",
+    slim: "applied",
+    slimKeep: ["media-apps", "location", "setup", "camera"],
+  } as Device;
+
+  function setup(installed: string[], disabled: string[]) {
+    const calls: string[] = [];
+    const runner = async (command: string[]): Promise<RunResult> => {
+      const line = command.join(" ");
+      calls.push(line);
+      if (line === "/bin/avdslim profiles") return { code: 0, stdout: profiles, stderr: "" };
+      const list = line.endsWith("packages -d")
+        ? disabled
+        : line.endsWith("packages")
+          ? installed
+          : [];
+      return { code: 0, stdout: list.map((p) => `package:${p}\r`).join("\n"), stderr: "" };
+    };
+    const { env } = sdkWithImages();
+    return { calls, d: driver(env, { runner, avdslimPath: () => "/bin/avdslim" }) };
+  }
+
+  test("고를 수 있는 항목 — 패키지 묶음 + 기기 설정 + 하드웨어", async () => {
+    const { d } = setup([], []);
+    const items = await d.slimItems();
+    expect(items.map((i) => `${i.kind}:${i.id}`)).toEqual([
+      "packages:media-apps",
+      "packages:search",
+      "settings:location",
+      "settings:sync",
+      "settings:bglimit",
+      "settings:bluetooth",
+      "settings:setup",
+      "host:camera",
+      "host:audio",
+    ]);
+  });
+
+  test("기기 안 정리 — 남길 설정은 --skip 뒤 되돌리고, 남길 묶음의 설치된 패키지를 다시 켠다", async () => {
+    const { d, calls } = setup(["app.a", "app.s"], []);
+    await d.afterBoot?.(device, { booted: true, targetId: "emulator-5554" }, () => {});
+    const avdslim = calls.filter((c) => c.startsWith("/bin/avdslim ") && !c.endsWith("profiles"));
+    expect(avdslim).toEqual([
+      "/bin/avdslim on emulator-5554 --skip=location,setup",
+      "/bin/avdslim enable location emulator-5554", // setup 은 되돌리는 명령이 없다
+      "/bin/avdslim enable app.a emulator-5554", // app.z 는 설치돼 있지 않다
+    ]);
+  });
+
+  test("하드웨어 — tune-avd 뒤 남길 카메라를 다시 켜고, 소리를 남기면 -no-audio 없이 켠다", async () => {
+    const calls: string[] = [];
+    const spawned: string[][] = [];
+    const adb = fakeAdb();
+    const runner = async (command: string[]): Promise<RunResult> => {
+      calls.push(command.join(" "));
+      if (command[0] === "/bin/avdslim") return { code: 0, stdout: "", stderr: "" };
+      return adb.runner(command);
+    };
+    const { env } = sdkWithImages();
+    const d = driver(env, {
+      runner,
+      avdslimPath: () => "/bin/avdslim",
+      spawnEmulator: (command) => {
+        spawned.push(command);
+        const port = command[command.indexOf("-port") + 1];
+        adb.running.set(`emulator-${port}`, { avd: "simless_x", booted: true });
+        return { exited: new Promise(() => {}) };
+      },
+    });
+    const keepHw = { ...device, slimKeep: ["camera", "audio"] } as Device;
+    await d.slim(keepHw, () => {});
+    expect(calls.filter((c) => c.startsWith("/bin/avdslim enable"))).toEqual([
+      "/bin/avdslim enable camera simless_x",
+      "/bin/avdslim enable audio simless_x",
+    ]);
+    await d.boot(keepHw, () => {});
+    expect(spawned[0]).not.toContain("-no-audio");
+    await d.boot({ ...device, id: "y", native: "simless_y", slimKeep: [] } as Device, () => {});
+    expect(spawned[1]).toContain("-no-audio");
+  });
+
+  test("슬림 확인은 남긴 패키지를 세지 않는다", async () => {
+    const { d } = setup(["app.a", "app.z", "app.s"], ["app.s"]);
+    expect(await d.checkSlim(device, { booted: true, targetId: "emulator-5554" })).toBe("applied");
+  });
+});
+
 describe("parseFootprint — 메모리 (M10)", () => {
   test("avdslim measure 의 Activity Monitor 메모리를 바이트로", async () => {
     const { parseFootprint } = await import("../src/server/drivers/android.ts");
@@ -347,12 +439,24 @@ describe("parseAvdslimProfiles (M4)", () => {
       "   ✓ Core Android OS & SystemUI",
       "   ✓ Flutter / React Native / Native APK execution",
     ].join("\n");
-    expect(parseAvdslimProfiles(text)).toEqual({
-      off: [
-        { name: "Assistant & Search", count: 2 },
-        { name: "Printing & Background Spoolers", count: 1 },
-      ],
-      keeps: ["Core Android OS & SystemUI", "Flutter / React Native / Native APK execution"],
-    });
+    const parsed = parseAvdslimProfiles(text);
+    expect(parsed.off).toEqual([
+      { id: "assistant-search", kind: "packages", name: "Assistant & Search", count: 2 },
+      {
+        id: "printing-background-spoolers",
+        kind: "packages",
+        name: "Printing & Background Spoolers",
+        count: 1,
+      },
+    ]);
+    expect(parsed.keeps).toEqual([
+      "Core Android OS & SystemUI",
+      "Flutter / React Native / Native APK execution",
+    ]);
+    // 남길 묶음의 패키지를 다시 켤 때 쓴다 (M15)
+    expect(parsed.packages.get("assistant-search")).toEqual([
+      "com.google.android.googlequicksearchbox",
+      "com.google.android.as",
+    ]);
   });
 });

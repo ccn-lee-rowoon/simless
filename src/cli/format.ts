@@ -79,12 +79,14 @@ function slimText(d: DeviceView): string {
   if (d.slim === "failed") return t("slim.failed");
   if (d.slim === "applying") return t("slim.applying");
   const stats = d.slimStats;
-  if (!stats) return t("slim.applied");
+  // 커스텀 슬림은 남긴 수를 붙인다 (M15)
+  const custom = d.slimKeep?.length ? `(${t("cli.slim.custom")} −${d.slimKeep.length})` : "";
+  if (!stats) return `${t("slim.applied")} ${custom}`.trim();
   const memory =
     memoryChange(d.slimBaseline?.memoryBytes, stats.memoryBytes) ??
     (stats.memoryBytes ? `${(stats.memoryBytes / 1024 ** 3).toFixed(1)}GB` : "");
   const unit = t(stats.unit === "packages" ? "slim.unit.packages" : "slim.unit.daemons");
-  return `${t("slim.applied")} ${stats.disabled}/${stats.total} ${unit} ${memory}`.trim();
+  return `${t("slim.applied")}${custom ? ` ${custom}` : ""} ${stats.disabled}/${stats.total} ${unit} ${memory}`.trim();
 }
 
 export function devicesTable(devices: DeviceView[]): string {
@@ -148,7 +150,7 @@ export function catalogText(result: CatalogResult): string {
         t("catalog.slimOff"),
         ...catalog.slimOff.map(
           (c) =>
-            `  - ${c.name}${c.count ? ` (${c.count})` : ""}${c.detail ? ` — ${c.detail}` : ""}`,
+            `  - ${c.id}  ${c.name}${c.count ? ` (${c.count})` : ""}${c.detail ? ` — ${c.detail}` : ""}`,
         ),
         "",
       );

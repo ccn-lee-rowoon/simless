@@ -88,9 +88,9 @@
 | `setup.finish` | `{}` | `{ finished: true }` | `…/simless/setup.json` 에 끝낸 시각을 남긴다 — 앱이 다시 띄우지 않는다 |
 | `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, historyRetentionDays, androidRamMb, simslimProfile? }` | 설정 화면·`simless config` (M11) |
 | `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·기록 보관 일수(1~3650)·Android RAM·simslim 프로필 (R25) |
-| `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff`)·남는 것(`slimKeeps`) (M1·M4) |
+| `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff` — `{ id, kind?, name, detail?, count? }`, 커스텀 슬림에서 남길 때 `id` 를 준다. Android `kind` 는 `packages`·`settings`·`host`)·남는 것(`slimKeeps`) (M1·M4·M15) |
 | `device.list` | `{}` | `DeviceView[]` | Simless 목록. 켜짐·argent ID(`targetId`)·점유자·메모(`memo`)·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20). 슬림 수치 `slimStats` 는 켜진 기기만(뒤에서 15초마다 읽음), `slimSeen` 은 마지막으로 읽은 값 `{ disabled, total, unit, seenAt }` — 누가 슬림했든 (M6·M10) |
-| `device.create` | `{ platform?, model \| custom, os?, name?, slim = true, baseline = true }` | `DeviceView` | `model` = 기종 ID·이름(`platform` 을 안 주면 두 플랫폼에서 찾고, 양쪽에 있으면 `INVALID`), `custom` = `{ widthDp, heightDp, density }`(Android). `os` 를 안 주면 기본값. 앱 없이 만들고 `slim` 이면 기준값을 잰 뒤 슬림화. 기본 이름은 슬림이면 `simless <기종>`, 아니면 `<기종>` — 겹치면 번호를 붙인다. 진행 알림 있음 |
+| `device.create` | `{ platform?, model \| custom, os?, name?, slim = true, slimKeep?, baseline = true }` | `DeviceView` | `model` = 기종 ID·이름(`platform` 을 안 주면 두 플랫폼에서 찾고, 양쪽에 있으면 `INVALID`), `custom` = `{ widthDp, heightDp, density }`(Android). `os` 를 안 주면 기본값. 앱 없이 만들고 `slim` 이면 기준값을 잰 뒤 슬림화. 기본 이름은 슬림이면 `simless <기종>`, 아니면 `<기종>` — 겹치면 번호를 붙인다. `slimKeep` = 슬림해도 남길 항목 ID(`catalog` 의 `slimOff[].id`, 없는 ID 는 `INVALID`) — 비우면 전체 슬림, 기기에 기억한다(M15). 진행 알림 있음 |
 | `device.rename` | `{ device, name }` | `DeviceView` | 원래 있던 디바이스도 된다. 다른 세션이 쓰는 중이면 `BUSY` |
 | `device.available` | `{}` | `DeviceView[]` | 이 Mac 에 있지만 Simless 목록에 없는 디바이스 — 생성 화면의 «이 Mac 의 디바이스» (M1) |
 | `device.add` | `{ device }` | `DeviceView` | 이 Mac 의 디바이스를 Simless 목록에 넣는다 — 만들지도 슬림화하지도 않는다. 이미 있으면 `INVALID` |
@@ -98,7 +98,7 @@
 | `device.setMemo` | `{ device, memo }` | `DeviceView` | 로그인한 계정 등 (R24). 빈 글이면 지운다. 누가 쓰는 중이어도 고칠 수 있다 |
 | `device.setDefault` | `{ device }` | `DeviceView` | 그 플랫폼의 기본 디바이스로 (R22). 기본이 없는 플랫폼은 처음 만든 디바이스가 자동으로 기본이 된다 |
 | `device.delete` | `{ device }` | `{ deleted }` | Simless 가 만든 것만, 기본 디바이스는 안 됨(`NOT_ALLOWED`). 메모·그룹 소속도 지운다. 켜져 있으면 끄고 지운다. 다른 세션이 쓰는 중이면 `BUSY` (M8) |
-| `device.slim` | `{ devices = simless 가 만든 것 전부, mode = "on" \| "off" \| "check" }` | `{ results, devices }` | Simless 가 만든 것만(`NOT_ALLOWED`). on·off 는 다른 세션이 쓰는 중이면 `BUSY` |
+| `device.slim` | `{ devices = simless 가 만든 것 전부, mode = "on" \| "off" \| "check", keep? }` | `{ results, devices }` | Simless 가 만든 것만(`NOT_ALLOWED`). on·off 는 다른 세션이 쓰는 중이면 `BUSY`. `keep` 을 주면 남길 항목을 바꾸고 다시 슬림한다 — 빈 배열은 전체 슬림, `on` 에서만(`INVALID`) (M15) |
 | `device.up` | `{ devices = 이 세션의 점유 전부 }` | `{ results, devices }` | 점유가 있어야 함(`NOT_HELD`). 켠 뒤 슬림을 확인하고 풀렸으면 다시 적용 (M6) |
 | `device.down` | 같음 | `{ results, devices }` | |
 | `device.install` | `{ path, devices = 이 세션의 점유 전부 }` | `{ results }` | 네이티브 빌드 캐시 (R26). `path` 가 `.app` 이면 iOS, `.apk` 면 Android — 점유한 것 중 그 플랫폼만. 다른 확장자 `INVALID`, 파일이 없으면 `NOT_FOUND`, 그 플랫폼 점유가 없으면 `NOT_HELD`, 고른 기기에 다른 플랫폼이 섞이면 `INVALID`. 꺼진 기기는 그 기기만 실패(`results[].ok: false`) |

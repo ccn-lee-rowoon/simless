@@ -71,8 +71,8 @@ export function parseSimslimProfiles(text: string): { off: SlimCategory[]; keeps
   const keeps: string[] = [];
   for (const line of text.split("\n")) {
     const head = /^(\S+)\s{2,}(\S.*)$/.exec(line);
-    if (head?.[2]) {
-      off.push({ name: head[2].trim() });
+    if (head?.[1] && head[2]) {
+      off.push({ id: head[1], name: head[2].trim() });
       continue;
     }
     const disabled = /^\s+When disabled:\s*(.+)$/.exec(line);
@@ -363,15 +363,23 @@ export class IosDriver implements Driver {
     return path;
   }
 
-  private profileArgs(): string[] {
+  /** 남길 묶음이 있으면 `--except`, 없으면 설정의 프로필 — simslim 은 둘을 함께 받지 않는다 (M15) */
+  private profileArgs(device: Device): string[] {
+    if (device.slimKeep?.length) return ["--except", device.slimKeep.join(",")];
     return this.config.ios.simslimProfile ? ["--profile", this.config.ios.simslimProfile] : [];
   }
 
-  async slim(device: Device, progress: Progress): Promise<void> {
+  async slimItems(): Promise<SlimCategory[]> {
+    return (await this.slimCategories()).off;
+  }
+
+  async slim(device: Device, progress: Progress, options?: { reset?: boolean }): Promise<void> {
+    // 남길 묶음이 바뀌었으면 풀고 다시 — 이전에 끈 것이 남지 않게
+    if (options?.reset) await this.unslim(device, progress);
     progress(t("progress.slimSim", { name: device.name }));
     await runOk(
       this.runner,
-      [this.simslim(), "on", device.native, ...this.profileArgs(), "--preserve-boot-state"],
+      [this.simslim(), "on", device.native, ...this.profileArgs(device), "--preserve-boot-state"],
       {
         timeoutMs: SLIM_TIMEOUT_MS,
       },
@@ -432,7 +440,7 @@ export class IosDriver implements Driver {
       this.simslim(),
       "verify",
       device.native,
-      ...this.profileArgs(),
+      ...this.profileArgs(device),
     ]);
     return result.code === 0 ? "applied" : "drifted";
   }

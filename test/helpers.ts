@@ -65,12 +65,26 @@ const FAKE_MODELS = [
   { id: "large-412", name: "Large 412", widthDp: 412 },
 ];
 
+/** 고를 수 있는 슬림 항목 (M15) */
+export const FAKE_SLIM_ITEMS = [
+  { id: "assistant-search", kind: "packages" as const, name: "Assistant & Search", count: 3 },
+  {
+    id: "media-consumer-apps",
+    kind: "packages" as const,
+    name: "Media & Consumer Apps",
+    count: 13,
+  },
+  { id: "location", kind: "settings" as const, name: "Location" },
+];
+
 export type FakeDriver = Driver & {
   booted: Set<string>;
   /** 이 Mac 에 있는 기기 — list() 가 돌려준다. 만들면 늘고 지우면 준다 */
   existing: Discovered[];
   /** install() 로 설치한 것 — [디바이스 ID, 경로] */
   installed: [string, string][];
+  /** slim() 을 부른 기록 — [디바이스 ID, 남길 항목, reset] (M15) */
+  slimmed: [string, string[], boolean][];
 };
 
 /** 아무것도 실제로 켜지 않는 드라이버 — 켜짐 상태만 기억한다 */
@@ -86,6 +100,7 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
     booted,
     existing,
     installed: [],
+    slimmed: [],
     missingTools: async () => [],
     list: async () => [...driver.existing],
     catalog: async () => ({
@@ -100,7 +115,7 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
       })),
       os: [{ id: "image-36", name: "android-36", recommended: true }],
       custom: true,
-      slimOff: [{ name: "Assistant & Search", count: 3 }],
+      slimOff: FAKE_SLIM_ITEMS,
       slimKeeps: ["Core Android OS"],
     }),
     resolve: async ({ model, custom }) => {
@@ -139,7 +154,10 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
     install: async (d, _state, path) => {
       driver.installed.push([d.id, path]);
     },
-    slim: async () => {},
+    slim: async (d, _progress, options) => {
+      driver.slimmed.push([d.id, d.slimKeep ?? [], options?.reset ?? false]);
+    },
+    slimItems: async () => FAKE_SLIM_ITEMS,
     unslim: async () => {},
     checkSlim: async () => "applied",
     measure: async () => ({ memoryBytes: 7.8 * 1024 ** 3, processes: 167 }),

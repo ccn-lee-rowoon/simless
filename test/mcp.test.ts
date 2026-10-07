@@ -52,6 +52,7 @@ describe("simless mcp (R12)", () => {
       "simless_down",
       "simless_group_save",
       "simless_release",
+      "simless_slim",
       "simless_status",
       "simless_use",
     ]);
@@ -78,5 +79,21 @@ describe("simless mcp (R12)", () => {
     expect(result.isError).toBe(true);
     expect(textOf(result)).toStartWith("BUSY:");
     await call(env.paths.socket, "lease.release", {}, session("other"));
+  });
+
+  test("slim — 남길 항목을 바꾸고, 없는 ID 는 오류 (M15)", async () => {
+    const result = await client.callTool({
+      name: "simless_slim",
+      arguments: { devices: ["ab12"], keep: ["location"] },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain("Slim updated.");
+    expect(textOf(result)).toContain('"slimKeep": [\n      "location"\n    ]');
+    const bad = await client.callTool({
+      name: "simless_slim",
+      arguments: { devices: ["ab12"], keep: ["nope"] },
+    });
+    expect(bad.isError).toBe(true);
+    expect(textOf(bad)).toStartWith("INVALID:");
   });
 });

@@ -1174,6 +1174,63 @@ summary:focus-visible {
   border: 0;
 }
 
+/* 생성 화면 — 단계마다 번호·제목, 단계 사이는 구분선과 넉넉한 간격 */
+.dialog-body.create {
+  /* 숨긴 라디오·legend 가 스크롤 밖(창 아래)으로 삐져나와 창에 스크롤바가 생기지 않게 */
+  position: relative;
+  gap: 0;
+  padding: 0;
+}
+
+/* 안내·진행 표시도 단계와 같은 여백 */
+.create > p,
+.create > .progress {
+  margin: 12px 18px 0;
+}
+
+.create-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.create-section:first-of-type {
+  padding-top: 14px;
+  border-top: 0;
+}
+
+.create-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.create-step-num {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font: 700 11.5px / 1 var(--mono);
+}
+
+/* 만들기 버튼은 스크롤해도 늘 보이게 */
+.create .dialog-footer {
+  position: sticky;
+  bottom: 0;
+  margin: 0;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface);
+}
+
 .create legend {
   margin-bottom: 6px;
   color: var(--muted);
@@ -1236,33 +1293,156 @@ summary:focus-visible {
   font-size: 13px;
 }
 
-.slim-option {
+/* 슬림 방식·항목 고르기 (R5·M15) — 세 가지 카드, 커스텀은 남길 것을 체크 */
+.slim-field {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
-.info-button {
-  width: 24px;
-  height: 24px;
-  font-size: 14px;
+.slim-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.slim-info {
-  padding: 12px 14px;
+.slim-modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.slim-mode {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
   border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.slim-mode:hover {
   background: var(--surface-2);
-  border: 1px solid var(--border-soft);
+}
+
+.slim-mode-active,
+.slim-mode-active:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.slim-mode:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.slim-mode:has(input:disabled) {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.slim-mode-title {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.slim-details summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.slim-off-list {
+  margin: 6px 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+}
+
+.slim-off-list li {
+  margin-bottom: 3px;
+}
+
+.slim-items {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.slim-items ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slim-items-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 12.5px;
+}
+
+.slim-count {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.slim-kind {
+  margin: 0;
+  padding: 8px 12px 4px;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.slim-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 10px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+
+.slim-item:hover {
+  background: var(--surface-2);
+}
+
+.slim-item input {
+  margin-top: 3px;
+}
+
+.slim-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 12.5px;
+}
+
+.slim-item-name {
+  font-weight: 600;
   font-size: 13px;
 }
 
-.slim-info ul {
-  margin: 6px 0 10px;
-  padding-left: 18px;
+.slim-tag {
+  padding: 0 6px;
+  border-radius: 4px;
+  font: 600 11px / 18px var(--font);
+  color: var(--muted);
+  background: var(--surface-2);
 }
 
-.slim-info li {
-  margin-bottom: 4px;
+.slim-tag-kept {
+  color: var(--accent-text);
+  background: var(--accent-soft);
 }
 
 .notice-inline {
