@@ -9,6 +9,7 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 
 ### 추가
 
+- **Android 기종을 전부** — Android Studio 가 깔려 있으면 그 기기 정의의 폰·태블릿을 모두 만들 수 있다(이 Mac 에서 8개 → 67개: Pixel 2~9 Pro XL·Fold·Tablet, Nexus, 일반 크기). Android Studio 에서 만든 하드웨어 프로필도 보인다
 - **macOS 알림** — Simless 서버가 1분 넘게 꺼져 있을 때(누르면 서버를 켬)와 스킬 업데이트가 있을 때(버전마다 한 번) 알림 센터에 알린다
 - **시작 애니메이션** — 앱을 켜고 대시보드를 처음 열 때 «Simulator + Seamless» 가 «Simless» 로 합쳐진다(3초 안, 누르면 넘어감, «동작 줄이기» 를 따름). 끄려면 `simless config launchAnimation false`
 - **슬림 내역** — 기기마다 꺼진 슬림 항목을 기록한다(켜진 기기를 15초마다 확인, Simless 밖에서 한 슬림도). 앱 창은 목록의 «슬림» 칸(`SLIM ↗` 버튼)·⋯ «슬림 내역» 에서 꺼진 것·켜진 것을 새 창으로, `simless --json list`·MCP 에는 `slimOff`. 스킬은 기기 기능을 쓰는 테스트면 필요한 항목이 켜진 기기를 골라 요청한다(레이아웃 확인은 아무 기기나)

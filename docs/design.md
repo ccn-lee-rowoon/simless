@@ -237,7 +237,7 @@ simless/
 | 단계 | Android | iOS |
 | --- | --- | --- |
 | 목록 (R20) | `~/.android/avd/*.ini` + 각 `config.ini` 를 읽는다 | `simctl list devices available -j` + 기기 종류 profile.plist(폭) |
-| 생성 — 고를 것 (M1) | 기종: 대표 프로필(`src/server/drivers/android-profiles.ts`, Android Studio 기기 정의를 본뜸) 또는 직접 입력(폭·높이·밀도). OS: 설치된 시스템 이미지(추천: 4KB 페이지·API 높은 순) | 기종: `simctl list devicetypes` 중 설치된 런타임이 지원하는 것. OS: 설치된 런타임(기본: 최신) |
+| 생성 — 고를 것 (M1) | 기종: **Android Studio 의 기기 정의** — `/Applications`·`~/Applications` 의 `Android Studio*.app/Contents/plugins/android/lib/sdklib.jar` 안 `devices.xml`·`nexus.xml`(폰·태블릿, `unzip -p` 로 읽음)과 사람이 만든 `~/.android/devices.xml`(`ANDROID_USER_HOME`), 없으면 대표 프로필(`android-profiles.ts`). 사람 정의 → Android Studio → 대표 프로필 순으로 합치고 같은 ID(정의 ID 를 `pixel-9` 처럼 바꾼 것)는 앞의 것. 워치·TV·자동차·XR·데스크톱(`tag-id`)은 뺀다. 10분 기억. 또는 직접 입력(폭·높이·밀도). OS: 설치된 시스템 이미지(추천: 4KB 페이지·API 높은 순) | 기종: `simctl list devicetypes` 중 설치된 런타임이 지원하는 것. OS: 설치된 런타임(기본: 최신) |
 | 생성 — 만들기 | `simless_<id>.ini` + `.avd/config.ini` 를 새로 쓴다(`hw.lcd.width/height/density`, `image.sysdir.1`) | `simctl create <이름> <종류> <런타임>` → UDID. `simctl clone` 은 앱·데이터가 따라와 쓰지 않는다 |
 | 슬림화 (R5) | `avdslim tune-avd` + 켠 뒤 `avdslim on <시리얼>` | `simslim on <udid> --preserve-boot-state` |
 | 슬림화하면 꺼지는 기능 (M4 — 생성 화면 «꺼지는 것 보기»·커스텀 목록) | avdslim 프로필이 끄는 패키지 목록(`avdslim profiles`)을 사람이 읽을 이름으로 묶어 보여 준다 | simslim 프로필이 끄는 서비스 목록을 묶어 보여 준다(Siri·Spotlight·iCloud·Wallet …) |
@@ -397,7 +397,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 - `SLIM` 배지에 마우스를 올리면 꺼진 항목 수·메모리·슬림 전후(«7.8GB → 1.6GB (−79%)», M10). 재적용 실패는 `SLIM ⚠` + 이유. 꺼진 기기는 마지막으로 본 수치와 «마지막 확인» 시각, Simless 밖에서 한 슬림이면 배지가 흐리다(M6).
 - 켜기·끄기는 점유 없이(사람), 다른 세션이 쓰는 중이면 막는다. SSE 로 바로 반영된다.
 
-**생성(+)** (M1·M4) — 위에 «새로 만들기 · 이 Mac 의 디바이스» 탭. «이 Mac 의 디바이스» 는 Simless 목록에 없는 기기(`device.available`)를 플랫폼·검색으로 거르고 «추가»(`device.add`). «새로 만들기» 는 번호 붙은 네 단계(구분선으로 나눔, «만들기» 버튼은 아래에 고정): ① 플랫폼 → ② 기종(iOS 기기 종류 / Android 대표 프로필·직접 입력) → ③ OS·이름(런타임·시스템 이미지는 기본값을 미리 골라 둠, 이름 기본값 `simless <기종>` 또는 `<기종>`, 겹치면 번호) → ④ **슬림**(«슬림 안 함 · 전체 슬림(UI 확인용, 기본) · 커스텀» 세 카드 중 하나. 전체 슬림은 «꺼지는 것 보기» 로 펼치고, 커스텀은 플랫폼마다 다른 항목에서 **남길 것**을 체크한다 — Android 는 앱·서비스 묶음 / 기기 설정 / 에뮬레이터 하드웨어로 나눠 보인다, M15)과 슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다(N4).
+**생성(+)** (M1·M4) — 위에 «새로 만들기 · 이 Mac 의 디바이스» 탭. «이 Mac 의 디바이스» 는 Simless 목록에 없는 기기(`device.available`)를 플랫폼·검색으로 거르고 «추가»(`device.add`). «새로 만들기» 는 번호 붙은 네 단계(구분선으로 나눔, «만들기» 버튼은 아래에 고정): ① 플랫폼 → ② 기종(iOS 기기 종류 / Android 기기 정의(Android Studio, 없으면 대표 프로필)·직접 입력) → ③ OS·이름(런타임·시스템 이미지는 기본값을 미리 골라 둠, 이름 기본값 `simless <기종>` 또는 `<기종>`, 겹치면 번호) → ④ **슬림**(«슬림 안 함 · 전체 슬림(UI 확인용, 기본) · 커스텀» 세 카드 중 하나. 전체 슬림은 «꺼지는 것 보기» 로 펼치고, 커스텀은 플랫폼마다 다른 항목에서 **남길 것**을 체크한다 — Android 는 앱·서비스 묶음 / 기기 설정 / 에뮬레이터 하드웨어로 나눠 보인다, M15)과 슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다(N4).
 
 **더보기(⋯) 메뉴** (M7·M8) — 이름 변경(원래 있던 디바이스도) · 그룹에 넣기/빼기 · 기본 디바이스로 · 슬림 내역(꺼진 것·켜진 것, M16) · 슬림 설정…(슬림 안 함·전체 슬림·커스텀을 고르는 창, 바꾸면 다시 맞춤 — simless 가 만든 것만) · 점유 강제 해제(다른 세션이 쓰는 중일 때, 사람만) · 목록에서 빼기(이 Mac 에서 추가한 것) · 삭제(simless 가 만든 것만, 확인 창. 기본 디바이스·켜짐·사용 중이면 이유와 함께 막음). 바깥을 누르거나 Esc 로 닫힌다.
 
