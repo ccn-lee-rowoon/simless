@@ -104,6 +104,10 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("ignores `ANDROID_SERIAL`");
     // 원칙: 127.0.0.1 만, LAN IP 는 쓰지 않는다
     expect(text).toContain("never the Mac's LAN IP");
+    expect(text).toContain(
+      "through a Metro you start on this Mac, on this Mac's simulators and emulators",
+    );
+    expect(text).toContain("Physical devices");
     expect(text).toContain("npx expo run:android --device <AVD name> --port <port>");
     expect(text).not.toContain("run:android --device <targetId>");
     expect(text).toContain("Don't use `--no-bundler`.");
