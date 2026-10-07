@@ -85,10 +85,10 @@ Other sessions — often in other worktrees of the same repo — run their own M
      ANDROID_SERIAL=<targetId> NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port> --android
      ```
      Success in the Metro log: `Opening exp+<scheme>://expo-development-client/?url=…%3A<port>` and then `Android Bundled`. Then skip to 4.2's «Check it attached».
-   - **Otherwise** (iOS, several Android devices, bare React Native) start Metro alone and launch per device in 4.2:
+   - **Otherwise** (iOS, several Android devices, bare React Native) start Metro alone and launch per device in 4.2. Send its output to a log file — step 4.2 waits on it:
      ```sh
-     NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port>   # Expo
-     NODE_OPTIONS=--dns-result-order=ipv4first npx react-native start --port <port>        # bare React Native
+     NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port> > <metro.log> 2>&1 &   # Expo
+     NODE_OPTIONS=--dns-result-order=ipv4first npx react-native start --port <port> > <metro.log> 2>&1 &        # bare React Native
      ```
 3. **Wait until it's ready**: argent `debugger-status` with `device_id: <targetId>` and `port: <port>` — `metro_not_running` means not yet (retry for up to ~30 s); `no_app_connected` or `connected` means Metro is up.
 4. **Point each acquired Android device at it** — both your port (dev client URLs use it) and 8081 (what the app falls back to), so a stale mapping can't send it elsewhere. `--android` sets only `tcp:<port>`, so add 8081 there too:
@@ -97,6 +97,13 @@ Other sessions — often in other worktrees of the same repo — run their own M
    adb -s <targetId> reverse tcp:8081 tcp:<port>
    ```
    **These mappings disappear** when the emulator reboots, the app is reinstalled, or the adb server restarts. A red screen «Unable to load script … adb reverse tcp:8081» means exactly that — set them again, then Reload.
+
+5. **Warm the first bundle while you build or install (Expo).** Metro builds the JS bundle only when the app first asks — tens of seconds for a large app. Ask for it now, in the background, with the exact URL the app will request (from the manifest your Metro serves):
+   ```sh
+   url=$(curl -s -H 'expo-platform: ios' http://127.0.0.1:<port>/ | jq -r '.launchAsset.url')   # android for Android
+   curl -s "$url" -o /dev/null &
+   ```
+   If `url` comes back empty, skip this — it's only a speed-up.
 
 Launching the app onto this Metro is step 4.2.
 
@@ -111,9 +118,12 @@ Pass `targetId` as argent's device argument, device by device, following the arg
      ```
      Per platform, `hit: true` means it is installed — go on to launch. `hit: false` means nothing is cached for this fingerprint: build onto the device (below), then store the build so the next session skips it:
      ```sh
-     npx expo run:ios --device <targetId>      # or run:android
+     REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo run:ios --device <targetId> --port <port>   # or run:android
      simless --json app save --platform ios    # finds the newest build (DerivedData / android/app/build)
      ```
+   - **Building with your Metro already running (Expo):** pass `--port <port>` — Expo sees your Metro (started from the same folder) on that port and reuses it instead of starting another. Also set `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1`: otherwise the app opens at your **LAN IP**, which changes with the network. When the build finishes the app opens on `127.0.0.1:<port>` — go to 4.2's «Check it attached».
+     - **Don't use `--no-bundler`.** It can't be combined with `--port` («mutually exclusive»), and without a port the app opens on **LAN IP :8081 — another session's Metro**. If an install did open there, stop the app and reopen it on your port (4.2).
+     - Run the build in the foreground or watch its output — a backgrounded build that fails on bad options only tells you minutes later.
      `TOOL_MISSING` means it isn't an Expo project with `@expo/fingerprint` — skip the cache. Computing the fingerprint takes about 30 seconds.
    - Otherwise `reinstall-app`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <targetId>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
 2. **Launch onto your Metro** — not with `launch-app`: a plain launch reconnects to whatever server the app remembers. The bundle ID and Android package come from the project: `npx expo config --json` → `ios.bundleIdentifier`, `android.package`.
@@ -137,7 +147,10 @@ Pass `targetId` as argent's device argument, device by device, following the arg
      then `launch-app`. **Android**: `launch-app` (the 8081 mapping from step 3 reaches your Metro).
    - **Check it attached — in the app, not in the Metro log.** `debugger-status` (`device_id: <targetId>`, `port: <port>`) should say `connected`; then confirm where the app really is:
      - Android: open the dev menu (`adb -s <targetId> shell input keyevent 82`) and scroll down to **Connected to: http://…:<port>**.
-     - iOS: `iOS Bundled` in your Metro log right after the launch.
+     - iOS: `iOS Bundled` in your Metro log right after the launch. Wait on it instead of a fixed sleep, with a limit — if it times out, check `debugger-status`:
+       ```sh
+       for i in $(seq 120); do grep -q 'iOS Bundled' <metro.log> && break; sleep 1; done   # Android: 'Android Bundled'
+       ```
      - Device console lines flowing into your Metro log don't prove it — after the app moves to another Metro the old socket keeps sending logs for a while.
      - Not your port → it's on another server; repeat this step.
    - **An Android deep link can restart the app** — `am start … -d <url>` may recreate the activity even when the app is up, and the dev client then falls back to its saved default server (usually 8081 or a LAN address). Check the dev menu again after any deep link (step 4.3 too); if it fell back, the quickest fix is restarting your Metro with `--android` (step 3).

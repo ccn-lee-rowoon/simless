@@ -96,6 +96,13 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("Find the dev client scheme the app actually registers");
     expect(text).toContain("unable to resolve Intent");
     expect(text).toContain("Don't tap the listed servers");
+    // iOS 빌드: 자기 Metro 를 다시 쓰고 127.0.0.1 로 열기, --no-bundler 금지, 번들 미리 만들기, 고정 sleep 대신 기다리기
+    expect(text).toContain(
+      "REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo run:ios --device <targetId> --port <port>",
+    );
+    expect(text).toContain("Don't use `--no-bundler`.");
+    expect(text).toContain("launchAsset.url");
+    expect(text).toContain("grep -q 'iOS Bundled' <metro.log>");
   });
 
   test("Android 실측 보충 — --android 는 ANDROID_SERIAL 로, 앱에서 확인, 딥링크 재기동, reverse 사라짐, 점유는 따로 (S7·S11)", async () => {
