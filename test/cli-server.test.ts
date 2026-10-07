@@ -48,6 +48,32 @@ describe("CLI ↔ 서버 (R13·R14)", () => {
     expect((await simless(["release"], { SIMLESS_SESSION_ID: "A" })).exitCode).toBe(0);
   });
 
+  test("슬림 항목 — create --slim-keep, slim --keep·--full (M15)", async () => {
+    const created = await simless([
+      "--json",
+      "create",
+      "small-360",
+      "--slim-keep",
+      "location, assistant-search",
+      "--no-baseline",
+    ]);
+    expect(created.exitCode).toBe(0);
+    const device = JSON.parse(created.stdout);
+    expect(device.slimKeep).toEqual(["location", "assistant-search"]);
+
+    const kept = await simless(["--json", "slim", device.id, "--keep", "location"]);
+    expect(kept.exitCode).toBe(0);
+    expect(JSON.parse(kept.stdout).devices[0].slimKeep).toEqual(["location"]);
+
+    const full = await simless(["--json", "slim", device.id, "--full"]);
+    expect(full.exitCode).toBe(0);
+    expect(JSON.parse(full.stdout).devices[0].slimKeep).toBeUndefined();
+
+    const bad = await simless(["--json", "slim", device.id, "--keep", "nope"]);
+    expect(bad.exitCode).toBe(2);
+    expect(JSON.parse(bad.stdout).error).toMatchObject({ code: "INVALID" });
+  });
+
   test("서버가 없으면 종료 코드 4", async () => {
     const { exitCode, stderr } = await simless(["status"], {
       SIMLESS_SOCKET: "/tmp/simless-test-none.sock",
@@ -99,5 +125,22 @@ describe("표 출력 — 슬림 실패 이유 (M6)", () => {
       groups: [],
     };
     expect(devicesTable([device])).toContain("SLIM 49/52 packages (checked just now)");
+  });
+
+  test("커스텀 슬림은 남긴 수를 붙인다 (M15)", async () => {
+    const { devicesTable } = await import("../src/cli/format.ts");
+    const device = {
+      ...androidDevice("eeee"),
+      slim: "applied" as const,
+      slimKeep: ["location", "camera"],
+      label: "Android 360dp",
+      layoutWidth: 360,
+      layoutHeight: 760,
+      booted: false,
+      mine: false,
+      default: false,
+      groups: [],
+    };
+    expect(devicesTable([device])).toContain("SLIM (custom −2)");
   });
 });

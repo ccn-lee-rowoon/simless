@@ -313,6 +313,38 @@ describe("AndroidDriver 커스텀 슬림 (M15)", () => {
     ]);
   });
 
+  test("하드웨어 — tune-avd 뒤 남길 카메라를 다시 켜고, 소리를 남기면 -no-audio 없이 켠다", async () => {
+    const calls: string[] = [];
+    const spawned: string[][] = [];
+    const adb = fakeAdb();
+    const runner = async (command: string[]): Promise<RunResult> => {
+      calls.push(command.join(" "));
+      if (command[0] === "/bin/avdslim") return { code: 0, stdout: "", stderr: "" };
+      return adb.runner(command);
+    };
+    const { env } = sdkWithImages();
+    const d = driver(env, {
+      runner,
+      avdslimPath: () => "/bin/avdslim",
+      spawnEmulator: (command) => {
+        spawned.push(command);
+        const port = command[command.indexOf("-port") + 1];
+        adb.running.set(`emulator-${port}`, { avd: "simless_x", booted: true });
+        return { exited: new Promise(() => {}) };
+      },
+    });
+    const keepHw = { ...device, slimKeep: ["camera", "audio"] } as Device;
+    await d.slim(keepHw, () => {});
+    expect(calls.filter((c) => c.startsWith("/bin/avdslim enable"))).toEqual([
+      "/bin/avdslim enable camera simless_x",
+      "/bin/avdslim enable audio simless_x",
+    ]);
+    await d.boot(keepHw, () => {});
+    expect(spawned[0]).not.toContain("-no-audio");
+    await d.boot({ ...device, id: "y", native: "simless_y", slimKeep: [] } as Device, () => {});
+    expect(spawned[1]).toContain("-no-audio");
+  });
+
   test("슬림 확인은 남긴 패키지를 세지 않는다", async () => {
     const { d } = setup(["app.a", "app.z", "app.s"], ["app.s"]);
     expect(await d.checkSlim(device, { booted: true, targetId: "emulator-5554" })).toBe("applied");
