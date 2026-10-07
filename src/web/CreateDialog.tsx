@@ -44,11 +44,10 @@ export function CreateDialog({
   const [osId, setOsId] = useState("");
   const [size, setSize] = useState({ widthDp: "375", heightDp: "812", density: "420" });
   const [name, setName] = useState("");
-  const [slim, setSlim] = useState(true);
   const [baseline, setBaseline] = useState(true);
   const [slimMode, setSlimMode] = useState<SlimMode>("full");
   const [slimKeep, setSlimKeep] = useState<string[]>([]);
-  const [showSlimInfo, setShowSlimInfo] = useState(false);
+  const slim = slimMode !== "none";
   const [creating, setCreating] = useState(false);
   const [logStart, setLogStart] = useState(0);
 
@@ -56,8 +55,8 @@ export function CreateDialog({
     setPlatformState(next);
     setModelId("");
     setOsId("");
-    // 남길 항목은 플랫폼마다 다르다 (M15)
-    setSlimMode("full");
+    // 남길 항목은 플랫폼마다 다르다 — 커스텀이었으면 전체 슬림으로 (M15)
+    setSlimMode((m) => (m === "custom" ? "full" : m));
     setSlimKeep([]);
     try {
       localStorage.setItem(PLATFORM_KEY, next);
@@ -72,11 +71,9 @@ export function CreateDialog({
     setModelId("");
     setOsId("");
     setName("");
-    setSlim(true);
     setBaseline(true);
     setSlimMode("full");
     setSlimKeep([]);
-    setShowSlimInfo(false);
     setCreating(false);
   }, [open]);
 
@@ -290,28 +287,8 @@ export function CreateDialog({
             </label>
           </div>
 
-          <div className="slim-option">
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={slim}
-                disabled={creating}
-                onChange={(e) => setSlim(e.target.checked)}
-              />
-              {t("web.create.slim")}
-            </label>
-            <button
-              type="button"
-              className="icon-button info-button"
-              aria-label={t("web.create.slimInfo")}
-              aria-expanded={showSlimInfo}
-              onClick={() => setShowSlimInfo(!showSlimInfo)}
-            >
-              ⓘ
-            </button>
-          </div>
-          {showSlimInfo && current && <SlimInfo catalog={current} />}
-          {slim && (
+          <fieldset className="field slim-field">
+            <legend>{t("web.slim.legend")}</legend>
             <SlimPicker
               catalog={current}
               mode={slimMode}
@@ -322,16 +299,18 @@ export function CreateDialog({
                 setSlimKeep(k);
               }}
             />
+          </fieldset>
+          {slim && (
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={baseline}
+                disabled={creating}
+                onChange={(e) => setBaseline(e.target.checked)}
+              />
+              {t("web.create.baseline")}
+            </label>
           )}
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={slim && baseline}
-              disabled={creating || !slim}
-              onChange={(e) => setBaseline(e.target.checked)}
-            />
-            {t("web.create.baseline")}
-          </label>
 
           {creating && <Progress log={log} logStart={logStart} />}
           <footer className="dialog-footer">
@@ -469,45 +448,7 @@ function MacDevices({
   );
 }
 
-/** 슬림화하면 꺼지는 것 (M4 ⓘ) — simslim·avdslim 이 알려 주는 그대로 */
-function SlimInfo({ catalog }: { catalog: PlatformCatalog }) {
-  if (catalog.slimOff.length === 0) {
-    return (
-      <p className="sub">
-        {t("web.create.slimInfoMissing", {
-          tool: catalog.platform === "ios" ? "simslim" : "avdslim",
-        })}
-      </p>
-    );
-  }
-  return (
-    <div className="slim-info">
-      <p>{t("web.create.slimInfoIntro")}</p>
-      <ul>
-        {catalog.slimOff.map((c) => (
-          <li key={c.name}>
-            <strong>{c.name}</strong>
-            {c.count ? (
-              <span className="sub"> · {t("web.create.slimCount", { count: c.count })}</span>
-            ) : null}
-            {c.detail && <div className="sub">{c.detail}</div>}
-          </li>
-        ))}
-      </ul>
-      {catalog.slimKeeps.length > 0 && (
-        <>
-          <p>{t("web.create.slimKeeps")}</p>
-          <ul className="keeps">
-            {catalog.slimKeeps.map((k) => (
-              <li key={k}>{k}</li>
-            ))}
-          </ul>
-        </>
-      )}
-    </div>
-  );
-}
-
+/** 만드는 중 — 서버가 보내는 진행 알림 */
 function Progress({ log, logStart }: { log: LogLine[]; logStart: number }) {
   return (
     <div className="progress">

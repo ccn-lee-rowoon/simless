@@ -220,20 +220,8 @@ export function DevicesView({
                   disabled={lockedByOther || d.slim === "applying"}
                   onClick={() => setSlimming(d)}
                 >
-                  {t(d.slim === "none" ? "web.device.slimOn" : "web.device.slimSettings")}
+                  {t("web.device.slimSettings")}
                 </MenuItem>
-                {(d.slim === "applied" || d.slim === "drifted") && (
-                  <MenuItem
-                    disabled={lockedByOther}
-                    onClick={() =>
-                      run(d, t("web.device.slimOff"), () =>
-                        call("device.slim", { devices: [d.id], mode: "off" }),
-                      )
-                    }
-                  >
-                    {t("web.device.slimOff")}
-                  </MenuItem>
-                )}
               </>
             )}
             {lockedByOther && (
@@ -366,10 +354,15 @@ export function DevicesView({
       <SlimDialog
         device={slimming}
         onClose={() => setSlimming(null)}
-        onApply={(d, keep) => {
+        onApply={(d, mode, keep) => {
           setSlimming(null);
-          void run(d, t("web.device.slimSettings"), () =>
-            call("device.slim", { devices: [d.id], mode: "on", keep }),
+          void run(d, t(mode === "none" ? "web.device.slimOff" : "web.device.slimSettings"), () =>
+            call(
+              "device.slim",
+              mode === "none"
+                ? { devices: [d.id], mode: "off" }
+                : { devices: [d.id], mode: "on", keep },
+            ),
           );
         }}
       />
