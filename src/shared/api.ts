@@ -96,6 +96,8 @@ export interface StatusResult {
   setupNeeded: boolean;
   /** 넣어 둔 스킬이 이 simless 의 것과 다른 곳이 있다 — 앱이 «스킬 업데이트» 를 알린다 (S9) */
   skillUpdate: boolean;
+  /** 들어 있는 스킬(SKILL.md·참고 파일)의 지문 — 메뉴바 앱이 스킬 버전마다 한 번만 알림을 띄운다 (M18) */
+  skillHash: string;
   queue: { sessionKey: string; agent: string; deviceIds: string[]; enqueuedAt: number }[];
 }
 

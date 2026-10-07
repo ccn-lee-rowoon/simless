@@ -3,6 +3,7 @@
 // 설정은 Info.plist 의 SimlessHTTPPort·SimlessTokenPath·SimlessLaunchLabel 에서 읽는다 (docs/design.md §14).
 
 import AppKit
+import UserNotifications
 import WebKit
 
 /// 메뉴 문구 — 서버의 언어 설정(status.language)을 따른다 (R25). 웹 화면은 공용 사전을 쓰고, 여기는 몇 줄뿐이라 따로 둔다
@@ -38,6 +39,17 @@ enum Strings {
       "setupTitle": ("Simless 시작하기", "Get started with Simless"),
       "skillUpdate": ("스킬 업데이트 있음 — 업데이트", "Skill update available — Update"),
       "skillUpdated": ("Simless 스킬을 업데이트했습니다", "Updated the Simless skill"),
+      // macOS 알림 (M18)
+      "noticeServerDown": ("Simless 서버가 꺼져 있습니다", "The Simless server is not running"),
+      "noticeServerDownBody": (
+        "1분 넘게 연결되지 않습니다. 보호 훅이 기기 명령을 막을 수 있습니다 — 누르면 서버를 켭니다.",
+        "Unreachable for over a minute. The protection hook may block device commands — click to start it."
+      ),
+      "noticeSkillUpdate": ("Simless 스킬 업데이트가 있습니다", "A Simless skill update is available"),
+      "noticeSkillUpdateBody": (
+        "새 에이전트 세션이 새 스킬을 읽도록 대시보드나 메뉴바에서 «업데이트» 를 누르세요.",
+        "Click «Update» in the dashboard or the menu bar so new agent sessions read the new skill."
+      ),
     ]
     guard let pair = table[key] else { return key }
     return lang == "ko" ? pair.0 : pair.1
@@ -82,7 +94,7 @@ func devicesTemplate(size: CGFloat) -> NSImage {
 }
 
 final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigationDelegate,
-  WKScriptMessageHandler
+  WKScriptMessageHandler, UNUserNotificationCenterDelegate
 {
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let menu = NSMenu()
@@ -97,6 +109,12 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
   private var setupNeeded = false
   /// 넣어 둔 스킬이 예전 것 (S9)
   private var skillUpdate = false
+  /// 들어 있는 스킬의 지문 — 이 값마다 «스킬 업데이트» 알림을 한 번만 (M18)
+  private var skillHash: String?
+  /// 서버에 처음 연결하지 못한 때 — 1분이 넘으면 «서버 꺼짐» 알림 한 번 (M18)
+  private var downSince: Date?
+  private var downNotified = false
+  private var pollTimer: Timer?
   /// 세션 기록 창 — 세션 키마다 하나 (M13)
   private var sessionWindows: [String: NSWindow] = [:]
   private var retries = 0
@@ -115,6 +133,71 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     menu.delegate = self
     statusItem.menu = menu
     refresh { [weak self] in self?.openSetupIfNeeded(attempt: 0) }
+    setUpNotifications()
+  }
+
+  // MARK: macOS 알림 (M18)
+
+  /// 사람이 손을 써야 하는데 놓치기 쉬운 것만 — 서버가 꺼짐, 스킬 업데이트. 15초마다 서버를 본다
+  private func setUpNotifications() {
+    let center = UNUserNotificationCenter.current()
+    center.delegate = self
+    center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    pollTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+      self?.refresh { self?.checkNotices() }
+    }
+  }
+
+  private func checkNotices() {
+    if serverVersion == nil {
+      let since = downSince ?? Date()
+      downSince = since
+      if !downNotified && Date().timeIntervalSince(since) >= 60 {
+        downNotified = true
+        post(id: "server-down", title: Strings.get("noticeServerDown"), body: Strings.get("noticeServerDownBody"))
+      }
+      return
+    }
+    downSince = nil
+    downNotified = false
+    UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["server-down"])
+    let key = "simless.notifiedSkillHash"
+    if skillUpdate, let hash = skillHash, !hash.isEmpty,
+       UserDefaults.standard.string(forKey: key) != hash {
+      UserDefaults.standard.set(hash, forKey: key)
+      post(id: "skill-update", title: Strings.get("noticeSkillUpdate"), body: Strings.get("noticeSkillUpdateBody"))
+    }
+  }
+
+  private func post(id: String, title: String, body: String) {
+    let content = UNMutableNotificationContent()
+    content.title = title
+    content.body = body
+    content.sound = .default
+    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
+  }
+
+  /// 앱이 앞에 있어도 배너로 보인다
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    completionHandler([.banner, .sound])
+  }
+
+  /// 누르면 — 서버 꺼짐은 서버를 켜고, 스킬 업데이트는 대시보드(업데이트 띠)를 연다
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void
+  ) {
+    DispatchQueue.main.async { [weak self] in
+      if response.notification.request.identifier == "server-down" {
+        self?.startServer()
+      } else {
+        self?.openDashboard()
+      }
+    }
+    completionHandler()
   }
 
   /// 처음 뜰 때 설정을 안 끝냈으면 설정 창을 연다. 서버가 아직 안 떴으면(로그인 직후) 잠시 뒤 다시
@@ -156,6 +239,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
           self.serverVersion = result["serverVersion"] as? String
           self.setupNeeded = (result["setupNeeded"] as? Bool) == true
           self.skillUpdate = (result["skillUpdate"] as? Bool) == true
+          self.skillHash = result["skillHash"] as? String
           self.lastError = nil
         } else {
           self.serverVersion = nil

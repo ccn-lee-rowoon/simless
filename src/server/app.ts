@@ -191,6 +191,8 @@ export class SimlessServer {
 
   /** 스킬 업데이트가 있는지 — setup.ts 가 켤 때·10분마다·설치를 바꿀 때 다시 본다 (S9) */
   skillUpdate = false;
+  /** 들어 있는 스킬의 지문 — setup.ts 가 켤 때 계산한다 (M18) */
+  skillHash = "";
 
   /** 2초마다 — 끝난 세션의 점유를 풀고, 오래 안 쓴 점유 중 누가 기다리는 것을 푼다 */
   tick(): void {
@@ -601,6 +603,7 @@ export class SimlessServer {
       })),
       setupNeeded: setupNeeded(this.deps.paths),
       skillUpdate: this.skillUpdate,
+      skillHash: this.skillHash,
     };
   }
 
