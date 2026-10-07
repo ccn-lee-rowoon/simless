@@ -2,12 +2,21 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import androidRef from "agent-skills/skills/device-slim/reference/app-android.md" with {
+  type: "file",
+};
+import expoRef from "agent-skills/skills/device-slim/reference/app-expo.md" with { type: "file" };
+import iosRef from "agent-skills/skills/device-slim/reference/app-ios.md" with { type: "file" };
+import reactNativeRef from "agent-skills/skills/device-slim/reference/app-react-native.md" with {
+  type: "file",
+};
 import { z } from "zod";
 import skillPath from "../../integrations/skill/simless/SKILL.md" with { type: "file" };
 import type { InstallState, SkillLocation } from "../shared/api.ts";
@@ -46,15 +55,55 @@ export async function bundledSkill(): Promise<string> {
   return Bun.file(skillPath).text();
 }
 
+/**
+ * 앱에 필요한 기기 기능 찾기 — agent-skills 저장소의 device-slim 참고 파일을 그대로 쓴다(M15).
+ * package.json 에 태그(`device-slim-vX.Y.Z`)로 고정하고 bun.lock 이 커밋까지 고정한다.
+ */
+const REFERENCES: Record<string, string> = {
+  "reference/app-ios.md": iosRef,
+  "reference/app-android.md": androidRef,
+  "reference/app-react-native.md": reactNativeRef,
+  "reference/app-expo.md": expoRef,
+};
+
+/** 스킬 폴더에 넣을 파일 — 폴더 안 경로 → 내용 */
+export async function bundledFiles(): Promise<Map<string, string>> {
+  const files = new Map([["SKILL.md", await bundledSkill()]]);
+  for (const [path, source] of Object.entries(REFERENCES)) {
+    files.set(path, await Bun.file(source).text());
+  }
+  return files;
+}
+
+/** 스킬 폴더에 넣는다 — reference/ 는 비우고 다시 써서 빠진 파일이 남지 않게 */
+async function writeSkillDir(dir: string): Promise<void> {
+  rmSync(join(dir, "reference"), { recursive: true, force: true });
+  for (const [path, text] of await bundledFiles()) {
+    mkdirSync(dirname(join(dir, path)), { recursive: true });
+    writeFileSync(join(dir, path), text);
+  }
+}
+
 /** 여러 파일의 상태를 하나로 — 전부 같으면 current, 전부 없으면 missing, 나머지는 outdated */
 export function combineStates(states: InstallState[]): InstallState {
   if (states.length === 0 || states.every((s) => s === "missing")) return "missing";
   return states.every((s) => s === "current") ? "current" : "outdated";
 }
 
+/** SKILL.md 경로로 그 스킬 폴더 전체를 본다 — 파일 하나라도 다르거나 빠졌거나 남은 게 있으면 outdated */
 async function fileState(file: string): Promise<InstallState> {
   if (!existsSync(file)) return "missing";
-  return readFileSync(file, "utf8") === (await bundledSkill()) ? "current" : "outdated";
+  const dir = dirname(file);
+  const files = await bundledFiles();
+  for (const [path, text] of files) {
+    const target = join(dir, path);
+    if (!existsSync(target) || readFileSync(target, "utf8") !== text) return "outdated";
+  }
+  const refDir = join(dir, "reference");
+  const extra = existsSync(refDir)
+    ? readdirSync(refDir).filter((name) => !files.has(`reference/${name}`))
+    : [];
+  return extra.length === 0 ? "current" : "outdated";
 }
 
 /** missing = 없음, outdated = 들어 있는 것과 다름, current = 같음 — 전역 위치 */
@@ -64,8 +113,7 @@ export async function skillStatus(env: NodeJS.ProcessEnv = process.env): Promise
 
 export async function installSkill(env: NodeJS.ProcessEnv = process.env): Promise<string> {
   const target = skillTarget(env);
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, await bundledSkill());
+  await writeSkillDir(dirname(target));
   return target;
 }
 
@@ -175,12 +223,8 @@ export async function installSkillAt(
   location: SkillLocation,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<string[]> {
-  const text = await bundledSkill();
   const targets = await targetsOf(location, env);
-  for (const target of targets) {
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, text);
-  }
+  for (const target of targets) await writeSkillDir(dirname(target));
   if (location.kind === "project") {
     for (const target of targets) await excludeFromGit(dirname(dirname(dirname(dirname(target)))));
   }

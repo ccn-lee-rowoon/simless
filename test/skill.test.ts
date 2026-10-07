@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { bundledSkill, installSkill, skillStatus, skillTarget } from "../src/install/skill.ts";
+import { dirname, join } from "node:path";
+import {
+  bundledFiles,
+  bundledSkill,
+  installSkill,
+  skillStatus,
+  skillTarget,
+} from "../src/install/skill.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -53,6 +59,19 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(await skillStatus(env)).toBe("outdated");
     await installSkill(env);
     expect(readFileSync(target, "utf8")).toBe(await bundledSkill());
+    // 앱 기능 찾기 참고 파일도 같이 — 하나라도 다르거나 남은 파일이 있으면 outdated (M15)
+    const dir = dirname(target);
+    expect(readFileSync(join(dir, "reference/app-expo.md"), "utf8")).toContain(
+      "# Finding app features — Expo",
+    );
+    writeFileSync(join(dir, "reference/app-ios.md"), "old");
+    expect(await skillStatus(env)).toBe("outdated");
+    await installSkill(env);
+    expect(await skillStatus(env)).toBe("current");
+    writeFileSync(join(dir, "reference/gone.md"), "left over");
+    expect(await skillStatus(env)).toBe("outdated");
+    await installSkill(env);
+    expect(existsSync(join(dir, "reference/gone.md"))).toBe(false);
   });
 
   // 스킬 문서가 요구사항을 담고 있는지 — 문서를 고치다 빠뜨리지 않게
@@ -110,6 +129,10 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("simless slim <device> --keep <id,…>");
     // 앱에 필요한 기능 찾기 — device-slim 스킬 없이도 (M15)
     expect(text).toContain("## Finding what the app needs");
+    // 참고 파일은 agent-skills 의 device-slim 것을 쓰고, 스킬이 모두 링크한다
+    for (const path of (await bundledFiles()).keys()) {
+      if (path !== "SKILL.md") expect(text).toContain(`(${path})`);
+    }
     expect(text).toContain(".device-slim.json");
     expect(text).toContain(
       "| Remote push notifications | `aps-environment` entitlement, notification library | `store` |",

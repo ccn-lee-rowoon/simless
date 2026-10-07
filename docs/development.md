@@ -6,7 +6,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 
 ## 1. 준비와 매일 쓰는 명령
 
-처음 한 번: `mise install`(Bun 1.3.6) → `bun install` → `bun link`(`simless` 가 이 저장소를 가리킨다).
+처음 한 번: `mise install`(Bun 1.3.6) → `bun install` → `bun link`(`simless` 가 이 저장소를 가리킨다). `bun install` 은 비공개 저장소 `ccn-lee-rowoon/agent-skills` 를 SSH 로 받는다 — GitHub SSH 키가 있어야 한다(`ssh -T git@github.com` 로 확인).
 
 | 명령 | 하는 일 |
 | --- | --- |
@@ -75,6 +75,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 - `integrations/skill/simless/SKILL.md`·`integrations/rules/simless.md` — 커밋 type 은 `docs`
 - 요구사항(S1~S12)을 담은 문장은 `test/skill.test.ts` 가 검사한다 — 바꾸면 테스트도 같이
 - 이 Mac 에 반영: `simless skill install`(넣어 둔 모든 곳). 서버는 10분마다 예전 스킬을 찾아 앱에 알린다
+- 스킬은 폴더째 설치된다 — `SKILL.md` + `reference/app-*.md`(앱에 필요한 기기 기능 찾기, M15). 참고 파일의 정본은 agent-skills 저장소의 `skills/device-slim/reference/` 다. 거기서 고친 것을 가져오려면 agent-skills 에서 `device-slim-vX.Y.Z` 태그를 낸 뒤 `package.json` 의 `agent-skills` 태그를 올리고 `bun install` → 바뀐 파일을 읽어 보고 커밋. 파일을 더하거나 빼면 `src/install/skill.ts` 의 `REFERENCES` 와 스킬의 링크도
 
 ### 이 Mac 에 설치하는 것 하나 더하기 (S1·S12)
 

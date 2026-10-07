@@ -39,7 +39,7 @@
 
 ## 4. 빌드·검사
 
-처음 한 번: `mise install` (Bun 1.3.6) → `bun install` → `bun link` (`simless` 명령이 이 저장소를 가리키게 된다).
+처음 한 번: `mise install` (Bun 1.3.6) → `bun install` → `bun link` (`simless` 명령이 이 저장소를 가리키게 된다). `bun install` 은 비공개 저장소 `ccn-lee-rowoon/agent-skills`(스킬 참고 파일)를 SSH 로 받으므로 GitHub SSH 키가 있어야 한다.
 
 ```sh
 bun install
