@@ -80,12 +80,13 @@ Other sessions — often in other worktrees of the same repo — run their own M
    for p in $(seq 8081 8099); do lsof -nP -iTCP:$p -sTCP:LISTEN >/dev/null || { echo $p; break; }; done
    ```
 2. **Start Metro from your working directory** on that port, in the background, and remember its PID. Force IPv4 so it answers on `127.0.0.1` — otherwise macOS may bind it to `[::1]` only and the app can't reach it. If the port was just taken, pick the next free one.
-   - **Expo with one Android device — let Metro launch it.** `--android` does what Metro's `a` key does: `adb reverse` for your port and opening the dev client at your Metro with the scheme the installed app registers. **Always pin the device with `ANDROID_SERIAL`** — without it, it runs on every connected emulator, other sessions' included:
+   - **Expo, Android, and yours is the only emulator running** (`adb devices` lists just it) — Metro can launch it: `--android` does what Metro's `a` key does — `adb reverse` for your port and opening the dev client at your Metro with the scheme the installed app registers:
      ```sh
-     ANDROID_SERIAL=<targetId> NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port> --android
+     NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port> --android > <metro.log> 2>&1 &
      ```
      Success in the Metro log: `Opening exp+<scheme>://expo-development-client/?url=…%3A<port>` and then `Android Bundled`. Then skip to 4.2's «Check it attached».
-   - **Otherwise** (iOS, several Android devices, bare React Native) start Metro alone and launch per device in 4.2. Send its output to a log file — step 4.2 waits on it:
+     **Not when another emulator is running:** Expo opens the app on the **first** device it finds and ignores `ANDROID_SERIAL` (it passes its own `adb -s`), and it sets `adb reverse` for your port on **every** connected emulator. Start Metro alone instead and launch with `adb -s` in 4.2.
+   - **Otherwise** (iOS, more than one emulator running, bare React Native) start Metro alone and launch per device in 4.2. Send its output to a log file — step 4.2 waits on it:
      ```sh
      NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port> > <metro.log> 2>&1 &   # Expo
      NODE_OPTIONS=--dns-result-order=ipv4first npx react-native start --port <port> > <metro.log> 2>&1 &        # bare React Native
@@ -118,14 +119,16 @@ Pass `targetId` as argent's device argument, device by device, following the arg
      ```
      Per platform, `hit: true` means it is installed — go on to launch. `hit: false` means nothing is cached for this fingerprint: build onto the device (below), then store the build so the next session skips it:
      ```sh
-     REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo run:ios --device <targetId> --port <port>   # or run:android
+     REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo run:ios --device <targetId> --port <port>
+     REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo run:android --device <AVD name> --port <port>
      simless --json app save --platform ios    # finds the newest build (DerivedData / android/app/build)
      ```
    - **Building with your Metro already running (Expo):** pass `--port <port>` — Expo sees your Metro (started from the same folder) on that port and reuses it instead of starting another. Also set `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1`: otherwise the app opens at your **LAN IP**, which changes with the network. When the build finishes the app opens on `127.0.0.1:<port>` — go to 4.2's «Check it attached».
+     - **Android: `--device` takes the AVD name, not the serial** — `native` in `simless --json list` (e.g. `simless_ab12`). Given `emulator-5554` it fails with «Could not find device with name». Expo also sets `adb reverse` for your port on every connected emulator and removes it when it exits — harmless to other sessions, whose Metros use other ports.
      - **Don't use `--no-bundler`.** It can't be combined with `--port` («mutually exclusive»), and without a port the app opens on **LAN IP :8081 — another session's Metro**. If an install did open there, stop the app and reopen it on your port (4.2).
      - Run the build in the foreground or watch its output — a backgrounded build that fails on bad options only tells you minutes later.
      `TOOL_MISSING` means it isn't an Expo project with `@expo/fingerprint` — skip the cache. Computing the fingerprint takes about 30 seconds.
-   - Otherwise `reinstall-app`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <targetId>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
+   - Otherwise `reinstall-app`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <AVD name>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
 2. **Launch onto your Metro** — not with `launch-app`: a plain launch reconnects to whatever server the app remembers. The bundle ID and Android package come from the project: `npx expo config --json` → `ios.bundleIdentifier`, `android.package`.
    - **Find the dev client scheme the app actually registers** — don't build it from the slug: many apps change the slug per environment, but the scheme was fixed when the native project was generated (e.g. slug `MyApp_Dev_A` while the app registers `exp+myapp`). A wrong scheme leaves the app on the dev client's home screen.
      ```sh
