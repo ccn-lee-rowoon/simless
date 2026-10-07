@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { SettingsResult, StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import { call } from "./api.ts";
 import { openSetup } from "./bridge.ts";
-import { LaunchSplash } from "./LaunchSplash.tsx";
 import type { Act } from "./types.ts";
 import { Dialog } from "./ui.tsx";
 
@@ -24,9 +23,6 @@ export function SettingsView({
   const [purge, setPurge] = useState(false);
   const [removed, setRemoved] = useState(false);
   const [draft, setDraft] = useState<SettingsResult | null>(null);
-  /** 시작 애니메이션 미리 보기 (M17) */
-  const [preview, setPreview] = useState(false);
-  const endPreview = useCallback(() => setPreview(false), []);
 
   useEffect(() => {
     call<SettingsResult>("settings.get").then((s) => {
@@ -114,20 +110,14 @@ export function SettingsView({
 
       <section className="panel settings-section">
         <h3>{t("web.settings.screen")}</h3>
-        <div className="setup-intro">
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={draft.launchAnimation}
-              onChange={(e) => setDraft({ ...draft, launchAnimation: e.target.checked })}
-            />
-            {t("web.settings.launchAnimation")}
-          </label>
-          <button type="button" className="button button-small" onClick={() => setPreview(true)}>
-            {t("web.settings.launchPreview")}
-          </button>
-        </div>
-        {preview && <LaunchSplash onDone={endPreview} />}
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={draft.launchAnimation}
+            onChange={(e) => setDraft({ ...draft, launchAnimation: e.target.checked })}
+          />
+          {t("web.settings.launchAnimation")}
+        </label>
         <p className="sub">{t("web.settings.launchAnimationHint")}</p>
       </section>
 

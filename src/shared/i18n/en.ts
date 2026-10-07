@@ -464,7 +464,6 @@ export const en: Record<keyof typeof ko, string> = {
   "web.settings.leases": "Leases",
   "web.settings.screen": "Screen",
   "web.settings.launchAnimation": "Launch animation",
-  "web.settings.launchPreview": "Preview",
   "web.settings.launchAnimationHint":
     "When you start the app and first open the dashboard, shows «Simulator + Seamless → Simless» for about three seconds. Click to skip; nothing moves when macOS «Reduce motion» is on.",
   "web.launch.skip": "Launch animation — click to skip",
