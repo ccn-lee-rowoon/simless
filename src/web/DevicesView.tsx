@@ -5,6 +5,7 @@ import type { Group } from "../shared/model.ts";
 import { Agent } from "./agents.tsx";
 import { call } from "./api.ts";
 import { PlatformIcon } from "./icons.tsx";
+import { SlimDialog } from "./SlimPicker.tsx";
 import type { Act } from "./types.ts";
 import {
   ago,
@@ -70,6 +71,7 @@ export function DevicesView({
   const [renaming, setRenaming] = useState<DeviceView | null>(null);
   const [grouping, setGrouping] = useState<DeviceView | null>(null);
   const [deleting, setDeleting] = useState<DeviceView | null>(null);
+  const [slimming, setSlimming] = useState<DeviceView | null>(null);
 
   const setPlatform = (next: Platform) => {
     setPlatformState(next);
@@ -214,7 +216,13 @@ export function DevicesView({
             {d.createdBySimless && (
               <>
                 <MenuSeparator />
-                {d.slim === "applied" || d.slim === "drifted" ? (
+                <MenuItem
+                  disabled={lockedByOther || d.slim === "applying"}
+                  onClick={() => setSlimming(d)}
+                >
+                  {t(d.slim === "none" ? "web.device.slimOn" : "web.device.slimSettings")}
+                </MenuItem>
+                {(d.slim === "applied" || d.slim === "drifted") && (
                   <MenuItem
                     disabled={lockedByOther}
                     onClick={() =>
@@ -224,17 +232,6 @@ export function DevicesView({
                     }
                   >
                     {t("web.device.slimOff")}
-                  </MenuItem>
-                ) : (
-                  <MenuItem
-                    disabled={lockedByOther || d.slim === "applying"}
-                    onClick={() =>
-                      run(d, t("web.device.slimOn"), () =>
-                        call("device.slim", { devices: [d.id], mode: "on" }),
-                      )
-                    }
-                  >
-                    {t("web.device.slimOn")}
                   </MenuItem>
                 )}
               </>
@@ -364,6 +361,16 @@ export function DevicesView({
             void run(d, t("web.device.rename"), () =>
               call("device.rename", { device: d.id, name: name.trim() }),
             );
+        }}
+      />
+      <SlimDialog
+        device={slimming}
+        onClose={() => setSlimming(null)}
+        onApply={(d, keep) => {
+          setSlimming(null);
+          void run(d, t("web.device.slimSettings"), () =>
+            call("device.slim", { devices: [d.id], mode: "on", keep }),
+          );
         }}
       />
       <DeviceGroupsDialog

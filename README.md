@@ -47,7 +47,8 @@ simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·
 | `simless status` | 기기·그룹·누가 쓰는지 |
 | `simless use --default ios` · `--group "two accounts"` · `<기기>…` | 빌려서 켜기 (`--available` 비어 있는 것만, `--wait` 기다리기, `--create` 없으면 만들기) |
 | `simless release` · `simless down` | 돌려주기 · 끄기 |
-| `simless catalog` · `simless create "iPhone 17"` | 만들 수 있는 기종 · 만들기 (`--no-slim` 일반 기기) |
+| `simless catalog` · `simless create "iPhone 17"` | 만들 수 있는 기종·슬림 항목 · 만들기 (`--no-slim` 일반 기기, `--slim-keep <ID,…>` 남길 항목) |
+| `simless slim <기기> --keep <ID,…>` · `--full` · `--off` | 슬림 항목 바꾸기 · 전체 슬림 · 슬림 해제 (Simless 가 만든 것만) |
 | `simless group list` · `simless group create …` | 그룹 |
 | `simless history` | 점유 기록 (90일 보관) |
 | `simless app install` · `simless app save --platform ios` | 네이티브 빌드 캐시 — 네이티브 지문이 같은 빌드가 있으면 빌드 없이 설치 · 방금 빌드한 것 보관 (Expo 앱) |

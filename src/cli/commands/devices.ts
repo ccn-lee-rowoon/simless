@@ -75,6 +75,7 @@ export function registerDevices(program: Command, run: Run) {
     .option("--density <dpi>", t("cli.create.density"))
     .option("--name <name>", t("cli.create.name"))
     .option("--no-slim", t("cli.create.noSlim"))
+    .option("--slim-keep <ids>", t("cli.create.slimKeep"))
     .option("--no-baseline", t("cli.create.noBaseline"))
     .action(
       run(
@@ -89,6 +90,7 @@ export function registerDevices(program: Command, run: Run) {
             density?: string;
             name?: string;
             slim: boolean;
+            slimKeep?: string;
             baseline: boolean;
           },
         ) => {
@@ -108,6 +110,7 @@ export function registerDevices(program: Command, run: Run) {
             os: o.os,
             name: o.name,
             slim: o.slim,
+            slimKeep: o.slimKeep !== undefined ? idList(o.slimKeep) : undefined,
             baseline: o.baseline,
           });
           output(ctx, device, () => devicesTable([device]));
@@ -192,11 +195,20 @@ export function registerDevices(program: Command, run: Run) {
     .argument("[devices...]", t("cli.slim.devices"))
     .option("--off", t("cli.slim.off"))
     .option("--check", t("cli.slim.check"))
+    .option("--keep <ids>", t("cli.slim.keep"))
+    .option("--full", t("cli.slim.full"))
     .action(
-      run(async (ctx, devices: string[], o: { off?: boolean; check?: boolean }) => {
-        const mode = o.check ? "check" : o.off ? "off" : "on";
-        finish(ctx, await call(ctx, "device.slim", { devices, mode }), t("cli.verb.slim"));
-      }),
+      run(
+        async (
+          ctx,
+          devices: string[],
+          o: { off?: boolean; check?: boolean; keep?: string; full?: boolean },
+        ) => {
+          const mode = o.check ? "check" : o.off ? "off" : "on";
+          const keep = o.full ? [] : o.keep !== undefined ? idList(o.keep) : undefined;
+          finish(ctx, await call(ctx, "device.slim", { devices, mode, keep }), t("cli.verb.slim"));
+        },
+      ),
     );
 
   program
@@ -229,4 +241,12 @@ export function registerDevices(program: Command, run: Run) {
       finish(ctx, await call(ctx, "device.up", { devices: result.deviceIds }), t("cli.verb.boot"));
     }),
   );
+}
+
+/** `a,b , c` → `["a", "b", "c"]` — 남길 슬림 항목 ID (M15) */
+function idList(value: string): string[] {
+  return value
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
 }

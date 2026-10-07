@@ -441,13 +441,20 @@ export function registerDeviceMethods(server: SimlessServer): void {
     if (params.keep && params.mode !== "on") {
       throw new HandlerError("INVALID", t("err.slimKeepOnlyOn"));
     }
+    // 없는 항목이면 어느 기기도 건드리기 전에 INVALID (M15)
+    const keepFor = new Map<Platform, string[]>();
+    if (params.keep) {
+      for (const platform of new Set(devices.map((d) => d.spec.platform))) {
+        keepFor.set(platform, await checkKeep(platform, params.keep));
+      }
+    }
     const results = await forEach(devices, async (device) => {
       const driver = server.driver(device.spec.platform);
       if (params.mode === "on") {
         let reset = false;
         if (params.keep) {
           // 남길 항목을 바꾼다 — 이미 슬림했으면 바뀐 것까지 맞춰 다시 (M15)
-          const keep = await checkKeep(device.spec.platform, params.keep);
+          const keep = keepFor.get(device.spec.platform) ?? [];
           const before = [...(device.slimKeep ?? [])].sort().join(",");
           reset = device.slim !== "none" && before !== [...keep].sort().join(",");
           device = update(device, { slimKeep: keep.length > 0 ? keep : undefined });

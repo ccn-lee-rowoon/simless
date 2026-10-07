@@ -1265,6 +1265,38 @@ summary:focus-visible {
   margin-bottom: 4px;
 }
 
+/* 슬림 방식·항목 고르기 (M15) */
+.slim-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slim-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slim-items ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.slim-item {
+  align-items: flex-start;
+}
+
+.slim-item-detail {
+  display: block;
+}
+
+.slim-kind {
+  margin: 8px 0 2px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
 .notice-inline {
   padding: 8px 10px;
   border-radius: 6px;

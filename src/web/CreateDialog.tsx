@@ -3,6 +3,7 @@ import type { CatalogModel, CatalogResult, DeviceView, PlatformCatalog } from ".
 import { t } from "../shared/i18n.ts";
 import { call } from "./api.ts";
 import { PlatformIcon } from "./icons.tsx";
+import { type SlimMode, SlimPicker } from "./SlimPicker.tsx";
 import type { LogLine } from "./types.ts";
 import { Dialog, osText, resolutionText, widthText } from "./ui.tsx";
 
@@ -45,6 +46,8 @@ export function CreateDialog({
   const [name, setName] = useState("");
   const [slim, setSlim] = useState(true);
   const [baseline, setBaseline] = useState(true);
+  const [slimMode, setSlimMode] = useState<SlimMode>("full");
+  const [slimKeep, setSlimKeep] = useState<string[]>([]);
   const [showSlimInfo, setShowSlimInfo] = useState(false);
   const [creating, setCreating] = useState(false);
   const [logStart, setLogStart] = useState(0);
@@ -53,6 +56,9 @@ export function CreateDialog({
     setPlatformState(next);
     setModelId("");
     setOsId("");
+    // 남길 항목은 플랫폼마다 다르다 (M15)
+    setSlimMode("full");
+    setSlimKeep([]);
     try {
       localStorage.setItem(PLATFORM_KEY, next);
     } catch {
@@ -68,6 +74,8 @@ export function CreateDialog({
     setName("");
     setSlim(true);
     setBaseline(true);
+    setSlimMode("full");
+    setSlimKeep([]);
     setShowSlimInfo(false);
     setCreating(false);
   }, [open]);
@@ -111,6 +119,7 @@ export function CreateDialog({
         os: os?.id,
         name: name.trim() || undefined,
         slim,
+        slimKeep: slim && slimMode === "custom" ? slimKeep : undefined,
         baseline: slim && baseline,
       });
       onCreated(device.name);
@@ -302,6 +311,18 @@ export function CreateDialog({
             </button>
           </div>
           {showSlimInfo && current && <SlimInfo catalog={current} />}
+          {slim && (
+            <SlimPicker
+              catalog={current}
+              mode={slimMode}
+              keep={slimKeep}
+              disabled={creating}
+              onChange={(m, k) => {
+                setSlimMode(m);
+                setSlimKeep(k);
+              }}
+            />
+          )}
           <label className="check">
             <input
               type="checkbox"

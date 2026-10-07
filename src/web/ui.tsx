@@ -97,6 +97,9 @@ export function SlimBadge({ device }: { device: DeviceView }) {
           {t(failed ? "slim.failed" : applying ? "slim.applying" : "web.slim.applied")}
         </strong>
         {failed && device.slimError && <span>{device.slimError.split("\n")[0]}</span>}
+        {device.slimKeep?.length ? (
+          <span>{t("web.slim.keptCount", { count: device.slimKeep.length })}</span>
+        ) : null}
         {stats && <span>{slimStatsText(stats)}</span>}
         {change ? (
           <span className="mono">{change}</span>
