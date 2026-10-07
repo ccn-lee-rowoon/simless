@@ -4,7 +4,7 @@ The iOS simulators and Android emulators in the simless list (`simless list`) ar
 
 - Before touching one with argent, adb, or simctl — screenshots and `describe` included — acquire it: `simless use <device>`, `simless use --group "<group>"`, or `simless use --default ios|android`.
 - Boot and shut down with `simless use` / `simless down`, not argent `boot-device`, `emulator -avd`, or `simctl boot`.
-- When a device is busy, Simless says who holds it. Wait (`--wait`) or ask the user; never `simless release --force`.
+- When a device is busy, Simless says who holds it. Wait (`--wait`) or ask the user; never force-release it — only a person can, from the Simless app window.
 - Metro: run your own on a free port and point only your devices at it (see the `simless` skill). Don't reuse a Metro already on 8081 — it is usually another session's — and pass your port to argent `debugger-*` tools.
 - Release with `simless release` when the task is done.
 - A hook blocks calls on Simless devices this session doesn't hold. Follow the `simless` skill for the full flow.

@@ -119,20 +119,22 @@ simless/
 | `Simless.app` | 메뉴바 앱 + 앱 창(§14). `tray/SimlessTray.swift` 를 컴파일한 실행 파일 + `Info.plist`(`LSUIElement` — 평소엔 Dock 아이콘 없음) + 아이콘, ad-hoc 서명. 더블클릭·Spotlight·Launchpad 에서 연다. Xcode 가 없어 컴파일을 못 하면 브라우저로 웹 화면을 여는 스크립트로 대신한다 |
 | 로그인 항목 이름 | macOS 로그인 항목(«앱 백그라운드 활동»)에는 실행 파일 서명자 이름이 보인다 — 개발 모드는 bun 의 «Jarred Sumner». `Simless.app` 을 만들 때(3단계) plist 에 `AssociatedBundleIdentifiers` 로 앱을 연결해 «Simless» 로 보이게 한다. 사용자가 이 항목을 끄면 launchd 가 서버를 띄우지 않으므로 `simless doctor` 가 확인한다 |
 | 서버 자동 시작 (Q10) | CLI·MCP 는 소켓이 없으면 `launchctl kickstart` 로 켜고 몇 초 기다린다. 훅은 켜지 않는다 |
-| 업데이트 | `simless update` — 확인·알림·교체·되돌리기는 §19. 클라이언트·서버 버전이 다르면 `hello` 에서 알려 준다 |
+| 업데이트 | `simless update`(U단계 — 아직 없음) — 확인·알림·교체·되돌리기는 §19. 클라이언트·서버 버전이 다르면 요청·응답의 `clientVersion`·`serverVersion` 으로 알린다(§11) |
 
 ## 5. 런타임 파일 위치
 
 | 경로 | 내용 | 쓰는 쪽 |
 | --- | --- | --- |
-| `~/Library/Application Support/simless/registry.json` | 디바이스에 Simless 가 붙인 정보(메모·슬림·만든 여부·기준값), 그룹, 기본 디바이스 (영속). 기기 자체 목록은 저장하지 않는다(§6) | 서버 |
-| `…/simless/leases.json` | 점유·대기열 — 서버를 다시 켜도 복원 | 서버 |
-| `…/simless/history.db` | 점유 기록 — SQLite(`bun:sqlite`, WAL). 사건마다 한 줄 덧붙이고, 보관 기간(`historyRetentionDays`, 기본 90일)이 지난 것은 서버가 한 시간마다 지운다 (M13). 예전 `history.json` 은 처음 켤 때 옮기고 `history.json.migrated` 로 남긴다 | 서버 |
-| `…/simless/managed-index.json` | 이 Mac 디바이스 식별자(UDID·AVD ID·마지막 시리얼). **서버가 꺼졌을 때 훅이 읽는다** | 서버 쓰기 / 훅 읽기 |
-| `…/simless/simless.sock` | 소켓 (권한 0600) | 서버 |
-| `…/simless/web-token` | 웹 화면 요청 토큰 (0600) | 서버 |
-| `…/simless/update.json` | 마지막 확인 시각·최신 버전·알림 보낸 버전 | 서버 |
-| `~/Library/Logs/simless/` | 서버 로그 | 서버 |
+| `~/Library/Application Support/Simless/registry.json` | 디바이스에 Simless 가 붙인 정보(슬림·남길 항목·슬림 내역·만든 여부·기준값, 메모는 저장만 — R24 보류), 그룹, 기본 디바이스 (영속). 기기 자체 목록은 저장하지 않는다(§6) | 서버 |
+| `…/Simless/leases.json` | 점유·대기열 — 서버를 다시 켜도 복원 | 서버 |
+| `…/Simless/history.db` | 점유 기록 — SQLite(`bun:sqlite`, WAL). 사건마다 한 줄 덧붙이고, 보관 기간(`historyRetentionDays`, 기본 90일)이 지난 것은 서버가 한 시간마다 지운다 (M13). 예전 `history.json` 은 처음 켤 때 옮기고 `history.json.migrated` 로 남긴다 | 서버 |
+| `…/Simless/managed-index.json` | 이 Mac 디바이스 식별자(UDID·AVD ID·마지막 시리얼). **서버가 꺼졌을 때 훅이 읽는다** | 서버 쓰기 / 훅 읽기 |
+| `…/Simless/simless.sock` | 소켓 (권한 0600) | 서버 |
+| `…/Simless/web-token` | 웹 화면 요청 토큰 (0600) | 서버 |
+| `…/Simless/setup.json` | 첫 실행 설정을 끝낸 시각 (M14) | 서버 |
+| `…/Simless/skills.json` | 스킬을 넣어 둔 위치(전역·프로젝트) (S9) | CLI·서버 |
+| `…/Simless/update.json` | 마지막 확인 시각·최신 버전·알림 보낸 버전 — **U단계, 아직 없음** | 서버 |
+| `~/Library/Logs/Simless/` | 서버 로그 | 서버 |
 | `~/.local/share/simless/versions/<버전>/simless` · `~/.local/bin/simless`(링크) | 설치된 버전들과 지금 쓰는 버전 (§19) | `simless update` |
 | `~/Library/Caches/Simless/builds/<앱>/<플랫폼>/<지문>/` | 캐시된 네이티브 빌드(.app·.apk) + `meta.json`. 앱·플랫폼마다 최근 5개 (R26). `SIMLESS_BUILD_CACHE` 로 바꿀 수 있다 | CLI |
 | `~/.config/simless/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`, 기본 `system`), 자동 해제 시간(기본 30분), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다 | 사람·서버 |
@@ -160,9 +162,10 @@ simless/
 | `slimKeep` | 레지스트리 | 슬림해도 남길 항목 ID — 없으면 전체 슬림 (M15) |
 | `slimSeen.off` | 레지스트리 | 켜져 있을 때 실제로 읽은 꺼진 슬림 항목 ID — `DeviceView.slimOff`(못 읽었으면 `slimKeep` 으로 계산, `slimOffObserved: false`) (M16) |
 | `slimSeen` | 레지스트리 | 켜져 있을 때 마지막으로 읽은 슬림 수치 `{ disabled, total, unit, seenAt }` — 누가 슬림했든 적는다. 값이 같으면 10분에 한 번만 쓴다 (M6) |
-| `memo` | 레지스트리 | 디바이스 메모 (R24) |
+| `memo` | 레지스트리 | 디바이스 메모 — R24 보류: 저장만 하고 화면·CLI·스킬에는 보이지 않는다 |
 | `default` | 레지스트리 | 이 플랫폼의 기본 디바이스인지 (R22) |
 | `groups` | 레지스트리(그룹) | 든 그룹 ID 목록 (R21) |
+| `createdAt` | 레지스트리 | Simless 가 처음 본(또는 만든) 시각 |
 
 - **기기가 사라지면 붙인 정보도 지운다** — Simless 로 지웠을 때, 그리고 밖(Xcode·Android Studio)에서 지워 드라이버 목록에 없을 때 그 `id` 의 메모·슬림 정보·그룹 소속·기본 지정을 지운다. 밖에서 지운 경우는 **목록 읽기가 성공했을 때만** 지운다(`simctl` 오류로 빈 목록이 오면 지우지 않는다).
 - Android AVD ID 는 Simless 가 만든 것만 `simless_<id>` 다. 표시 이름은 슬림이면 `simless …` 접두사(R5), 슬림을 나중에 켜고 꺼도 이름은 그대로.
@@ -227,7 +230,7 @@ simless/
   2. `lastUsedAt` 후 30분(설정) 지나고 **대기열에 누가 있을 때만**.
 - `lastUsedAt` 갱신: 그 세션의 CLI 요청, MCP 요청, 훅이 통과시킨 호출(argent 포함).
 - **사람(앱 창)** 은 점유 없이 켜고 끈다. 다른 세션이 잡고 있으면 막는다.
-- **강제 해제**: 앱 창, 또는 CLI `release --force` (확인 질문). 스킬에는 «에이전트는 쓰지 않는다» 로 적는다.
+- **강제 해제**: 사람만 — 앱 창 ⋯ «강제 해제»(`lease.forceRelease`, 확인 질문). CLI 에는 없다. 스킬·규칙에는 «에이전트는 하지 않는다» 로 적는다.
 
 ## 9. 디바이스 수명주기 (드라이버)
 
@@ -237,7 +240,7 @@ simless/
 | 생성 — 고를 것 (M1) | 기종: 대표 프로필(`src/server/drivers/android-profiles.ts`, Android Studio 기기 정의를 본뜸) 또는 직접 입력(폭·높이·밀도). OS: 설치된 시스템 이미지(추천: 4KB 페이지·API 높은 순) | 기종: `simctl list devicetypes` 중 설치된 런타임이 지원하는 것. OS: 설치된 런타임(기본: 최신) |
 | 생성 — 만들기 | `simless_<id>.ini` + `.avd/config.ini` 를 새로 쓴다(`hw.lcd.width/height/density`, `image.sysdir.1`) | `simctl create <이름> <종류> <런타임>` → UDID. `simctl clone` 은 앱·데이터가 따라와 쓰지 않는다 |
 | 슬림화 (R5) | `avdslim tune-avd` + 켠 뒤 `avdslim on <시리얼>` | `simslim on <udid> --preserve-boot-state` |
-| 슬림화하면 안 되는 기능 (M4 ⓘ) | avdslim 프로필이 끄는 패키지 목록(`avdslim profiles`)을 사람이 읽을 이름으로 묶어 보여 준다 | simslim 프로필이 끄는 서비스 목록을 묶어 보여 준다(Siri·Spotlight·iCloud·Wallet …) |
+| 슬림화하면 꺼지는 기능 (M4 — 생성 화면 «꺼지는 것 보기»·커스텀 목록) | avdslim 프로필이 끄는 패키지 목록(`avdslim profiles`)을 사람이 읽을 이름으로 묶어 보여 준다 | simslim 프로필이 끄는 서비스 목록을 묶어 보여 준다(Siri·Spotlight·iCloud·Wallet …) |
 | 슬림 확인 (M6) | 프로필 패키지 중 꺼진 비율 ≥ 50% | `simslim verify` — 켜진 기기만 가능 |
 | 켜기 | `emulator -avd <AVD ID> -port <빈 포트> -no-snapshot-save` 를 서버와 분리(detached)해 실행. `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
 | 끄기 | `adb -s <시리얼> emu kill` | `simctl shutdown` |
@@ -295,7 +298,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 - 요청 `{"v":1,"id":"r1","method":"lease.acquire","session":{…},"params":{…}}`
 - 응답 `{"id":"r1","ok":true,"result":{…}}` / `{"id":"r1","ok":false,"error":{"code":"BUSY","message":"…","holder":{…}}}`
 - 긴 작업(부팅·설치)은 응답 전에 `{"id":"r1","event":"progress","data":{…}}` 를 여러 번 보낸다.
-- 메서드: `status` · `catalog`(생성 화면의 기종·OS 목록, 슬림화하면 안 되는 기능) · `device.create|list|rename|setMemo|setDefault|slim|delete|up|down|install` · `group.list|create|update|delete` · `lease.acquire|release|who` · `settings.get|set` · `hook.check`
+- 메서드·매개변수·결과의 정본은 `docs/protocol.md` 다(여기에 따로 적지 않는다).
 - 오류 코드: `BUSY` · `NOT_HELD` · `NOT_FOUND` · `INVALID` · `NOT_ALLOWED`(원래 있던 기기 삭제·기본 디바이스 삭제 등) · `DEADLOCK` · `NO_DEFAULT` · `TOOL_MISSING`(avdslim 등 없음) · `FAILED` · (클라이언트 쪽) `SERVER_DOWN`
 - **현지화 (R25)**: 서버·CLI·웹 화면이 **같은 설정 언어와 같은 사전**(`src/shared/i18n`, 키의 정본은 `ko.ts`, `en.ts` 는 같은 키를 다 갖춰야 컴파일된다)으로 문장을 만든다. 서버가 보내는 오류·진행 문장도 설정 언어다. 에이전트는 문장이 아니라 오류 `code` 로 판단한다. 언어 설정이 `system` 이면 macOS 언어 설정(`AppleLanguages`)을 먼저 보고 — 터미널의 `LANG` 은 macOS 언어와 다르게 잡혀 있는 경우가 많다 — 없으면 `LANG`, 그래도 없으면 영어
 
@@ -313,23 +316,25 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | --- | --- | --- |
 | `simless status` | 서버 연결, 디바이스, 그룹, 점유·대기 한눈에 | S2·R13 |
 | `simless doctor [--fix]` | 서버·launchd·Android SDK·시스템 이미지·avdslim·Xcode·simslim·argent(여러 버전)·스킬 점검과 고치는 방법. `--fix` 는 launchd·스킬만 고친다. 훅 점검은 5단계 | S1·S2 |
-| `simless install [--no-launchd] [--no-skill] [--no-app]` | launchd 등록 + 스킬 + `Simless.app` (§4) | S1 |
+| `simless install [--no-launchd] [--no-skill] [--no-app] [--hook] [--mcp] [--agents <이름,…>]` | launchd 등록 + 스킬 + `Simless.app` (§4). 보호(훅)·MCP 는 고를 때만, `--agents` 는 어느 에이전트에(기본 `claude`) | S1·Q16 |
 | `simless uninstall [--purge] [--yes]` | 제거 — 스킬(모든 위치)·모든 에이전트의 훅·규칙·MCP·앱·서버 등록, `--purge` 면 데이터·로그·설정·빌드 캐시까지. 만든 디바이스는 남긴다(§4) | S12 |
 | `simless ui` | 웹 화면을 브라우저로 연다 (앱 창은 `Simless.app`) | R11 |
-| `simless list [--platform] [--group <그룹>] [--created]` | **이 Mac 의 디바이스 전부** — 폭·이름·켜짐·SLIM·기본·그룹·메모·사용 중인 세션·argent ID | M5·R20 |
+| `simless list [--platform] [--created] [--available]` | **Simless 목록** — 폭·이름·켜짐·SLIM·기본·사용 중인 세션·argent ID. `--json` 에는 슬림 내역(`slimOff`)도. `--available` 은 목록에 없는 이 Mac 의 디바이스 | M5·R20·M16 |
 | `simless catalog [--platform]` | 만들 수 있는 기종·OS 목록 | M1 |
 | `simless create <기종> [--os] [--name] [--no-slim \| --slim-keep <ID,…>] [--no-baseline]` · `simless create --width --height --density [--os]` | 새로 만들기. 슬림이면 `simless …` 이름, `--slim-keep` 은 남길 슬림 항목 | R1~R3·R5·M4·M15 |
-| `simless rename <dev> <name>` · `memo <dev> [<text>]` · `default <dev>` · `delete <dev>` | 관리. 삭제는 Simless 가 만든 것만 | M7·M8·R22·R24 |
+| `simless rename <dev> <name>` · `default [<dev>]` · `delete <dev> [-y]` · `add <dev>` · `unlist <dev>` | 관리. 삭제는 Simless 가 만든 것만, `add`·`unlist` 는 이 Mac 의 디바이스를 목록에 넣고 빼기 | M7·M8·R20·R22 |
 | `simless slim [<dev>…] [--off] [--check] [--keep <ID,…> \| --full]` | 슬림 적용·해제·확인, 남길 항목 바꾸기 (simless 가 만든 것만) | M6·M7·M15 |
 | `simless group list` · `show <그룹>` · `create <이름> [--desc] [<dev>…]` · `edit <그룹> [--name] [--desc] [--add <dev>…] [--remove <dev>…]` · `delete <그룹>` | 그룹 관리 — 사람·에이전트 모두 | R21·S10 |
 | `simless acquire [<dev>… \| --group <그룹> \| --default [android\|ios]] [--available] [--wait] [--timeout 10m]` | 점유 (모드는 §8) | R14·R22·R23 |
-| `simless release [<dev>…] [--force]` | 점유 해제 | R17·S8 |
+| `simless release [<dev>…]` | 점유 해제(자기 것만 — 강제 해제는 앱 창에서 사람만) | R17·S8 |
 | `simless who [<udid·시리얼·dev>]` | 누가 쓰는지 | R13 |
+| `simless history [--session <키>] [--limit 50]` | 점유 기록 | M13 |
 | `simless up` · `simless down` | 점유한 디바이스 켜기·끄기 | R7 |
 | **`simless use [<dev>… \| --group … \| --default …] [--available] [--wait]`** | **acquire + up 한 번에** — 주 흐름의 첫 단계 | R15 |
 | `simless app install [<dev>…] [--platform] [--project]` · `app save [--platform] [--path] [--project]` · `app list` · `app prune [--keep 5]` | 네이티브 빌드 캐시 — 지문이 같으면 점유한 켜진 기기에 설치, 빌드한 것 보관 (§10) | R26 |
 | `simless config [get\|set <키> <값>]` | 설정 (언어 등) — 앱 창 설정 화면과 같은 값 | M11·R25 |
-| `simless update [--check] [--rollback]` | 새 버전 확인·업데이트·이전 버전으로 되돌리기 | R19 |
+| `simless skill status` · `skill install [--global] [--project <폴더>…]` · `skill uninstall` | 스킬 설치 위치·상태 (폴더째 — SKILL.md + `reference/app-*.md`) | S9 |
+| `simless update [--check] [--rollback]` | 새 버전 확인·업데이트·이전 버전으로 되돌리기 — **U단계, 아직 없음** | R19 |
 | `simless serve` · `simless hook <에이전트> pre-tool-use` · `simless mcp` | 서버·훅·MCP 진입점 (사람이 직접 쓰지 않음) | — |
 
 - 종료 코드: `0` 성공 · `1` 실패 · `2` 사용법 오류 · `3` 다른 세션이 사용 중(`--available` 이면 하나도 못 잡았을 때만) · `4` 서버에 연결 못 함
@@ -376,24 +381,24 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 > Simless 목록(`simless list`)의 시뮬레이터·에뮬레이터는 `simless use` 로 점유한 뒤에만 조작한다(스크린샷·describe 포함). 켜기·끄기는 argent `boot-device` 가 아니라 `simless use`·`simless down` 으로 한다. 전문은 `integrations/rules/simless.md`(영어).
 
-## 14. 앱 창·웹 화면 (R11·M1~M12)
+## 14. 앱 창·웹 화면 (R11·M1~M16)
 
 **앱 창** — `Simless.app` 이 자기 창(NSWindow + WKWebView)에 웹 화면(`http://127.0.0.1:<포트>/#token=…`)을 띄운다. 메뉴바 «대시보드 열기»·앱 다시 열기·Dock 클릭이 이 창을 연다. 창이 열려 있는 동안만 Dock 아이콘을 보이고(`setActivationPolicy(.regular)`), 닫으면 메뉴바 앱으로 돌아간다. 창 크기·위치를 기억하고 ⌘W·⌘Q 가 앱처럼 동작한다. 같은 화면을 브라우저로도 연다(`simless ui`) — 개발 중엔 argent(Chromium)로 화면을 눌러 확인한다.
 
 **왼쪽 메뉴** (M9) — 디바이스 · 그룹 · 세션, 아래쪽에 설정(새 창 — 앱에서는 `window.webkit.messageHandlers.simless` 로 Swift 에 알려 별도 NSWindow, 브라우저에서는 `window.open`)과 서버 상태(«서버 연결됨», 그 밑에 `v0.1.0`). 서버가 다시 켜지면 열린 화면이 페이지를 새로 받는다(SSE `hello` 의 `startedAt`, §11).
 
-**세션 화면** (M13) — `status.sessions`(지금 점유·대기)와 `lease.history`(기록)를 세션 키로 묶어 «지금 쓰는 세션 / 지난 세션» 카드로 보인다. 카드에 에이전트 아이콘(이름으로 종류를 가림 — 각 도구의 대표 색에 단순한 기호, 실제 로고는 쓰지 않음)·세션 ID(에이전트가 주는 `agentSessionId` 와 Simless 세션 키)·작업 폴더·마지막 활동·기록 수. 지금 쓰는 세션은 점유한 디바이스(사람은 강제 해제)와 대기. 카드를 누르면 `?window=session&key=…` 를 새 창(앱은 Swift 별도 창, 브라우저는 `window.open`)으로 — 그 세션의 기록을 시간순 타임라인으로. 기록은 LeaseManager 가 점유·대기·해제가 일어날 때마다 남기는 사건(acquired·queued·granted·released·forced·ended·idle·deadlock, `agentSessionId` 포함)을 서버가 `…/simless/history.db`(SQLite)에 덧붙이고 90일 보관한다. 세션 목록은 서버가 세션마다 묶어 준다(`lease.sessions`). CLI `simless history`.
+**세션 화면** (M13) — `status.sessions`(지금 점유·대기)와 `lease.history`(기록)를 세션 키로 묶어 «지금 쓰는 세션 / 지난 세션» 카드로 보인다. 카드에 에이전트 아이콘(이름으로 종류를 가림 — 각 도구의 대표 색에 단순한 기호, 실제 로고는 쓰지 않음)·세션 ID(에이전트가 주는 `agentSessionId` 와 Simless 세션 키)·작업 폴더·마지막 활동·기록 수. 지금 쓰는 세션은 점유한 디바이스(사람은 강제 해제)와 대기. 카드를 누르면 `?window=session&key=…` 를 새 창(앱은 Swift 별도 창, 브라우저는 `window.open`)으로 — 그 세션의 기록을 시간순 타임라인으로. 기록은 LeaseManager 가 점유·대기·해제가 일어날 때마다 남기는 사건(acquired·queued·granted·released·forced·ended·idle·deadlock, `agentSessionId` 포함)을 서버가 `…/Simless/history.db`(SQLite)에 덧붙이고 90일 보관한다. 세션 목록은 서버가 세션마다 묶어 준다(`lease.sessions`). CLI `simless history`.
 
 **메인 화면** (M5·M9)
 - Simless 목록 — 위에 **All · Android · iOS 탭**(마지막 탭 기억)과 그룹 거르기, 검색.
-- 한 줄에 `폭 · 이름 · 켜짐 · SLIM 배지 · 태그(기본 Android/iOS, 그룹들) · 메모 · 사용 중인 세션`.
+- 한 줄에 `폭 · 이름 · 켜짐 · SLIM 배지 · 태그(기본 Android/iOS, 그룹들) · 사용 중인 세션`. `SLIM` 배지를 누르면 «슬림 내역» 새 창(M16).
 - 정렬: 켜진 것 → 기본 → 플랫폼 → 폭.
 - `SLIM` 배지에 마우스를 올리면 꺼진 항목 수·메모리·슬림 전후(«7.8GB → 1.6GB (−79%)», M10). 재적용 실패는 `SLIM ⚠` + 이유. 꺼진 기기는 마지막으로 본 수치와 «마지막 확인» 시각, Simless 밖에서 한 슬림이면 배지가 흐리다(M6).
 - 켜기·끄기는 점유 없이(사람), 다른 세션이 쓰는 중이면 막는다. SSE 로 바로 반영된다.
 
-**생성(+)** (M1·M4) — 위에 «새로 만들기 · 이 Mac 의 디바이스» 탭. «이 Mac 의 디바이스» 는 Simless 목록에 없는 기기(`device.available`)를 플랫폼·검색으로 거르고 «추가»(`device.add`). «새로 만들기» 는 번호 붙은 네 단계(구분선으로 나눔, «만들기» 버튼은 아래에 고정): 플랫폼 → 기종(iOS 기기 종류 / Android 대표 프로필·직접 입력) → OS(런타임·시스템 이미지, 기본값 미리 골라 둠) → 이름(기본값 `simless <기종>` 또는 `<기종>`, 겹치면 번호)·**슬림**(«슬림 안 함 · 전체 슬림(UI 확인용, 기본) · 커스텀» 세 카드 중 하나. 전체 슬림은 «꺼지는 것 보기» 로 펼치고, 커스텀은 플랫폼마다 다른 항목에서 **남길 것**을 체크한다 — Android 는 앱·서비스 묶음 / 기기 설정 / 에뮬레이터 하드웨어로 나눠 보인다, M15)·슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다.
+**생성(+)** (M1·M4) — 위에 «새로 만들기 · 이 Mac 의 디바이스» 탭. «이 Mac 의 디바이스» 는 Simless 목록에 없는 기기(`device.available`)를 플랫폼·검색으로 거르고 «추가»(`device.add`). «새로 만들기» 는 번호 붙은 네 단계(구분선으로 나눔, «만들기» 버튼은 아래에 고정): ① 플랫폼 → ② 기종(iOS 기기 종류 / Android 대표 프로필·직접 입력) → ③ OS·이름(런타임·시스템 이미지는 기본값을 미리 골라 둠, 이름 기본값 `simless <기종>` 또는 `<기종>`, 겹치면 번호) → ④ **슬림**(«슬림 안 함 · 전체 슬림(UI 확인용, 기본) · 커스텀» 세 카드 중 하나. 전체 슬림은 «꺼지는 것 보기» 로 펼치고, 커스텀은 플랫폼마다 다른 항목에서 **남길 것**을 체크한다 — Android 는 앱·서비스 묶음 / 기기 설정 / 에뮬레이터 하드웨어로 나눠 보인다, M15)과 슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다(N4).
 
-**더보기(⋯) 메뉴** (M7·M8) — 이름 변경(원래 있던 디바이스도) · 메모 · 그룹에 넣기/빼기 · 기본 디바이스로 · 슬림 설정…(슬림 안 함·전체 슬림·커스텀을 고르는 창, 바꾸면 다시 맞춤 — simless 가 만든 것만) · 점유 강제 해제 · 삭제(simless 가 만든 것만, 확인 창. 기본 디바이스·켜짐·사용 중이면 이유와 함께 막음). 바깥을 누르거나 Esc 로 닫힌다.
+**더보기(⋯) 메뉴** (M7·M8) — 이름 변경(원래 있던 디바이스도) · 그룹에 넣기/빼기 · 기본 디바이스로 · 슬림 내역(꺼진 것·켜진 것, M16) · 슬림 설정…(슬림 안 함·전체 슬림·커스텀을 고르는 창, 바꾸면 다시 맞춤 — simless 가 만든 것만) · 점유 강제 해제(다른 세션이 쓰는 중일 때, 사람만) · 목록에서 빼기(이 Mac 에서 추가한 것) · 삭제(simless 가 만든 것만, 확인 창. 기본 디바이스·켜짐·사용 중이면 이유와 함께 막음). 바깥을 누르거나 Esc 로 닫힌다.
 
 **그룹 화면** (M9·R21) — 그룹 목록(이름·설명·디바이스 수·마지막으로 고친 사람/에이전트), 만들기·고치기(이름·설명·디바이스 고르기 — 목록에서 체크), 삭제. 없는 디바이스(밖에서 지워짐)는 표시하고 빼게 한다.
 
@@ -409,10 +414,10 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 ## 15. 스킬 (S1~S11)
 
-`integrations/skill/simless/SKILL.md` 와 `reference/app-*.md`(agent-skills 저장소 device-slim 의 «앱 기능 찾기» 참고 파일 — 의존성으로 태그 고정, 빌드에 넣는다, M15)를 폴더째 → 기본 `~/.claude/skills/simless`, 고르면 프로젝트 `<폴더>/.claude/skills/simless`(작업 트리마다, `git worktree list` 로 찾음 — git 공용 폴더의 `info/exclude` 에 `/.claude/skills/simless/` 를 적어 저장소에는 안 보이게) (S9). 넣은 곳은 `…/simless/skills.json` 에 기억하고, `simless install`·`simless skill install`·설정 창이 모든 곳을 같이 고친다. 위치를 바꾸면 빠진 곳의 스킬은 지운다. 서버는 켤 때·10분마다·설치를 바꿀 때 넣어 둔 곳을 다시 보고, 예전 스킬이 있으면 `status.skillUpdate` 를 켠다 → 대시보드 위 띠 «Simless 스킬 업데이트가 있습니다 [업데이트]», 메뉴바 «스킬 업데이트 있음 — 업데이트». 누르면 `setup.apply { item: "skill" }` 로 모든 곳을 고친다. 새로 시작하는 에이전트 세션부터 새 스킬을 읽는다. **영어로 쓴다**(R25 — 읽는 쪽이 에이전트). 스킬 형식을 읽는 다른 에이전트(Codex 등)는 `simless install --agent <이름>` 으로 그 에이전트 위치에도 설치한다.
+`integrations/skill/simless/SKILL.md` 와 `reference/app-*.md`(agent-skills 저장소 device-slim 의 «앱 기능 찾기» 참고 파일 — 의존성으로 태그 고정, 빌드에 넣는다, M15)를 폴더째 → 기본 `~/.claude/skills/simless`, 고르면 프로젝트 `<폴더>/.claude/skills/simless`(작업 트리마다, `git worktree list` 로 찾음 — git 공용 폴더의 `info/exclude` 에 `/.claude/skills/simless/` 를 적어 저장소에는 안 보이게) (S9). 넣은 곳은 `…/Simless/skills.json` 에 기억하고, `simless install`·`simless skill install`·설정 창이 모든 곳을 같이 고친다. 위치를 바꾸면 빠진 곳의 스킬은 지운다. 서버는 켤 때·10분마다·설치를 바꿀 때 넣어 둔 곳을 다시 보고, 예전 스킬이 있으면 `status.skillUpdate` 를 켠다 → 대시보드 위 띠 «Simless 스킬 업데이트가 있습니다 [업데이트]», 메뉴바 «스킬 업데이트 있음 — 업데이트». 누르면 `setup.apply { item: "skill" }` 로 모든 곳을 고친다. 새로 시작하는 에이전트 세션부터 새 스킬을 읽는다. **영어로 쓴다**(R25 — 읽는 쪽이 에이전트). 스킬 형식을 읽는 다른 에이전트(Codex 등)는 `simless install --agents <이름,…>` 으로 그 에이전트 위치에도 설치한다.
 
 - description 에 S3 의 반응 프롬프트(디바이스가 필요한 작업 전부), S4 의 비반응(디바이스를 쓰지 않는 작업)을 넣는다. 테스트하는 앱의 «그룹» 기능과 헷갈리지 않게 «device group» 이라고 쓴다.
-- 본문 순서(S5): `simless status` → **용도 고르기**: `simless group list --json`(설명)·`simless list --json`(메모)을 보고 맞는 그룹, 없으면 `--default` → `simless use … [--available] [--wait]` — 일부가 사용 중이면 R23 기준(그룹 설명의 «모두 필요», 작업에 몇 대가 꼭 필요한지)으로 판단, 애매하면 사용자에게 묻기(S7) → `simless list --json` 으로 기기별 `targetId`·`label` 받기 → 기기마다 argent: 앱 설치(`reinstall-app`)·실행(`launch-app`, Android 는 먼저 `adb reverse`)·같은 화면(`open-url` 또는 argent 흐름)·`screenshot` → 크기 라벨을 붙여 보고 → `simless release` → 끌지 묻기(S8).
+- 본문 순서(S5): `simless status` → **용도 고르기**: `simless group list --json`(설명)·`simless list --json`(슬림 내역 `slimOff` — S13)을 보고 맞는 그룹, 없으면 `--default` → `simless use … [--available] [--wait]` — 일부가 사용 중이면 R23 기준(그룹 설명의 «모두 필요», 작업에 몇 대가 꼭 필요한지)으로 판단, 애매하면 사용자에게 묻기(S7) → `simless list --json` 으로 기기별 `targetId`·`label` 받기 → 기기마다 argent: 앱 설치(`reinstall-app`)·실행(`launch-app`, Android 는 먼저 `adb reverse`)·같은 화면(`open-url` 또는 argent 흐름)·`screenshot` → 크기 라벨을 붙여 보고 → `simless release` → 끌지 묻기(S8).
 - 그룹 만들기·고치기(S10): 사용자가 요청할 때만 `simless group create|edit`. 요청 없이 남이 만든 그룹을 바꾸지 않는다.
 - 오류는 `code` 로 판단한다(`BUSY`·`DEADLOCK`·`NO_DEFAULT` …). `DEADLOCK` 이면 쥔 것으로 진행할지 놓을지 정한다.
 - 설치·연결 문제는 `simless doctor` 결과를 따른다 (S1·S2).
@@ -433,7 +438,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | 5.5 ✅ | 첫 실행 설정 창 (M14, 2026-10-05) — 앱을 처음 열면 점검 → 에이전트 연결(스킬·보호·MCP) → 기본 디바이스를 차례로. 서버 `setup.*`, `simless install` 은 보호·MCP 를 기본으로 넣지 않음(`--hook`·`--mcp`) | 터미널 없이 앱에서 설정을 끝낸다 |
 | 6 ✅ | MCP 래퍼 — `simless mcp`(stdio). 도구: `simless_status`·`simless_use`(디바이스·그룹·기본, all·available, 기다리기는 45초씩 나눠 «STILL_QUEUED → 다시 호출»)·`simless_release`·`simless_down`·`simless_catalog`·`simless_create`(`slimKeep`)·`simless_slim`(남길 항목 바꾸기·해제, M15)·`simless_group_save`. 오류는 코드부터(`BUSY: …`). 세션은 CLI 처럼 프로세스 트리, 서버가 꺼져 있으면 켠다. **등록은 사용자 결정** — 첫 실행 설정 창의 «MCP 도구» 또는 `simless install --mcp` | 에이전트가 사용법 없이 바로 쓴다 |
 | 6.5 ✅ | 쓰면서 더한 것 (2026-10-05~06) — 네이티브 빌드 캐시(`simless app`, R26), 보안 문서(`SECURITY.md`), 제거(`simless uninstall [--purge]`·설정 창 «Simless 제거», S12), 버전 표기·앱 창 새로 고침, 보안 약한 점 정리(다른 세션 작업 폴더 감추기·토큰 비교·파일 권한·앱 창 이동 제한), 훅 heredoc 오탐, 요구사항 «확인» 칸과 요구사항↔테스트 검사, Metro 연결 순서(스킬 — argent 의 «8081 하나» 덮어쓰기·dev client 스킴·`--android`·앱에서 확인), 메뉴바 메뉴 줄이기 | 빌드를 건너뛰고, 깔끔하게 지울 수 있다. 앱이 자기 Metro 에 붙는다 |
-| U | 업데이트 — `scripts/release.ts`, 확인·알림, `simless update`·되돌리기 (§19). **리모트·첫 Release 가 생긴 뒤**, 5단계 이후 아무 때나 | 새 버전을 알림 받고 명령 한 번으로 올린다 |
+| U | 업데이트 — `scripts/release.ts`, 확인·알림, `simless update`·되돌리기 (§19). **첫 Release 를 낸 뒤**(리모트는 2026-10-07 연결), 5단계 이후 아무 때나 | 새 버전을 알림 받고 명령 한 번으로 올린다 |
 | 나중 | 스크린샷 모아 보기 (화면 탭) · 일괄 설치·실행·딥링크 (L1~L3 — 캐시된 빌드 설치는 R26 으로 들어감) · 슬림된 디바이스 복제 (L4) — 필요하면 | — |
 
 ## 17. 구현 전에 실측할 것
@@ -447,16 +452,16 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | ✅ 컴파일한 바이너리에 웹 UI·파일이 잘 들어가는지, 훅 경로 시작 시간 — **확인됨(0단계)**: `with { type: "file" }` 는 `/$bunfs/root/…` 경로로 들어가 `Bun.file` 로 읽히고, HTML import 는 TSX 까지 번들돼 `Bun.serve` 로 서빙된다(`--bytecode` 포함, 다른 폴더로 옮겨도 동작). 훅 경로 약 21ms | §2·§3·§13 | 0단계 |
 | ✅ launchd 로 띄운 서버가 `emulator`·`xcrun` 을 PATH·권한 문제 없이 실행하는지 — **확인됨(2단계 전)**: `simless install` 로 등록한 서버가 Android·iOS 를 만들고 함께 켰다(1분 16초, 슬림 없이). 등록하면 macOS 가 «백그라운드 항목 추가됨» 알림을 띄우고, 로그인 항목에 실행 파일 서명자 이름(개발 모드는 bun 의 «Jarred Sumner»)이 보인다 | launchd 는 로그인 셸 환경을 안 받는다 | 2단계 전 |
 | 에이전트별 MCP 서버의 부모가 에이전트 프로세스인지 (Claude Code 는 확인됨) | §7 | 6단계 |
-| argent 두 버전(homebrew 0.17.0 이 PATH 우선, mise 0.26.0) 정리 | 훅이 보는 argent 도구 인자가 버전마다 다를 수 있다 | 5단계 전 |
+| argent 여러 버전(homebrew 0.17.0 이 PATH 우선, mise 의 node 마다 0.25.1·0.27.0 — 2026-10-07 확인) 정리 | 훅이 보는 argent 도구 인자가 버전마다 다를 수 있다 | 5단계 전 |
 | 다른 에이전트의 실행 직전 훅 지원 여부·설정 위치·입력 형식, 전역 규칙·스킬 위치 | §13 어댑터·P2·S9 | 5단계 전 |
-| avdslim·simslim 이 끄는 항목을 사람이 읽을 이름으로 묶는 방법 (`avdslim profiles`·simslim 프로필 JSON) | M4 ⓘ | 4단계 ③ 전 |
+| avdslim·simslim 이 끄는 항목을 사람이 읽을 이름으로 묶는 방법 (`avdslim profiles`·simslim 프로필 JSON) | M4 | 4단계 ③ 전 |
 | `simctl list devicetypes`·`runtimes` 의 지원 관계(`supportedDeviceTypes`) | M1 iOS 기종·OS 고르기 | 4단계 ③ 전 |
 
 ## 18. 미결정 질문(Q)에 대한 설계 쪽 제안
 
 | Q | 제안 |
 | --- | --- |
-| Q16 훅 없는 에이전트 | 규칙 + CLI 의 BUSY 응답으로 보호. 훅을 지원하면 어댑터를 붙인다(§13). **조사 결과(2026-10-05)** `docs/agent-integrations.md` — Copilot CLI·Codex·Cursor·OpenCode 는 실행 직전 막기가 되고, Gemini CLI 는 설치본(0.16.0)이 너무 오래돼 안 된다. 붙이는 순서: Copilot CLI → Codex → Cursor → OpenCode·Gemini |
+| Q16 훅 없는 에이전트 | 규칙 + CLI 의 BUSY 응답으로 보호. 훅을 지원하면 어댑터를 붙인다(§13). **조사 결과(2026-10-05)** `docs/agent-integrations.md` — Copilot CLI·Codex·Cursor 는 실행 직전 막기가 되고, Gemini CLI 는 설치본(0.16.0)이 너무 오래돼 안 된다. 네 에이전트(Copilot CLI·Codex·Cursor·Gemini CLI)에 붙였다(2026-10-05) |
 
 ## 19. 업데이트 (R19)
 

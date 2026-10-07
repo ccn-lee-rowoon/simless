@@ -1,10 +1,10 @@
 # Simless 소켓 프로토콜 (v1)
 
-> CLI·훅·(나중의) MCP 가 상주 서버(`simless serve`)에 요청하는 형식이다. 타입의 정본은 코드다 — 메시지 `src/shared/protocol.ts`, 결과 `src/shared/api.ts`, 매개변수 검증 `src/server/app.ts`·`src/server/devices.ts`.
+> CLI·훅·MCP·웹 화면이 상주 서버(`simless serve`)에 요청하는 형식이다. 타입의 정본은 코드다 — 메시지 `src/shared/protocol.ts`, 결과 `src/shared/api.ts`, 매개변수 검증 `src/server/app.ts`·`src/server/devices.ts`.
 
 ## 연결
 
-- **Unix 도메인 소켓**: `~/Library/Application Support/simless/simless.sock` (권한 0600, `SIMLESS_SOCKET` 으로 바꿀 수 있음).
+- **Unix 도메인 소켓**: `~/Library/Application Support/Simless/simless.sock` (권한 0600, `SIMLESS_SOCKET` 으로 바꿀 수 있음).
 - **연결 하나에 요청 하나.** 클라이언트가 요청 한 줄을 보내고, 서버는 진행 알림(0개 이상) 뒤에 응답 한 줄을 보내고 연결을 닫는다.
 - 한 줄에 JSON 하나(UTF-8, `\n` 으로 끝). 오류·진행 문장은 서버의 설정 언어(R25)다 — 판단은 `code` 로 한다. 큰 응답은 여러 조각으로 오므로 스트리밍 디코더로 이어 붙인다.
 - 서버가 없으면 클라이언트는 `SERVER_DOWN`(CLI 종료 코드 4)으로 끝낸다. CLI 는 launchd 에 등록돼 있으면 먼저 서버를 켜고 한 번 더 보낸다.
@@ -85,17 +85,17 @@
 | `setup.cancel` | `{ job }` | `JobView` | 돌던 것을 멈춘다 |
 | `setup.openTerminal` | `{ fix }` | `{ opened }` | 입력이 필요할 때 — Terminal 앱에 같은 명령을 띄운다 |
 | `setup.uninstall` | `{ purge = false }` | `{ steps: [{ what, ok, error? }], devicesLeft, purge }` | Simless 제거 (S12). 사람만(`NOT_ALLOWED`). 스킬·모든 에이전트의 훅·규칙·MCP 를 지우고 답한 뒤, 1.5초 뒤 앱·(purge 면) 데이터 폴더·서버 등록을 지운다 — 서버가 끝난다 |
-| `setup.finish` | `{}` | `{ finished: true }` | `…/simless/setup.json` 에 끝낸 시각을 남긴다 — 앱이 다시 띄우지 않는다 |
+| `setup.finish` | `{}` | `{ finished: true }` | `…/Simless/setup.json` 에 끝낸 시각을 남긴다 — 앱이 다시 띄우지 않는다 |
 | `settings.get` | `{}` | `{ language: system·ko·en, idleReleaseMinutes, historyRetentionDays, androidRamMb, simslimProfile? }` | 설정 화면·`simless config` (M11) |
 | `settings.set` | 위 값 중 바꿀 것 (`simslimProfile: null` 은 지움) | 같음 | `config.json` 에 바뀐 값만 쓰고 바로 반영한다 — 언어·자동 해제 시간·기록 보관 일수(1~3650)·Android RAM·simslim 프로필 (R25) |
 | `catalog` | `{ platform? }` | `{ platforms: PlatformCatalog[], problems }` | 만들 수 있는 기종(`models` — 폭·해상도, iOS 는 지원 런타임 `os`)·OS(`os` — 기본값 `recommended`)·직접 입력 가능 여부, 슬림화하면 꺼지는 것(`slimOff` — `{ id, kind?, name, detail?, count? }`, 커스텀 슬림에서 남길 때 `id` 를 준다. Android `kind` 는 `packages`·`settings`·`host`)·남는 것(`slimKeeps`) (M1·M4·M15) |
-| `device.list` | `{}` | `DeviceView[]` | Simless 목록. 켜짐·argent ID(`targetId`)·점유자·메모(`memo`)·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20). 슬림 수치 `slimStats` 는 켜진 기기만(뒤에서 15초마다 읽음), `slimSeen` 은 마지막으로 읽은 값 `{ disabled, total, unit, seenAt, off? }` — 누가 슬림했든 (M6·M10). `slimOff` = 꺼진 슬림 항목 ID(`slimOffObserved` 가 true 면 기기에서 읽은 것, false 면 Simless 슬림 설정으로 계산 — 슬림이 아니면 없음) (M16) |
+| `device.list` | `{}` | `DeviceView[]` | Simless 목록. 켜짐·argent ID(`targetId`)·점유자·기본 여부(`default`)·든 그룹 ID(`groups`) 포함 (M5·R20). 슬림 수치 `slimStats` 는 켜진 기기만(뒤에서 15초마다 읽음), `slimSeen` 은 마지막으로 읽은 값 `{ disabled, total, unit, seenAt, off? }` — 누가 슬림했든 (M6·M10). `slimOff` = 꺼진 슬림 항목 ID(`slimOffObserved` 가 true 면 기기에서 읽은 것, false 면 Simless 슬림 설정으로 계산 — 슬림이 아니면 없음) (M16) |
 | `device.create` | `{ platform?, model \| custom, os?, name?, slim = true, slimKeep?, baseline = true }` | `DeviceView` | `model` = 기종 ID·이름(`platform` 을 안 주면 두 플랫폼에서 찾고, 양쪽에 있으면 `INVALID`), `custom` = `{ widthDp, heightDp, density }`(Android). `os` 를 안 주면 기본값. 앱 없이 만들고 `slim` 이면 기준값을 잰 뒤 슬림화. 기본 이름은 슬림이면 `simless <기종>`, 아니면 `<기종>` — 겹치면 번호를 붙인다. `slimKeep` = 슬림해도 남길 항목 ID(`catalog` 의 `slimOff[].id`, 없는 ID 는 `INVALID`) — 비우면 전체 슬림, 기기에 기억한다(M15). 진행 알림 있음 |
 | `device.rename` | `{ device, name }` | `DeviceView` | 원래 있던 디바이스도 된다. 다른 세션이 쓰는 중이면 `BUSY` |
 | `device.available` | `{}` | `DeviceView[]` | 이 Mac 에 있지만 Simless 목록에 없는 디바이스 — 생성 화면의 «이 Mac 의 디바이스» (M1) |
 | `device.add` | `{ device }` | `DeviceView` | 이 Mac 의 디바이스를 Simless 목록에 넣는다 — 만들지도 슬림화하지도 않는다. 이미 있으면 `INVALID` |
 | `device.unlist` | `{ device }` | `{ unlisted }` | 추가한 디바이스를 목록에서 뺀다 — 기기는 그대로, 점유·그룹 소속·기본 지정은 풀린다. Simless 가 만든 것은 `NOT_ALLOWED`(삭제를 쓴다) |
-| `device.setMemo` | `{ device, memo }` | `DeviceView` | 로그인한 계정 등 (R24). 빈 글이면 지운다. 누가 쓰는 중이어도 고칠 수 있다 |
+| `device.setMemo` | `{ device, memo }` | `DeviceView` | 로그인한 계정 등 — **R24 보류**: 서버에 남겨 두었지만 화면·CLI·스킬은 부르지 않는다. 빈 글이면 지운다. 누가 쓰는 중이어도 고칠 수 있다 |
 | `device.setDefault` | `{ device }` | `DeviceView` | 그 플랫폼의 기본 디바이스로 (R22). 기본이 없는 플랫폼은 처음 만든 디바이스가 자동으로 기본이 된다 |
 | `device.delete` | `{ device }` | `{ deleted }` | Simless 가 만든 것만, 기본 디바이스는 안 됨(`NOT_ALLOWED`). 메모·그룹 소속도 지운다. 켜져 있으면 끄고 지운다. 다른 세션이 쓰는 중이면 `BUSY` (M8) |
 | `device.slim` | `{ devices = simless 가 만든 것 전부, mode = "on" \| "off" \| "check", keep? }` | `{ results, devices }` | Simless 가 만든 것만(`NOT_ALLOWED`). on·off 는 다른 세션이 쓰는 중이면 `BUSY`. `keep` 을 주면 남길 항목을 바꾸고 다시 슬림한다 — 빈 배열은 전체 슬림, `on` 에서만(`INVALID`) (M15) |
@@ -110,7 +110,9 @@
 | `lease.release` | `{ devices? }` | `{ released }` | 안 주면 이 세션의 점유·대기 전부 |
 | `lease.history` | `{ limit = 100 (최대 5000), session? }` | `[{ at, kind, sessionKey, agentSessionId?, agent, cwd, human, deviceIds }]` — 최근 것부터 | `kind`: `acquired` 바로 점유 · `queued` 대기 등록 · `granted` 기다려서 점유 · `released` 스스로 해제 · `forced` 강제 해제됨 · `ended` 세션 종료로 해제 · `idle` 오래 안 써서 해제 · `deadlock` 교착이라 대기 거절 (M13) |
 | `lease.sessions` | `{ limit = 200 (최대 1000) }` | `[{ sessionKey, agentSessionId?, agent, cwd, human, lastAt, events }]` — 마지막 활동이 최근인 것부터 | 기록에 남은 세션마다 묶음 — 세션 화면의 지난 세션 (M13) |
+| `lease.forceRelease` | `{ device }` | `{ released }` | **사람(웹 화면)만** — 에이전트가 부르면 `INVALID`. 다른 세션의 점유를 푼다(앱 창 ⋯ «강제 해제») |
 | `lease.who` | `{ target? }` | `[{ deviceId, name, holder? }]` | `target` 은 ID·이름·AVD ID·UDID·시리얼 |
+| `hook.check` | `{ ids = [], boots = [], allAndroid = false, allIos = false }` | `{ allow, reason?, devices }` | 보호 훅이 부른다 — 명령에서 뽑은 기기 식별자(UDID·AVD ID·시리얼)·켜려는 기기·«모든 Android/iOS» 대상만 받아, 이 세션이 점유하지 않은 Simless 기기가 있으면 막는다(P3~P9). 명령 내용은 받지 않는다 |
 
 - 여러 대 작업(`slim`·`up`·`down`)은 하나가 실패해도 나머지를 계속하고 `results: [{ id, name, ok, error? }]` 로 대마다 알려 준다.
 - 같은 디바이스에 대한 작업은 서버가 한 번에 하나씩 처리한다.
