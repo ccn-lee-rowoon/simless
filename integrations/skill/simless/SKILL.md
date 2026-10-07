@@ -1,9 +1,11 @@
 ---
 name: simless
-description: Use when testing or checking a **mobile app** (React Native, Expo, native iOS or Android) on an iOS simulator or Android emulator on this Mac — running the app, checking a screen, checking its layout across device sizes, or anything else that drives a simulator or emulator. Also use when the user explicitly asks for a simulator, emulator or Simless, in any project. Simless (the `simless` CLI) brokers the devices between sessions — acquire a device group, the default device, or specific devices, then drive screens with argent. Triggers in a mobile app project — "시뮬레이터로 확인해 줘", "에뮬레이터에서 테스트", "기본 디바이스로 테스트", "그룹으로 확인해 줘", "여러 해상도로 확인", "레이아웃 크기별로 봐 줘", "320·375·414 에서 확인", "작은 폰에서 깨지는지", "태블릿에서도 봐 줘"; anywhere — "심리스로 확인해 줘", "시뮬레이터에서 봐 줘", "test on the simulator". Even for a single device, acquire it through Simless first; argent skills (argent-device-interact etc.) then do the on-screen work. **Not for web projects**: checking a website's responsive layout at phone or tablet widths is done in a browser (resize, device emulation), not here — unless the user asks for a simulator or emulator by name (e.g. mobile Safari on an iOS simulator). Not for tasks that don't touch a device.
+description: Use when testing or checking a **React Native (Expo) mobile app** on an iOS simulator or Android emulator on this Mac — running the app, checking a screen, checking its layout across device sizes, or anything else that drives a simulator or emulator. Also use when the user explicitly asks for a simulator, emulator or Simless, in any project. Simless (the `simless` CLI) brokers the devices between sessions — acquire a device group, the default device, or specific devices, then drive screens with argent. Triggers in a React Native (Expo) project — "시뮬레이터로 확인해 줘", "에뮬레이터에서 테스트", "기본 디바이스로 테스트", "그룹으로 확인해 줘", "여러 해상도로 확인", "레이아웃 크기별로 봐 줘", "320·375·414 에서 확인", "작은 폰에서 깨지는지", "태블릿에서도 봐 줘"; anywhere — "심리스로 확인해 줘", "시뮬레이터에서 봐 줘", "test on the simulator". Even for a single device, acquire it through Simless first; argent skills (argent-device-interact etc.) then do the on-screen work. **Not for web projects**: checking a website's responsive layout at phone or tablet widths is done in a browser (resize, device emulation), not here — unless the user asks for a simulator or emulator by name (e.g. mobile Safari on an iOS simulator). Not for tasks that don't touch a device.
 ---
 
 # Simless — device broker
+
+> **Supported apps: React Native with Expo (dev client).** The Metro, launch and build-cache steps below assume an Expo dev client. Leasing and protecting devices works for any app, but for native (Swift/Kotlin), Flutter or non-Expo React Native apps these steps don't apply — acquire the device here, then use that project's own way to build and run, and tell the user it's outside what this skill covers.
 
 simless lets several agent sessions and people share this Mac's simulators and emulators without stepping on each other. The devices in the **simless list** (created by Simless, or added from this Mac) are shared, and you **acquire** a device before touching it. Devices are bundled by purpose into **device groups** (e.g. «UI layout check», «two accounts»), and each platform has one **default device** for general testing.
 
@@ -25,7 +27,7 @@ simless lets several agent sessions and people share this Mac's simulators and e
 
 ### 1. Check and pick what to use
 
-First make sure this really is device work: the project is a mobile app (`package.json` with `react-native` or `expo`, an `ios/`·`android/` project, Xcode or Gradle files), or the user asked for a simulator, emulator or Simless by name. A web project's «check it at phone widths» belongs in the browser — stop here and use browser tools instead.
+First make sure this really is device work: the project is a React Native app (`package.json` with `react-native` and `expo`), or the user asked for a simulator, emulator or Simless by name. A web project's «check it at phone widths» belongs in the browser — stop here and use browser tools instead.
 
 ```sh
 simless --json status          # server, devices, groups, defaults, who holds what

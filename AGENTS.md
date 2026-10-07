@@ -1,6 +1,6 @@
 # Simless — 작업 규칙 (모든 에이전트)
 
-**Make simulator management seamless.** — 시뮬레이터·에뮬레이터 중개·관리 도구(용도별 그룹·기본 디바이스·UI 테스트용 슬림 디바이스). TypeScript(Bun) 상주 서버 + CLI + 웹 화면(`Simless.app` 창) + 로컬 MCP + 스킬. 단일 실행 파일로 배포하고, 개발 중에는 `bun link` 로 쓴다.
+**Make simulator management seamless.** — 시뮬레이터·에뮬레이터 중개·관리 도구(용도별 그룹·기본 디바이스·UI 테스트용 슬림 디바이스). 지원하는 앱은 **React Native (Expo)**, 에이전트는 Claude Code·Copilot CLI·Codex·Cursor·Gemini CLI(OpenCode 는 지원하지 않음). TypeScript(Bun) 상주 서버 + CLI + 웹 화면(`Simless.app` 창) + 로컬 MCP + 스킬. 단일 실행 파일로 배포하고, 개발 중에는 `bun link` 로 쓴다.
 
 이 파일이 작업 규칙의 정본이다. Claude Code 는 `CLAUDE.md` 가 이 파일을 불러온다. 작업을 시작할 때마다 이 파일을 다시 본다.
 

@@ -56,9 +56,10 @@ describe("에이전트 스킬 (R16·S9)", () => {
   });
 
   // 스킬 문서가 요구사항을 담고 있는지 — 문서를 고치다 빠뜨리지 않게
-  test("모바일 앱 작업에 반응하고 웹 프로젝트의 반응형 확인은 맡지 않는다 (S3·S4)", async () => {
+  test("React Native (Expo) 앱 작업에 반응하고 웹 프로젝트의 반응형 확인은 맡지 않는다 (S3·S4)", async () => {
     const description = /^description: (.*)$/m.exec(await bundledSkill())?.[1] ?? "";
-    expect(description).toContain("mobile app");
+    expect(description).toContain("React Native (Expo) mobile app");
+    expect(await bundledSkill()).toContain("Supported apps: React Native with Expo (dev client).");
     expect(description).toContain("Not for web projects");
     expect(description).toContain("심리스로 확인해 줘");
   });

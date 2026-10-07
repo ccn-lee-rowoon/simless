@@ -68,7 +68,6 @@ const AGENT_HINTS: [hint: string, agent: string][] = [
   ["codex", "codex"],
   ["gemini", "gemini"],
   ["cursor", "cursor-agent"],
-  ["opencode", "opencode"],
   ["copilot", "copilot"],
 ];
 

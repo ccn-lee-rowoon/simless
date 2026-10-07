@@ -12,6 +12,8 @@
 - **차례·교착** — 먼저 온 순서대로, 서로 기다리다 멈추는 요청은 미리 거절한다
 - **보호(선택)** — 점유하지 않은 세션이 argent·adb·simctl 로 기기를 건드리면 실행 직전에 막는다
 
+**지원하는 앱: React Native (Expo)** — 스킬의 흐름(세션마다 Metro, dev client 로 앱 실행, 네이티브 빌드 캐시)은 Expo dev client 를 쓰는 React Native 앱을 기준으로 만들었고, 사실상 이것만 지원한다. 기기 만들기·빌려주기·보호는 앱 종류와 상관없이 동작하지만, 네이티브(Swift·Kotlin)·Flutter·Expo 없는 React Native 앱의 실행·연결 단계는 안내하지 않는다.
+
 화면 안 조작(탭·스크린샷·앱 실행)은 [argent](https://argent.swmansion.com) 가 하고, Simless 는 기기를 만들고·관리하고·빌려준다.
 
 ## 설치
@@ -56,11 +58,12 @@ simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·
 
 ## 지원하는 에이전트
 
+OpenCode 는 지원하지 않는다.
+
 | 에이전트 | 지금 |
 | --- | --- |
 | Claude Code | 스킬 · 보호(훅) · MCP |
 | Copilot CLI · Codex · Cursor · Gemini CLI | 스킬 · 보호(훅) · MCP — 붙였지만 실제 에이전트로는 아직 확인 전. Codex 는 `/hooks` 승인, Gemini 는 작업 폴더 `/trust` 가 필요 |
-| OpenCode | 아직 (`docs/agent-integrations.md`) |
 
 ## 보호가 막는 것과 못 막는 것
 
