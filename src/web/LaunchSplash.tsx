@@ -16,7 +16,7 @@ export function takeLaunchFlag(): boolean {
 }
 
 /** 전체 길이(ms) — 접기·모으기·로고 뒤 사라지기까지. 동작 줄이기면 로고만 잠깐 */
-const DURATION = 1500;
+const DURATION = 2900;
 const REDUCED = 700;
 
 export function LaunchSplash({ onDone }: { onDone: () => void }) {
