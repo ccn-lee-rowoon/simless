@@ -115,8 +115,10 @@ feat(server): 점유 대기열과 세션 종료 시 자동 해제 추가
 
 ### 브랜치
 
-- 리모트가 생기기 전까지는 `main` 에 직접 커밋한다.
-- 리모트를 연결하면 작업 브랜치 → PR → `main` 으로 바꾸고 이 절을 고친다.
+- 리모트: `https://github.com/ccn-lee-rowoon/simless` (비공개, 2026-10-07 연결). 인계·설계에 회사 앱 정보가 있어 공개하지 않는다.
+- 작업은 **작업 브랜치 → PR → `main`**. 브랜치 이름은 `<type>/<짧은-설명>`(예: `fix/metro-scheme`). `main` 에 직접 푸시하지 않는다.
+- PR 하나 = 논리적 변경 하나(커밋 규칙과 같다). 제목은 커밋 요약과 같은 형식, 본문은 왜·무엇을 확인했는지(검사·테스트·화면). 합칠 때는 커밋을 그대로 두는 merge 나 rebase — 커밋 메시지가 CHANGELOG 초안이 된다.
+- 리모트에 올린 커밋은 `--amend`·리베이스·강제 푸시하지 않는다(위 «하지 않는 것»).
 
 ## 6. 버전과 바뀐 것 (CHANGELOG)
 
@@ -124,7 +126,7 @@ feat(server): 점유 대기열과 세션 종료 시 자동 해제 추가
 - 1.0 전에는 기능이 늘거나 동작이 바뀌면 minor, 고치기만 하면 patch.
 - 사용자에게 보이는 변화는 `feat`·`fix`·`perf` 로 커밋한다 — CHANGELOG 초안이 여기서 나온다(`bun run release draft`). 내기 전에 «아직 내지 않은 것» 을 사람이 읽기 좋게 다듬는다.
 - 소켓 프로토콜(`PROTOCOL_VERSION`)·저장 파일 형식(레지스트리 `version`)은 앱 버전과 따로, 깨질 때만 올린다.
-- 리모트·GitHub Release 올리기는 아직이다(U단계, `docs/design.md` §19).
+- 태그(`vX.Y.Z`)는 리모트에도 올린다(`git push origin vX.Y.Z`). GitHub Release·업데이트 확인은 아직이다(U단계, `docs/design.md` §19).
 
 ## 7. 이 Mac 에 반영할 때
 
