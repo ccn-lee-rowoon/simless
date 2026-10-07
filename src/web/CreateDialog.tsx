@@ -314,7 +314,6 @@ export function CreateDialog({
 
           {creating && <Progress log={log} logStart={logStart} />}
           <footer className="dialog-footer">
-            <span className="sub">{t("web.create.noApps")}</span>
             <span className="spacer" />
             <button type="button" className="button" disabled={creating} onClick={onClose}>
               {t("web.cancel")}

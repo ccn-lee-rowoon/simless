@@ -480,7 +480,6 @@ export const en: Record<keyof typeof ko, string> = {
   "web.create.recommended": " (default)",
   "web.create.baseline":
     "Before/after comparison — boot once before slimming to measure memory (1–2 minutes longer)",
-  "web.create.noApps": "No apps are installed",
   "web.create.creating": "Creating…",
   "web.create.submit": "Create",
   "web.create.slimInfoMissing": "{tool} isn't installed, so the list couldn't be read.",

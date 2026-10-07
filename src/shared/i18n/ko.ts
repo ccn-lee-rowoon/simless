@@ -487,7 +487,6 @@ export const ko = {
   "web.create.recommended": " (기본)",
   "web.create.baseline":
     "슬림 전후 비교 — 슬림하기 전에 한 번 켜서 메모리를 재 둔다 (1~2분 더 걸림)",
-  "web.create.noApps": "앱은 설치하지 않습니다",
   "web.create.creating": "만드는 중…",
   "web.create.submit": "만들기",
   "web.create.slimInfoMissing": "{tool} 이 없어 목록을 읽지 못했습니다.",
