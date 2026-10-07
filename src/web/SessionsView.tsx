@@ -7,13 +7,14 @@ import type {
   SessionView,
   StatusResult,
 } from "../shared/api.ts";
-import { language, type MessageKey, t } from "../shared/i18n.ts";
+import { type MessageKey, t } from "../shared/i18n.ts";
+import { fullTime, when } from "../shared/time.ts";
 import { AgentIcon, agentLabel } from "./agents.tsx";
 import { call } from "./api.ts";
 import { postToApp } from "./bridge.ts";
 import { PlatformIcon } from "./icons.tsx";
 import type { Act } from "./types.ts";
-import { ago, shortPath, widthText } from "./ui.tsx";
+import { shortPath, widthText } from "./ui.tsx";
 
 /** 세션 하나 — 지금 점유·대기(status)와 기록을 세션 키로 묶은 것 */
 interface SessionRow {
@@ -166,10 +167,10 @@ function SessionCard({
         </span>
         <span className="spacer" />
         <span className="session-meta sub">
-          <span>
+          <span title={fullTime(row.lastAt)}>
             {s
-              ? t("web.sessions.lastUsed", { ago: ago(row.lastAt) })
-              : t("web.sessions.lastActive", { ago: ago(row.lastAt) })}
+              ? t("web.sessions.lastUsed", { ago: when(row.lastAt) })
+              : t("web.sessions.lastActive", { ago: when(row.lastAt) })}
           </span>
           <span>{t("web.sessions.events", { count: row.events })} ↗</span>
         </span>
@@ -184,7 +185,9 @@ function SessionCard({
                 {device && <PlatformIcon platform={device.platform} />}
                 {device && <span className="mono">{widthText(device)}</span>}
                 <span className="strong">{name(h.deviceId)}</span>
-                <span className="sub">{t("web.sessions.since", { ago: ago(h.since) })}</span>
+                <span className="sub" title={fullTime(h.since)}>
+                  {t("web.sessions.since", { ago: when(h.since) })}
+                </span>
                 <span className="spacer" />
                 {!mine && (
                   <button
@@ -224,16 +227,6 @@ const KIND: Record<HistoryKind, MessageKey> = {
   idle: "web.history.idle",
   deadlock: "web.history.deadlock",
 };
-
-function timeText(at: number): string {
-  return new Date(at).toLocaleString(language() === "ko" ? "ko-KR" : "en-US", {
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
 
 /** 세션 기록 창 — ?window=session&key=… (M13) */
 export function SessionWindow({
@@ -279,7 +272,10 @@ export function SessionWindow({
       )}
       {first && (
         <p className="sub">
-          {t("web.sessions.range", { from: timeText(first.at), count: events.length })}
+          {t("web.sessions.range", {
+            from: when(first.at, { seconds: true }),
+            count: events.length,
+          })}
         </p>
       )}
       {events.length === 0 ? (
@@ -288,7 +284,9 @@ export function SessionWindow({
         <ol className="timeline">
           {events.map((e) => (
             <li key={`${e.at}-${e.kind}-${e.deviceIds.join()}`} className="timeline-item">
-              <span className="mono sub timeline-time">{timeText(e.at)}</span>
+              <span className="mono sub timeline-time" title={fullTime(e.at)}>
+                {when(e.at, { seconds: true })}
+              </span>
               <span className={`timeline-dot history-dot-${e.kind}`} />
               <span className={`history-kind history-${e.kind}`}>{t(KIND[e.kind])}</span>
               <span className="timeline-devices">

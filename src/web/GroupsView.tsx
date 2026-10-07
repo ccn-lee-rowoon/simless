@@ -2,11 +2,12 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { DeviceView, StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
+import { fullTime, when } from "../shared/time.ts";
 import { Agent } from "./agents.tsx";
 import { call } from "./api.ts";
 import { PlatformIcon } from "./icons.tsx";
 import type { Act } from "./types.ts";
-import { ago, Dialog, osText, widthText } from "./ui.tsx";
+import { Dialog, osText, widthText } from "./ui.tsx";
 
 /** 그룹 화면 — 용도별 디바이스 묶음을 만들고 고친다 (R21·M9) */
 export function GroupsView({
@@ -84,10 +85,10 @@ export function GroupsView({
                   })}
                 </ul>
               )}
-              <footer className="sub">
+              <footer className="sub" title={fullTime(Date.parse(group.updatedAt))}>
                 {t("web.groups.lastEdit", {
                   who: group.updatedBy === "human" ? t("common.human") : group.updatedBy,
-                  ago: ago(Date.parse(group.updatedAt)),
+                  ago: when(Date.parse(group.updatedAt)),
                 })}
               </footer>
             </article>

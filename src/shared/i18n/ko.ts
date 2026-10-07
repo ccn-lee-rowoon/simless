@@ -8,6 +8,10 @@ export const ko = {
   "common.justNow": "방금",
   "common.minutesAgo": "{minutes}분 전",
   "common.hoursAgo": "{hours}시간 {minutes}분 전",
+  "time.today": "오늘 {time}",
+  "time.yesterday": "어제 {time}",
+  "time.date": "{date} {time}",
+  "time.full": "{date} ({weekday}) {time}",
   "common.on": "켜짐",
   "common.off": "꺼짐",
 
