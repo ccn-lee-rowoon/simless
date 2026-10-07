@@ -66,7 +66,7 @@ function App() {
   const [status, setStatus] = useState<StatusResult | null>(null);
   const [splash, setSplash] = useState(LAUNCHED);
   const endSplash = useCallback(() => setSplash(false), []);
-  // 설정에서 껐거나 첫 실행 설정을 해야 하면 보여 주지 않는다 (M17)
+  // CLI 설정(launchAnimation)에서 껐거나 첫 실행 설정을 해야 하면 보여 주지 않는다 (M17)
   useEffect(() => {
     if (!LAUNCHED) return;
     call<SettingsResult>("settings.get").then(

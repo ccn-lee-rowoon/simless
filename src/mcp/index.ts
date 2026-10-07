@@ -104,7 +104,7 @@ export async function runMcp(): Promise<void> {
     {
       title: "simless status",
       description:
-        "Devices in the simless list (argent targetId, size label, booted, slim, default, groups, who holds it), device groups with their descriptions, and what this session holds. Call this first to pick a device group or the default device.",
+        "Devices in the simless list (argent targetId, size label, booted, slim, slimKeep and slimOff — slim items kept and turned off, default, groups, who holds it), device groups with their descriptions, and what this session holds. Call this first to pick a device group or the default device.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },

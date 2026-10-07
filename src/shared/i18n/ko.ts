@@ -7,7 +7,6 @@ export const ko = {
   "common.none": "없음",
   "common.justNow": "방금",
   "common.minutesAgo": "{minutes}분 전",
-  "common.hoursAgo": "{hours}시간 {minutes}분 전",
   "time.today": "오늘 {time}",
   "time.yesterday": "어제 {time}",
   "time.date": "{date} {time}",
@@ -320,7 +319,7 @@ export const ko = {
   "cli.group.missingDevice": "(없는 디바이스)",
 
   // CLI — 설정
-  "cli.config": "설정을 보거나 바꾼다 — 앱 창의 설정 화면과 같은 값",
+  "cli.config": "설정을 보거나 바꾼다 — 앱 창의 설정 화면과 같은 값(launchAnimation 은 여기서만)",
   "cli.config.key": "설정 이름 (language·idleReleaseMinutes·android.ramMb …)",
   "cli.config.value": "새 값",
   "cli.config.set": "{key} = {value}",

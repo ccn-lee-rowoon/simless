@@ -8,7 +8,6 @@ export const en: Record<keyof typeof ko, string> = {
   "common.none": "none",
   "common.justNow": "just now",
   "common.minutesAgo": "{minutes} min ago",
-  "common.hoursAgo": "{hours} h {minutes} min ago",
   "time.today": "today {time}",
   "time.yesterday": "yesterday {time}",
   "time.date": "{date}, {time}",
@@ -313,7 +312,8 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.group.lastEdit": "Last edit: {who}",
   "cli.group.empty": "No devices",
   "cli.group.missingDevice": "(missing device)",
-  "cli.config": "Show or change settings — the same values as the app's Settings",
+  "cli.config":
+    "Show or change settings — the same values as the app's Settings (launchAnimation only here)",
   "cli.config.key": "Setting name (language, idleReleaseMinutes, android.ramMb …)",
   "cli.config.value": "New value",
   "cli.config.set": "{key} = {value}",

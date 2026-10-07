@@ -103,25 +103,26 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 | `architecture.test.ts` | 폴더 경계(설계 §3) | — |
 | `server.test.ts` | 소켓 서버 — status·점유·BUSY·기다리기·세션 종료 해제·점유 기록 | R13·R14·R17·M13 |
 | `leases.test.ts` | LeaseManager 순수 로직 — 대기열·비어 있는 것만·교착·기록 | R13·R14·R17·R23·M13 |
-| `devices.test.ts` | 만들기·이름·슬림·켜기·삭제·추가·빼기, 사람의 켜기·끄기, 슬림 수치·기준값, 기본 디바이스 만들어 빌려주기 | R1·R3·R5·R20·R22·M1·M3·M4·M6·M8·M10·P1 |
+| `devices.test.ts` | 만들기·이름·슬림·켜기·삭제·추가·빼기, 사람의 켜기·끄기, 슬림 수치·기준값·항목 고르기·내역, 기본 디바이스 만들어 빌려주기 | R1·R3·R5·R20·R22·M1·M3·M4·M6·M8·M10·M15·M16·P1 |
 | `groups.test.ts` | 그룹·기본 디바이스·그룹 점유(all·available·대기) | R21·R22·R23·R24 |
 | `registry.test.ts` | 레지스트리 저장·옮기기(예전 형식) | R4·R20·R21·R22 |
-| `android-driver.test.ts`·`ios-driver.test.ts` | 드라이버 — 가짜 명령으로 만들기·켜기·슬림·기종 목록 | R1·R2·R4·R5·R7·M1·M4·M6·M10 |
+| `android-driver.test.ts`·`ios-driver.test.ts` | 드라이버 — 가짜 명령으로 만들기·켜기·슬림(남길 항목·꺼진 항목 읽기)·기종 목록(Android Studio 기기 정의) | R1·R2·R4·R5·R7·M1·M4·M6·M10·M15·M16 |
 | `measure.test.ts` | 슬림 전후 메모리 비교 문구 | M10 |
 | `hook.test.ts` | 훅 대상 뽑기(heredoc 포함)·서버 꺼짐·점유 판정·`simless hook` 출력 | P1·P3·P4·P5·P6·P8·P9 |
 | `claude-hook.test.ts` | Claude Code 훅·규칙 설치 | P2·P3 |
 | `session.test.ts` | 세션 = 에이전트 프로세스·에이전트 세션 ID | R18 |
-| `cli.test.ts`·`cli-server.test.ts` | CLI 종료 코드·서버와 주고받기·표 출력 | R12·R13·R14·M6 |
-| `mcp.test.ts` | MCP 도구 | R12 |
+| `cli.test.ts`·`cli-server.test.ts` | CLI 종료 코드·서버와 주고받기·표 출력·슬림 옵션 | R12·R13·R14·M6·M15 |
+| `mcp.test.ts` | MCP 도구(`simless_slim` 포함) | R12·M15 |
 | `http.test.ts` | 웹 HTTP — 토큰·Host·Origin·웹 메서드 | R11 |
 | `security.test.ts` | `SECURITY.md` 의 규칙 — 다른 세션 작업 폴더 감추기·토큰·파일 권한 | — |
-| `setup.test.ts` | 첫 실행 설정 창 — 스킬·보호·MCP·스킬 위치·바로 설치 | M14·S9·R12 |
+| `setup.test.ts` | 첫 실행 설정 창 — 스킬·보호·MCP·스킬 위치·바로 설치, 스킬 지문 | M14·S9·R12·M18 |
 | `checks.test.ts` | 점검(`simless doctor`·설정 창) — 가짜 명령으로 | S1·S2 |
-| `skill.test.ts` | 스킬 문서에 꼭 있어야 할 문장 | R16·S3~S11 |
+| `skill.test.ts` | 스킬 문서에 꼭 있어야 할 문장, 스킬 폴더(참고 파일) 설치 | R16·S3~S13 |
 | `uninstall.test.ts` | 제거 — 스킬·보호·데이터, 서버 등록은 가짜로 | S12 |
 | `builds.test.ts` | 네이티브 빌드 캐시 — 지문·보관·정리·찾기·설치 | R26 |
 | `history.test.ts` | 점유 기록 SQLite·보관 기간 | M13 |
-| `i18n.test.ts`·`config.test.ts` | 문구 사전(키·자리 표시자)·설정 | R25·M11 |
+| `i18n.test.ts`·`config.test.ts` | 문구 사전(키·자리 표시자)·설정(시작 애니메이션 포함) | R25·M11·M17 |
+| `time.test.ts` | 시각 표시 — 방금·N분 전·오늘·어제·날짜, 초까지, 전체 시각 | R25 |
 | `launchd.test.ts`·`app-bundle.test.ts` | 서버 등록 plist·`Simless.app` 만들기·메뉴바 로그인 항목 | R11 |
 
 새 파일을 만들면 이 표에 한 줄 더한다.
