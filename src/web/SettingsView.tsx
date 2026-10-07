@@ -54,6 +54,7 @@ export function SettingsView({
             language: draft.language,
             idleReleaseMinutes: draft.idleReleaseMinutes,
             historyRetentionDays: draft.historyRetentionDays,
+            launchAnimation: draft.launchAnimation,
             androidRamMb: draft.androidRamMb,
             simslimProfile: draft.simslimProfile?.trim() ? draft.simslimProfile.trim() : null,
           });
@@ -105,6 +106,19 @@ export function SettingsView({
             </label>
           ))}
         </fieldset>
+      </section>
+
+      <section className="panel settings-section">
+        <h3>{t("web.settings.screen")}</h3>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={draft.launchAnimation}
+            onChange={(e) => setDraft({ ...draft, launchAnimation: e.target.checked })}
+          />
+          {t("web.settings.launchAnimation")}
+        </label>
+        <p className="sub">{t("web.settings.launchAnimationHint")}</p>
       </section>
 
       <section className="panel settings-section">

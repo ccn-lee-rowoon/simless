@@ -1,6 +1,6 @@
 import { type ReactNode, StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { CatalogResult, StatusResult } from "../shared/api.ts";
+import type { CatalogResult, SettingsResult, StatusResult } from "../shared/api.ts";
 import { language, resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
 import { ApiError, call, subscribe, token } from "./api.ts";
 import { postToApp } from "./bridge.ts";
@@ -15,6 +15,7 @@ import {
   SessionsIcon,
   SettingsIcon,
 } from "./icons.tsx";
+import { LaunchSplash, takeLaunchFlag } from "./LaunchSplash.tsx";
 import { SessionsView, SessionWindow } from "./SessionsView.tsx";
 import { SettingsView } from "./SettingsView.tsx";
 import { SetupView } from "./SetupView.tsx";
@@ -29,6 +30,8 @@ const SETTINGS_WINDOW = PARAMS.get("window") === "settings";
 const SESSION_WINDOW = PARAMS.get("window") === "session" ? PARAMS.get("key") : null;
 /** ?window=setup — 첫 실행 설정 (M14) */
 const SETUP_WINDOW = PARAMS.get("window") === "setup";
+/** 앱을 켜고 대시보드를 처음 열 때 — 메뉴바 앱이 `launch=1` 을 붙인다 (M17). 읽자마자 지운다 */
+const LAUNCHED = takeLaunchFlag();
 
 /** 설정 창 열기 — 앱(Simless.app)이면 Swift 에 알려 별도 창, 브라우저면 새 창 */
 function openSettings(): void {
@@ -61,6 +64,21 @@ setLanguage(resolveLanguage("system", navigator.languages));
 function App() {
   const [view, setViewState] = useState<View>(savedView);
   const [status, setStatus] = useState<StatusResult | null>(null);
+  const [splash, setSplash] = useState(LAUNCHED);
+  const endSplash = useCallback(() => setSplash(false), []);
+  // 설정에서 껐거나 첫 실행 설정을 해야 하면 보여 주지 않는다 (M17)
+  useEffect(() => {
+    if (!LAUNCHED) return;
+    call<SettingsResult>("settings.get").then(
+      (s) => {
+        if (!s.launchAnimation) setSplash(false);
+      },
+      () => setSplash(false),
+    );
+  }, []);
+  useEffect(() => {
+    if (status?.setupNeeded) setSplash(false);
+  }, [status?.setupNeeded]);
   const [catalog, setCatalog] = useState<CatalogResult | null>(null);
   const [online, setOnline] = useState(true);
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -237,6 +255,7 @@ function App() {
 
   return (
     <div className="app">
+      {splash && <LaunchSplash onDone={endSplash} />}
       <aside className="sidebar">
         <div className="brand">
           <Logo />

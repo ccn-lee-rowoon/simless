@@ -137,7 +137,7 @@ simless/
 | `~/Library/Logs/Simless/` | 서버 로그 | 서버 |
 | `~/.local/share/simless/versions/<버전>/simless` · `~/.local/bin/simless`(링크) | 설치된 버전들과 지금 쓰는 버전 (§19) | `simless update` |
 | `~/Library/Caches/Simless/builds/<앱>/<플랫폼>/<지문>/` | 캐시된 네이티브 빌드(.app·.apk) + `meta.json`. 앱·플랫폼마다 최근 5개 (R26). `SIMLESS_BUILD_CACHE` 로 바꿀 수 있다 | CLI |
-| `~/.config/simless/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`, 기본 `system`), 자동 해제 시간(기본 30분), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다 | 사람·서버 |
+| `~/.config/simless/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`, 기본 `system`), 자동 해제 시간(기본 30분), 시작 애니메이션(`launchAnimation`, 기본 켜짐), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다 | 사람·서버 |
 | `~/.config/simless/apps/<name>.json` | 앱별 설정 (Q8) | 사람 |
 | `~/.android/avd/<AVD ID>.avd` · `.ini` | Android 디바이스 본체 — Simless 가 만든 것은 `simless_<id>` | Android Studio·서버 |
 | CoreSimulator 기본 device set | iOS 디바이스 본체 | Xcode·서버(simctl) |
@@ -381,7 +381,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 > Simless 목록(`simless list`)의 시뮬레이터·에뮬레이터는 `simless use` 로 점유한 뒤에만 조작한다(스크린샷·describe 포함). 켜기·끄기는 argent `boot-device` 가 아니라 `simless use`·`simless down` 으로 한다. 전문은 `integrations/rules/simless.md`(영어).
 
-## 14. 앱 창·웹 화면 (R11·M1~M16)
+## 14. 앱 창·웹 화면 (R11·M1~M17)
 
 **앱 창** — `Simless.app` 이 자기 창(NSWindow + WKWebView)에 웹 화면(`http://127.0.0.1:<포트>/#token=…`)을 띄운다. 메뉴바 «대시보드 열기»·앱 다시 열기·Dock 클릭이 이 창을 연다. 창이 열려 있는 동안만 Dock 아이콘을 보이고(`setActivationPolicy(.regular)`), 닫으면 메뉴바 앱으로 돌아간다. 창 크기·위치를 기억하고 ⌘W·⌘Q 가 앱처럼 동작한다. 같은 화면을 브라우저로도 연다(`simless ui`) — 개발 중엔 argent(Chromium)로 화면을 눌러 확인한다.
 
@@ -402,7 +402,9 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 **그룹 화면** (M9·R21) — 그룹 목록(이름·설명·디바이스 수·마지막으로 고친 사람/에이전트), 만들기·고치기(이름·설명·디바이스 고르기 — 목록에서 체크), 삭제. 없는 디바이스(밖에서 지워짐)는 표시하고 빼게 한다.
 
-**설정** (M11, 새 창) — 맨 위 «버전 정보»(버전·설정 파일 위치) · 첫 실행 설정 다시 열기(M14) · 언어(시스템 따름·한국어·English, R25) · 자동 해제 시간·기록 보관 기간 · Android RAM · simslim 프로필 · 저장 버튼 · 맨 아래 «Simless 제거»(S12 — 지울 것을 보여 주고 «데이터까지» 를 고르게 한 뒤 `setup.uninstall`). `config.json` 에 쓰고 서버가 바로 반영한다.
+**시작 애니메이션** (M17) — 메뉴바 앱이 켜진 뒤 대시보드를 처음 불러올 때만 주소에 `launch=1` 을 붙인다(불러오기에 성공하면 뗌). 화면은 그 값을 읽자마자 지우고(`history.replaceState`), 설정이 켜져 있고 첫 실행 설정을 할 필요가 없으면 `LaunchSplash` 를 덮어 보여 준다 — «Sim·ulator» «Seam·less» 에서 0.2초 멈춤 → 0.7초 버릴 글자 흐리게 → 0.8초 접으며 붙이기 → 로고(0.5초) → 2.4초부터 0.5초 동안 사라진다(2.9초). 그동안 뒤에서 목록을 읽는다. 누르거나 키를 누르면 끝, `prefers-reduced-motion` 이면 움직임 없이 0.7초.
+
+**설정** (M11, 새 창) — 맨 위 «버전 정보»(버전·설정 파일 위치) · 첫 실행 설정 다시 열기(M14) · 언어(시스템 따름·한국어·English, R25) · 화면(시작 애니메이션 켜기·끄기, M17) · 자동 해제 시간·기록 보관 기간 · Android RAM · simslim 프로필 · 저장 버튼 · 맨 아래 «Simless 제거»(S12 — 지울 것을 보여 주고 «데이터까지» 를 고르게 한 뒤 `setup.uninstall`). `config.json` 에 쓰고 서버가 바로 반영한다.
 
 **첫 실행 설정 창** (M14) — `?window=setup`, 앱에서는 Swift 별도 창(처음 뜰 때 서버가 아직 안 떴으면 2초 간격으로 다시 물어본다). 단계 표시 + 단계마다 한 화면, 아래에 이전·다음(창 아래에 붙음). 생성 창(M1)을 그 창 안에서 연다. «완료» → 앱이면 Swift 에 `{open:"dashboard"}`·`{close:"setup"}`, 브라우저면 `/` 로.
 

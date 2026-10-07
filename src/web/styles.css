@@ -1186,12 +1186,6 @@ summary:focus-visible {
   padding: 0;
 }
 
-/* 안내·진행 표시도 단계와 같은 여백 */
-.create > p,
-.create > .progress {
-  margin: 12px 18px 0;
-}
-
 .create-section {
   display: flex;
   flex-direction: column;
@@ -1501,6 +1495,12 @@ summary:focus-visible {
   border-radius: 8px;
   background: var(--surface-2);
   font-size: 13px;
+}
+
+/* 안내·진행 표시도 단계와 같은 여백 */
+.create > p,
+.create > .progress {
+  margin: 12px 18px 0;
 }
 
 .progress p {
@@ -2063,4 +2063,104 @@ summary:focus-visible {
 .logo {
   display: block;
   flex: none;
+}
+
+/* 시작 애니메이션 (M17) — Sim·ulator + Seam·less → Simless. 천천히, 단계마다 부드럽게:
+   0.2초 멈춤 → 0.7초 버릴 글자 흐리게 → 0.8초 접으며 붙이기 → 로고 0.5초 → 2.4초부터 0.5초 동안 사라짐 */
+.launch {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0;
+  border: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 700 44px / 1 var(--font);
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  animation: launch-out 500ms cubic-bezier(0.4, 0, 0.2, 1) 2400ms forwards;
+}
+
+.launch-word {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.launch-drop {
+  display: inline-block;
+  overflow: hidden;
+  max-width: 6ch;
+  color: var(--muted);
+  animation:
+    launch-fade 700ms cubic-bezier(0.45, 0, 0.55, 1) 200ms forwards,
+    launch-collapse 800ms cubic-bezier(0.65, 0, 0.35, 1) 900ms forwards;
+}
+
+.launch-gap {
+  display: inline-block;
+  width: 0.45em;
+  animation: launch-gap 800ms cubic-bezier(0.65, 0, 0.35, 1) 900ms forwards;
+}
+
+.launch-logo {
+  display: inline-flex;
+  order: -1;
+  opacity: 0;
+  transform: scale(0.85) translateY(2px);
+  animation: launch-logo 500ms cubic-bezier(0.22, 1, 0.36, 1) 1600ms forwards;
+}
+
+@keyframes launch-fade {
+  to {
+    opacity: 0.15;
+  }
+}
+
+@keyframes launch-collapse {
+  from {
+    opacity: 0.15;
+    max-width: 6ch;
+  }
+  to {
+    opacity: 0;
+    max-width: 0;
+  }
+}
+
+@keyframes launch-gap {
+  to {
+    width: 0;
+  }
+}
+
+@keyframes launch-logo {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes launch-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* macOS «동작 줄이기» — 움직임 없이 합친 이름과 로고만 잠깐 */
+.launch-reduced,
+.launch-reduced .launch-logo {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+.launch-reduced .launch-drop,
+.launch-reduced .launch-gap {
+  display: none;
 }
