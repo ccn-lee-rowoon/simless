@@ -307,7 +307,7 @@ describe("슬림 항목 고르기 (M15)", () => {
 
 describe("슬림 내역 (M16)", () => {
   test("켜서 읽기 전에는 Simless 가 슬림한 내용으로, 읽은 뒤에는 실제 꺼진 항목으로", async () => {
-    const { A, H, driver, server } = await start();
+    const { A, H, driver } = await start();
     const device = (await A("device.create", {
       ...android360,
       baseline: false,

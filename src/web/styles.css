@@ -1186,12 +1186,6 @@ summary:focus-visible {
   padding: 0;
 }
 
-/* 안내·진행 표시도 단계와 같은 여백 */
-.create > p,
-.create > .progress {
-  margin: 12px 18px 0;
-}
-
 .create-section {
   display: flex;
   flex-direction: column;
@@ -1501,6 +1495,12 @@ summary:focus-visible {
   border-radius: 8px;
   background: var(--surface-2);
   font-size: 13px;
+}
+
+/* 안내·진행 표시도 단계와 같은 여백 */
+.create > p,
+.create > .progress {
+  margin: 12px 18px 0;
 }
 
 .progress p {
@@ -2063,4 +2063,103 @@ summary:focus-visible {
 .logo {
   display: block;
   flex: none;
+}
+
+/* 시작 애니메이션 (M17) — Sim·ulator + Seam·less → Simless. 0.9초에 글자를 접고, 로고가 나타난 뒤 사라진다 */
+.launch {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0;
+  border: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 700 44px / 1 var(--font);
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  animation: launch-out 300ms ease-in 1200ms forwards;
+}
+
+.launch-word {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.launch-drop {
+  display: inline-block;
+  overflow: hidden;
+  max-width: 6ch;
+  color: var(--muted);
+  animation: launch-drop 900ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.launch-gap {
+  display: inline-block;
+  width: 0.45em;
+  animation: launch-gap 900ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.launch-logo {
+  display: inline-flex;
+  order: -1;
+  opacity: 0;
+  transform: scale(0.8);
+  animation: launch-logo 260ms ease-out 850ms forwards;
+}
+
+@keyframes launch-drop {
+  0% {
+    opacity: 1;
+    max-width: 6ch;
+  }
+  45% {
+    opacity: 0.18;
+    max-width: 6ch;
+  }
+  100% {
+    opacity: 0;
+    max-width: 0;
+  }
+}
+
+@keyframes launch-gap {
+  0%,
+  45% {
+    width: 0.45em;
+  }
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes launch-logo {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes launch-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* macOS «동작 줄이기» — 움직임 없이 합친 이름과 로고만 잠깐 */
+.launch-reduced,
+.launch-reduced .launch-logo {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+.launch-reduced .launch-drop,
+.launch-reduced .launch-gap {
+  display: none;
 }

@@ -462,6 +462,12 @@ export const en: Record<keyof typeof ko, string> = {
   "web.settings.language": "Language",
   "web.settings.languageSystem": "Follow the system (now: {current})",
   "web.settings.leases": "Leases",
+  "web.settings.screen": "Screen",
+  "web.settings.launchAnimation": "Launch animation",
+  "web.settings.launchPreview": "Preview",
+  "web.settings.launchAnimationHint":
+    "When you start the app and first open the dashboard, shows «Simulator + Seamless → Simless» for about a second. Click to skip; nothing moves when macOS «Reduce motion» is on.",
+  "web.launch.skip": "Launch animation — click to skip",
   "web.settings.idle": "Auto-release (minutes)",
   "web.settings.idleHint":
     "A lease is released only after this long without use, and only if another session is waiting.",

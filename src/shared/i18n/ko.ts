@@ -469,6 +469,12 @@ export const ko = {
   "web.settings.language": "언어",
   "web.settings.languageSystem": "시스템 설정 따르기 (지금: {current})",
   "web.settings.leases": "점유",
+  "web.settings.screen": "화면",
+  "web.settings.launchAnimation": "시작 애니메이션",
+  "web.settings.launchPreview": "미리 보기",
+  "web.settings.launchAnimationHint":
+    "앱을 켜고 대시보드를 처음 열 때 «Simulator + Seamless → Simless» 를 1초쯤 보여 줍니다. 누르면 바로 넘어가고, macOS «동작 줄이기» 가 켜져 있으면 움직이지 않습니다.",
+  "web.launch.skip": "시작 애니메이션 — 누르면 넘어갑니다",
   "web.settings.idle": "자동 해제 (분)",
   "web.settings.idleHint":
     "마지막 사용 후 이 시간이 지나고 기다리는 세션이 있을 때만 점유를 풉니다.",

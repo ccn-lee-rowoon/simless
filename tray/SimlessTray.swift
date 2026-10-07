@@ -358,8 +358,12 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     self.webView = web
   }
 
+  /// 앱이 켜진 뒤 대시보드를 처음 열 때만 시작 애니메이션 — 처음 불러오기에 성공할 때까지 `launch=1` (M17)
+  private var launchPending = true
+
   private func load() {
-    guard let token = token(), let url = URL(string: "http://127.0.0.1:\(port)/#token=\(token)") else {
+    let query = launchPending ? "?launch=1" : ""
+    guard let token = token(), let url = URL(string: "http://127.0.0.1:\(port)/\(query)#token=\(token)") else {
       // 서버가 처음 켜질 때 토큰을 만든다 — 켜고 잠시 뒤 다시
       startServer()
       retryLoad()
@@ -376,6 +380,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
 
   func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
     retries = 0
+    if webView === self.webView { launchPending = false }
   }
 
   /// 창 안에서는 이 앱의 화면(127.0.0.1:<포트>)만 연다 — 그 밖의 주소로는 옮겨 가지 않고,
