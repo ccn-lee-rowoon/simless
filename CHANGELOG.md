@@ -7,6 +7,8 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 
 ## 아직 내지 않은 것
 
+## [0.3.0] — 2026-10-09
+
 ### 추가
 
 - **설치 파일 하나로 설치·업데이트** — 팀원은 `simless-<버전>-install.sh` 를 받아 어디서든 `bash <파일>` 하면 된다(서명 없이도 Gatekeeper 에 막히지 않음). simless 는 자기를 `~/.local/share/simless/versions/<버전>/` 에 넣고 `~/.local/bin/simless` 로 링크해, 받은 파일은 지워도 된다. 새 버전 파일로 같은 일을 하거나 `simless update <파일>` 이면 업데이트, `simless update --rollback` 이면 되돌리기, `simless update` 만 치면 지금 버전과 설치된 버전
