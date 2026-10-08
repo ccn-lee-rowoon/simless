@@ -90,7 +90,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 - **서버 시나리오** — 파일 맨 위에서 `const start = testServers();` 한 번, 테스트마다 `const { A, B, H, server, driver } = await start({ seed })`. `A`·`B` 는 에이전트 세션, `H` 는 사람(웹). 결과와 오류(`code`·`message`·`data`)를 같은 값으로 받는다
 - **준비 도구**(`test/helpers.ts`) — `tempEnv()` 임시 상태·HOME·짧은 소켓 경로, `fakeDriver()` 아무것도 켜지 않는 드라이버, `seedDevice()` 디바이스 넣기, `session()` 세션 정보
 - **점검(`runChecks`, S1·S2)** — `probe: { run, which, env }` 로 가짜 명령·임시 HOME 을 준다(`test/checks.test.ts`). 진짜 `brew`·`xcrun`·`launchctl` 을 부르지 않는다
-- **이 Mac 을 건드리지 않는다** — 설치·훅·MCP 를 부르는 테스트는 `deps: (env) => ({ env: { ...env.env, PATH: "" } })` 로 HOME 을 임시 폴더로, PATH 를 비워 진짜 `claude` 등을 못 쓰게 한다. 실제 기기는 테스트에서 켜지 않는다
+- **이 Mac 을 건드리지 않는다** — 설치·훅·MCP 를 부르는 테스트는 `deps: (env) => ({ env: { ...env.env, PATH: "" } })` 로 HOME 을 임시 폴더로 한다. **PATH 를 비워도 진짜 명령을 부를 수 있다** — `which()`(`src/shared/exec.ts`)는 PATH 다음에 `/opt/homebrew/bin`·`/usr/local/bin`·`~/.local/bin`·`~/.bun/bin`·`/usr/bin` 도 찾는다. HOME 이 임시 폴더라 진짜 설정은 안전하지만, 명령이 실패하거나 특정하게 동작해야 하는 테스트는 가짜 명령을 만든 폴더를 PATH 에 두거나(`test/self.test.ts` 의 가짜 `codex`) `probe` 로 준다. 실제 기기는 테스트에서 켜지 않는다
 - **이름에 요구사항 ID** — `describe("그룹 (R21)")` 처럼. `bun run trace` 가 이걸 세고, requirements.md 에서 확인이 `테스트` 인 요구사항에 테스트가 없거나 없는 ID 를 쓰면 `test/requirements.test.ts` 가 실패한다
 - **문서도 검사한다** — 스킬처럼 요구사항을 담은 문서는 꼭 있어야 할 문장을 테스트로(`test/skill.test.ts`)
 - **주의** — 같은 프로세스의 소켓 서버를 부르는 promise 에 `expect(…).rejects` 를 쓰지 않는다(Bun 1.3.6 오동작). `.catch((e) => e)` 로 받아 검사한다. `afterEach` 는 helpers.ts 맨 위에 두면 파일마다 걸리지 않는다 — `testServers()` 가 부른 파일에 건다
@@ -146,7 +146,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
      SIMLESS_SOCKET=/tmp/simless-ui-test.sock bun bin/simless.ts serve &
    ```
    `$S/config/config.json` 에 `{"httpPort": 8792}` 를 넣어 두면 포트가 겹치지 않는다. 토큰은 `$S/state/web-token`.
-2. **브라우저** — Chrome 을 `--headless=new --remote-debugging-port=9222 --user-data-dir=$S/chrome` 로 `http://127.0.0.1:8792/?window=setup#token=<토큰>` 에 열고 argent(Chromium)로 누르고 스크린샷. SSE 가 계속 열려 있어 `--screenshot` 은 끝나지 않는다. CSS 를 바꿨으면 캐시 없이 다시 읽는다
+2. **브라우저** — Chrome 을 `--headless=new --remote-debugging-port=9222 --user-data-dir=$S/chrome` 로 `http://127.0.0.1:8792/?window=setup#token=<토큰>` 에 열고 argent(Chromium)로 누르고 스크린샷. SSE 가 계속 열려 있어 `--screenshot` 은 끝나지 않는다. CSS 를 바꿨으면 캐시 없이 다시 읽는다. **읽는 중 화면**은 CDP `Fetch.enable`(`urlPattern: */api/call*`)로 정한 메서드(`setup.status` 등)의 요청을 붙잡아 두면 계속 보인다 — 탭을 닫으면 붙잡은 요청이 풀려 실제로 실행되니 시험 서버(임시 HOME)에서만
 3. **앱 창** — `simless install` 로 앱을 다시 만들고(아래), 창 ID 를 찾아 `screencapture -x -l<창 ID>`
 
 ## 6. 이 Mac 에 반영

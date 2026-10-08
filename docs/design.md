@@ -113,10 +113,10 @@ simless/
 | 명령 | 하는 일 |
 | --- | --- |
 | (배포) | 설치 파일 `simless-<버전>-install.sh` 하나를 메신저·드라이브로 나눈다(`bun run release` 가 만든다 — §19). 받는 사람은 어디서든 `bash <파일>` → 안의 실행 파일을 sha256 으로 확인하고 임시 폴더에 꺼내 `simless install`. 혼자 개발할 땐 저장소에서 `bun link` |
-| `simless install` | (단일 실행 파일이면 먼저) 자기를 `~/.local/share/simless/versions/<버전>/simless` 에 복사하고 `~/.local/bin/simless` 링크를 바꾼다 — 아래에 적는 경로는 모두 이 링크, 받은 파일은 지워도 된다(R19). 이미 넣어 둔 훅·MCP 가 예전 경로를 가리키면 새 경로로 고친다(넣어 두지 않은 것은 넣지 않음). 그다음 LaunchAgent(`~/Library/LaunchAgents/simless.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`simless`·Android SDK 경로를 절대 경로로** 적는다. 스킬 설치, `~/Applications/Simless.app` 생성 → 앱을 띄우면 **첫 실행 설정 창**(M14)이 뜬다. 보호(훅·규칙)와 MCP 는 그 창에서 고른다 — 터미널만 쓸 때는 `--hook`·`--mcp`. 훅·MCP 명령은 절대 경로로 적는다 |
+| `simless install` | (단일 실행 파일이면 먼저) 자기를 `~/.local/share/simless/versions/<버전>/simless` 에 복사하고 `~/.local/bin/simless` 링크를 바꾼다 — 아래에 적는 경로는 모두 이 링크, 받은 파일은 지워도 된다(R19). 이미 넣어 둔 훅·MCP 가 예전 경로를 가리키면 새 경로로 고친다 — `--hook`·`--mcp` 로 고른 에이전트가 아니어도 모두 보고, 넣어 두지 않은 것은 넣지 않으며, 한 에이전트를 못 고치면(지운 에이전트의 설정이 남은 경우 등) stderr 에 알리고 이어 간다. 사람이 터미널에서 실행하면 맨 위에 로고(M12). 그다음 LaunchAgent(`~/Library/LaunchAgents/simless.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`simless`·Android SDK 경로를 절대 경로로** 적는다. 스킬 설치, `~/Applications/Simless.app` 생성 → 앱을 띄우면 **첫 실행 설정 창**(M14)이 뜬다. 보호(훅·규칙)와 MCP 는 그 창에서 고른다 — 터미널만 쓸 때는 `--hook`·`--mcp`. 훅·MCP 명령은 절대 경로로 적는다 |
 | 제거 (S12) | `simless uninstall` 또는 설정 창 «Simless 제거» — 둘 다 `src/install/uninstall.ts`. 순서는 에이전트 연결(스킬·훅·규칙·MCP) → 앱·메뉴바 → (`--purge`) 데이터 폴더 → 서버 등록. 창에서 할 때는 서버(`setup.uninstall`)가 에이전트 연결을 지우고 답한 뒤, 1.5초 뒤 앱·데이터를 지우고 plist 를 먼저 지운 다음 자기를 `bootout` 한다(내리는 순간 프로세스가 끝나므로). 만든 디바이스와 `simless` 명령 자체는 남긴다 |
 | `simless uninstall` | 위를 되돌린다(훅·규칙·MCP 등록 포함). 만든 디바이스는 지우지 않는다 |
-| 첫 실행 설정 (M14) | 앱이 뜰 때 `status.setupNeeded` 면 설정 창(`?window=setup`)을 연다 — ① 이 Mac 점검(`simless doctor` 와 같은 점검. 점검 결과의 `action` 이 있으면 «설치·업데이트·열기» 버튼 — `setup.run` 이 `install/fixes.ts` 에 정해 둔 명령만 뒤에서 돌리고(`server/jobs.ts`, 묻지 않는 모드 `NONINTERACTIVE=1`·`HOMEBREW_NO_AUTO_UPDATE=1`), 출력은 SSE `output` 으로 한 줄씩, 상태는 `job` 으로. 출력에 «trust» 가 있으면 `brew trust` 후 다시. 끝나면 다시 점검. 실패하면 «터미널에서 열기»(osascript 로 Terminal 에 같은 명령). 버튼으로 못 고치는 것만 복사 버튼) ② 에이전트 연결(스킬 권장 · 보호 권장 · MCP 선택 — 버튼 하나로 설치·제거, 서버가 한다) ③ 기본 디바이스(없으면 목록에서 고르거나 생성 창). «완료» 면 `setup.json` 을 남기고 대시보드를 연다. 끝내지 않고 닫으면 다음에 또 뜬다. 설정 창에서 다시 연다 |
+| 첫 실행 설정 (M14) | 앱이 뜰 때 `status.setupNeeded` 면 설정 창(`?window=setup`)을 연다 — ① 이 Mac 점검(`simless doctor` 와 같은 점검. 점검 결과의 `action` 이 있으면 «설치·업데이트·열기» 버튼 — `setup.run` 이 `install/fixes.ts` 에 정해 둔 명령만 뒤에서 돌리고(`server/jobs.ts`, 묻지 않는 모드 `NONINTERACTIVE=1`·`HOMEBREW_NO_AUTO_UPDATE=1`), 출력은 SSE `output` 으로 한 줄씩, 상태는 `job` 으로. 출력에 «trust» 가 있으면 `brew trust` 후 다시. 끝나면 다시 점검. 실패하면 «터미널에서 열기»(osascript 로 Terminal 에 같은 명령). 버튼으로 못 고치는 것만 복사 버튼) ② 에이전트 연결(스킬 권장 · 보호 권장 · MCP 선택 — 버튼 하나로 설치·제거, 서버가 한다. 아래 «다른 에이전트»(Copilot CLI·Codex·Cursor·Gemini CLI)는 «실험적» 표시. 표시 색은 권장 초록·선택 테두리만·실험적 주의색. 상태를 읽는 동안은 도는 원, 누른 버튼에는 끝날 때까지 작은 도는 원) ③ 기본 디바이스(없으면 목록에서 고르거나 생성 창). «완료» 면 `setup.json` 을 남기고 대시보드를 연다. 끝내지 않고 닫으면 다음에 또 뜬다. 설정 창에서 다시 연다 |
 | `Simless.app` | 메뉴바 앱 + 앱 창(§14). `tray/SimlessTray.swift` 를 컴파일한 실행 파일 + `Info.plist`(`LSUIElement` — 평소엔 Dock 아이콘 없음) + 아이콘, ad-hoc 서명. 더블클릭·Spotlight·Launchpad 에서 연다. Xcode 가 없어 컴파일을 못 하면 브라우저로 웹 화면을 여는 스크립트로 대신한다 |
 | 로그인 항목 이름 | macOS 로그인 항목(«앱 백그라운드 활동»)에는 실행 파일 서명자 이름이 보인다 — 개발 모드는 bun 의 «Jarred Sumner». `Simless.app` 을 만들 때(3단계) plist 에 `AssociatedBundleIdentifiers` 로 앱을 연결해 «Simless» 로 보이게 한다. 사용자가 이 항목을 끄면 launchd 가 서버를 띄우지 않으므로 `simless doctor` 가 확인한다 |
 | 서버 자동 시작 (Q10) | CLI·MCP 는 소켓이 없으면 `launchctl kickstart` 로 켜고 몇 초 기다린다. 훅은 켜지 않는다 |
@@ -410,7 +410,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 **첫 실행 설정 창** (M14) — `?window=setup`, 앱에서는 Swift 별도 창(처음 뜰 때 서버가 아직 안 떴으면 2초 간격으로 다시 물어본다). 단계 표시 + 단계마다 한 화면, 아래에 이전·다음(창 아래에 붙음). 생성 창(M1)을 그 창 안에서 연다. «완료» → 앱이면 Swift 에 `{open:"dashboard"}`·`{close:"setup"}`, 브라우저면 `/` 로.
 
-**디자인** (M12) — 귀엽지 않고 단정하게. 촘촘한 표 형태 목록, 시스템 글꼴, 숫자(폭·해상도·메모리)는 고정폭, 강조색 하나. 읽는 중에는 글자만 두지 않는다 — 창·화면은 도는 원 + «읽는 중…»(`Loading`), 목록은 줄 모양 자리 표시(`SkeletonRows`, 세션). 0.15초 뒤에 나타나 짧은 읽기에는 깜빡이지 않고, «동작 줄이기» 면 움직이지 않는다. 아이콘은 폰 하나에 점 눈·작은 미소만 넣은 모양(입 밑 홈 표시줄 같은 다른 선은 없음) — 앱 아이콘·탭 아이콘·화면 로고·메뉴바가 모두 같은 모양이고(옆 막대 «디바이스» 메뉴는 단순한 폰 선 아이콘), `src/web/icon.svg` 하나가 정본이고, 앱 아이콘(`scripts/icon.sh` → `assets/simless.icns`, 잉크 바탕 + 민트, 바탕 바깥은 투명 — `scripts/icon-render.swift` 가 AppKit 으로 그린다. qlmanage 는 투명한 곳을 흰색으로 채워 흰 테두리가 생겼다)·웹 로고·탭 아이콘(`ui.tsx` 의 `Logo` 가 `icon.svg` 를 그대로 보여 준다)·메뉴바 템플릿(Swift `devicesTemplate`, 같은 모양을 단색으로 — 18px 에서도 보이게 눈·입 위치와 굵기를 살짝 조정)이 같은 경로를 쓴다. **구현 전에 시안을 보고 정한다.**
+**디자인** (M12) — 귀엽지 않고 단정하게. 촘촘한 표 형태 목록, 시스템 글꼴, 숫자(폭·해상도·메모리)는 고정폭, 강조색 하나. 읽는 중에는 글자만 두지 않는다 — 창·화면은 도는 원 + «읽는 중…»(`Loading`), 목록은 줄 모양 자리 표시(`SkeletonRows`, 세션), 시간이 걸리는 버튼은 누른 버튼 안에 작은 도는 원(`.spinner-small`, 글자 색을 따라감). 0.15초 뒤에 나타나 짧은 읽기에는 깜빡이지 않고, «동작 줄이기» 면 움직이지 않는다. **CLI 로고**(`src/cli/banner.ts`) — 같은 폰 얼굴 + `SIMLESS` 블록 글자 + 슬로건·버전, 민트색(24비트 색을 알리는 터미널은 `#5EEAC0`, 아니면 256색 79). `install` 을 사람이 터미널에서 실행할 때만(설치 파일·`update` 도 안에서 `install` 을 부른다) — 터미널이 아니거나 `--json`·`TERM=dumb` 이면 없음, `NO_COLOR` 면 색 없이, 60칸보다 좁으면 한 줄. `--help` 맨 위에는 색 없는 한 줄 제목만(에이전트도 읽는다). 아이콘은 폰 하나에 점 눈·작은 미소만 넣은 모양(입 밑 홈 표시줄 같은 다른 선은 없음) — 앱 아이콘·탭 아이콘·화면 로고·메뉴바가 모두 같은 모양이고(옆 막대 «디바이스» 메뉴는 단순한 폰 선 아이콘), `src/web/icon.svg` 하나가 정본이고, 앱 아이콘(`scripts/icon.sh` → `assets/simless.icns`, 잉크 바탕 + 민트, 바탕 바깥은 투명 — `scripts/icon-render.swift` 가 AppKit 으로 그린다. qlmanage 는 투명한 곳을 흰색으로 채워 흰 테두리가 생겼다)·웹 로고·탭 아이콘(`ui.tsx` 의 `Logo` 가 `icon.svg` 를 그대로 보여 준다)·메뉴바 템플릿(Swift `devicesTemplate`, 같은 모양을 단색으로 — 18px 에서도 보이게 눈·입 위치와 굵기를 살짝 조정)이 같은 경로를 쓴다. **구현 전에 시안을 보고 정한다.**
 
 **메뉴바** — 아이콘(단색 템플릿, 숫자 없음) → 메뉴: 서버 상태 · 스킬 업데이트가 있으면 «업데이트» · «대시보드 열기»(앱 창) · «설정 열기» · 서버가 꺼져 있으면 «서버 켜기» · 종료. 켜진 디바이스 목록은 넣지 않는다(대시보드에서 본다, 2026-10-06 사용자 결정). «설정 열기» 에는 ⌘, 단축키를 달지 않고 자기 동작을 쓴다 — 표준 설정 항목으로 보이면 macOS 26 이 톱니 아이콘을 자동으로 붙인다(메뉴바 메뉴는 글자만). 문구는 설정 언어를 따른다(Swift 안의 작은 사전, 언어는 `status` 응답으로 받음). 서버 HTTP API(토큰은 파일에서)만 읽고 로직은 없다. 로그인 시 뜨게 등록한다(launchd `simless.menubar`, `open -a`).
 
@@ -467,7 +467,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 | Q | 제안 |
 | --- | --- |
-| Q16 훅 없는 에이전트 | 규칙 + CLI 의 BUSY 응답으로 보호. 훅을 지원하면 어댑터를 붙인다(§13). **조사 결과(2026-10-05)** `docs/agent-integrations.md` — Copilot CLI·Codex·Cursor 는 실행 직전 막기가 되고, Gemini CLI 는 설치본(0.16.0)이 너무 오래돼 안 된다. 네 에이전트(Copilot CLI·Codex·Cursor·Gemini CLI)에 붙였다(2026-10-05) |
+| Q16 훅 없는 에이전트 | 규칙 + CLI 의 BUSY 응답으로 보호. 훅을 지원하면 어댑터를 붙인다(§13). **조사 결과(2026-10-05)** `docs/agent-integrations.md` — Copilot CLI·Codex·Cursor 는 실행 직전 막기가 되고, Gemini CLI 는 설치본(0.16.0)이 너무 오래돼 안 된다. 네 에이전트(Copilot CLI·Codex·Cursor·Gemini CLI)에 붙였다(2026-10-05). 실제 에이전트로 다듬지 않아 첫 실행 설정에 «실험적» 으로 표시한다(2026-10-08 사용자 결정 — 연결은 계속 제공) |
 
 ## 19. 설치·업데이트 (R19·R27)
 
@@ -478,7 +478,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 **설치 위치** (`src/install/self.ts`)
 - `simless install` 이 단일 실행 파일로 돌면 자기를 `~/.local/share/simless/versions/<버전>/simless` 에 복사하고(옆에 쓰고 이름 바꾸기), 격리 표시를 지우고, `~/.local/bin/simless` 링크를 바꾼다(역시 옆에 만들고 이름 바꾸기). 바로 전에 링크가 가리키던 파일은 `~/.local/share/simless/previous` 에 적는다.
 - 서버(launchd)·훅·MCP·앱(메뉴바를 못 만들 때의 대신 스크립트)에는 `selfCommand()` 가 주는 경로를 적는데, 설치돼 있으면 **링크**다. 그래서 받은 파일을 지워도 되고, 버전이 바뀌어도 적어 둔 경로는 그대로다.
-- 이미 넣어 둔 훅·MCP(Claude Code·Codex·Copilot·Cursor·Gemini)가 다른 경로면 새 경로로 고친다. 넣어 두지 않은 것은 넣지 않는다.
+- 이미 넣어 둔 훅·MCP(Claude Code·Codex·Copilot·Cursor·Gemini)가 다른 경로면 새 경로로 고친다 — `--hook`·`--mcp` 로 고른 에이전트가 아니어도 모두. 넣어 두지 않은 것은 넣지 않는다. 에이전트마다 따로 시도해 하나가 실패해도 설치는 이어 간다(2026-10-08 — 설치 방식을 바꿨을 때 고르지 않은 에이전트의 MCP 가 예전 경로에 남던 것을 고침).
 - 버전 폴더는 큰 버전부터 3개 + 지금·바로 전 것. 링크 폴더가 PATH 에 없으면 `~/.zshrc` 에 넣을 줄을 알려 준다.
 - 경로는 테스트를 위해 `SIMLESS_INSTALL_DIR`·`SIMLESS_BIN_LINK` 로 바꿀 수 있다.
 
