@@ -105,7 +105,11 @@ console.log(`${pkg.version} → ${version}`);
 const { head, unreleased, rest } = readChangelog();
 const notes = unreleased || draftFromCommits();
 if (!notes) throw new Error("내보낼 변경이 없습니다 (사용자에게 보이는 feat·fix·perf 커밋이 없음)");
-const date = new Date().toISOString().slice(0, 10);
+// 이 Mac 의 날짜 — toISOString 은 UTC 라 한국 시간 오전 9시 전에는 하루 전 날짜가 된다
+const now = new Date();
+const date = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
+  .map((n, i) => String(n).padStart(i === 0 ? 4 : 2, "0"))
+  .join("-");
 const changelog = `${head}\n\n## [${version}] — ${date}\n\n${notes}\n\n${rest}`.replace(
   /\n{3,}/g,
   "\n\n",
