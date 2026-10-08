@@ -59,6 +59,7 @@ simless/
 │   ├── install/             설치·점검 — CLI 와 서버(첫 실행 설정 창)가 같이 쓴다
 │   │   ├── launchd.ts       서버 LaunchAgent 등록·kickstart
 │   │   ├── app-bundle.ts    Simless.app 만들기(Swift 컴파일·서명·로그인 항목)
+│   │   ├── self.ts          설치한 simless 를 버전 폴더에 두고 ~/.local/bin/simless 링크(R19)
 │   │   ├── skill.ts         스킬 설치 위치(전역·프로젝트)·상태 (S9)
 │   │   ├── claude-hook.ts   Claude Code 훅·규칙 (P2·P3)
 │   │   ├── claude-mcp.ts    Claude Code MCP 등록 (R12)
@@ -83,7 +84,7 @@ simless/
 ├── integrations/            이 Mac 의 다른 도구에 설치하는 것
 │   ├── skill/simless/SKILL.md          → ~/.claude/skills/simless (또는 프로젝트)
 │   └── rules/simless.md                전역 규칙 (P2) → ~/.claude/rules/simless.md
-├── scripts/                 build.ts(단일 실행 파일 → dist/simless) · trace.ts(요구사항 ↔ 테스트) · icon.sh
+├── scripts/                 build.ts(단일 실행 파일 → dist/simless, 설치 파일 → dist/simless-<버전>-install.sh) · trace.ts(요구사항 ↔ 테스트) · icon.sh
 ├── docs/                    design.md(이 문서) · protocol.md(메시지) · development.md(개발 가이드) ·
 │                            agent-integrations.md(다른 에이전트 조사)
 ├── README.md                처음 보는 사람용 — 무엇을 하나·설치·쓰는 법
@@ -111,8 +112,8 @@ simless/
 
 | 명령 | 하는 일 |
 | --- | --- |
-| (배포) | `dist/simless` 를 `~/.local/share/simless/versions/<버전>/simless` 에 두고 `~/.local/bin/simless` 를 그 파일로 링크한다(§19). 혼자 쓸 땐 저장소에서 `bun link`. 동료와는 **프라이빗 GitHub Release** 에 올리고, 설치 스크립트가 `gh release download`(또는 `curl`)로 받아 배치 → `simless install` 까지 한다. 브라우저로 받으면 격리 속성 때문에 실행이 막히므로 스크립트로 받는다 |
-| `simless install` | LaunchAgent(`~/Library/LaunchAgents/simless.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`simless`·Android SDK 경로를 절대 경로로** 적는다. 스킬 설치, `~/Applications/Simless.app` 생성 → 앱을 띄우면 **첫 실행 설정 창**(M14)이 뜬다. 보호(훅·규칙)와 MCP 는 그 창에서 고른다 — 터미널만 쓸 때는 `--hook`·`--mcp`. 훅·MCP 명령은 절대 경로로 적는다 |
+| (배포) | 설치 파일 `simless-<버전>-install.sh` 하나를 메신저·드라이브로 나눈다(`bun run release` 가 만든다 — §19). 받는 사람은 어디서든 `bash <파일>` → 안의 실행 파일을 sha256 으로 확인하고 임시 폴더에 꺼내 `simless install`. 혼자 개발할 땐 저장소에서 `bun link` |
+| `simless install` | (단일 실행 파일이면 먼저) 자기를 `~/.local/share/simless/versions/<버전>/simless` 에 복사하고 `~/.local/bin/simless` 링크를 바꾼다 — 아래에 적는 경로는 모두 이 링크, 받은 파일은 지워도 된다(R19). 이미 넣어 둔 훅·MCP 가 예전 경로를 가리키면 새 경로로 고친다(넣어 두지 않은 것은 넣지 않음). 그다음 LaunchAgent(`~/Library/LaunchAgents/simless.server.plist`, `RunAtLoad`·`KeepAlive`) 등록 → 서버 시작. launchd 는 로그인 셸 PATH 를 안 받으므로 **`simless`·Android SDK 경로를 절대 경로로** 적는다. 스킬 설치, `~/Applications/Simless.app` 생성 → 앱을 띄우면 **첫 실행 설정 창**(M14)이 뜬다. 보호(훅·규칙)와 MCP 는 그 창에서 고른다 — 터미널만 쓸 때는 `--hook`·`--mcp`. 훅·MCP 명령은 절대 경로로 적는다 |
 | 제거 (S12) | `simless uninstall` 또는 설정 창 «Simless 제거» — 둘 다 `src/install/uninstall.ts`. 순서는 에이전트 연결(스킬·훅·규칙·MCP) → 앱·메뉴바 → (`--purge`) 데이터 폴더 → 서버 등록. 창에서 할 때는 서버(`setup.uninstall`)가 에이전트 연결을 지우고 답한 뒤, 1.5초 뒤 앱·데이터를 지우고 plist 를 먼저 지운 다음 자기를 `bootout` 한다(내리는 순간 프로세스가 끝나므로). 만든 디바이스와 `simless` 명령 자체는 남긴다 |
 | `simless uninstall` | 위를 되돌린다(훅·규칙·MCP 등록 포함). 만든 디바이스는 지우지 않는다 |
 | 첫 실행 설정 (M14) | 앱이 뜰 때 `status.setupNeeded` 면 설정 창(`?window=setup`)을 연다 — ① 이 Mac 점검(`simless doctor` 와 같은 점검. 점검 결과의 `action` 이 있으면 «설치·업데이트·열기» 버튼 — `setup.run` 이 `install/fixes.ts` 에 정해 둔 명령만 뒤에서 돌리고(`server/jobs.ts`, 묻지 않는 모드 `NONINTERACTIVE=1`·`HOMEBREW_NO_AUTO_UPDATE=1`), 출력은 SSE `output` 으로 한 줄씩, 상태는 `job` 으로. 출력에 «trust» 가 있으면 `brew trust` 후 다시. 끝나면 다시 점검. 실패하면 «터미널에서 열기»(osascript 로 Terminal 에 같은 명령). 버튼으로 못 고치는 것만 복사 버튼) ② 에이전트 연결(스킬 권장 · 보호 권장 · MCP 선택 — 버튼 하나로 설치·제거, 서버가 한다) ③ 기본 디바이스(없으면 목록에서 고르거나 생성 창). «완료» 면 `setup.json` 을 남기고 대시보드를 연다. 끝내지 않고 닫으면 다음에 또 뜬다. 설정 창에서 다시 연다 |
@@ -468,29 +469,31 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | --- | --- |
 | Q16 훅 없는 에이전트 | 규칙 + CLI 의 BUSY 응답으로 보호. 훅을 지원하면 어댑터를 붙인다(§13). **조사 결과(2026-10-05)** `docs/agent-integrations.md` — Copilot CLI·Codex·Cursor 는 실행 직전 막기가 되고, Gemini CLI 는 설치본(0.16.0)이 너무 오래돼 안 된다. 네 에이전트(Copilot CLI·Codex·Cursor·Gemini CLI)에 붙였다(2026-10-05) |
 
-## 19. 업데이트 (R19)
+## 19. 설치·업데이트 (R19·R27)
 
-**확인**
-- 서버가 **시작할 때와 하루 한 번** 프라이빗 GitHub Release 의 최신 버전을 본다. 인증은 이미 로그인된 `gh` 를 그대로 쓴다(`gh api repos/<owner>/simless/releases/latest`). `gh` 가 없거나 로그인 안 돼 있으면 조용히 넘어가고 `simless doctor` 에서만 알려 준다.
-- 버전은 semver(`package.json` `version`) 로 비교한다. 개발 모드(`bun link` 로 소스 실행)에서는 확인하지 않는다.
+**설치 파일** (`scripts/build.ts`, 2026-10-08) — `bun run build` 가 `dist/simless`(단일 실행 파일) 다음에 `dist/simless-<버전>-install.sh` 를 만든다. 실행 파일을 gzip·base64 로 넣은 bash 스크립트 하나(약 33MB)로, 머리에 `# simless-installer`·`SIMLESS_VERSION=`·`SIMLESS_SHA256=`(gzip 의 sha256)이 있다. 하는 일: Apple Silicon 인지 확인 → 임시 폴더에 꺼냄 → sha256 확인(다르면 «손상됨») → `<꺼낸 파일> install "$@"` → 임시 폴더 지움.
+- 서명이 없어도 막히지 않는 이유: Gatekeeper 는 «다운로드한 파일» 표시가 붙은 실행 파일을 실행할 때 막는다. `bash <파일>` 은 bash 가 스크립트를 읽는 것이라 막지 않고, 스크립트가 쓴 파일에는 표시가 없다(2026-10-08 확인 — 표시를 붙인 설치 파일로 설치·실행됨, 같은 표시를 붙인 실행 파일은 종료 137).
+- sha256 은 받다가 깨진 것을 잡을 뿐, 누가 바꾼 파일은 막지 못한다 — 받은 곳을 믿는 것이다(SECURITY.md §2).
 
-**알림** — 사람과 에이전트를 나눈다
+**설치 위치** (`src/install/self.ts`)
+- `simless install` 이 단일 실행 파일로 돌면 자기를 `~/.local/share/simless/versions/<버전>/simless` 에 복사하고(옆에 쓰고 이름 바꾸기), 격리 표시를 지우고, `~/.local/bin/simless` 링크를 바꾼다(역시 옆에 만들고 이름 바꾸기). 바로 전에 링크가 가리키던 파일은 `~/.local/share/simless/previous` 에 적는다.
+- 서버(launchd)·훅·MCP·앱(메뉴바를 못 만들 때의 대신 스크립트)에는 `selfCommand()` 가 주는 경로를 적는데, 설치돼 있으면 **링크**다. 그래서 받은 파일을 지워도 되고, 버전이 바뀌어도 적어 둔 경로는 그대로다.
+- 이미 넣어 둔 훅·MCP(Claude Code·Codex·Copilot·Cursor·Gemini)가 다른 경로면 새 경로로 고친다. 넣어 두지 않은 것은 넣지 않는다.
+- 버전 폴더는 큰 버전부터 3개 + 지금·바로 전 것. 링크 폴더가 PATH 에 없으면 `~/.zshrc` 에 넣을 줄을 알려 준다.
+- 경로는 테스트를 위해 `SIMLESS_INSTALL_DIR`·`SIMLESS_BIN_LINK` 로 바꿀 수 있다.
 
-| 받는 쪽 | 방식 |
-| --- | --- |
-| 사람 | 새 버전마다 **macOS 알림 한 번**(`update.json` 에 보낸 버전 기록). 앱 창 상단 배너 + «업데이트» 버튼. 메뉴바 아이콘 표시 |
-| 터미널 CLI | 하루 한 번 stderr 에 한 줄 — «Simless 0.3.0 이 있습니다 — `simless update`». `--json` 출력에는 섞지 않는다 |
-| 에이전트 | `simless status --json`·MCP 응답의 `update: {current, latest}` 필드. 스킬은 «알리기만, 직접 업데이트하지 않음» (§15) |
+**업데이트 — `simless update`** (`src/cli/commands/update.ts`)
+- `simless update` — 지금 버전, 설치된 버전, 되돌릴 수 있는 버전, 업데이트 방법.
+- `simless update <설치 파일>` — 설치 파일 머리(표시·버전)를 보고, 지금보다 새것이면(`--force` 면 상관없이) `bash <파일>` 을 실행한다. 사람이 그 파일을 직접 `bash` 로 돌리는 것과 같다.
+- `simless update --rollback` — `previous` 에 적힌 실행 파일로 `install` 한다. 그 버전이 링크를 되찾고 서버·앱·스킬을 맞춘다.
+- 서버 재시작은 `install` 의 launchd 다시 등록(bootout → bootstrap)이 한다. 점유·대기열은 파일에 있어 유지된다.
+- 개발 중(`bun link`)에는 파일·되돌리기를 거절한다 — 저장소에서 `git pull`.
 
-**교체 — `simless update`**
-1. Release 에서 `simless-darwin-arm64.tar.gz` 와 `SHA256SUMS` 를 받아 **체크섬을 검증**한다.
-2. `~/.local/share/simless/versions/<버전>/simless` 에 풀고 `~/.local/bin/simless` 링크를 바꾼다 — Claude Code 와 같은 방식(이 Mac 의 `~/.local/share/claude/versions/` 확인).
-3. 서버 재시작 + `Simless.app` 갱신(`simless install` 과 같은 경로). 점유·대기열은 파일에 있어 유지되고, 부팅·설치가 진행 중이면 끝난 뒤 재시작한다.
-4. `simless update --rollback` — 이전 버전으로 링크를 되돌린다. 버전 폴더는 최근 3개만 남긴다.
+**새 버전 확인 (R27, 미구현)** — 팀원이 받을 수 있는 주소가 정해지면 더한다. 계획: 서버가 시작할 때와 하루 한 번 최신 버전을 묻고(GitHub Release 면 로그인된 `gh` 로), 사람에게는 macOS 알림 한 번(메뉴바 앱의 M18 알림에 더함)·앱 창 배너, CLI 는 하루 한 번 stderr 한 줄, 에이전트에게는 `status`·MCP 의 `update: {current, latest}`. 받은 설치 파일은 sha256 을 확인한다. 외부 요청이 처음 생기는 것이라 그때 SECURITY.md §3 «네트워크 요청» 을 고친다.
 
-- 자동 업데이트는 기본 꺼짐. `config.json` 의 `autoUpdate: true` 면 점유가 하나도 없을 때만 알아서 교체한다.
+**배포 쪽 — `scripts/release.ts`** — 작업 트리·검사·테스트 확인 → `package.json` 버전 → `CHANGELOG.md` 의 «아직 내지 않은 것» 을 새 버전 절로 → `chore(release): vX.Y.Z` 커밋 + `vX.Y.Z` 태그 → **`bun run build` 로 설치 파일**. 그 파일을 팀원에게 보낸다.
 
-**배포 쪽 — `scripts/release.ts`** — 지금(2026-10-05): 작업 트리·검사·테스트 확인 → `package.json` 버전 올리기 → `CHANGELOG.md` 의 «아직 내지 않은 것» 을 새 버전 절로(비어 있으면 지난 태그 이후 `feat`·`fix`·`perf` 커밋에서 초안) → `chore(release): vX.Y.Z` 커밋 + `vX.Y.Z` 태그. 리모트가 생기면 여기에 `bun run build` → 압축·체크섬 → `gh release create` 를 잇는다. 나중에 GitHub Actions 로 옮길 수 있다. 첫 버전은 0.1.0(그동안의 작업 전부).
+**나중에 다른 배포 방식** — Homebrew tap·서명된 DMG 를 더해도 위의 설치 위치·업데이트 코어는 그대로 쓴다. 다른 것은 받는 방법과, Homebrew 면 복사하지 않고 Homebrew 가 둔 곳을 쓰는 것, DMG 면 앱 안의 실행 파일을 쓰고 `install` 이 앱을 다시 만들지 않는 것뿐이다.
 
 **1단계부터 지킬 것**: 버전은 semver 로 관리하고, 요청·응답에 실린 클라이언트·서버 버전을 비교해 다르면 알려 준다(업데이트 후 서버가 아직 옛 버전인 경우를 잡는다) — 1단계에서 구현함.
 

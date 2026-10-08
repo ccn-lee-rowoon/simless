@@ -132,3 +132,6 @@ sh([
 ]);
 sh(["git", "tag", "-a", `v${version}`, "-m", `simless ${version}`]);
 console.log(`v${version} — 커밋하고 태그를 붙였습니다`);
+// 팀원에게 줄 설치 파일 — 이 파일 하나를 메신저·드라이브로 보낸다 (R19)
+sh(["bun", "run", "build"]);
+console.log(`설치 파일: dist/simless-${version}-install.sh — bash 로 실행하면 설치·업데이트`);

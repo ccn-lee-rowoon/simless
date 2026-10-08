@@ -46,7 +46,7 @@ bun install
 bun run check   # biome check + tsc --noEmit
 bun run test    # 모든 테스트
 bun run trace   # 요구사항 ID ↔ 확인 방법·테스트 (--missing: 테스트여야 하는데 없는 것)
-bun run build   # dist/simless 단일 실행 파일 — 진입점·파일 포함을 바꿨을 때
+bun run build   # dist/simless 단일 실행 파일 + 팀원용 설치 파일 dist/simless-<버전>-install.sh
 bun run release <patch|minor|x.y.z>  # 버전 내기 (§6)
 ```
 
@@ -126,7 +126,7 @@ feat(server): 점유 대기열과 세션 종료 시 자동 해제 추가
 - 1.0 전에는 기능이 늘거나 동작이 바뀌면 minor, 고치기만 하면 patch.
 - 사용자에게 보이는 변화는 `feat`·`fix`·`perf` 로 커밋한다 — CHANGELOG 초안이 여기서 나온다(`bun run release draft`). 내기 전에 «아직 내지 않은 것» 을 사람이 읽기 좋게 다듬는다.
 - 소켓 프로토콜(`PROTOCOL_VERSION`)·저장 파일 형식(레지스트리 `version`)은 앱 버전과 따로, 깨질 때만 올린다.
-- 태그(`vX.Y.Z`)는 리모트에도 올린다(`git push origin vX.Y.Z`). GitHub Release·업데이트 확인은 아직이다(U단계, `docs/design.md` §19).
+- 태그(`vX.Y.Z`)는 리모트에도 올린다(`git push origin vX.Y.Z`). `bun run release` 가 마지막에 설치 파일(`dist/simless-<버전>-install.sh`)을 만든다 — 팀원에게는 이 파일 하나를 보낸다(설치·업데이트 모두 `bash <파일>`). 새 버전 자동 확인(R27)은 아직이다(`docs/design.md` §19).
 
 ## 7. 이 Mac 에 반영할 때
 

@@ -33,12 +33,19 @@ export interface Paths {
   appBundle: string;
   /** 로그인 시 메뉴바 앱을 띄우는 launchd 에이전트 */
   menubarAgent: string;
+  /** 설치한 실행 파일을 버전별로 두는 곳 — `<versionsDir>/<버전>/simless` (R19) */
+  versionsDir: string;
+  /** 되돌릴 때 쓸 바로 전 버전의 실행 파일 경로를 적어 두는 파일 (R19) */
+  previousVersion: string;
+  /** 터미널·에이전트가 부르는 `simless` — 지금 버전 실행 파일을 가리키는 링크. 서버·훅·MCP 도 이 경로를 쓴다 (R19) */
+  binLink: string;
 }
 
 export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
   const home = env.HOME ?? homedir();
   const stateDir = env.SIMLESS_STATE_DIR ?? join(home, "Library", "Application Support", "Simless");
   const configDir = env.SIMLESS_CONFIG_DIR ?? join(home, ".config", "simless");
+  const installDir = env.SIMLESS_INSTALL_DIR ?? join(home, ".local", "share", "simless");
   return {
     stateDir,
     configDir,
@@ -58,5 +65,8 @@ export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
     launchAgent: join(home, "Library", "LaunchAgents", `${LAUNCH_LABEL}.plist`),
     appBundle: join(home, "Applications", "Simless.app"),
     menubarAgent: join(home, "Library", "LaunchAgents", `${MENUBAR_LABEL}.plist`),
+    versionsDir: join(installDir, "versions"),
+    previousVersion: join(installDir, "previous"),
+    binLink: env.SIMLESS_BIN_LINK ?? join(home, ".local", "bin", "simless"),
   };
 }

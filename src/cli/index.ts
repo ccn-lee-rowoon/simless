@@ -14,7 +14,11 @@ import { registerGroups } from "./commands/groups.ts";
 import { registerLease } from "./commands/lease.ts";
 import { registerSkill } from "./commands/skill.ts";
 import { registerStatus } from "./commands/status.ts";
+import { registerUpdate } from "./commands/update.ts";
 import { CliError, confirm, makeContext, output, type Run, request } from "./context.ts";
+
+/** 보호·MCP 를 고쳐 줄 다른 에이전트 — Claude Code 는 따로 (Q16) */
+const ALL_OTHER_AGENTS: OtherAgent[] = ["codex", "copilot", "cursor", "gemini"];
 
 /** 설정 언어 — 명령 설명(--help)도 이 언어로 나오도록 명령을 만들기 전에 정한다 (R25) */
 function applyLanguage(): void {
@@ -103,6 +107,21 @@ export async function runCli(argv: string[]): Promise<number> {
             const moved = await migrateLegacy(ctx.paths, selfCommand());
             if (moved.length > 0) done.legacy = moved.join(", ");
           }
+          // 단일 실행 파일이면 자기를 버전 폴더에 넣고 ~/.local/bin/simless 링크를 바꾼다 —
+          // 뒤의 서버·훅·MCP·앱은 그 링크를 적으므로 받은 파일은 지워도 된다 (R19)
+          const { compareVersions, installSelf, isCompiled, versionOf } = await import(
+            "../install/self.ts"
+          );
+          /** 버전이 바뀐 것을 맨 앞에 한 줄로 — JSON 에는 from·to 로 */
+          let change: { from: string; to: string } | undefined;
+          if (isCompiled()) {
+            const self = await installSelf(ctx.paths, VERSION);
+            done.binary = self.binary;
+            const from = self.previous ? versionOf(ctx.paths, self.previous) : undefined;
+            if (from && from !== VERSION) change = { from, to: VERSION };
+            if (self.pruned.length > 0) done.pruned = self.pruned.join(", ");
+            if (self.notOnPath) console.error(t("cli.install.notOnPath", { dir: self.notOnPath }));
+          }
           if (o.launchd) {
             const { install } = await import("../install/launchd.ts");
             await install(ctx.paths);
@@ -145,15 +164,52 @@ export async function runCli(argv: string[]): Promise<number> {
               done[`mcp:${a}`] = integrationOf(a).label;
             }
           }
+          // 이미 넣어 둔 보호·MCP 가 예전 경로를 가리키면 새 경로로 고친다 — 업데이트·옮긴 뒤 (R19).
+          // 넣어 두지 않은 것은 넣지 않는다(사람이 고른 것만, SECURITY.md §3)
+          {
+            const command = selfCommand();
+            if (!o.hook) {
+              const { hookStatus, installHook } = await import("../install/claude-hook.ts");
+              if (hookStatus(command) === "outdated") done.hook = installHook(command);
+              for (const a of ALL_OTHER_AGENTS) {
+                const integration = integrationOf(a);
+                if ((await integration.hookState(command, process.env)) === "outdated") {
+                  await integration.installHook(command, process.env);
+                  done[`hook:${a}`] = integration.label;
+                }
+              }
+            }
+            if (!o.mcp) {
+              const { mcpStatus, installMcp } = await import("../install/claude-mcp.ts");
+              if (mcpStatus(command) === "outdated") done.mcp = await installMcp(command);
+              for (const a of ALL_OTHER_AGENTS) {
+                const integration = integrationOf(a);
+                if ((await integration.mcpState(command, process.env)) === "outdated") {
+                  await integration.installMcp(command, process.env);
+                  done[`mcp:${a}`] = integration.label;
+                }
+              }
+            }
+          }
           if (o.app) {
             const { installApp } = await import("../install/app-bundle.ts");
             const app = await installApp(ctx.paths, ctx.config);
             done.app = app.menubar ? t("cli.install.menubar", { path: app.path }) : app.path;
             if (app.warning) console.error(app.warning);
           }
-          output(ctx, done, () =>
-            Object.entries(done)
-              .map(([what, path]) => t("cli.install.done", { what, path }))
+          output(ctx, change ? { ...done, change } : done, () =>
+            [
+              change
+                ? t(
+                    compareVersions(change.to, change.from) > 0
+                      ? "cli.install.updated"
+                      : "cli.install.rolledBack",
+                    change,
+                  )
+                : "",
+              ...Object.entries(done).map(([what, path]) => t("cli.install.done", { what, path })),
+            ]
+              .filter(Boolean)
               .join("\n"),
           );
         },
@@ -215,6 +271,8 @@ export async function runCli(argv: string[]): Promise<number> {
     );
 
   registerStatus(program, run);
+
+  registerUpdate(program, run);
   registerLease(program, run);
   registerDevices(program, run);
   registerGroups(program, run);

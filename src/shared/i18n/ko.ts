@@ -111,6 +111,28 @@ export const ko = {
   "cli.install.noApp": "Simless.app 만들기는 건너뛴다",
   "cli.install.menubar": "{path} (메뉴바 앱)",
   "cli.install.done": "설치했습니다 ({what}): {path}",
+  "cli.update":
+    "설치 파일로 업데이트하고 되돌린다 — 파일 없이 부르면 지금 버전과 설치된 버전 (R19)",
+  "cli.update.file": "새 버전 설치 파일 (simless-<버전>-install.sh)",
+  "cli.update.rollback": "바로 전 버전으로 되돌린다",
+  "cli.update.force": "같거나 오래된 버전이어도 설치한다",
+  "cli.update.current": "지금 버전: {version}",
+  "cli.update.versions": "설치된 버전: {versions}",
+  "cli.update.previous": "되돌릴 수 있는 버전: {version} (simless update --rollback)",
+  "cli.update.how": "업데이트: 새 설치 파일을 받아 bash <파일> 또는 simless update <파일>",
+  "cli.update.devMode":
+    "설치 파일로 설치한 simless 가 아닙니다(개발 중 bun link 등) — 저장소에서 git pull 하세요",
+  "cli.update.noPrevious": "되돌릴 이전 버전이 없습니다",
+  "cli.update.noFile": "파일이 없습니다: {file}",
+  "cli.update.notInstaller": "simless 설치 파일이 아닙니다: {file}",
+  "cli.update.notNewer":
+    "{version} 은 지금 버전({current})보다 새것이 아닙니다 — 그래도 설치하려면 --force",
+  "cli.update.failed":
+    "업데이트가 실패했습니다 (종료 코드 {code}) — 바로 전 버전은 simless update --rollback 으로",
+  "cli.install.updated": "{from} → {to} 로 업데이트했습니다",
+  "cli.install.rolledBack": "{from} → {to} 로 되돌렸습니다",
+  "cli.install.notOnPath":
+    '{dir} 이 PATH 에 없습니다 — 터미널과 에이전트가 simless 를 찾도록 ~/.zshrc 에 넣으세요: export PATH="{dir}:$PATH"',
   "cli.uninstall":
     "Simless 제거 — 스킬(모든 위치)·훅·규칙·MCP(모든 에이전트)·Simless.app·서버 등록. 만든 디바이스는 남긴다",
   "cli.uninstall.purge": "데이터·기록·로그·설정·빌드 캐시 폴더도 지운다",

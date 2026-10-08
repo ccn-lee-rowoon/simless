@@ -15,7 +15,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 | `bun run test:watch` | 고칠 때마다 다시 |
 | `bun run trace` | 요구사항 ID 마다 확인 방법·테스트·코드에서 몇 번 가리키나, 끝에 확인 방법별 수. `--missing` 은 확인이 `테스트` 인데 테스트가 없는 것만 |
 | `bun run format` | 포맷·import 정리를 고쳐 쓴다 |
-| `bun run build` | `dist/simless` 단일 실행 파일 — 진입점·묶음 파일(`with { type: "file" }`)을 바꿨을 때 |
+| `bun run build` | `dist/simless` 단일 실행 파일과 팀원에게 줄 설치 파일 `dist/simless-<버전>-install.sh` — 진입점·묶음 파일(`with { type: "file" }`)·설치 흐름을 바꿨을 때 |
 
 커밋마다 `check`·`test` 가 통과해야 한다. 종료 코드로 확인한다 — 출력을 `grep` 에 넘기면 실패해도 성공으로 보일 수 있다.
 
@@ -124,6 +124,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 | `i18n.test.ts`·`config.test.ts` | 문구 사전(키·자리 표시자)·설정 | R25·M11 |
 | `time.test.ts` | 시각 표시 — 방금·N분 전·오늘·어제·날짜, 초까지, 전체 시각 | R25 |
 | `launchd.test.ts`·`app-bundle.test.ts` | 서버 등록 plist·`Simless.app` 만들기·메뉴바 로그인 항목 | R11 |
+| `self.test.ts` | 설치한 simless — 버전 폴더·링크·바로 전 버전·오래된 것 정리·PATH 안내, 설치 파일 알아보기 | R19 |
 
 새 파일을 만들면 이 표에 한 줄 더한다.
 
@@ -157,6 +158,8 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 | 스킬 | `simless skill install` |
 
 다른 세션이 쓰는 기기·Metro 는 건드리지 않는다. 점유가 있는지 먼저 본다(`simless status`).
+
+**설치 파일로 확인할 때**(R19) — `bun run build` 후 임시 홈에서 서버·앱 없이: `HOME=<임시> SIMLESS_STATE_DIR=… SIMLESS_CONFIG_DIR=… SIMLESS_LOG_DIR=… SIMLESS_SOCKET=/tmp/… bash dist/simless-<버전>-install.sh --no-launchd --no-app --no-skill`. 서버 등록(launchd)은 이름이 하나(`simless.server`)라 임시 홈에서도 이 Mac 의 진짜 등록을 바꾼다 — 서버까지 확인할 때는 이 Mac 의 개발 설치를 내리고 하거나 다른 사용자 계정에서 한다.
 
 ## 7. 문서를 고칠 때
 

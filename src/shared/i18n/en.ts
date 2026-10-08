@@ -106,6 +106,28 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.install.noSkill": "Skip installing the skill",
   "cli.install.noApp": "Skip building Simless.app",
   "cli.install.menubar": "{path} (menu bar app)",
+  "cli.update":
+    "Update from an installer file, or roll back — without a file, shows the current and installed versions (R19)",
+  "cli.update.file": "The new version's installer (simless-<version>-install.sh)",
+  "cli.update.rollback": "Go back to the previous version",
+  "cli.update.force": "Install even if it isn't newer",
+  "cli.update.current": "Current version: {version}",
+  "cli.update.versions": "Installed versions: {versions}",
+  "cli.update.previous": "Can roll back to: {version} (simless update --rollback)",
+  "cli.update.how": "To update: get the new installer and run bash <file> or simless update <file>",
+  "cli.update.devMode":
+    "This simless wasn't installed from an installer (e.g. bun link in development) — git pull in the repository",
+  "cli.update.noPrevious": "No previous version to roll back to",
+  "cli.update.noFile": "File not found: {file}",
+  "cli.update.notInstaller": "Not a simless installer: {file}",
+  "cli.update.notNewer":
+    "{version} isn't newer than the current version ({current}) — use --force to install anyway",
+  "cli.update.failed":
+    "Update failed (exit code {code}) — roll back with simless update --rollback",
+  "cli.install.updated": "Updated {from} → {to}",
+  "cli.install.rolledBack": "Rolled back {from} → {to}",
+  "cli.install.notOnPath":
+    '{dir} is not on your PATH — add it to ~/.zshrc so the terminal and agents find simless: export PATH="{dir}:$PATH"',
   "cli.install.done": "Installed ({what}): {path}",
   "cli.uninstall":
     "Remove Simless — the skill (every location), hooks, rules and MCP (all agents), Simless.app and the server registration. Created devices stay",
