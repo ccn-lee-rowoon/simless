@@ -6,7 +6,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 
 ## 1. 준비와 매일 쓰는 명령
 
-처음 한 번: `mise install`(Bun 1.3.6) → `bun install` → `bun link`(`simless` 가 이 저장소를 가리킨다). `bun install` 은 비공개 저장소 `ccn-lee-rowoon/agent-skills` 를 SSH 로 받는다 — GitHub SSH 키가 있어야 한다(`ssh -T git@github.com` 로 확인).
+처음 한 번: `mise install`(Bun 1.3.6) → `bun install` → `bun link`(`simless` 가 이 저장소를 가리킨다). `bun install` 은 비공개 저장소 `agent-skills`(주소는 `package.json`)를 SSH 로 받는다 — GitHub SSH 키가 있어야 한다(`ssh -T git@github.com` 로 확인).
 
 | 명령 | 하는 일 |
 | --- | --- |
