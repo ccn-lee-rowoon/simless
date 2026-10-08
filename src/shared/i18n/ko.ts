@@ -131,6 +131,8 @@ export const ko = {
     "업데이트가 실패했습니다 (종료 코드 {code}) — 바로 전 버전은 simless update --rollback 으로",
   "cli.install.updated": "{from} → {to} 로 업데이트했습니다",
   "cli.install.rolledBack": "{from} → {to} 로 되돌렸습니다",
+  "cli.install.refreshFailed":
+    "{what} 의 simless 연결을 새 경로로 고치지 못했습니다 — 설정 창 «에이전트 연결» 에서 다시 켜세요: {error}",
   "cli.install.notOnPath":
     '{dir} 이 PATH 에 없습니다 — 터미널과 에이전트가 simless 를 찾도록 ~/.zshrc 에 넣으세요: export PATH="{dir}:$PATH"',
   "cli.uninstall":

@@ -126,6 +126,8 @@ export const en: Record<keyof typeof ko, string> = {
     "Update failed (exit code {code}) — roll back with simless update --rollback",
   "cli.install.updated": "Updated {from} → {to}",
   "cli.install.rolledBack": "Rolled back {from} → {to}",
+  "cli.install.refreshFailed":
+    "Could not point the simless connection in {what} to the new path — turn it on again in the settings window (Agent connections): {error}",
   "cli.install.notOnPath":
     '{dir} is not on your PATH — add it to ~/.zshrc so the terminal and agents find simless: export PATH="{dir}:$PATH"',
   "cli.install.done": "Installed ({what}): {path}",
