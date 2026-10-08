@@ -14,6 +14,11 @@ const dirs: string[] = [];
 afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
+/** 설치되는 스킬 전체(SKILL.md + reference/) — 안내가 어느 파일에 있든 찾는다 */
+async function skillText(): Promise<string> {
+  return [...(await bundledFiles()).values()].join("\n");
+}
+
 function home() {
   const dir = mkdtempSync(join(tmpdir(), "simless-skill-"));
   dirs.push(dir);
@@ -24,7 +29,7 @@ describe("에이전트 스킬 (R16·S9)", () => {
   test("특정 앱에 묶이지 않는다 — 앱 이름·번들 ID·저장소 이름을 쓰지 않는다 (R16)", async () => {
     // 스킬은 모든 모바일 앱 프로젝트에서 쓴다. 예시는 MyApp 처럼 지어낸 이름으로
     for (const text of [
-      await bundledSkill(),
+      await skillText(),
       await Bun.file("integrations/rules/simless.md").text(),
     ]) {
       // 번들 ID·패키지는 com.example 만, dev client 스킴은 지어낸 exp+myapp 이나 <자리 표시자> 만
@@ -96,7 +101,7 @@ describe("에이전트 스킬 (R16·S9)", () => {
   });
 
   test("남의 기기·Metro 를 건드리지 않고, 자기 Metro 는 비어 있는 포트에 (S7·S11)", async () => {
-    const text = await bundledSkill();
+    const text = await skillText();
     expect(text).toContain("Never touch other sessions' devices or Metro");
     expect(text).toContain("adb -s <targetId> reverse tcp:<port> tcp:<port>");
     expect(text).toContain("adb -s <targetId> reverse tcp:8081 tcp:<port>");
@@ -104,7 +109,8 @@ describe("에이전트 스킬 (R16·S9)", () => {
   });
 
   test("argent 의 Metro 하나 안내 대신 — IPv4·준비 확인·주소를 넣은 실행·붙었는지 확인·디버거 포트 (S11)", async () => {
-    const text = await bundledSkill();
+    const text = await skillText();
+    const skill = await bundledSkill();
     expect(text).toContain("overrides the argent React Native workflow's single-Metro advice");
     expect(text).toContain("NODE_OPTIONS=--dns-result-order=ipv4first");
     expect(text).toContain("`debugger-status` with `device_id: <targetId>` and `port: <port>`");
@@ -124,14 +130,14 @@ describe("에이전트 스킬 (R16·S9)", () => {
     // 원칙: 127.0.0.1 만, LAN IP 는 쓰지 않는다
     expect(text).toContain("never the Mac's LAN IP");
     // 슬림 방식 셋 — 전체·앱에 필요한 것 남기기·커스텀 (M15)
-    expect(text).toContain("#### Choosing how to slim");
+    expect(text).toContain("## Choosing how to slim");
     expect(text).toContain("--slim-keep <id,…>");
     expect(text).toContain("simless slim <device> --keep <id,…>");
     // 앱에 필요한 기능 찾기 — device-slim 스킬 없이도 (M15)
-    expect(text).toContain("## Finding what the app needs");
+    expect(skill).toContain("## Finding what the app needs");
     // 참고 파일은 agent-skills 의 device-slim 것을 쓰고, 스킬이 모두 링크한다
     for (const path of (await bundledFiles()).keys()) {
-      if (path !== "SKILL.md") expect(text).toContain(`(${path})`);
+      if (path !== "SKILL.md") expect(skill).toContain(`(${path})`);
     }
     expect(text).toContain(".device-slim.json");
     expect(text).toContain(
@@ -152,7 +158,7 @@ describe("에이전트 스킬 (R16·S9)", () => {
   });
 
   test("Android 실측 보충 — --android 는 에뮬레이터가 하나일 때만, 앱에서 확인, 딥링크 재기동, reverse 사라짐, 점유는 따로 (S7·S11)", async () => {
-    const text = await bundledSkill();
+    const text = await skillText();
     expect(text).toContain(
       "NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port> --android",
     );
@@ -169,18 +175,36 @@ describe("에이전트 스킬 (R16·S9)", () => {
   });
 
   test("직접 빌드·설치할 때는 기기를 꼭 지정한다 — 남의 에뮬레이터에 깔리지 않게 (S7)", async () => {
-    const text = await bundledSkill();
+    const text = await skillText();
     expect(text).toContain("--deviceId <targetId>");
     expect(text).toContain("ANDROID_SERIAL=<targetId>");
   });
 
   test("테스트에 맞는 기기 — 레이아웃은 아무 기기나, 기능 테스트는 slimOff 를 보고, 맞는 기기가 없으면 묻는다 (S13)", async () => {
-    const text = await bundledSkill();
+    const text = await skillText();
     expect(text).toContain("#### Does the test need device features?");
     expect(text).toContain("**UI and layout checks** need nothing");
     expect(text).toContain("A device fits when **none of those IDs is in its `slimOff`**");
     expect(text).toContain("wait for it (`--wait`) and tell the user");
     expect(text).toContain("No device fits → **ask the user**");
+  });
+
+  test("스킬 형식 — description·본문 길이 한도, 참고 파일은 본문에서 한 단계만, 진행 체크리스트 (S9)", async () => {
+    const skill = await bundledSkill();
+    const description = /^description: (.*)$/m.exec(skill)?.[1] ?? "";
+    // Agent Skills 규격 — 넘으면 잘리거나 로드되지 않는다. 본문은 500줄 아래(Anthropic 가이드)
+    expect(description.length).toBeLessThanOrEqual(1024);
+    expect(description).toStartWith("Brokers ");
+    expect(skill.split("\n").length).toBeLessThan(500);
+    // 참고 파일끼리 링크하지 않는다 — 에이전트가 따라가면 일부만 읽고 넘어가기 쉽다
+    for (const [path, text] of await bundledFiles()) {
+      if (path === "SKILL.md") continue;
+      expect([...text.matchAll(/\]\(([^)\s#]+\.md)/g)].map((m) => `${path} → ${m[1]}`)).toEqual([]);
+    }
+    expect(skill).toContain("**Progress** — copy this list");
+    expect(skill).toContain(
+      "Read [reference/troubleshooting.md](reference/troubleshooting.md) when",
+    );
   });
 
   test("그룹은 사용자가 요청할 때만 (S10)", async () => {

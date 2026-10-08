@@ -75,7 +75,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 - `integrations/skill/simless/SKILL.md`·`integrations/rules/simless.md` — 커밋 type 은 `docs`
 - 요구사항(S1~S12)을 담은 문장은 `test/skill.test.ts` 가 검사한다 — 바꾸면 테스트도 같이
 - 이 Mac 에 반영: `simless skill install`(넣어 둔 모든 곳). 서버는 10분마다 예전 스킬을 찾아 앱에 알린다
-- 스킬은 폴더째 설치된다 — `SKILL.md` + `reference/app-*.md`(앱에 필요한 기기 기능 찾기, M15). 참고 파일의 정본은 agent-skills 저장소의 `skills/device-slim/reference/` 다. 거기서 고친 것을 가져오려면 agent-skills 에서 `device-slim-vX.Y.Z` 태그를 낸 뒤 `package.json` 의 `agent-skills` 태그를 올리고 `bun install` → 바뀐 파일을 읽어 보고 커밋. 파일을 더하거나 빼면 `src/install/skill.ts` 의 `REFERENCES` 와 스킬의 링크도 고친다. 새 태그를 올렸는데 `bun install` 이 «no commit matching» 으로 못 찾으면 Bun 이 저장소를 캐시한 채 태그를 새로 받지 않은 것이다 — `~/.bun/install/cache/` 에서 `remote.origin.url` 이 agent-skills 인 `<hash>.git` 폴더를 찾아 `git -C <그 폴더> fetch --tags origin` 한 뒤 다시 `bun install`.
+- 스킬은 폴더째 설치된다 — `SKILL.md` + `reference/`. `reference/slim.md`·`troubleshooting.md` 는 이 저장소(`integrations/skill/simless/reference/`)에서 고친다. 본문에는 흐름만 두고, 필요할 때만 읽는 긴 안내는 참고 파일로 뺀다 — 참고 파일을 더하면 `src/install/skill.ts` 의 `REFERENCES` 에 넣고 SKILL.md 에서 바로 링크한다(참고 파일끼리 링크하지 않는다, `test/skill.test.ts` 가 검사). `reference/app-*.md`(앱에 필요한 기기 기능 찾기, M15)의 정본은 agent-skills 저장소의 `skills/device-slim/reference/` 다. 거기서 고친 것을 가져오려면 agent-skills 에서 `device-slim-vX.Y.Z` 태그를 낸 뒤 `package.json` 의 `agent-skills` 태그를 올리고 `bun install` → 바뀐 파일을 읽어 보고 커밋. 파일을 더하거나 빼면 `src/install/skill.ts` 의 `REFERENCES` 와 스킬의 링크도 고친다. 새 태그를 올렸는데 `bun install` 이 «no commit matching» 으로 못 찾으면 Bun 이 저장소를 캐시한 채 태그를 새로 받지 않은 것이다 — `~/.bun/install/cache/` 에서 `remote.origin.url` 이 agent-skills 인 `<hash>.git` 폴더를 찾아 `git -C <그 폴더> fetch --tags origin` 한 뒤 다시 `bun install`.
 
 ### 이 Mac 에 설치하는 것 하나 더하기 (S1·S12)
 
