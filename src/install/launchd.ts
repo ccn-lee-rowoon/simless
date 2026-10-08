@@ -1,7 +1,8 @@
 import { chmodSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { run } from "../shared/exec.ts";
-import { APP_BUNDLE_ID, LAUNCH_LABEL, type Paths } from "../shared/paths.ts";
+import { APP_BUNDLE_ID, LAUNCH_LABEL, type Paths, resolvePaths } from "../shared/paths.ts";
+import { currentBinary, isCompiled, linkPointsIntoVersions } from "./self.ts";
 
 // 서버를 launchd 사용자 에이전트로 등록한다 — 로그인 시 켜지고, 죽으면 다시 살아난다 (docs/design.md §4).
 
@@ -13,10 +14,17 @@ const PASS_ENV = [
   "ANDROID_HOME",
 ];
 
-/** 지금 실행 중인 simless 를 다시 실행하는 명령 — 단일 실행 파일이면 그 파일, 개발 중이면 bun + 스크립트 */
+/**
+ * simless 를 다시 실행하는 명령 — 서버(launchd)·훅·MCP·앱에 적는다.
+ * 개발 중이면 bun + 스크립트. 단일 실행 파일이면 설치한 링크(`~/.local/bin/simless`)를 적어
+ * 받은 파일을 지우거나 업데이트로 버전이 바뀌어도 그대로 맞게 한다 (R19). 링크가 없으면 그 파일
+ */
 export function selfCommand(): string[] {
-  const compiled = Bun.main.startsWith("/$bunfs/");
-  return compiled ? [process.execPath] : [process.execPath, Bun.main];
+  if (!isCompiled()) return [process.execPath, Bun.main];
+  const paths = resolvePaths();
+  return linkPointsIntoVersions(paths) && currentBinary(paths)
+    ? [paths.binLink]
+    : [process.execPath];
 }
 
 function escapeXml(text: string): string {
