@@ -1,6 +1,6 @@
 import { type ReactNode, StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { CatalogResult, SettingsResult, StatusResult } from "../shared/api.ts";
+import type { CatalogResult, StatusResult } from "../shared/api.ts";
 import { language, resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
 import { ApiError, call, subscribe, token } from "./api.ts";
 import { postToApp } from "./bridge.ts";
@@ -66,16 +66,7 @@ function App() {
   const [status, setStatus] = useState<StatusResult | null>(null);
   const [splash, setSplash] = useState(LAUNCHED);
   const endSplash = useCallback(() => setSplash(false), []);
-  // CLI 설정(launchAnimation)에서 껐거나 첫 실행 설정을 해야 하면 보여 주지 않는다 (M17)
-  useEffect(() => {
-    if (!LAUNCHED) return;
-    call<SettingsResult>("settings.get").then(
-      (s) => {
-        if (!s.launchAnimation) setSplash(false);
-      },
-      () => setSplash(false),
-    );
-  }, []);
+  // 첫 실행 설정을 해야 하면 보여 주지 않는다 (M17)
   useEffect(() => {
     if (status?.setupNeeded) setSplash(false);
   }, [status?.setupNeeded]);

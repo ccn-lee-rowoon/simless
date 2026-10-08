@@ -319,7 +319,7 @@ export const ko = {
   "cli.group.missingDevice": "(없는 디바이스)",
 
   // CLI — 설정
-  "cli.config": "설정을 보거나 바꾼다 — 앱 창의 설정 화면과 같은 값(launchAnimation 은 여기서만)",
+  "cli.config": "설정을 보거나 바꾼다 — 앱 창의 설정 화면과 같은 값",
   "cli.config.key": "설정 이름 (language·idleReleaseMinutes·android.ramMb …)",
   "cli.config.value": "새 값",
   "cli.config.set": "{key} = {value}",

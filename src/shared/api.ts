@@ -72,8 +72,6 @@ export interface SettingsResult {
   idleReleaseMinutes: number;
   /** 점유 기록 보관 기간 (M13) */
   historyRetentionDays: number;
-  /** 앱을 켜고 대시보드를 처음 열 때 시작 애니메이션 (M17) */
-  launchAnimation: boolean;
   androidRamMb: number;
   simslimProfile?: string;
 }

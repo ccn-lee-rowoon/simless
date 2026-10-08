@@ -11,7 +11,7 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 
 - **Android 기종을 전부** — Android Studio 가 깔려 있으면 그 기기 정의의 폰·태블릿을 모두 만들 수 있다(이 Mac 에서 8개 → 67개: Pixel 2~9 Pro XL·Fold·Tablet, Nexus, 일반 크기). Android Studio 에서 만든 하드웨어 프로필도 보인다
 - **macOS 알림** — Simless 서버가 1분 넘게 꺼져 있을 때(누르면 서버를 켬)와 스킬 업데이트가 있을 때(버전마다 한 번) 알림 센터에 알린다
-- **시작 애니메이션** — 앱을 켜고 대시보드를 처음 열 때 «Simulator + Seamless» 가 «Simless» 로 합쳐진다(3초 안, 누르면 넘어감, «동작 줄이기» 를 따름). 끄려면 `simless config launchAnimation false`
+- **시작 애니메이션** — 앱을 켜고 대시보드를 처음 열 때 «Simulator + Seamless» 가 «Simless» 로 합쳐진다(3초 안, 누르면 넘어감, «동작 줄이기» 를 따름)
 - **슬림 내역** — 기기마다 꺼진 슬림 항목을 기록한다(켜진 기기를 15초마다 확인, Simless 밖에서 한 슬림도). 앱 창은 목록의 «슬림» 칸(`SLIM ↗` 버튼)·⋯ «슬림 내역» 에서 꺼진 것·켜진 것을 창으로, `simless --json list`·MCP 에는 `slimOff`. 스킬은 기기 기능을 쓰는 테스트면 필요한 항목이 켜진 기기를 골라 요청한다(레이아웃 확인은 아무 기기나)
 - **슬림 항목 고르기** — 전체 슬림(UI 확인용) 말고 남길 항목을 골라 슬림할 수 있다. iOS 는 simslim 묶음, Android 는 avdslim 패키지 묶음·기기 설정(위치 등)·카메라·소리. 기기마다 기억해 풀렸을 때 같은 내용으로 다시 적용하고, 만든 뒤에도 바꿀 수 있다 — 앱 창의 생성 화면·⋯ «슬림 설정…», `simless create --slim-keep`·`simless slim --keep|--full`, MCP `simless_create`(`slimKeep`)·`simless_slim`. 스킬은 전체 · 앱에 필요한 기능을 남기고 · 커스텀 중에서 고른다
 - 지원 범위를 적었다 — 앱은 **React Native (Expo)** 하나(스킬의 Metro·dev client·빌드 캐시가 이것을 전제로 한다), 에이전트는 Claude Code·Copilot CLI·Codex·Cursor·Gemini CLI.

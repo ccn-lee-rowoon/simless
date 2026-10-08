@@ -10,8 +10,6 @@ export const Config = z.object({
   idleReleaseMinutes: z.number().positive().default(30),
   /** 점유 기록을 남겨 두는 날 수 — 지난 것은 서버가 지운다 (M13) */
   historyRetentionDays: z.number().int().positive().default(90),
-  /** 앱을 켜고 대시보드를 처음 열 때 «Simulator + Seamless → Simless» 애니메이션 (M17) */
-  launchAnimation: z.boolean().default(true),
   httpPort: z.number().int().positive().default(8791),
   /** 슬림 전 기준값을 잴 때 켜고 나서 기다리는 시간 — 백그라운드 서비스가 다 뜰 때까지 */
   slimBaselineSettleSeconds: z.number().nonnegative().default(45),
@@ -47,7 +45,6 @@ export interface SettingsPatch {
   language?: Config["language"];
   idleReleaseMinutes?: number;
   historyRetentionDays?: number;
-  launchAnimation?: boolean;
   androidRamMb?: number;
   simslimProfile?: string | null;
 }
@@ -67,7 +64,6 @@ export function saveSettings(path: string, patch: SettingsPatch): Config {
   if (patch.idleReleaseMinutes !== undefined) raw.idleReleaseMinutes = patch.idleReleaseMinutes;
   if (patch.historyRetentionDays !== undefined)
     raw.historyRetentionDays = patch.historyRetentionDays;
-  if (patch.launchAnimation !== undefined) raw.launchAnimation = patch.launchAnimation;
   if (patch.androidRamMb !== undefined) android.ramMb = patch.androidRamMb;
   if (patch.simslimProfile !== undefined) {
     if (patch.simslimProfile) ios.simslimProfile = patch.simslimProfile;

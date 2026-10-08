@@ -137,7 +137,7 @@ simless/
 | `~/Library/Logs/Simless/` | 서버 로그 | 서버 |
 | `~/.local/share/simless/versions/<버전>/simless` · `~/.local/bin/simless`(링크) | 설치된 버전들과 지금 쓰는 버전 (§19) | `simless update` |
 | `~/Library/Caches/Simless/builds/<앱>/<플랫폼>/<지문>/` | 캐시된 네이티브 빌드(.app·.apk) + `meta.json`. 앱·플랫폼마다 최근 5개 (R26). `SIMLESS_BUILD_CACHE` 로 바꿀 수 있다 | CLI |
-| `~/.config/simless/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`, 기본 `system`), 자동 해제 시간(기본 30분), 시작 애니메이션(`launchAnimation`, 기본 켜짐), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다(`launchAnimation` 은 `simless config` 로만) | 사람·서버 |
+| `~/.config/simless/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`, 기본 `system`), 자동 해제 시간(기본 30분), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다 | 사람·서버 |
 | `~/.config/simless/apps/<name>.json` | 앱별 설정 (Q8) | 사람 |
 | `~/.android/avd/<AVD ID>.avd` · `.ini` | Android 디바이스 본체 — Simless 가 만든 것은 `simless_<id>` | Android Studio·서버 |
 | CoreSimulator 기본 device set | iOS 디바이스 본체 | Xcode·서버(simctl) |
@@ -333,7 +333,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | `simless up` · `simless down` | 점유한 디바이스 켜기·끄기 | R7 |
 | **`simless use [<dev>… \| --group … \| --default …] [--available] [--wait]`** | **acquire + up 한 번에** — 주 흐름의 첫 단계 | R15 |
 | `simless app install [<dev>…] [--platform] [--project]` · `app save [--platform] [--path] [--project]` · `app list` · `app prune [--keep 5]` | 네이티브 빌드 캐시 — 지문이 같으면 점유한 켜진 기기에 설치, 빌드한 것 보관 (§10) | R26 |
-| `simless config [<키> [<값>]]` | 설정 보기·바꾸기 (언어 등) — 앱 창 설정 화면과 같은 값, `launchAnimation` 은 CLI 에서만 | M11·R25·M17 |
+| `simless config [<키> [<값>]]` | 설정 보기·바꾸기 (언어 등) — 앱 창 설정 화면과 같은 값 | M11·R25 |
 | `simless skill status` · `skill install [--global] [--project <폴더>…]` · `skill uninstall` | 스킬 설치 위치·상태 (폴더째 — SKILL.md + `reference/*.md`) | S9 |
 | `simless update [--check] [--rollback]` | 새 버전 확인·업데이트·이전 버전으로 되돌리기 — **U단계, 아직 없음** | R19 |
 | `simless serve` · `simless hook <에이전트> pre-tool-use` · `simless mcp` | 서버·훅·MCP 진입점 (사람이 직접 쓰지 않음) | — |
@@ -403,7 +403,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 **그룹 화면** (M9·R21) — 그룹 목록(이름·설명·디바이스 수·마지막으로 고친 사람/에이전트), 만들기·고치기(이름·설명·디바이스 고르기 — 목록에서 체크), 삭제. 없는 디바이스(밖에서 지워짐)는 표시하고 빼게 한다.
 
-**시작 애니메이션** (M17) — 메뉴바 앱이 켜진 뒤 대시보드를 처음 불러올 때만 주소에 `launch=1` 을 붙인다(불러오기에 성공하면 뗌). 화면은 그 값을 읽자마자 지우고(`history.replaceState`), 설정이 켜져 있고 첫 실행 설정을 할 필요가 없으면 `LaunchSplash` 를 덮어 보여 준다 — «Sim·ulator» «Seam·less» 에서 0.2초 멈춤 → 0.7초 버릴 글자 흐리게 → 0.8초 접으며 붙이기 → 로고(0.5초) → 2.4초부터 0.5초 동안 사라진다(2.9초). 그동안 뒤에서 목록을 읽는다. 누르거나 키를 누르면 끝, `prefers-reduced-motion` 이면 움직임 없이 0.7초.
+**시작 애니메이션** (M17) — 메뉴바 앱이 켜진 뒤 대시보드를 처음 불러올 때만 주소에 `launch=1` 을 붙인다(불러오기에 성공하면 뗌). 화면은 그 값을 읽자마자 지우고(`history.replaceState`), 첫 실행 설정을 할 필요가 없으면 `LaunchSplash` 를 덮어 보여 준다 — «Sim·ulator» «Seam·less» 에서 0.2초 멈춤 → 0.7초 버릴 글자 흐리게 → 0.8초 접으며 붙이기 → 로고(0.5초) → 2.4초부터 0.5초 동안 사라진다(2.9초). 그동안 뒤에서 목록을 읽는다. 누르거나 키를 누르면 끝, `prefers-reduced-motion` 이면 움직임 없이 0.7초.
 
 **설정** (M11, 새 창) — 맨 위 «버전 정보»(버전·설정 파일 위치) · 첫 실행 설정 다시 열기(M14) · 언어(시스템 따름·한국어·English, R25) · 자동 해제 시간·기록 보관 기간 · Android RAM · simslim 프로필 · 저장 버튼 · 맨 아래 «Simless 제거»(S12 — 지울 것을 보여 주고 «데이터까지» 를 고르게 한 뒤 `setup.uninstall`). `config.json` 에 쓰고 서버가 바로 반영한다.
 

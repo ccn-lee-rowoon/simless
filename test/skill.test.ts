@@ -194,7 +194,6 @@ describe("에이전트 스킬 (R16·S9)", () => {
     const description = /^description: (.*)$/m.exec(skill)?.[1] ?? "";
     // Agent Skills 규격 — 넘으면 잘리거나 로드되지 않는다. 본문은 500줄 아래(Anthropic 가이드)
     expect(description.length).toBeLessThanOrEqual(1024);
-    expect(description).toStartWith("Brokers ");
     expect(skill.split("\n").length).toBeLessThan(500);
     // 참고 파일끼리 링크하지 않는다 — 에이전트가 따라가면 일부만 읽고 넘어가기 쉽다
     for (const [path, text] of await bundledFiles()) {

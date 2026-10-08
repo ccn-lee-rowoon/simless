@@ -121,7 +121,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 | `uninstall.test.ts` | 제거 — 스킬·보호·데이터, 서버 등록은 가짜로 | S12 |
 | `builds.test.ts` | 네이티브 빌드 캐시 — 지문·보관·정리·찾기·설치 | R26 |
 | `history.test.ts` | 점유 기록 SQLite·보관 기간 | M13 |
-| `i18n.test.ts`·`config.test.ts` | 문구 사전(키·자리 표시자)·설정(시작 애니메이션 포함) | R25·M11·M17 |
+| `i18n.test.ts`·`config.test.ts` | 문구 사전(키·자리 표시자)·설정 | R25·M11 |
 | `time.test.ts` | 시각 표시 — 방금·N분 전·오늘·어제·날짜, 초까지, 전체 시각 | R25 |
 | `launchd.test.ts`·`app-bundle.test.ts` | 서버 등록 plist·`Simless.app` 만들기·메뉴바 로그인 항목 | R11 |
 

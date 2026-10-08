@@ -312,8 +312,7 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.group.lastEdit": "Last edit: {who}",
   "cli.group.empty": "No devices",
   "cli.group.missingDevice": "(missing device)",
-  "cli.config":
-    "Show or change settings — the same values as the app's Settings (launchAnimation only here)",
+  "cli.config": "Show or change settings — the same values as the app's Settings",
   "cli.config.key": "Setting name (language, idleReleaseMinutes, android.ramMb …)",
   "cli.config.value": "New value",
   "cli.config.set": "{key} = {value}",

@@ -225,7 +225,7 @@ Used when picking a device for a feature test (step 1) and when creating a slim 
    - [ ] Not only a package.json / Podfile / Gradle line — a dependency is never proof on its own
    - [ ] A config plugin, entitlement, Info.plist key or manifest permission — and a source file that imports or calls it (or the built app)
    - [ ] Dependencies no source file imports are dropped, and you say so
-   - [ ] Features that depend on the environment are marked «only when …», and you asked which build will be tested (no answer → the development build)
+   - [ ] Features that depend on the environment are marked «only when …», and you asked which build will be tested
    ```
 4. List the features with their evidence and **confirm with the user** — always, even when you then continue with a default; they may only need some of them for this test.
 5. Map them to slim item IDs with the tables in [reference/slim.md](reference/slim.md) «Features → Simless slim items».
