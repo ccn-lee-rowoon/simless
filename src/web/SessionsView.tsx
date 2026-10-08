@@ -14,7 +14,7 @@ import { call } from "./api.ts";
 import { postToApp } from "./bridge.ts";
 import { PlatformIcon } from "./icons.tsx";
 import type { Act } from "./types.ts";
-import { shortPath, widthText } from "./ui.tsx";
+import { SkeletonRows, shortPath, widthText } from "./ui.tsx";
 
 /** 세션 하나 — 지금 점유·대기(status)와 기록을 세션 키로 묶은 것 */
 interface SessionRow {
@@ -75,7 +75,7 @@ export function SessionsView({ status, act }: { status: StatusResult; act: Act }
     );
   }, [status]);
 
-  if (!recorded) return <p className="sub">{t("web.loading")}</p>;
+  if (!recorded) return <SkeletonRows />;
   const list = rows(status, recorded);
   const active = list.filter((r) => r.active);
   const past = list.filter((r) => !r.active);
@@ -247,7 +247,7 @@ export function SessionWindow({
     );
   }, [status, sessionKey]);
 
-  if (!events) return <p className="sub">{t("web.loading")}</p>;
+  if (!events) return <SkeletonRows />;
   const active = status.sessions.find((s) => s.sessionKey === sessionKey);
   const first = events.at(-1);
   const head = active ?? events[0];

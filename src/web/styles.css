@@ -2164,3 +2164,119 @@ summary:focus-visible {
 .launch-reduced .launch-gap {
   display: none;
 }
+
+/* 읽는 중 (M12) — 도는 원 + 글자, 목록은 줄 모양 자리 표시. 0.15초 뒤에 나타나 짧은 읽기에는 안 보인다 */
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  opacity: 0;
+  animation: loading-in 0.2s ease-out 0.15s forwards;
+}
+
+.loading-page {
+  justify-content: center;
+  /* 창 한가운데쯤 — 로딩만 있는 창(설정 안내)에서 위에 붙지 않게 */
+  min-height: max(180px, 45vh);
+}
+
+.loading-inline {
+  padding: 12px 0;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border: 2px solid var(--track);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.skeleton-rows {
+  display: grid;
+  gap: 10px;
+  padding: 8px 0;
+  opacity: 0;
+  animation: loading-in 0.2s ease-out 0.15s forwards;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.skeleton {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--track) 0%, var(--hover) 50%, var(--track) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-dot {
+  width: 10px;
+  flex: none;
+  border-radius: 50%;
+}
+
+.skeleton-side {
+  width: 72px;
+  margin-left: auto;
+  flex: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes loading-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* macOS «동작 줄이기» — 돌거나 빛나지 않고 그대로 보인다 */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: var(--accent);
+  }
+  .skeleton {
+    animation: none;
+  }
+  .loading,
+  .skeleton-rows {
+    animation: none;
+    opacity: 1;
+  }
+}
