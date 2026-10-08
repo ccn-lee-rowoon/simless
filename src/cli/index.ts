@@ -6,6 +6,7 @@ import { resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
 import { resolvePaths } from "../shared/paths.ts";
 import { systemLanguages } from "../shared/system-language.ts";
 import { VERSION } from "../shared/version.ts";
+import { banner, titleLine } from "./banner.ts";
 import { registerApp } from "./commands/app.ts";
 import { registerConfig } from "./commands/config.ts";
 import { registerDevices } from "./commands/devices.ts";
@@ -39,6 +40,8 @@ export async function runCli(argv: string[]): Promise<number> {
     .version(VERSION, "-v, --version")
     .option("--json", t("cli.opt.json"))
     .option("--session <id>", t("cli.opt.session"))
+    // 맨 위 한 줄 제목 — 로고는 install 에만 (M12)
+    .addHelpText("beforeAll", `${titleLine(VERSION)}\n`)
     // 에이전트가 사용법을 찾아보지 않아도 되게 — JSON·종료 코드·오류 코드·예
     .addHelpText("after", t("cli.helpAgents"))
     .exitOverride();
@@ -100,6 +103,15 @@ export async function runCli(argv: string[]): Promise<number> {
           },
         ) => {
           const done: Record<string, string> = {};
+          // 사람이 터미널에서 실행했을 때만 로고 — 설치 파일·update 도 이 install 을 부른다 (M12)
+          if (!ctx.json) {
+            const logo = banner(VERSION, {
+              isTTY: process.stdout.isTTY === true,
+              columns: process.stdout.columns,
+              env: process.env,
+            });
+            if (logo) console.log(logo);
+          }
           // 예전 이름(Corgi)으로 설치된 것이 있으면 먼저 옮긴다 — 서버를 새로 올리기 전에
           {
             const { migrateLegacy } = await import("../install/legacy.ts");
