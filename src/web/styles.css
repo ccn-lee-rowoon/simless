@@ -18,6 +18,8 @@
   --track: #e9ecf0;
   --hover: #eef0f3;
   --ok: #22a35a;
+  --ok-soft: #e6f6ec;
+  --ok-text: #157a41;
   --off: #a3aab6;
   --danger: #b42318;
   --danger-soft: #fdecea;
@@ -50,6 +52,8 @@
     --track: #1c2027;
     --hover: #20252c;
     --ok: #34d399;
+    --ok-soft: #0f2e22;
+    --ok-text: #34d399;
     --off: #5c6470;
     --danger: #f97066;
     --danger-soft: #3b1714;
@@ -522,6 +526,25 @@ summary:focus-visible {
 .chip-default {
   background: var(--accent-soft);
   color: var(--accent-text);
+  font-weight: 600;
+}
+
+/* 첫 실행 설정의 표시 (M14) — 뜻마다 색: 권장 초록, 선택 테두리만, 실험적 주의색 */
+.chip-recommended {
+  background: var(--ok-soft);
+  color: var(--ok-text);
+  font-weight: 600;
+}
+
+.chip-optional {
+  background: transparent;
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.chip-experimental {
+  background: var(--warn-bg);
+  color: var(--warn-text);
   font-weight: 600;
 }
 

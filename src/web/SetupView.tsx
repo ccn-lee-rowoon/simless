@@ -454,6 +454,7 @@ function AgentsStep({
       <Integration
         title={t("web.setup.skill.title")}
         badge={t("web.setup.recommended")}
+        badgeKind="recommended"
         description={t("web.setup.skill.desc")}
         path={agents.skillLocations.map((l) => locationText(l.location)).join(" · ")}
         state={agents.skill}
@@ -464,6 +465,7 @@ function AgentsStep({
       <Integration
         title={t("web.setup.protect.title")}
         badge={t("web.setup.recommended")}
+        badgeKind="recommended"
         description={t("web.setup.protect.desc")}
         path="~/.claude/settings.json · ~/.claude/rules/simless.md"
         state={protection}
@@ -473,6 +475,7 @@ function AgentsStep({
       <Integration
         title={t("web.setup.mcp.title")}
         badge={t("web.setup.optional")}
+        badgeKind="optional"
         description={t("web.setup.mcp.desc")}
         path="~/.claude.json"
         state={agents.mcp}
@@ -481,7 +484,7 @@ function AgentsStep({
       />
       <div className="setup-agents-head">
         <h3 className="setup-agents-title">{t("web.setup.agents.othersTitle")}</h3>
-        <span className="chip">{t("web.setup.agents.experimental")}</span>
+        <span className="chip chip-experimental">{t("web.setup.agents.experimental")}</span>
       </div>
       <p className="sub">{t("web.setup.agents.experimentalHint")}</p>
       <p className="sub">{t("web.setup.agents.othersIntro")}</p>
@@ -575,6 +578,7 @@ function OtherAgentCard({
 function Integration({
   title,
   badge,
+  badgeKind,
   description,
   path,
   state,
@@ -586,6 +590,8 @@ function Integration({
   children?: ReactNode;
   title: string;
   badge: string;
+  /** 권장·선택 — 색으로 구분한다 */
+  badgeKind: "recommended" | "optional";
   description: string;
   path: string;
   state: InstallState;
@@ -604,7 +610,7 @@ function Integration({
     <div className="panel setup-section setup-integration">
       <div className="setup-integration-head">
         <h3>{title}</h3>
-        <span className="chip">{badge}</span>
+        <span className={`chip chip-${badgeKind}`}>{badge}</span>
         <span className="spacer" />
         <span className={`setup-state setup-state-${state}`}>{t(STATE_LABEL[state])}</span>
       </div>
