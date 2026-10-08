@@ -2020,9 +2020,20 @@ summary:focus-visible {
 }
 
 /* 다른 에이전트 (Q16) */
-.setup-agents-title {
+.setup-agents-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 8px 0 0;
+}
+
+.setup-agents-title {
+  margin: 0;
   font-size: 14px;
+}
+
+.setup-agents-head .chip {
+  margin: 0;
 }
 
 .setup-agent-row {

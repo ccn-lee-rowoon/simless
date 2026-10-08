@@ -479,7 +479,11 @@ function AgentsStep({
         disabled={agents.claude ? undefined : t("web.setup.mcp.noClaude")}
         onApply={(enabled) => apply("mcp", enabled, t("web.setup.mcp.title"))}
       />
-      <h3 className="setup-agents-title">{t("web.setup.agents.othersTitle")}</h3>
+      <div className="setup-agents-head">
+        <h3 className="setup-agents-title">{t("web.setup.agents.othersTitle")}</h3>
+        <span className="chip">{t("web.setup.agents.experimental")}</span>
+      </div>
+      <p className="sub">{t("web.setup.agents.experimentalHint")}</p>
       <p className="sub">{t("web.setup.agents.othersIntro")}</p>
       {agents.others.map((other) => (
         <OtherAgentCard key={other.agent} other={other} onChanged={onChanged} act={act} />
