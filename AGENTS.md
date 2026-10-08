@@ -52,7 +52,7 @@ bun run release <patch|minor|x.y.z>  # 버전 내기 (§6)
 
 **테스트에서 주의할 것**
 - 서버 시나리오는 `test/helpers.ts` 의 `testServers()` 로 — 파일 맨 위에서 한 번 부른다.
-- 설치·훅·MCP 를 부르는 테스트는 `deps: (env) => ({ env: { ...env.env, PATH: "" } })` 로 HOME 을 임시 폴더로 — **진짜 `~/.claude` 등을 건드리지 않는다.**
+- 설치·훅·MCP 를 부르는 테스트는 `deps: (env) => ({ env: { ...env.env, PATH: "" } })` 로 HOME 을 임시 폴더로 — **진짜 `~/.claude` 등을 건드리지 않는다.** PATH 를 비워도 `which()` 는 `/opt/homebrew/bin` 등에서 진짜 명령을 찾는다 — 명령이 실패해야 하는 테스트는 가짜 명령을 PATH 에(`docs/development.md`).
 - 같은 프로세스 안의 소켓 서버를 부르는 promise 에 `expect(…).rejects` 를 쓰면 Bun 1.3.6 에서 오동작한다. `.catch((e) => e)` 로 받아서 검사한다.
 - 테스트 이름에 요구사항 ID 를 넣는다(`describe("그룹 (R21)")`) — `bun run trace` 가 세고 `test/requirements.test.ts` 가 빠진 것을 잡는다. 요구사항을 더할 때는 확인 칸(`테스트`·`화면`·…)도 채운다(`docs/development.md` §4).
 - 실제 디바이스를 다루는 확인은 `SIMLESS_STATE_DIR`·`SIMLESS_SOCKET` 등을 임시 경로로 바꿔 서버를 띄우고 한다. 만든 시험 디바이스는 끝나면 `simless delete --yes` 로 지운다.

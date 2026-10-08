@@ -16,16 +16,22 @@
 
 화면 안 조작(탭·스크린샷·앱 실행)은 [argent](https://argent.swmansion.com) 가 하고, Simless 는 기기를 만들고·관리하고·빌려준다.
 
-## 설치
+## 설치·업데이트
+
+받은 설치 파일 하나로 한다 — 어디에 두었든, Bun 이 없어도 된다(Apple Silicon Mac).
 
 ```sh
-simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·Simless.app
+bash simless-<버전>-install.sh   # 설치: 서버(로그인 시 자동 실행)·에이전트 스킬·Simless.app
 ```
+
+- `simless` 명령은 `~/.local/bin/simless` 에 생긴다(PATH 에 없으면 설치가 넣을 줄을 알려 준다). 설치가 끝나면 받은 파일은 지워도 된다
+- **업데이트**: 새 버전 설치 파일을 같은 방법으로 실행하거나 `simless update <설치 파일>`. 켜져 있어도 된다 — 서버를 다시 켜고 앱·스킬·연결을 맞추며, 기기 점유는 그대로 남는다. 바로 전 버전으로는 `simless update --rollback`
+- 저장소에서 개발할 때는 아래 «개발» 의 `bun link` 뒤 `simless install`
 
 `Simless.app` 을 처음 열면 **«Simless 시작하기»** 창이 뜬다.
 
 1. **이 Mac 점검** — Xcode·simslim·Android SDK·avdslim·argent. 빠진 것은 설치 명령을 보여 준다
-2. **에이전트 연결** — 스킬(권장, 전역 또는 프로젝트) · 보호(권장) · MCP 도구(선택)
+2. **에이전트 연결** — 스킬(권장, 전역 또는 프로젝트) · 보호(권장) · MCP 도구(선택). Copilot CLI·Codex·Cursor·Gemini CLI 도 보호·MCP 를 켤 수 있다(실험적)
 3. **기본 디바이스** — 고르거나 만든다
 
 터미널만 쓸 때는 `simless install --hook --mcp` 로 보호·MCP 까지 넣는다. 점검은 `simless doctor`.
@@ -82,7 +88,7 @@ simless install     # 서버(로그인 시 자동 실행)·에이전트 스킬·
 - 터미널에서: `simless uninstall` (데이터·기록·로그·설정·빌드 캐시까지 지우려면 `--purge`)
 
 지우는 것: 스킬(전역과 넣어 둔 모든 프로젝트), 모든 에이전트의 보호(훅)·규칙·MCP, `Simless.app`·메뉴바·서버 등록.
-남는 것: Simless 가 만든 디바이스(지우려면 먼저 디바이스 화면에서 삭제), `simless` 명령 자체(`which simless` 가 가리키는 파일을 지운다 — 개발용으로 `bun link` 했다면 그 링크).
+남는 것: Simless 가 만든 디바이스(지우려면 먼저 디바이스 화면에서 삭제), `simless` 명령 자체. 설치 파일로 설치했다면 `rm ~/.local/bin/simless && rm -rf ~/.local/share/simless`(제거가 이것까지 지우게 고칠 예정 — `docs/design.md` §19), 개발용으로 `bun link` 했다면 그 링크.
 
 ## 개발
 
