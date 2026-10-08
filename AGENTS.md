@@ -39,7 +39,7 @@
 
 ## 4. 빌드·검사
 
-처음 한 번: `mise install` (Bun 1.3.6) → `bun install` → `bun link` (`simless` 명령이 이 저장소를 가리키게 된다). `bun install` 은 비공개 저장소 `ccn-lee-rowoon/agent-skills`(스킬 참고 파일)를 SSH 로 받으므로 GitHub SSH 키가 있어야 한다.
+처음 한 번: `mise install` (Bun 1.3.6) → `bun install` → `bun link` (`simless` 명령이 이 저장소를 가리키게 된다). `bun install` 은 비공개 저장소 `agent-skills`(스킬 참고 파일 — 주소는 `package.json`)를 SSH 로 받으므로 GitHub SSH 키가 있어야 한다.
 
 ```sh
 bun install
@@ -115,7 +115,7 @@ feat(server): 점유 대기열과 세션 종료 시 자동 해제 추가
 
 ### 브랜치
 
-- 리모트: `https://github.com/ccn-lee-rowoon/simless` (비공개, 2026-10-07 연결). 인계·설계에 회사 앱 정보가 있어 공개하지 않는다.
+- 리모트: 비공개 GitHub 저장소(주소는 `git remote -v`, 2026-10-07 연결). 인계·설계에 회사 앱 정보가 있어 공개하지 않는다.
 - 작업은 **작업 브랜치 → PR → `main`**. 브랜치 이름은 `<type>/<짧은-설명>`(예: `fix/metro-scheme`). `main` 에 직접 푸시하지 않는다.
 - PR 하나 = 논리적 변경 하나(커밋 규칙과 같다). 제목은 커밋 요약과 같은 형식, 본문은 왜·무엇을 확인했는지(검사·테스트·화면). 합칠 때는 커밋을 그대로 두는 merge 나 rebase — 커밋 메시지가 CHANGELOG 초안이 된다.
 - 리모트에 올린 커밋은 `--amend`·리베이스·강제 푸시하지 않는다(위 «하지 않는 것»).
