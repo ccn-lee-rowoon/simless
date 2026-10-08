@@ -165,29 +165,34 @@ export async function runCli(argv: string[]): Promise<number> {
             }
           }
           // 이미 넣어 둔 보호·MCP 가 예전 경로를 가리키면 새 경로로 고친다 — 업데이트·옮긴 뒤 (R19).
-          // 넣어 두지 않은 것은 넣지 않는다(사람이 고른 것만, SECURITY.md §3)
+          // --hook·--mcp 로 방금 넣은 에이전트만 빼고 모두 본다. 넣어 두지 않은 것은 넣지 않는다
+          // (사람이 고른 것만, SECURITY.md §3)
           {
             const command = selfCommand();
-            if (!o.hook) {
+            const justDone = (kind: boolean | undefined, a: string) => !!kind && agents.includes(a);
+            if (!justDone(o.hook, "claude")) {
               const { hookStatus, installHook } = await import("../install/claude-hook.ts");
               if (hookStatus(command) === "outdated") done.hook = installHook(command);
-              for (const a of ALL_OTHER_AGENTS) {
-                const integration = integrationOf(a);
-                if ((await integration.hookState(command, process.env)) === "outdated") {
-                  await integration.installHook(command, process.env);
-                  done[`hook:${a}`] = integration.label;
-                }
-              }
             }
-            if (!o.mcp) {
+            if (!justDone(o.mcp, "claude")) {
               const { mcpStatus, installMcp } = await import("../install/claude-mcp.ts");
               if (mcpStatus(command) === "outdated") done.mcp = await installMcp(command);
-              for (const a of ALL_OTHER_AGENTS) {
-                const integration = integrationOf(a);
-                if ((await integration.mcpState(command, process.env)) === "outdated") {
-                  await integration.installMcp(command, process.env);
-                  done[`mcp:${a}`] = integration.label;
-                }
+            }
+            for (const a of ALL_OTHER_AGENTS) {
+              const integration = integrationOf(a);
+              if (
+                !justDone(o.hook, a) &&
+                (await integration.hookState(command, process.env)) === "outdated"
+              ) {
+                await integration.installHook(command, process.env);
+                done[`hook:${a}`] = integration.label;
+              }
+              if (
+                !justDone(o.mcp, a) &&
+                (await integration.mcpState(command, process.env)) === "outdated"
+              ) {
+                await integration.installMcp(command, process.env);
+                done[`mcp:${a}`] = integration.label;
               }
             }
           }
