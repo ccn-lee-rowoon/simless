@@ -1,6 +1,6 @@
 {
   "name": "simless",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Make simulator management seamless. — 여러 에이전트 세션이 이 Mac 의 시뮬레이터·에뮬레이터를 나눠 쓴다",
   "private": true,
   "type": "module",
