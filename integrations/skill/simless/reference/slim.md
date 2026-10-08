@@ -9,7 +9,7 @@ When you create a slim device, or the user asks to change how one is slimmed, pi
 1. **Full slim** (the default) — for UI and layout checks. Everything that can be turned off is off.
 2. **Keep what the app needs** — for testing an app feature that relies on the device (push notifications, universal links, photo picker, contacts, location, camera …).
    - Find the features the app needs and map them to slim items — follow SKILL.md «Finding what the app needs».
-   - Items differ per platform (`simless --json catalog` → `slimOff[]`: `id`, `name`, and `detail` saying what stops working): iOS has simslim categories, Android has avdslim package groups, device settings and emulator hardware.
+   - Items differ per platform (`simless --json catalog` → `slimOff[]`: `id`, `name`, and — for iOS categories and Android settings and hardware — `detail` saying what stops working; Android package groups have no `detail`, and `avdslim profiles` lists their packages): iOS has simslim categories, Android has avdslim package groups, device settings and emulator hardware.
    - Tell the user which items you keep and why, then create with `--slim-keep <id,…>`.
 3. **Custom** — the user names what to keep. Pass those IDs.
 
@@ -45,7 +45,7 @@ Write or update `.device-slim.json` only if the user agrees. If they don't want 
 
 ## Features → Simless slim items
 
-Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keeps whole items (a simslim category, an avdslim package group, setting or hardware) — not single daemons or packages. The IDs below were checked with simslim 0.11.0 and avdslim 1.0.15; if the catalog shows different ones, use the catalog and its `detail` text.
+Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keeps whole items (a simslim category, an avdslim package group, setting or hardware) — not single daemons or packages. The IDs below were checked with simslim 0.11.0 and avdslim 1.0.15; if the catalog shows different ones, use the catalog — its `detail` text, or for an Android package group the packages `avdslim profiles` lists under it.
 
 ### iOS
 
@@ -74,13 +74,14 @@ Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keep
 | --- | --- | --- |
 | Location | `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` | `location` |
 | Background work, timely push while the app is in the background | background tasks, FCM | `bglimit` (otherwise 4 background processes) |
-| Account sync | sync adapters, Google account sign-in | `sync` |
+| Account sync | the app syncs through Android's sync framework — a `SyncAdapter` / `AbstractAccountAuthenticator` service in the manifest, `ContentResolver.requestSync`, accounts added with `AccountManager`. Not in-app Google Sign-In (last row) | `sync` |
 | Bluetooth | `BLUETOOTH_*` permissions | `bluetooth` |
 | First-run setup state | apps that read setup state (rare) | `setup` |
 | Camera | `CAMERA` permission, camera library | `camera` (emulator hardware — takes effect at the next boot) |
 | Microphone · audio playback | `RECORD_AUDIO`, audio / video playback | `audio` (emulator hardware — next boot) |
-| Opens Google Maps, the gallery / Photos app, YouTube | `geo:` / maps / gallery intents | `media-consumer-apps` |
+| System photo picker | `PickVisualMedia` / `ACTION_PICK_IMAGES`, or `ACTION_GET_CONTENT` with an image type. An image picker library is evidence only through the intent it uses — check its Android source | nothing — the system photo picker and DocumentsUI aren't turned off |
+| Opens Google Maps, Google Photos or YouTube, or picks with `ACTION_PICK` | `geo:` / maps intents, intents naming those apps; `ACTION_PICK` with an image type (once Photos is off no other app handles it) | `media-consumer-apps` |
 | Opens the dialer, contacts or messaging app | `tel:` / `sms:` intents, contacts intents | `telephony-emergency-satellite` |
 | Opens the calendar, clock or calculator app | calendar / alarm intents | `telemetry-feedback-screensavers` |
 | Text-to-speech · accessibility tests | TTS, TalkBack testing | `accessibility-speech` |
-| Push (FCM) · Google Sign-In · WebView | Firebase messaging, Google sign-in | nothing — never turned off; pair push with `bglimit` |
+| Push (FCM) · Google Sign-In · WebView | Firebase messaging, Google sign-in (Credential Manager / Play services) | nothing — never turned off; pair push with `bglimit` |

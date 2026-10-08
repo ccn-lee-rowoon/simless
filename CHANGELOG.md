@@ -30,6 +30,7 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 
 ### 고침
 
+- 스킬의 Android 기능 표를 바로잡았다 — Google 로그인은 «남길 것 없음»(`sync` 는 Android 동기화 프레임워크를 쓰는 앱만), 시스템 사진 선택은 남길 것 없음이고 Google Photos 앱을 직접 열거나 `ACTION_PICK` 을 쓸 때만 `media-consumer-apps`. Android 패키지 묶음에는 카탈로그 `detail` 이 없으니 `avdslim profiles` 의 패키지로 판단한다
 - 아이콘 — 앱 아이콘·화면 로고·탭 아이콘을 메뉴바처럼 «폰 + 눈 + 입» 으로 맞추고(입 밑 선 제거), Simless.app 아이콘의 흰 테두리를 없앴다
 - simslim·avdslim 을 직접 쓰거나 다른 도구로 슬림한 기기가 목록에서 슬림이 아닌 것처럼 보이던 것 — 켜진 기기는 모두 15초마다(서버가 뒤에서) 슬림 상태를 읽어 `SLIM` 으로 보이고, 꺼진 뒤에는 마지막으로 본 값을 «마지막 확인» 시각과 함께 흐리게 보여 준다(앱 창·`simless list`·MCP). 다시 적용은 Simless 가 한 슬림만
 - 스킬 — Android 안내 두 가지가 틀렸던 것(Expo CLI 코드로 확인): `expo start --android` 는 `ANDROID_SERIAL` 을 무시하고 첫 기기에 열고 모든 에뮬레이터에 `adb reverse` 를 걸므로, 켜진 에뮬레이터가 내 것 하나일 때만 쓴다. `expo run:android --device` 는 시리얼이 아니라 AVD 이름(`simless list` 의 `native`). Android 빌드도 iOS 처럼 `--port` 로 자기 Metro 를 다시 쓰고 127.0.0.1 로 연다
