@@ -16,7 +16,6 @@ const SettingsParams = z.object({
     .max(24 * 60)
     .optional(),
   historyRetentionDays: z.number().int().min(1).max(3650).optional(),
-  launchAnimation: z.boolean().optional(),
   androidRamMb: z.number().int().min(1024).max(16384).optional(),
   simslimProfile: z.string().nullable().optional(),
 });
@@ -28,7 +27,6 @@ export function registerSettingsMethods(server: SimlessServer): void {
       language: config.language,
       idleReleaseMinutes: config.idleReleaseMinutes,
       historyRetentionDays: config.historyRetentionDays,
-      launchAnimation: config.launchAnimation,
       androidRamMb: config.android.ramMb,
       simslimProfile: config.ios.simslimProfile,
     };
@@ -43,7 +41,6 @@ export function registerSettingsMethods(server: SimlessServer): void {
     config.language = next.language;
     config.idleReleaseMinutes = next.idleReleaseMinutes;
     config.historyRetentionDays = next.historyRetentionDays;
-    config.launchAnimation = next.launchAnimation;
     config.android.ramMb = next.android.ramMb;
     config.ios.simslimProfile = next.ios.simslimProfile;
     server.leases.setIdleMs(next.idleReleaseMinutes * 60_000);

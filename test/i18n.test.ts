@@ -72,16 +72,6 @@ describe("설정 (M11)", () => {
     });
   });
 
-  test("시작 애니메이션은 기본 켜짐, 끄면 파일에 쓴다 (M17)", async () => {
-    const { env, H } = await start([]);
-    expect((await H<SettingsResult>("settings.get")).launchAnimation).toBe(true);
-    const settings = await H<SettingsResult>("settings.set", { launchAnimation: false });
-    expect(settings.launchAnimation).toBe(false);
-    expect(JSON.parse(readFileSync(env.paths.config, "utf8"))).toMatchObject({
-      launchAnimation: false,
-    });
-  });
-
   test("잘못된 값은 INVALID", async () => {
     const { H } = await start([]);
     expect(await H("settings.set", { language: "fr" }).catch((e) => e)).toMatchObject({
