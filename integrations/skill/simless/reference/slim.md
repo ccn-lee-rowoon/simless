@@ -22,11 +22,11 @@ If the app root (the folder with `app.json` / `package.json`; in a monorepo, the
 ```json
 {
   "features": {
-    "push": "app.config.ts: aps-environment",
-    "photos": "package.json: expo-image-picker (3 files import it)",
-    "sign-in-with-apple": "app.config.ts: only when APP_ENV=prod"
+    "push": "ios/MyApp/MyApp.entitlements: aps-environment",
+    "photos": "ios/MyApp/Info.plist: NSPhotoLibraryUsageDescription; expo-image-picker (3 files import it)",
+    "location": "android/app/src/main/AndroidManifest.xml: ACCESS_FINE_LOCATION"
   },
-  "sources": ["app.config.ts", "package.json", "patches/"],
+  "sources": ["ios/MyApp/MyApp.entitlements", "ios/MyApp/Info.plist", "android/app/src/main/AndroidManifest.xml", "package.json", "patches/"],
   "sourcesHash": "sha256:9f2c…"
 }
 ```
@@ -39,7 +39,7 @@ find <sources…> -type f | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256 
 
 1. Same hash, and no new evidence file since (a new patch, local module, extension target or config plugin — the places the `app-*.md` files list) → use `features` as is.
 2. Otherwise → read the app again (SKILL.md «Finding what the app needs») and **write the file from scratch**, so features and sources that are gone disappear. Tell the user what changed («added location, dropped camera»).
-3. A feature whose evidence says «only when …» → ask which environment is being tested before keeping it.
+3. The native folders appeared or were removed since (a prebuild, or a clean) → read the app again: the evidence changed place. When there were no native folders, the evidence was `expo config --type introspect`, so `sources` lists the app config, `.env` and local plugins.
 
 Write or update `.device-slim.json` only if the user agrees. If they don't want it in the repository, add `/.device-slim.json` to `.git/info/exclude`.
 
@@ -56,7 +56,7 @@ Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keep
 | Universal links / associated domains | `com.apple.developer.associated-domains` | `web` |
 | Photo picker / photo library | `NSPhotoLibraryUsageDescription`, image picker library | `photos` |
 | Contacts · Calendar · Reminders · Mail compose | `NSContactsUsageDescription`, `NSCalendarsUsageDescription`, `NSRemindersUsageDescription`, mail composer | `pim` |
-| iCloud sync · Sign in with Apple · iCloud Keychain | iCloud / Sign in with Apple entitlements **in the build being tested** | `icloud` |
+| iCloud sync · Sign in with Apple · iCloud Keychain | iCloud / Sign in with Apple entitlements **in the app as it is now** | `icloud` |
 | HealthKit · HomeKit | HealthKit / HomeKit entitlements | `health` |
 | Widgets · Live Activities | widget extension, live activity library | `widgets` (about 675 MB — the heaviest) |
 | Siri · speech recognition | SiriKit, `NSSpeechRecognitionUsageDescription` | `siri` |
