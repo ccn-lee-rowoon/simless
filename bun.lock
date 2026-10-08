@@ -6,8 +6,8 @@
       "name": "corgi",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.32.0",
+        "agent-skills": "git+ssh://git@github.com/ccn-lee-rowoon/agent-skills.git#device-slim-v0.2.0",
         "commander": "15.0.0",
-        "agent-skills": "git+ssh://git@github.com/ccn-lee-rowoon/agent-skills.git#device-slim-v0.1.0",
         "react": "19.3.0",
         "react-dom": "19.3.0",
         "simple-icons": "^16.34.0",
@@ -95,7 +95,7 @@
 
     "accepts": ["accepts@2.0.0", "", { "dependencies": { "mime-types": "^3.0.0", "negotiator": "^1.0.0" } }, "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng=="],
 
-    "agent-skills": ["agent-skills@git+ssh://git@github.com/ccn-lee-rowoon/agent-skills.git#3bec48decc007a3ba346476bba2a0009bf004932", {}, "3bec48decc007a3ba346476bba2a0009bf004932"],
+    "agent-skills": ["agent-skills@git+ssh://git@github.com/ccn-lee-rowoon/agent-skills.git#983e01a5aede3475fd2573ba9e3261370da9de31", {}, "983e01a5aede3475fd2573ba9e3261370da9de31"],
 
     "ajv": ["ajv@8.20.0", "", { "dependencies": { "fast-deep-equal": "^3.1.3", "fast-uri": "^3.0.1", "json-schema-traverse": "^1.0.0", "require-from-string": "^2.0.2" } }, "sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA=="],
 

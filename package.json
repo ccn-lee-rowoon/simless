@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.0",
-    "agent-skills": "git+ssh://git@github.com/ccn-lee-rowoon/agent-skills.git#device-slim-v0.1.0",
+    "agent-skills": "git+ssh://git@github.com/ccn-lee-rowoon/agent-skills.git#device-slim-v0.2.0",
     "commander": "15.0.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
