@@ -20,7 +20,7 @@ import { SessionsView, SessionWindow } from "./SessionsView.tsx";
 import { SettingsView } from "./SettingsView.tsx";
 import { SetupView } from "./SetupView.tsx";
 import type { Act, LogLine } from "./types.ts";
-import { Logo, useMenuDismiss } from "./ui.tsx";
+import { Loading, Logo, useMenuDismiss } from "./ui.tsx";
 
 type View = "devices" | "groups" | "sessions";
 
@@ -192,7 +192,7 @@ function App() {
         {status ? (
           <SetupView status={status} act={act} onCreate={() => setCreating(true)} />
         ) : (
-          <p className="sub">{t("web.loading")}</p>
+          <Loading variant="page" />
         )}
         <Notices notices={notices} />
         {createDialog}
@@ -204,7 +204,7 @@ function App() {
     return status ? (
       <SessionWindow status={status} sessionKey={SESSION_WINDOW} />
     ) : (
-      <p className="sub">{t("web.loading")}</p>
+      <Loading variant="page" />
     );
   }
 
@@ -215,7 +215,7 @@ function App() {
         {status ? (
           <SettingsView status={status} act={act} onSaved={refreshStatus} />
         ) : (
-          <p className="sub">{t("web.loading")}</p>
+          <Loading variant="page" />
         )}
         <Notices notices={notices} />
       </div>
@@ -356,7 +356,7 @@ function App() {
           </div>
         )}
         {!status ? (
-          <p className="sub">{t("web.loading")}</p>
+          <Loading variant="page" />
         ) : view === "devices" ? (
           <DevicesView status={status} act={act} onCreate={() => setCreating(true)} />
         ) : view === "groups" ? (

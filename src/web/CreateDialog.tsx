@@ -5,7 +5,7 @@ import { call } from "./api.ts";
 import { PlatformIcon } from "./icons.tsx";
 import { type SlimMode, SlimPicker } from "./SlimPicker.tsx";
 import type { LogLine } from "./types.ts";
-import { Dialog, osText, resolutionText, widthText } from "./ui.tsx";
+import { Dialog, Loading, osText, resolutionText, widthText } from "./ui.tsx";
 
 type Platform = "android" | "ios";
 
@@ -403,7 +403,7 @@ function MacDevices({
         />
       </div>
       {!devices ? (
-        <p className="sub">{t("web.loading")}</p>
+        <Loading />
       ) : shown.length === 0 ? (
         <p className="sub">{t("web.create.macEmpty")}</p>
       ) : (

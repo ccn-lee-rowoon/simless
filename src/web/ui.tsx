@@ -255,7 +255,42 @@ export function useMenuDismiss(): void {
   }, []);
 }
 
-/** 앱 아이콘 — 폭이 다른 기기 세 대 (M12) */
+/**
+ * 읽는 중 — 도는 원 + «읽는 중…» (M12). page 는 창·화면 한가운데, inline 은 대화 상자 안.
+ * 0.15초 뒤에 나타나 금방 끝나는 읽기에는 깜빡이지 않는다. 화면 읽기 프로그램에는 status 로 알린다
+ */
+export function Loading({
+  variant = "inline",
+  label = t("web.loading"),
+}: {
+  variant?: "page" | "inline";
+  label?: string;
+}) {
+  return (
+    <div className={`loading loading-${variant}`} role="status" aria-live="polite">
+      <span className="spinner" aria-hidden="true" />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+/** 목록을 읽는 중 — 목록 줄 모양의 회색 막대가 은은하게 빛난다 (M12). 세션 목록·세션 기록 */
+export function SkeletonRows({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="skeleton-rows" role="status" aria-live="polite">
+      <span className="visually-hidden">{t("web.loading")}</span>
+      {Array.from({ length: rows }, (_, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: 순서만 있는 자리 표시
+        <div className="skeleton-row" key={i} aria-hidden="true">
+          <span className="skeleton skeleton-dot" />
+          <span className="skeleton skeleton-main" style={{ width: `${46 - (i % 3) * 8}%` }} />
+          <span className="skeleton skeleton-side" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** 로고 — 앱 아이콘(icon.svg)을 그대로. 앱 아이콘·탭 아이콘·화면 로고가 한 그림이다 (M12) */
 export function Logo({ size = 24 }: { size?: number }) {
   return (

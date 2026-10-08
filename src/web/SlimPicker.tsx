@@ -3,7 +3,7 @@ import type { CatalogResult, DeviceView, PlatformCatalog, SlimCategory } from ".
 import { type MessageKey, t } from "../shared/i18n.ts";
 import { when } from "../shared/time.ts";
 import { call } from "./api.ts";
-import { Dialog } from "./ui.tsx";
+import { Dialog, Loading } from "./ui.tsx";
 
 /** 슬림 안 함 · 전체 슬림(UI 확인용) · 커스텀(남길 것을 고름) (R5·M15) */
 export type SlimMode = "none" | "full" | "custom";
@@ -192,7 +192,7 @@ export function SlimDialog({
         <div className="dialog-body">
           <p className="sub">{t("web.slim.intro", { name: device.name })}</p>
           {error && <p className="notice-inline">{error}</p>}
-          {!catalog && !error && <p className="sub">{t("web.loading")}</p>}
+          {!catalog && !error && <Loading />}
           {catalog && (
             <SlimPicker
               catalog={catalog}
@@ -276,7 +276,7 @@ export function SlimDetailDialog({
               : t("web.slimDetail.planned", { name: device.name })}
           </p>
           {error && <p className="notice-inline">{error}</p>}
-          {!catalog && !error && <p className="sub">{t("web.loading")}</p>}
+          {!catalog && !error && <Loading />}
           {catalog && (
             <div className="slim-items">
               <div className="slim-items-head">

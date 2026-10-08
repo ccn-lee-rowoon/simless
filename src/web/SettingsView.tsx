@@ -4,7 +4,7 @@ import { t } from "../shared/i18n.ts";
 import { call } from "./api.ts";
 import { openSetup } from "./bridge.ts";
 import type { Act } from "./types.ts";
-import { Dialog } from "./ui.tsx";
+import { Dialog, Loading } from "./ui.tsx";
 
 const RAM_CHOICES = [1536, 2048, 3072, 4096];
 
@@ -38,7 +38,7 @@ export function SettingsView({
         <p className="sub">{t("web.uninstall.done")}</p>
       </section>
     );
-  if (!draft || !settings) return <p className="sub">{t("web.loading")}</p>;
+  if (!draft || !settings) return <Loading variant="page" />;
   const createdCount = status.devices.filter((d) => d.createdBySimless).length;
 
   const changed = JSON.stringify(draft) !== JSON.stringify(settings);
