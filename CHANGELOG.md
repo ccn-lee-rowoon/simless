@@ -7,6 +7,8 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 
 ## 아직 내지 않은 것
 
+## [0.2.0] — 2026-10-08
+
 ### 추가
 
 - **Android 기종을 전부** — Android Studio 가 깔려 있으면 그 기기 정의의 폰·태블릿을 모두 만들 수 있다(이 Mac 에서 8개 → 67개: Pixel 2~9 Pro XL·Fold·Tablet, Nexus, 일반 크기). Android Studio 에서 만든 하드웨어 프로필도 보인다
