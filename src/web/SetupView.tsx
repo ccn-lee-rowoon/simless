@@ -18,7 +18,7 @@ import { call, subscribe } from "./api.ts";
 import { postToApp } from "./bridge.ts";
 import { PlatformIcon } from "./icons.tsx";
 import type { Act } from "./types.ts";
-import { Logo } from "./ui.tsx";
+import { Loading, Logo } from "./ui.tsx";
 
 // 첫 실행 설정 창 — ?window=setup (M14). 앱을 처음 열면 뜬다.
 // 터미널 없이 차례로: 이 Mac 점검 → 에이전트 연결 → 기본 디바이스. 설치는 서버가 한다.
@@ -241,11 +241,12 @@ function CheckStep({
           disabled={checking}
           onClick={onRecheck}
         >
+          {checking && <span className="spinner spinner-small" aria-hidden="true" />}
           {checking ? t("web.setup.check.checking") : t("web.setup.check.recheck")}
         </button>
       </div>
       {!setup ? (
-        <p className="sub">{t("web.setup.check.checking")}</p>
+        <Loading variant="page" label={t("web.setup.check.checking")} />
       ) : (
         <>
           <p className={fails + warns === 0 ? "setup-summary setup-summary-ok" : "setup-summary"}>
@@ -308,6 +309,7 @@ function CheckRow({ check: c, fixes }: { check: CheckView; fixes: FixControls })
           disabled={running}
           onClick={() => fixes.run(action.fix)}
         >
+          {running && <span className="spinner spinner-small" aria-hidden="true" />}
           {running ? t("web.setup.fix.running") : t(ACTION_LABEL[action.kind])}
         </button>
       )}
@@ -420,7 +422,7 @@ function AgentsStep({
   onChanged: (agents: SetupAgents) => void;
   act: Act;
 }) {
-  if (!agents) return <p className="sub">{t("web.setup.check.checking")}</p>;
+  if (!agents) return <Loading variant="page" label={t("web.setup.check.checking")} />;
 
   const apply = (item: SetupItem, enabled: boolean, label: string) =>
     act(label, async () => {
@@ -445,6 +447,7 @@ function AgentsStep({
           disabled={checking}
           onClick={onRecheck}
         >
+          {checking && <span className="spinner spinner-small" aria-hidden="true" />}
           {checking ? t("web.setup.check.checking") : t("web.setup.check.recheck")}
         </button>
       </div>
@@ -476,7 +479,11 @@ function AgentsStep({
         disabled={agents.claude ? undefined : t("web.setup.mcp.noClaude")}
         onApply={(enabled) => apply("mcp", enabled, t("web.setup.mcp.title"))}
       />
-      <h3 className="setup-agents-title">{t("web.setup.agents.othersTitle")}</h3>
+      <div className="setup-agents-head">
+        <h3 className="setup-agents-title">{t("web.setup.agents.othersTitle")}</h3>
+        <span className="chip">{t("web.setup.agents.experimental")}</span>
+      </div>
+      <p className="sub">{t("web.setup.agents.experimentalHint")}</p>
       <p className="sub">{t("web.setup.agents.othersIntro")}</p>
       {agents.others.map((other) => (
         <OtherAgentCard key={other.agent} other={other} onChanged={onChanged} act={act} />
@@ -501,7 +508,8 @@ function OtherAgentCard({
   onChanged: (agents: SetupAgents) => void;
   act: Act;
 }) {
-  const [busy, setBusy] = useState(false);
+  // 누른 버튼 — 끝날 때까지 그 버튼에 도는 원
+  const [busy, setBusy] = useState<{ item: "protection" | "mcp"; enabled: boolean } | null>(null);
   const protection: InstallState =
     other.hook === "current" && other.rule === "current"
       ? "current"
@@ -509,14 +517,16 @@ function OtherAgentCard({
         ? "missing"
         : "outdated";
   const apply = (item: "protection" | "mcp", enabled: boolean) => {
-    setBusy(true);
+    setBusy({ item, enabled });
     void act(
       `${other.label} — ${t(item === "mcp" ? "web.setup.mcp.title" : "web.setup.protect.title")}`,
       async () => {
         onChanged(await call<SetupAgents>("setup.apply", { item, enabled, agent: other.agent }));
       },
-    ).finally(() => setBusy(false));
+    ).finally(() => setBusy(null));
   };
+  const pressed = (item: "protection" | "mcp", enabled: boolean) =>
+    busy?.item === item && busy.enabled === enabled;
   const note = AGENT_NOTE[other.agent];
   const row = (item: "protection" | "mcp", state: InstallState) => (
     <div className="setup-agent-row">
@@ -527,9 +537,10 @@ function OtherAgentCard({
         <button
           type="button"
           className="button button-primary button-small"
-          disabled={busy || !other.installed}
+          disabled={busy !== null || !other.installed}
           onClick={() => apply(item, true)}
         >
+          {pressed(item, true) && <span className="spinner spinner-small" aria-hidden="true" />}
           {state === "outdated" ? t("web.setup.update") : t("web.setup.install")}
         </button>
       )}
@@ -537,9 +548,10 @@ function OtherAgentCard({
         <button
           type="button"
           className="button button-small"
-          disabled={busy}
+          disabled={busy !== null}
           onClick={() => apply(item, false)}
         >
+          {pressed(item, false) && <span className="spinner spinner-small" aria-hidden="true" />}
           {t("web.setup.remove")}
         </button>
       )}
@@ -582,10 +594,11 @@ function Integration({
   disabled?: string;
   onApply: (enabled: boolean) => Promise<void>;
 }) {
-  const [busy, setBusy] = useState(false);
+  // 누른 버튼(설치 true·제거 false) — 끝날 때까지 그 버튼에 도는 원
+  const [busy, setBusy] = useState<boolean | null>(null);
   const run = (enabled: boolean) => {
-    setBusy(true);
-    void onApply(enabled).finally(() => setBusy(false));
+    setBusy(enabled);
+    void onApply(enabled).finally(() => setBusy(null));
   };
   return (
     <div className="panel setup-section setup-integration">
@@ -605,9 +618,10 @@ function Integration({
           <button
             type="button"
             className="button button-primary button-small"
-            disabled={busy || (disabled !== undefined && state === "missing")}
+            disabled={busy !== null || (disabled !== undefined && state === "missing")}
             onClick={() => run(true)}
           >
+            {busy === true && <span className="spinner spinner-small" aria-hidden="true" />}
             {state === "outdated" ? t("web.setup.update") : t("web.setup.install")}
           </button>
         )}
@@ -615,9 +629,10 @@ function Integration({
           <button
             type="button"
             className="button button-small"
-            disabled={busy}
+            disabled={busy !== null}
             onClick={() => run(false)}
           >
+            {busy === false && <span className="spinner spinner-small" aria-hidden="true" />}
             {t("web.setup.remove")}
           </button>
         )}

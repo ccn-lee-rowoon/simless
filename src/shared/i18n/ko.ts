@@ -701,6 +701,9 @@ export const ko = {
   "setup.agentConfig":
     "에이전트 설정을 고치지 못했습니다(읽을 수 없는 파일이거나 명령 실패) — 건드리지 않았습니다: {detail}",
   "web.setup.agents.othersTitle": "다른 에이전트",
+  "web.setup.agents.experimental": "실험적",
+  "web.setup.agents.experimentalHint":
+    "Claude Code 만큼 써 보며 다듬지 않았습니다. 에이전트가 업데이트되면 훅·MCP 동작이 달라질 수 있습니다.",
   "web.setup.agents.othersIntro":
     "스킬은 위의 Simless 스킬을 같이 씁니다(~/.agents/skills). 에이전트마다 보호와 MCP 를 켭니다. 설정은 새로 시작하는 세션부터 적용됩니다.",
   "web.setup.agents.notInstalled": "설치 안 됨",

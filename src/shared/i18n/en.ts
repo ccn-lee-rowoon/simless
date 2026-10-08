@@ -701,6 +701,9 @@ export const en: Record<keyof typeof ko, string> = {
   "setup.agentConfig":
     "Couldn't change the agent's settings (unreadable file or command failed) — left untouched: {detail}",
   "web.setup.agents.othersTitle": "Other agents",
+  "web.setup.agents.experimental": "Experimental",
+  "web.setup.agents.experimentalHint":
+    "Not used and polished as much as Claude Code. Hooks and MCP may behave differently after an agent update.",
   "web.setup.agents.othersIntro":
     "They share the simless skill above (~/.agents/skills). Turn on protection and MCP per agent. Changes apply to new sessions.",
   "web.setup.agents.notInstalled": "Not installed",

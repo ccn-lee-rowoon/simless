@@ -1507,23 +1507,6 @@ summary:focus-visible {
   margin: 0 0 2px;
 }
 
-.spinner {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* 작업 기록·알림 */
 
 .log {
@@ -2037,9 +2020,20 @@ summary:focus-visible {
 }
 
 /* 다른 에이전트 (Q16) */
-.setup-agents-title {
+.setup-agents-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 8px 0 0;
+}
+
+.setup-agents-title {
+  margin: 0;
   font-size: 14px;
+}
+
+.setup-agents-head .chip {
+  margin: 0;
 }
 
 .setup-agent-row {
@@ -2196,6 +2190,11 @@ summary:focus-visible {
   animation: spin 0.8s linear infinite;
 }
 
+/* 만드는 중(디바이스 만들기) — 도는 원을 첫 줄 글자에 맞춘다 */
+.progress .spinner {
+  margin-top: 2px;
+}
+
 .skeleton-rows {
   display: grid;
   gap: 10px;
@@ -2263,6 +2262,17 @@ summary:focus-visible {
   to {
     background-position: -100% 0;
   }
+}
+
+/* 버튼 안 — 누른 일이 끝날 때까지. 글자 색을 따라가 강조 버튼에서도 보인다 */
+.spinner-small {
+  width: 12px;
+  height: 12px;
+}
+
+.button .spinner {
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
 }
 
 /* macOS «동작 줄이기» — 돌거나 빛나지 않고 그대로 보인다 */
