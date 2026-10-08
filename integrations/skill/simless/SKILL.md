@@ -1,6 +1,6 @@
 ---
 name: simless
-description: Use when testing or checking a **React Native (Expo) mobile app** on an iOS simulator or Android emulator on this Mac — running the app, checking a screen, checking its layout across device sizes, or anything else that drives a simulator or emulator. Also use when the user explicitly asks for a simulator, emulator or Simless, in any project. Simless (the `simless` CLI) brokers the devices between sessions — acquire a device group, the default device, or specific devices, then drive screens with argent. Triggers in a React Native (Expo) project — "시뮬레이터로 확인해 줘", "에뮬레이터에서 테스트", "기본 디바이스로 테스트", "그룹으로 확인해 줘", "여러 해상도로 확인", "레이아웃 크기별로 봐 줘", "320·375·414 에서 확인", "작은 폰에서 깨지는지", "태블릿에서도 봐 줘"; anywhere — "심리스로 확인해 줘", "시뮬레이터에서 봐 줘", "test on the simulator". Even for a single device, acquire it through Simless first; argent skills (argent-device-interact etc.) then do the on-screen work. **Not for web projects**: checking a website's responsive layout at phone or tablet widths is done in a browser (resize, device emulation), not here — unless the user asks for a simulator or emulator by name (e.g. mobile Safari on an iOS simulator). Not for physical devices, and not for tasks that don't touch a device.
+description: Brokers this Mac's iOS simulators and Android emulators between agent sessions with the `simless` CLI — acquire a device group, the default device or specific devices, run the app on your own Metro, then drive screens with argent. Use when testing or checking a React Native (Expo) mobile app on a simulator or emulator — running the app, checking a screen, or its layout across device sizes — and whenever the user asks for a simulator, emulator or Simless in any project; acquire through Simless even for one device. Triggers — "시뮬레이터로 확인해 줘", "에뮬레이터에서 테스트", "기본 디바이스로 테스트", "그룹으로 확인해 줘", "여러 해상도로 확인", "작은 폰에서 깨지는지", "태블릿에서도 봐 줘", "심리스로 확인해 줘", "test on the simulator". Not for web projects — a website's responsive layout is checked in a browser unless the user names a simulator or emulator. Not for physical devices, or tasks that don't touch a device.
 ---
 
 # Simless — device broker
@@ -27,6 +27,17 @@ simless lets several agent sessions and people share this Mac's simulators and e
 
 ## Steps
 
+**Progress** — copy this list and tick it off as you go; the clean-up items are the ones most often missed:
+
+```
+- [ ] 1 Purpose picked (group / default / named devices); for a feature test, slimOff checked
+- [ ] 2 Acquired with `simless use` on its own; targetId and label noted
+- [ ] 3 Own Metro on a free port at 127.0.0.1 (`--android` only when yours is the only emulator running); Android adb reverse for <port> and 8081
+- [ ] 4 Installed (build cache first), launched onto your Metro, attachment checked in the app
+- [ ] 5 Reported per label
+- [ ] 6 adb reverse removed, your Metro killed, devices released; asked about shutting down
+```
+
 ### 1. Check and pick what to use
 
 First make sure this really is device work: the project is a React Native app (`package.json` with `react-native` and `expo`), or the user asked for a simulator, emulator or Simless by name. A web project's «check it at phone widths» belongs in the browser — stop here and use browser tools instead.
@@ -52,25 +63,16 @@ simless --json group list      # device groups — read each description
   A device that exists on this Mac but isn't in the list (e.g. one made in Xcode): `simless --json list --available` shows them; add one with `simless add <device>` **only when the user asks**.
   Slim devices are named `simless …` and boot lighter, but slimming turns some features off (push notifications, iCloud, Siri …; see `simless catalog`). iOS slimming takes 2–3 minutes. No apps are installed.
 
-#### Choosing how to slim
+#### Creating a slim device
 
-When you create a slim device, or the user asks to change how one is slimmed, pick one of three:
-
-1. **Full slim** (the default) — for UI and layout checks. Everything that can be turned off is off.
-2. **Keep what the app needs** — for testing an app feature that relies on the device (push notifications, universal links, photo picker, contacts, location, camera …).
-   - Find the features the app needs and map them to slim items — follow «Finding what the app needs» below. It reuses `.device-slim.json` at the app root when it is still current.
-   - Items differ per platform (`simless --json catalog` → `slimOff[]`: `id`, `name`, and `detail` saying what stops working): iOS has simslim categories, Android has avdslim package groups, device settings and emulator hardware.
-   - Tell the user which items you keep and why, then create with `--slim-keep <id,…>`.
-3. **Custom** — the user names what to keep. Pass those IDs.
-
-Change an existing device (only one Simless created) with `simless slim <device> --keep <id,…>` (or `--full` to go back to full slim, `--off` to remove slimming). iOS re-slims in 1–2 minutes; Android camera and audio take effect at the next boot. Use `--no-slim` only when the test needs a stock device.
+A slim device is one of three kinds — **full slim** (the default; UI and layout checks), **keep what the app needs** (testing a feature that relies on the device), or **custom** (the user names what to keep). How to choose, the `--slim-keep` IDs, and how to change an existing device: [reference/slim.md](reference/slim.md).
 
 #### Does the test need device features?
 
 Slimmed devices have some features off. `simless --json list` shows, per device, **`slimOff`** — the slim item IDs that are off (none if the device isn't slimmed). `slimOffObserved: true` means it was read from the device; `false` means it was worked out from Simless's slim settings and will be read once the device is on.
 
 - **UI and layout checks** need nothing — any device that fits the purpose is fine, including a fully slimmed one.
-- **Testing a feature that relies on the device** (push notifications, universal links, photo picker, contacts, location, camera …): find what the app needs («Finding what the app needs» below — reuse `.device-slim.json` when it's current) and map it to slim item IDs. A device fits when **none of those IDs is in its `slimOff`**.
+- **Testing a feature that relies on the device** (push notifications, universal links, photo picker, contacts, location, camera …): find what the app needs («Finding what the app needs» below) and map it to slim item IDs. A device fits when **none of those IDs is in its `slimOff`**.
   1. The device the purpose points to (group, default, named) fits → use it.
   2. It doesn't fit → look for another device in the list that fits (same platform), tell the user which one and why, and request it by ID.
   3. A fitting device is busy → if no other fitting device is free, wait for it (`--wait`) and tell the user.
@@ -94,7 +96,7 @@ simless --json use <ID|name>...             # specific devices
   - more than 0 — ask the user which device to use (`simless default <device>` makes it the default).
 - **Run `simless use` on its own** — not chained with device commands (`simless use … && adb …`): the hook checks the whole command before the lease exists and blocks all of it. Device commands go in the next call.
 - A lease can be released while you wait for the user (session end, or idle with someone waiting). If a device command is blocked with «… only after acquiring», check `simless --json status` (`mine`) and run `use` again — and redo the Android `adb reverse` from step 3.
-- From `devices[]` remember each device's **`targetId`** (argent `udid`/`device_id` — iOS UDID, Android `emulator-<port>`) and **`label`** (e.g. `Android 360dp`, `iOS 402pt`). `simless --json list` shows them again.
+- From `devices[]` remember each device's **`targetId`** (argent `udid`/`device_id` — iOS UDID, Android `emulator-<port>`; not the short Simless ID like `a1b2`, which only `simless` commands take) and **`label`** (e.g. `Android 360dp`, `iOS 402pt`). `simless --json list` shows them again.
 
 ### 3. Start your own Metro (React Native · Expo apps)
 
@@ -200,6 +202,7 @@ Per `label`, say what broke (clipping, overlap, overflow, wrapping …) with scr
 adb -s <targetId> reverse --remove tcp:<port>   # each Android device you pointed at your Metro
 adb -s <targetId> reverse --remove tcp:8081
 kill <your Metro PID>                            # only the Metro you started — same PID when started with --android
+simless down                                     # only if the user said yes (below) — before release
 simless release
 ```
 
@@ -210,104 +213,26 @@ simless release
 
 ## Finding what the app needs (for «keep what the app needs»)
 
-Used by «Choosing how to slim» option 2. The result is a short list of app features, each with its evidence, mapped to Simless slim item IDs.
+Used when picking a device for a feature test (step 1) and when creating a slim device that keeps what the app needs. The result is a short list of app features, each with its evidence, mapped to Simless slim item IDs.
 
-### Reuse a previous result
-
-If the app root (the folder with `app.json` / `package.json`; in a monorepo, the app's folder) has `.device-slim.json`, check whether it is still current before reading the app again:
-
-```json
-{
-  "features": {
-    "push": "app.config.ts: aps-environment",
-    "photos": "package.json: expo-image-picker (3 files import it)",
-    "sign-in-with-apple": "app.config.ts: only when APP_ENV=prod"
-  },
-  "sources": ["app.config.ts", "package.json", "patches/"],
-  "sourcesHash": "sha256:9f2c…"
-}
-```
-
-Hash the `sources` (paths are relative to the app root) the same way it was made:
-
-```sh
-find <sources…> -type f | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256 | cut -d' ' -f1
-```
-
-1. Same hash, and no new evidence file since (a new patch, local module, extension target or config plugin — the places listed below) → use `features` as is.
-2. Otherwise → read the app again (below) and **write the file from scratch**, so features and sources that are gone disappear. Tell the user what changed («added location, dropped camera»).
-3. A feature whose evidence says «only when …» → ask which environment is being tested before keeping it.
-
-Write or update `.device-slim.json` only if the user agrees. If they don't want it in the repository, add `/.device-slim.json` to `.git/info/exclude`.
-
-### Read the app
-
-Read the project — don't guess. A feature can enter the app from several places, and dependency names alone miss most of them. Read these files next to this skill, in order, and note where each feature came from (file and line, or «built app»):
-
-1. [reference/app-expo.md](reference/app-expo.md) — app config, config plugins, Expo modules, stale native folders (CNG), build profiles. Skip it for bare React Native.
-2. [reference/app-react-native.md](reference/app-react-native.md) — JavaScript dependencies (and whether source files import them), local native modules, patches.
-3. The platform you're slimming: [reference/app-ios.md](reference/app-ios.md) for an iOS simulator, [reference/app-android.md](reference/app-android.md) for an Android emulator — the built app first (the most reliable evidence), then the native project.
-
-**Build environment matters.** Many apps change entitlements and permissions per environment or variant (e.g. Sign in with Apple only in production, associated domains from an environment variable). Ask which environment will be tested and note it with the evidence.
-
-List the features with their evidence (file and line, or «built app») and **confirm with the user** — they may only need some of them for this test. Then map them with the tables below.
-
-### Features → Simless slim items
-
-Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keeps whole items (a simslim category, an avdslim package group, setting or hardware) — not single daemons or packages. The IDs below were checked with simslim 0.11.0 and avdslim 1.0.15; if the catalog shows different ones, use the catalog and its `detail` text.
-
-**iOS**
-
-| App feature | Evidence to look for | Keep |
-| --- | --- | --- |
-| Remote push notifications | `aps-environment` entitlement, notification library | `store` |
-| In-app purchases (StoreKit) · Wallet · Apple Pay | in-app purchase library, StoreKit config, PassKit | `store` |
-| Universal links / associated domains | `com.apple.developer.associated-domains` | `web` |
-| Photo picker / photo library | `NSPhotoLibraryUsageDescription`, image picker library | `photos` |
-| Contacts · Calendar · Reminders · Mail compose | `NSContactsUsageDescription`, `NSCalendarsUsageDescription`, `NSRemindersUsageDescription`, mail composer | `pim` |
-| iCloud sync · Sign in with Apple · iCloud Keychain | iCloud / Sign in with Apple entitlements **in the build being tested** | `icloud` |
-| HealthKit · HomeKit | HealthKit / HomeKit entitlements | `health` |
-| Widgets · Live Activities | widget extension, live activity library | `widgets` (about 675 MB — the heaviest) |
-| Siri · speech recognition | SiriKit, `NSSpeechRecognitionUsageDescription` | `siri` |
-| Spotlight / in-app search indexing | Core Spotlight usage | `search` |
-| Maps background data · Weather · News · Game Center | MapKit, WeatherKit, GameKit | `apps` |
-| iMessage · FaceTime | — | `messaging` |
-| AirDrop · Continuity · Find My | sharing / nearby features | `connectivity` |
-| Screen Time · Family | Family Controls entitlement | `family` |
-
-**Never slimmed on iOS** — nothing to keep: camera, microphone, location, sign-in services (AuthenticationServices / web auth sessions), Face ID, App Tracking Transparency. **Check by hand after slimming**: the tracking prompt, Face ID, web sign-in sessions (Google / Firebase sign-in). Don't keep `web` «for sign-in» — no sign-in service is in it. The Contacts, Photos and Calendar pickers can act up without their categories — keep `pim` / `photos` when a test opens them.
-
-**Android**
-
-| App feature | Evidence to look for | Keep |
-| --- | --- | --- |
-| Location | `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` | `location` |
-| Background work, timely push while the app is in the background | background tasks, FCM | `bglimit` (otherwise 4 background processes) |
-| Account sync | sync adapters, Google account sign-in | `sync` |
-| Bluetooth | `BLUETOOTH_*` permissions | `bluetooth` |
-| First-run setup state | apps that read setup state (rare) | `setup` |
-| Camera | `CAMERA` permission, camera library | `camera` (emulator hardware — takes effect at the next boot) |
-| Microphone · audio playback | `RECORD_AUDIO`, audio / video playback | `audio` (emulator hardware — next boot) |
-| Opens Google Maps, the gallery / Photos app, YouTube | `geo:` / maps / gallery intents | `media-consumer-apps` |
-| Opens the dialer, contacts or messaging app | `tel:` / `sms:` intents, contacts intents | `telephony-emergency-satellite` |
-| Opens the calendar, clock or calculator app | calendar / alarm intents | `telemetry-feedback-screensavers` |
-| Text-to-speech · accessibility tests | TTS, TalkBack testing | `accessibility-speech` |
-| Push (FCM) · Google Sign-In · WebView | Firebase messaging, Google sign-in | nothing — never turned off; pair push with `bglimit` |
+1. **Reuse** — if the app root has `.device-slim.json` and it is still current, use its `features` and skip to 4. How to check it: [reference/slim.md](reference/slim.md) «Reuse a previous result».
+2. **Read the project — don't guess.** A feature can enter the app from several places, and dependency names alone miss most of them. Read these files next to this skill, in order, and note where each feature came from (file and line, or «built app»):
+   1. [reference/app-expo.md](reference/app-expo.md) — app config, config plugins, Expo modules, stale native folders (CNG), build profiles. Skip it for bare React Native.
+   2. [reference/app-react-native.md](reference/app-react-native.md) — JavaScript dependencies (and whether source files import them), local native modules, patches.
+   3. The platform you're testing: [reference/app-ios.md](reference/app-ios.md) for an iOS simulator, [reference/app-android.md](reference/app-android.md) for an Android emulator — the built app first (the most reliable evidence), then the native project.
+3. **Check each feature's evidence** before listing it:
+   ```
+   - [ ] Not only a package.json / Podfile / Gradle line — a dependency is never proof on its own
+   - [ ] A config plugin, entitlement, Info.plist key or manifest permission — and a source file that imports or calls it (or the built app)
+   - [ ] Dependencies no source file imports are dropped, and you say so
+   - [ ] Features that depend on the environment are marked «only when …», and you asked which build will be tested (no answer → the development build)
+   ```
+4. List the features with their evidence and **confirm with the user** — always, even when you then continue with a default; they may only need some of them for this test.
+5. Map them to slim item IDs with the tables in [reference/slim.md](reference/slim.md) «Features → Simless slim items».
 
 ## When things go wrong
 
-- **Parsing `simless --json` output**: progress lines («… booting», «… booted») go to **stderr**, the JSON to stdout. Drop stderr when piping — `simless --json use … 2>/dev/null | jq …`. Merging it (`2>&1 | jq`) breaks the parse (`Invalid numeric literal`).
-- **A screenshot is entirely black**: the app blocks capture on that screen (Android `FLAG_SECURE`) — not a tool error. Read that screen's state from `describe` (accessibility tree: text and frames) and take screenshots on the next screen that allows capture.
-- **argent gestures fail on an Android emulator** with `simulator-server exited … emulator "emulator-5554" not found … grpc.token`: they keep failing for the rest of the session. `describe`, `debugger-*` and `launch-app` still work. Fall back to adb — coordinates are **pixels**, so multiply `describe`'s 0–1 frame by `wm size`:
-  ```sh
-  adb -s <targetId> shell wm size
-  adb -s <targetId> shell input tap <x> <y>
-  adb -s <targetId> shell input swipe <x1> <y1> <x2> <y2> 300
-  adb -s <targetId> shell input keyevent 82          # dev menu (4 = Back)
-  adb -s <targetId> exec-out screencap -p > shot.png
-  ```
-- **argent on iOS reports a sandbox error** — `launch-app` → `init_failed`, `screenshot` → `Connection refused … CoreSimulatorService … sandbox profile`: the argent tool-server was started inside a sandbox. Restarting it from an unsandboxed shell fixes it (`argent server stop && argent server start --detach`), but **the tool-server is shared by every session on this Mac — ask the user before restarting it.** Meanwhile use `xcrun simctl launch` / `openurl` / `io <targetId> screenshot`.
-- **`debugger-connect` refuses the device when iOS and Android share one Metro**: the error lists each device's `logicalDeviceId`. Pass that as `device_id` (with `port: <port>`) to `debugger-connect` and every later `debugger-*` call.
+Read [reference/troubleshooting.md](reference/troubleshooting.md) when `simless --json` output won't parse, a screenshot is entirely black, argent gestures fail on an Android emulator, argent on iOS reports a sandbox error, or `debugger-connect` refuses a device when iOS and Android share one Metro.
 
 ## Device groups (only when the user asks)
 
@@ -319,7 +244,7 @@ simless default <device>                       # make it its platform's default 
 
 ## MCP tools
 
-If the `simless` MCP server is registered, the same steps are available as tools: `simless_status` (devices with `slimOff`), `simless_use` (devices, group, or default; `mode: "available"`; `wait` — call again while it answers `STILL_QUEUED`), `simless_release`, `simless_down`, `simless_catalog`, `simless_create` (`slimKeep`), `simless_slim` (`keep`, `off`), `simless_group_save`. Errors start with the code (`BUSY: …`). Use either the CLI or the tools — they share the same session.
+If the `simless` MCP server is registered, the same steps are available as its tools (in Claude Code they appear as `mcp__simless__<tool>`): `simless_status` (devices with `slimOff`), `simless_use` (devices, group, or default; `mode: "available"`; `wait` — call again while it answers `STILL_QUEUED`), `simless_release`, `simless_down`, `simless_catalog`, `simless_create` (`slimKeep`), `simless_slim` (`keep`, `off`), `simless_group_save`. Errors start with the code (`BUSY: …`). Use either the CLI or the tools — they share the same session.
 
 ## Command summary
 

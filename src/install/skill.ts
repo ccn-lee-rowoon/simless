@@ -18,6 +18,10 @@ import reactNativeRef from "agent-skills/skills/device-slim/reference/app-react-
   type: "file",
 };
 import { z } from "zod";
+import slimRef from "../../integrations/skill/simless/reference/slim.md" with { type: "file" };
+import troubleshootingRef from "../../integrations/skill/simless/reference/troubleshooting.md" with {
+  type: "file",
+};
 import skillPath from "../../integrations/skill/simless/SKILL.md" with { type: "file" };
 import type { InstallState, SkillLocation } from "../shared/api.ts";
 import { run } from "../shared/exec.ts";
@@ -56,10 +60,14 @@ export async function bundledSkill(): Promise<string> {
 }
 
 /**
- * 앱에 필요한 기기 기능 찾기 — agent-skills 저장소의 device-slim 참고 파일을 그대로 쓴다(M15).
- * package.json 에 태그(`device-slim-vX.Y.Z`)로 고정하고 bun.lock 이 커밋까지 고정한다.
+ * 스킬과 함께 넣는 참고 파일 — 본문(SKILL.md)이 길어지지 않게 필요할 때만 읽는 것을 뺐다.
+ * slim·troubleshooting 은 이 저장소의 것, app-* 는 agent-skills 저장소의 device-slim 참고 파일을
+ * 그대로 쓴다(앱에 필요한 기기 기능 찾기, M15). 그쪽은 package.json 에 태그(`device-slim-vX.Y.Z`)로
+ * 고정하고 bun.lock 이 커밋까지 고정한다.
  */
 const REFERENCES: Record<string, string> = {
+  "reference/slim.md": slimRef,
+  "reference/troubleshooting.md": troubleshootingRef,
   "reference/app-ios.md": iosRef,
   "reference/app-android.md": androidRef,
   "reference/app-react-native.md": reactNativeRef,
