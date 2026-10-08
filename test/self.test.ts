@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, lstatSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { INSTALLER_MARK, installerVersion } from "../src/cli/commands/update.ts";
 import { selfCommand } from "../src/install/launchd.ts";
@@ -112,5 +119,82 @@ describe("설치한 simless 를 버전 폴더에 두고 링크로 (R19)", () => 
 
   test("개발 중(bun link)에는 서버·훅·MCP 에 bun + 스크립트를 적는다", () => {
     expect(selfCommand()).toEqual([process.execPath, Bun.main]);
+  });
+});
+
+describe("install 이 예전 경로를 가리키는 연결을 새 명령으로 고친다 (R19)", () => {
+  test("--mcp 로 한 에이전트만 넣어도, 이미 넣어 둔 다른 에이전트의 MCP 는 고치고 없는 것은 넣지 않는다", async () => {
+    const e = tempEnv();
+    envs.push(e);
+    const entry = new URL("../bin/simless.ts", import.meta.url).pathname;
+    // 설치 파일 방식으로 넣어 둔 Copilot MCP — 개발 방식으로 돌아오면 예전 경로가 된다
+    const copilot = join(e.env.HOME, ".copilot", "mcp-config.json");
+    mkdirSync(join(e.env.HOME, ".copilot"), { recursive: true });
+    writeFileSync(
+      copilot,
+      JSON.stringify({
+        mcpServers: { simless: { type: "stdio", command: "/old/simless", args: ["mcp"] } },
+      }),
+    );
+    const proc = Bun.spawn(
+      [
+        process.execPath,
+        entry,
+        "install",
+        "--no-launchd",
+        "--no-skill",
+        "--no-app",
+        "--mcp",
+        "--agents",
+        "cursor",
+      ],
+      { env: { ...e.env, PATH: "" }, stdout: "pipe", stderr: "pipe" },
+    );
+    expect(await proc.exited).toBe(0);
+
+    const servers = (path: string) => JSON.parse(readFileSync(path, "utf8")).mcpServers.simless;
+    expect(servers(copilot)).toEqual({
+      type: "stdio",
+      command: process.execPath,
+      args: [entry, "mcp"],
+    });
+    expect(servers(join(e.env.HOME, ".cursor", "mcp.json")).args).toEqual([entry, "mcp"]);
+    // 넣어 두지 않은 에이전트는 그대로
+    expect(existsSync(join(e.env.HOME, ".gemini", "settings.json"))).toBe(false);
+  });
+
+  test("한 에이전트를 고치지 못해도 알리고 설치는 이어 간다 — 지운 Codex 의 설정이 남은 경우", async () => {
+    const e = tempEnv();
+    envs.push(e);
+    const entry = new URL("../bin/simless.ts", import.meta.url).pathname;
+    // 예전 simless 항목이 남아 있는데 codex 명령은 실패한다 — 진짜 codex 를 부르지 않게 가짜를 앞에 둔다
+    const bin = join(e.env.HOME, "fake-bin");
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(join(bin, "codex"), "#!/bin/sh\necho codex broken >&2\nexit 1\n", {
+      mode: 0o755,
+    });
+    mkdirSync(join(e.env.HOME, ".codex"), { recursive: true });
+    writeFileSync(
+      join(e.env.HOME, ".codex", "config.toml"),
+      '[mcp_servers.simless]\ncommand = "/old/simless"\nargs = ["mcp"]\n',
+    );
+    const copilot = join(e.env.HOME, ".copilot", "mcp-config.json");
+    mkdirSync(join(e.env.HOME, ".copilot"), { recursive: true });
+    writeFileSync(
+      copilot,
+      JSON.stringify({ mcpServers: { simless: { command: "/old/simless", args: ["mcp"] } } }),
+    );
+    const proc = Bun.spawn(
+      [process.execPath, entry, "install", "--no-launchd", "--no-skill", "--no-app"],
+      { env: { ...e.env, PATH: bin }, stdout: "pipe", stderr: "pipe" },
+    );
+    const [stderr, code] = await Promise.all([new Response(proc.stderr).text(), proc.exited]);
+    expect(code).toBe(0);
+    expect(stderr).toContain("Codex");
+    expect(stderr).toContain("codex broken");
+    // 실패한 Codex 와 상관없이 Copilot 도 고쳤다
+    expect(JSON.parse(readFileSync(copilot, "utf8")).mcpServers.simless.command).toBe(
+      process.execPath,
+    );
   });
 });

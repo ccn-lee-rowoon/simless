@@ -165,30 +165,41 @@ export async function runCli(argv: string[]): Promise<number> {
             }
           }
           // 이미 넣어 둔 보호·MCP 가 예전 경로를 가리키면 새 경로로 고친다 — 업데이트·옮긴 뒤 (R19).
-          // 넣어 두지 않은 것은 넣지 않는다(사람이 고른 것만, SECURITY.md §3)
+          // --hook·--mcp 로 고른 에이전트가 아니어도 모두 본다(방금 넣은 것은 이미 current).
+          // 넣어 두지 않은 것은 넣지 않는다(사람이 고른 것만, SECURITY.md §3). 고치지 못해도
+          // 설치는 이어 간다 — 지운 에이전트의 설정이 남아 있을 수 있다
           {
             const command = selfCommand();
-            if (!o.hook) {
-              const { hookStatus, installHook } = await import("../install/claude-hook.ts");
+            const refresh = async (what: string, fn: () => Promise<unknown>) => {
+              try {
+                await fn();
+              } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                console.error(t("cli.install.refreshFailed", { what, error: message }));
+              }
+            };
+            const { hookStatus, installHook } = await import("../install/claude-hook.ts");
+            const { mcpStatus, installMcp } = await import("../install/claude-mcp.ts");
+            await refresh("Claude Code", async () => {
               if (hookStatus(command) === "outdated") done.hook = installHook(command);
-              for (const a of ALL_OTHER_AGENTS) {
-                const integration = integrationOf(a);
+            });
+            await refresh("Claude Code", async () => {
+              if (mcpStatus(command) === "outdated") done.mcp = await installMcp(command);
+            });
+            for (const a of ALL_OTHER_AGENTS) {
+              const integration = integrationOf(a);
+              await refresh(integration.label, async () => {
                 if ((await integration.hookState(command, process.env)) === "outdated") {
                   await integration.installHook(command, process.env);
                   done[`hook:${a}`] = integration.label;
                 }
-              }
-            }
-            if (!o.mcp) {
-              const { mcpStatus, installMcp } = await import("../install/claude-mcp.ts");
-              if (mcpStatus(command) === "outdated") done.mcp = await installMcp(command);
-              for (const a of ALL_OTHER_AGENTS) {
-                const integration = integrationOf(a);
+              });
+              await refresh(integration.label, async () => {
                 if ((await integration.mcpState(command, process.env)) === "outdated") {
                   await integration.installMcp(command, process.env);
                   done[`mcp:${a}`] = integration.label;
                 }
-              }
+              });
             }
           }
           if (o.app) {
