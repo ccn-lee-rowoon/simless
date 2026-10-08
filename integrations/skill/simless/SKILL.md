@@ -217,15 +217,17 @@ Used when picking a device for a feature test (step 1) and when creating a slim 
 
 1. **Reuse** — if the app root has `.device-slim.json` and it is still current, use its `features` and skip to 4. How to check it: [reference/slim.md](reference/slim.md) «Reuse a previous result».
 2. **Read the project — don't guess.** A feature can enter the app from several places, and dependency names alone miss most of them. Read these files next to this skill, in order, and note where each feature came from (file and line, or «built app»):
-   1. [reference/app-expo.md](reference/app-expo.md) — app config, config plugins, Expo modules, stale native folders (CNG), build profiles. Skip it for bare React Native.
+   1. [reference/app-expo.md](reference/app-expo.md) — app config, config plugins, Expo modules, and how to read the app as it is now. Skip it for bare React Native.
    2. [reference/app-react-native.md](reference/app-react-native.md) — JavaScript dependencies (and whether source files import them), local native modules, patches.
-   3. The platform you're testing: [reference/app-ios.md](reference/app-ios.md) for an iOS simulator, [reference/app-android.md](reference/app-android.md) for an Android emulator — the built app first (the most reliable evidence), then the native project.
+   3. The platform you're testing: [reference/app-ios.md](reference/app-ios.md) for an iOS simulator, [reference/app-android.md](reference/app-android.md) for an Android emulator — the native project, and a built app made from it as it is now.
+
+   **Read the app as it is now — don't ask which environment or build profile.** The evidence is what building from this folder right now would produce: the native folders `ios/` / `android/` when they exist (they are what gets built — if an Expo app's folders are older than its app config, still use them and say a fresh `npx expo prebuild` would change the result); with no native folders, `npx expo config --type introspect --json` (what a prebuild would write now, with the current environment variables and `.env`); and a built app made from that state. Say which one you used.
 3. **Check each feature's evidence** before listing it:
    ```
    - [ ] Not only a package.json / Podfile / Gradle line — a dependency is never proof on its own
    - [ ] A config plugin, entitlement, Info.plist key or manifest permission — and a source file that imports or calls it (or the built app)
    - [ ] Dependencies no source file imports are dropped, and you say so
-   - [ ] Features that depend on the environment are marked «only when …», and you asked which build will be tested
+   - [ ] The evidence is the app as it is now (native folders, or `expo config --type introspect`, plus a built app from them), and you say which
    ```
 4. List the features with their evidence and **confirm with the user** — always, even when you then continue with a default; they may only need some of them for this test.
 5. Map them to slim item IDs with the tables in [reference/slim.md](reference/slim.md) «Features → Simless slim items».
