@@ -45,7 +45,7 @@ Write or update `.device-slim.json` only if the user agrees. If they don't want 
 
 ## Features → Simless slim items
 
-Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keeps whole items (a simslim category, an avdslim package group, setting or hardware) — not single daemons or packages. The IDs below were checked with simslim 0.11.0 and avdslim 1.0.15; if the catalog shows different ones, use the catalog — its `detail` text, or for an Android package group the packages `avdslim profiles` lists under it.
+Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keeps whole items (a simslim category, an avdslim package group, setting or hardware) — not single daemons or packages. The IDs below were checked with simslim 0.12.0 and avdslim 1.0.15; if the catalog shows different ones, use the catalog — its `detail` text, or for an Android package group the packages `avdslim profiles` lists under it.
 
 ### iOS
 
@@ -61,12 +61,12 @@ Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keep
 | Widgets · Live Activities | widget extension, live activity library | `widgets` (about 675 MB — the heaviest) |
 | Siri · speech recognition | SiriKit, `NSSpeechRecognitionUsageDescription` | `siri` |
 | Spotlight / in-app search indexing | Core Spotlight usage | `search` |
-| Maps background data · Weather · News · Game Center | MapKit, WeatherKit, GameKit | `apps` |
+| Maps background data · Weather · News · game controllers · game save sync | MapKit, WeatherKit, GameController, GameKit saved games | `apps` |
 | iMessage · FaceTime | — | `messaging` |
 | AirDrop · Continuity · Find My | sharing / nearby features | `connectivity` |
 | Screen Time · Family | Family Controls entitlement | `family` |
 
-**Never slimmed on iOS** — nothing to keep: camera, microphone, location, sign-in services (AuthenticationServices / web auth sessions), Face ID, App Tracking Transparency. **Check by hand after slimming**: the tracking prompt, Face ID, web sign-in sessions (Google / Firebase sign-in). Don't keep `web` «for sign-in» — no sign-in service is in it. The Contacts, Photos and Calendar pickers can act up without their categories — keep `pim` / `photos` when a test opens them.
+**Never slimmed on iOS** — nothing to keep: camera, microphone, location, sign-in services (AuthenticationServices / web auth sessions), Face ID, App Tracking Transparency, Game Center (simslim 0.12.0 and later keep it on; an older slim turns it off until the simulator is slimmed again). **Check by hand after slimming**: the tracking prompt, Face ID, web sign-in sessions (Google / Firebase sign-in). Don't keep `web` «for sign-in» — no sign-in service is in it. The Contacts, Photos and Calendar pickers can act up without their categories — keep `pim` / `photos` when a test opens them.
 
 ### Android
 
