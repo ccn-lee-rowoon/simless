@@ -41,7 +41,7 @@ find <sources…> -type f | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256 
 2. Otherwise → read the app again (SKILL.md «Finding what the app needs») and **write the file from scratch**, so features and sources that are gone disappear. Tell the user what changed («added location, dropped camera»).
 3. The native folders appeared or were removed since (a prebuild, or a clean) → read the app again: the evidence changed place. When there were no native folders, the evidence was `expo config --type introspect`, so `sources` lists the app config, `.env` and local plugins.
 
-Write or update `.device-slim.json` only if the user agrees. If they don't want it in the repository, add `/.device-slim.json` to `.git/info/exclude`.
+Saving is optional. When there is no `.device-slim.json` yet, ask in **the same question** that confirms the features (SKILL.md «Finding what the app needs» step 4): save it · save it but keep it out of git (add `/.device-slim.json` to `.git/info/exclude`) · don't save. Write it only after they choose to save. When the file already exists, it was saved before — rewrite it without asking and say what changed. `features` holds **every feature found**, not only the ones this test keeps; even when the file is current and you don't read the app again, still confirm which features this test needs.
 
 ## Features → Simless slim items
 

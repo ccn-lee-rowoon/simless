@@ -229,7 +229,7 @@ Used when picking a device for a feature test (step 1) and when creating a slim 
    - [ ] Dependencies no source file imports are dropped, and you say so
    - [ ] The evidence is the app as it is now (native folders, or `expo config --type introspect`, plus a built app from them), and you say which
    ```
-4. List the features with their evidence and **confirm with the user** — always, even when you then continue with a default; they may only need some of them for this test.
+4. List the features with their evidence and **confirm with the user** — always, even when you then continue with a default; they may only need some of them for this test. When the app root has no `.device-slim.json`, ask in the same question whether to save the result ([reference/slim.md](reference/slim.md) «Reuse a previous result»).
 5. Map them to slim item IDs with the tables in [reference/slim.md](reference/slim.md) «Features → Simless slim items».
 
 ## When things go wrong
