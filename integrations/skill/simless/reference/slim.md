@@ -41,11 +41,11 @@ find <sources…> -type f | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256 
 2. Otherwise → read the app again (SKILL.md «Finding what the app needs») and **write the file from scratch**, so features and sources that are gone disappear. Tell the user what changed («added location, dropped camera»).
 3. The native folders appeared or were removed since (a prebuild, or a clean) → read the app again: the evidence changed place. When there were no native folders, the evidence was `expo config --type introspect`, so `sources` lists the app config, `.env` and local plugins.
 
-Write or update `.device-slim.json` only if the user agrees. If they don't want it in the repository, add `/.device-slim.json` to `.git/info/exclude`.
+Saving is optional. When there is no `.device-slim.json` yet, ask in **the same question** that confirms the features (SKILL.md «Finding what the app needs» step 4): save it · save it but keep it out of git (add `/.device-slim.json` to `.git/info/exclude`) · don't save. Write it only after they choose to save. When the file already exists, it was saved before — rewrite it without asking and say what changed. `features` holds **every feature found**, not only the ones this test keeps; even when the file is current and you don't read the app again, still confirm which features this test needs.
 
 ## Features → Simless slim items
 
-Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keeps whole items (a simslim category, an avdslim package group, setting or hardware) — not single daemons or packages. The IDs below were checked with simslim 0.11.0 and avdslim 1.0.15; if the catalog shows different ones, use the catalog — its `detail` text, or for an Android package group the packages `avdslim profiles` lists under it.
+Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keeps whole items (a simslim category, an avdslim package group, setting or hardware) — not single daemons or packages. The IDs below were checked with simslim 0.12.0 and avdslim 1.0.15; if the catalog shows different ones, use the catalog — its `detail` text, or for an Android package group the packages `avdslim profiles` lists under it.
 
 ### iOS
 
@@ -61,12 +61,12 @@ Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keep
 | Widgets · Live Activities | widget extension, live activity library | `widgets` (about 675 MB — the heaviest) |
 | Siri · speech recognition | SiriKit, `NSSpeechRecognitionUsageDescription` | `siri` |
 | Spotlight / in-app search indexing | Core Spotlight usage | `search` |
-| Maps background data · Weather · News · Game Center | MapKit, WeatherKit, GameKit | `apps` |
+| Maps background data · Weather · News · game controllers · game save sync | MapKit, WeatherKit, GameController, GameKit saved games | `apps` |
 | iMessage · FaceTime | — | `messaging` |
 | AirDrop · Continuity · Find My | sharing / nearby features | `connectivity` |
 | Screen Time · Family | Family Controls entitlement | `family` |
 
-**Never slimmed on iOS** — nothing to keep: camera, microphone, location, sign-in services (AuthenticationServices / web auth sessions), Face ID, App Tracking Transparency. **Check by hand after slimming**: the tracking prompt, Face ID, web sign-in sessions (Google / Firebase sign-in). Don't keep `web` «for sign-in» — no sign-in service is in it. The Contacts, Photos and Calendar pickers can act up without their categories — keep `pim` / `photos` when a test opens them.
+**Never slimmed on iOS** — nothing to keep: camera, microphone, location, sign-in services (AuthenticationServices / web auth sessions), Face ID, App Tracking Transparency, Game Center (simslim 0.12.0 and later keep it on; a simulator slimmed with an older simslim has it off until it is slimmed or unslimmed again with 0.12.0 or later). **Check by hand after slimming**: the tracking prompt, Face ID, web sign-in sessions (Google / Firebase sign-in). Don't keep `web` «for sign-in» — no sign-in service is in it. The Contacts, Photos and Calendar pickers can act up without their categories — keep `pim` / `photos` when a test opens them.
 
 ### Android
 

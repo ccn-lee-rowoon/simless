@@ -300,4 +300,24 @@ describe("parseSimslimProfiles (M4)", () => {
       keeps: ["Required for system share sheets."],
     });
   });
+
+  test("simslim 0.12.0 — 설명 줄 뒤의 «Always on» 도 늘 켜 두는 것으로 (apps 의 gamed)", () => {
+    const text = [
+      "apps           News, Weather, Maps & Games",
+      "               11 daemons · ~90 MB idle footprint when enabled",
+      "               When disabled: News, Weather, Maps background data, and game-controller services are unavailable.",
+      "               Always on: com.apple.gamed — Required for timely XCUITest app launches (DTServiceHub / GameKit).",
+    ].join("\n");
+    expect(parseSimslimProfiles(text)).toEqual({
+      off: [
+        {
+          id: "apps",
+          name: "News, Weather, Maps & Games",
+          detail:
+            "News, Weather, Maps background data, and game-controller services are unavailable.",
+        },
+      ],
+      keeps: ["Required for timely XCUITest app launches (DTServiceHub / GameKit)."],
+    });
+  });
 });
