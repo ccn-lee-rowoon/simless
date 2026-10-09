@@ -66,7 +66,7 @@ Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keep
 | AirDrop · Continuity · Find My | sharing / nearby features | `connectivity` |
 | Screen Time · Family | Family Controls entitlement | `family` |
 
-**Never slimmed on iOS** — nothing to keep: camera, microphone, location, sign-in services (AuthenticationServices / web auth sessions), Face ID, App Tracking Transparency, Game Center (simslim 0.12.0 and later keep it on; an older slim turns it off until the simulator is slimmed again). **Check by hand after slimming**: the tracking prompt, Face ID, web sign-in sessions (Google / Firebase sign-in). Don't keep `web` «for sign-in» — no sign-in service is in it. The Contacts, Photos and Calendar pickers can act up without their categories — keep `pim` / `photos` when a test opens them.
+**Never slimmed on iOS** — nothing to keep: camera, microphone, location, sign-in services (AuthenticationServices / web auth sessions), Face ID, App Tracking Transparency, Game Center (simslim 0.12.0 and later keep it on; a simulator slimmed with an older simslim has it off until it is slimmed or unslimmed again with 0.12.0 or later). **Check by hand after slimming**: the tracking prompt, Face ID, web sign-in sessions (Google / Firebase sign-in). Don't keep `web` «for sign-in» — no sign-in service is in it. The Contacts, Photos and Calendar pickers can act up without their categories — keep `pim` / `photos` when a test opens them.
 
 ### Android
 
