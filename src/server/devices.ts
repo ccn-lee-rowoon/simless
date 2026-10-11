@@ -141,14 +141,10 @@ export function registerDeviceMethods(server: SimlessServer): void {
     ...server.registry.update(device.id, patch),
   });
 
-  const applySlim = async (
-    device: Device,
-    progress: Progress,
-    options?: { reset?: boolean },
-  ): Promise<Device> => {
+  const applySlim = async (device: Device, progress: Progress): Promise<Device> => {
     update(device, { slim: "applying", slimError: undefined });
     try {
-      await server.driver(device.spec.platform).slim(device, progress, options);
+      await server.driver(device.spec.platform).slim(device, progress);
       return update(device, { slim: "applied", slimError: undefined });
     } catch (error) {
       return update(device, { slim: "failed", slimError: message(error) });
@@ -435,15 +431,12 @@ export function registerDeviceMethods(server: SimlessServer): void {
     const results = await forEach(devices, async (device) => {
       const driver = server.driver(device.spec.platform);
       if (params.mode === "on") {
-        let reset = false;
         if (params.keep) {
-          // 남길 항목을 바꾼다 — 이미 슬림했으면 바뀐 것까지 맞춰 다시 (M15)
+          // 남길 항목을 바꾼다 — 이미 슬림했어도 다시 적용하면 바뀐 것까지 맞춰진다 (M15)
           const keep = keepFor.get(device.spec.platform) ?? [];
-          const before = [...(device.slimKeep ?? [])].sort().join(",");
-          reset = device.slim !== "none" && before !== [...keep].sort().join(",");
           device = update(device, { slimKeep: keep.length > 0 ? keep : undefined });
         }
-        const updated = await applySlim(device, progress, { reset });
+        const updated = await applySlim(device, progress);
         if (updated.slim === "failed") throw new Error(updated.slimError);
       } else if (params.mode === "off") {
         await driver.unslim(device, progress);

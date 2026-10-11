@@ -50,10 +50,10 @@ export interface Driver {
   /** 켜진 디바이스에 앱을 설치한다 — iOS 는 .app, Android 는 .apk (R26) */
   install(device: Device, state: RuntimeState, path: string): Promise<void>;
   /**
-   * 슬림한다 — `device.slimKeep` 에 든 항목은 남긴다 (M15). 이미 슬림한 기기의 남길 항목이 바뀌었으면
-   * `reset` — 남길 것이 늘어도 그대로 맞춰지게(iOS 는 풀었다 다시)
+   * 슬림한다 — `device.slimKeep` 에 든 항목은 남긴다 (M15). 이미 슬림한 기기도 이것 한 번으로
+   * 새 남길 항목에 맞춰진다(끌 것은 끄고, 다시 남길 것은 켠다)
    */
-  slim(device: Device, progress: Progress, options?: { reset?: boolean }): Promise<void>;
+  slim(device: Device, progress: Progress): Promise<void>;
   /** 슬림할 때 고를 수 있는 항목 — `catalog` 의 `slimOff` 와 같다 (M15) */
   slimItems(): Promise<SlimCategory[]>;
   unslim(device: Device, progress: Progress): Promise<void>;

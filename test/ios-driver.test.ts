@@ -231,18 +231,15 @@ describe("IosDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
     expect(calls).toContain("/bin/simslim on UDID-1 --preserve-boot-state");
   });
 
-  test("slim — 남길 묶음은 --except 로, 바뀌었으면 풀고 다시 (M15)", async () => {
+  test("slim — 남길 묶음은 --except 로, 바뀌어도 off 없이 on 한 번 (M15)", async () => {
     const { runner, calls } = fakeRunner();
     const driver = new IosDriver(config, runner, () => "/bin/simslim");
     const custom = { ...device, slimKeep: ["store", "web"] };
     await driver.slim(custom, () => {});
     expect(calls).toContain("/bin/simslim on UDID-1 --except store,web --preserve-boot-state");
     calls.length = 0;
-    await driver.slim(custom, () => {}, { reset: true });
-    expect(calls).toEqual([
-      "/bin/simslim off UDID-1 --preserve-boot-state",
-      "/bin/simslim on UDID-1 --except store,web --preserve-boot-state",
-    ]);
+    await driver.slim({ ...custom, slimKeep: ["photos"] }, () => {});
+    expect(calls).toEqual(["/bin/simslim on UDID-1 --except photos --preserve-boot-state"]);
     calls.length = 0;
     await driver.checkSlim(custom, { booted: true });
     expect(calls).toContain("/bin/simslim verify UDID-1 --except store,web");

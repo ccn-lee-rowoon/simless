@@ -382,9 +382,11 @@ export class IosDriver implements Driver {
     return (await this.slimCategories()).off;
   }
 
-  async slim(device: Device, progress: Progress, options?: { reset?: boolean }): Promise<void> {
-    // 남길 묶음이 바뀌었으면 풀고 다시 — 이전에 끈 것이 남지 않게
-    if (options?.reset) await this.unslim(device, progress);
+  /**
+   * 남길 묶음이 바뀌어도 `on` 한 번 — 더는 남기지 않는 것은 끄고 새로 남길 것은 켠다(재부팅 한 번).
+   * 전에는 `off` 뒤 `on` 이라 두 번 재부팅했다 (device-slim 0.6.0 이 시험 기기로 확인)
+   */
+  async slim(device: Device, progress: Progress): Promise<void> {
     progress(t("progress.slimSim", { name: device.name }));
     await runOk(
       this.runner,
