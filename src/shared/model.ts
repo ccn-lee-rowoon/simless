@@ -7,6 +7,17 @@ export type Platform = z.infer<typeof Platform>;
 export const SlimState = z.enum(["none", "applying", "applied", "drifted", "failed"]);
 export type SlimState = z.infer<typeof SlimState>;
 
+/**
+ * 슬림 방식 (M15) — device-slim 스킬과 같은 이름, 어느 언어에서나 그대로 쓴다.
+ * UI: 남길 것 없이 전체(화면·레이아웃 확인) · App: 에이전트가 앱 프로젝트에서 찾은 기능을 남김 ·
+ * Custom: 사람·에이전트가 고른 것을 남김
+ */
+export const SlimMode = z.enum(["ui", "app", "custom"]);
+export type SlimMode = z.infer<typeof SlimMode>;
+/** 남길 항목이 어디서 왔나 — 남길 것이 있을 때만 의미가 있다 */
+export const SlimKeepMode = z.enum(["app", "custom"]);
+export type SlimKeepMode = z.infer<typeof SlimKeepMode>;
+
 export const AndroidSpec = z.object({
   platform: z.literal("android"),
   widthPx: z.number().int().positive(),
@@ -51,6 +62,8 @@ export const DeviceMeta = z.object({
    * iOS 는 simslim 묶음 ID, Android 는 avdslim 패키지 묶음·기기 설정·에뮬레이터 하드웨어 (`catalog` 의 `slimOff[].id`)
    */
   slimKeep: z.array(z.string()).optional(),
+  /** 남길 항목(`slimKeep`)이 어디서 왔나 (M15) — 없으면 Custom. 남길 것이 없으면 UI 라 두지 않는다 */
+  slimMode: SlimKeepMode.optional(),
   /** 슬림하기 전에 잰 기준값 — 슬림 후 메모리와 비교한다 (M10) */
   slimBaseline: z
     .object({

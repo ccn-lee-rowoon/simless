@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
 import type { CatalogResult, DeviceView, PlatformCatalog, SlimCategory } from "../shared/api.ts";
 import { type MessageKey, t } from "../shared/i18n.ts";
+import { slimModeOf } from "../shared/slim-mode.ts";
 import { when } from "../shared/time.ts";
 import { call } from "./api.ts";
 import { Dialog, Loading } from "./ui.tsx";
 
-/** 슬림 안 함 · 전체 슬림(UI 확인용) · 커스텀(남길 것을 고름) (R5·M15) */
-export type SlimMode = "none" | "full" | "custom";
+/**
+ * 슬림 안 함 · UI(전체 슬림) · App(에이전트가 앱 프로젝트에서 찾은 것을 남김) · Custom(남길 것을 고름)
+ * (R5·M15). 이름은 device-slim 스킬과 같게, 어느 언어에서나 그대로. App 은 화면에서 고를 수 없고,
+ * 에이전트가 App 으로 슬림한 기기를 고칠 때만 보인다
+ */
+export type SlimMode = "none" | "ui" | "app" | "custom";
 
 const MODES: { mode: SlimMode; title: MessageKey; hint: MessageKey }[] = [
   { mode: "none", title: "web.slim.none", hint: "web.slim.noneHint" },
-  { mode: "full", title: "web.slim.full", hint: "web.slim.fullHint" },
+  { mode: "ui", title: "web.slim.ui", hint: "web.slim.uiHint" },
+  { mode: "app", title: "web.slim.app", hint: "web.slim.appHint" },
   { mode: "custom", title: "web.slim.custom", hint: "web.slim.customHint" },
 ];
 
@@ -22,19 +28,22 @@ const KINDS: { kind: SlimCategory["kind"]; title: MessageKey }[] = [
 ];
 
 /**
- * 슬림 방식 고르기 — 세 가지를 카드로 보여 주고, 커스텀이면 **남길 것**을 체크한다(체크 안 한 것은 끈다).
- * 전체 슬림이면 무엇이 꺼지는지 접어 둔 목록으로 보여 준다 (M4)
+ * 슬림 방식 고르기 — 방식을 카드로 보여 주고, Custom·App 이면 **남길 것**을 체크한다(체크 안 한 것은
+ * 끈다 — App 에서 바꾸면 Custom 이 된다). UI 면 무엇이 꺼지는지 접어 둔 목록으로 보여 준다 (M4)
  */
 export function SlimPicker({
   catalog,
   mode,
   keep,
+  appKeep,
   disabled,
   onChange,
 }: {
   catalog: PlatformCatalog | undefined;
   mode: SlimMode;
   keep: string[];
+  /** App 으로 슬림한 기기의 남긴 항목 — 있으면 App 카드를 보이고, 고르면 이것으로 돌아간다 */
+  appKeep?: string[];
   disabled?: boolean;
   onChange: (mode: SlimMode, keep: string[]) => void;
 }) {
@@ -81,7 +90,7 @@ export function SlimPicker({
   return (
     <div className="slim-picker">
       <div className="slim-modes" role="radiogroup" aria-label={t("web.slim.mode")}>
-        {MODES.map((m) => {
+        {MODES.filter((m) => m.mode !== "app" || appKeep).map((m) => {
           const off = m.mode !== "none" && missing;
           return (
             <label
@@ -94,7 +103,12 @@ export function SlimPicker({
                 className="visually-hidden"
                 checked={mode === m.mode}
                 disabled={disabled || off}
-                onChange={() => onChange(m.mode, m.mode === "custom" ? keep : [])}
+                onChange={() =>
+                  onChange(
+                    m.mode,
+                    m.mode === "custom" ? keep : m.mode === "app" ? (appKeep ?? []) : [],
+                  )
+                }
               />
               <span className="slim-mode-title">{t(m.title)}</span>
               <span className="sub">{t(m.hint)}</span>
@@ -107,7 +121,7 @@ export function SlimPicker({
         <p className="notice-inline">{t("web.create.slimInfoMissing", { tool })}</p>
       )}
 
-      {mode === "full" && items.length > 0 && (
+      {mode === "ui" && items.length > 0 && (
         <details className="slim-details">
           <summary>{t("web.slim.fullOff", { count: items.length })}</summary>
           <ul className="slim-off-list">
@@ -126,7 +140,7 @@ export function SlimPicker({
         </details>
       )}
 
-      {mode === "custom" && items.length > 0 && (
+      {(mode === "custom" || mode === "app") && items.length > 0 && (
         <div className="slim-items">
           <div className="slim-items-head">
             <span>{t("web.slim.customIntro")}</span>
@@ -146,7 +160,7 @@ export function SlimPicker({
   );
 }
 
-/** 만든 디바이스의 슬림 설정 (M15) — 슬림 안 함·전체·커스텀. 바꾸면 그대로 다시 맞춘다 */
+/** 만든 디바이스의 슬림 설정 (M15) — 슬림 안 함·UI·Custom(App 으로 슬림했으면 App 도). 바꾸면 그대로 다시 맞춘다 */
 export function SlimDialog({
   device,
   onClose,
@@ -158,14 +172,13 @@ export function SlimDialog({
 }) {
   const [catalog, setCatalog] = useState<PlatformCatalog | undefined>();
   const [error, setError] = useState("");
-  const [mode, setMode] = useState<SlimMode>("full");
+  const [mode, setMode] = useState<SlimMode>("ui");
   const [keep, setKeep] = useState<string[]>([]);
 
   useEffect(() => {
     if (!device) return;
-    const initial = device.slimKeep ?? [];
-    setMode(device.slim === "none" ? "none" : initial.length > 0 ? "custom" : "full");
-    setKeep(initial);
+    setMode(slimModeOf(device));
+    setKeep(device.slimKeep ?? []);
     setCatalog(undefined);
     setError("");
     call<CatalogResult>("catalog", { platform: device.platform }).then(
@@ -174,17 +187,12 @@ export function SlimDialog({
     );
   }, [device]);
 
-  const current = device
-    ? device.slim === "none"
-      ? "none"
-      : (device.slimKeep?.length ?? 0) > 0
-        ? "custom"
-        : "full"
-    : "none";
+  const current = device ? slimModeOf(device) : "none";
   const unchanged =
     device !== null &&
     mode === current &&
-    (mode !== "custom" || [...keep].sort().join() === [...(device.slimKeep ?? [])].sort().join());
+    ((mode !== "custom" && mode !== "app") ||
+      [...keep].sort().join() === [...(device.slimKeep ?? [])].sort().join());
 
   return (
     <Dialog open={device !== null} onClose={onClose} title={t("web.slim.title")} wide>
@@ -198,6 +206,7 @@ export function SlimDialog({
               catalog={catalog}
               mode={mode}
               keep={keep}
+              appKeep={current === "app" ? device.slimKeep : undefined}
               onChange={(m, k) => {
                 setMode(m);
                 setKeep(k);
@@ -220,7 +229,7 @@ export function SlimDialog({
               type="button"
               className="button button-primary"
               disabled={!catalog || unchanged}
-              onClick={() => onApply(device, mode, mode === "custom" ? keep : [])}
+              onClick={() => onApply(device, mode, mode === "custom" || mode === "app" ? keep : [])}
             >
               {t("web.slim.apply")}
             </button>

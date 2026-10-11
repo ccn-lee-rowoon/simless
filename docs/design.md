@@ -160,7 +160,8 @@ simless/
 | `listed` | 레지스트리 | Simless 목록에 있는지 (R20). 만든 기기는 늘, 원래 있던 기기는 생성 화면에서 추가했을 때만. 값이 없으면(이전 형식) `createdBySimless` 와 같다. 빼면 그룹 소속·기본 지정·점유도 푼다 |
 | `slim` | 레지스트리 | `none`·`applying`·`applied`·`failed` (+ `slimError`). 풀림은 켤 때 자동 재적용하므로 따로 두지 않는다 (M6) |
 | `slimBaseline` | 레지스트리 | 슬림 전 메모리 기준값 (M10) |
-| `slimKeep` | 레지스트리 | 슬림해도 남길 항목 ID — 없으면 전체 슬림 (M15) |
+| `slimKeep` | 레지스트리 | 슬림해도 남길 항목 ID — 없으면 UI(전체 슬림) (M15) |
+| `slimMode` | 레지스트리 | 남길 항목이 어디서 왔나 — `app`(에이전트가 앱 프로젝트에서 찾음) · `custom`(없으면 이것). 남길 것이 없으면 두지 않는다. 방식 이름 UI·App·Custom 은 `src/shared/slim-mode.ts` (M15) |
 | `slimSeen.off` | 레지스트리 | 켜져 있을 때 실제로 읽은 꺼진 슬림 항목 ID — `DeviceView.slimOff`(못 읽었으면 `slimKeep` 으로 계산, `slimOffObserved: false`) (M16) |
 | `slimSeen` | 레지스트리 | 켜져 있을 때 마지막으로 읽은 슬림 수치 `{ disabled, total, unit, seenAt }` — 누가 슬림했든 적는다. 값이 같으면 10분에 한 번만 쓴다 (M6) |
 | `memo` | 레지스트리 | 디바이스 메모 — R24 보류: 저장만 하고 화면·CLI·스킬에는 보이지 않는다 |
@@ -241,7 +242,7 @@ simless/
 | 생성 — 고를 것 (M1) | 기종: **Android Studio 의 기기 정의** — `/Applications`·`~/Applications` 의 `Android Studio*.app/Contents/plugins/android/lib/sdklib.jar` 안 `devices.xml`·`nexus.xml`(폰·태블릿, `unzip -p` 로 읽음)과 사람이 만든 `~/.android/devices.xml`(`ANDROID_USER_HOME`), 없으면 대표 프로필(`android-profiles.ts`). 사람 정의 → Android Studio → 대표 프로필 순으로 합치고 같은 ID(정의 ID 를 `pixel-9` 처럼 바꾼 것)는 앞의 것. 워치·TV·자동차·XR·데스크톱(`tag-id`)은 뺀다. 10분 기억. 또는 직접 입력(폭·높이·밀도). OS: 설치된 시스템 이미지(추천: 4KB 페이지 → `google_apis`(Play Store 없음, 가장 가벼움) → API 높은 순 — device-slim 과 같게. 16KB 페이지 이미지는 RAM 을 4GB 아래로 못 줄여 그것뿐일 때만) | 기종: `simctl list devicetypes` 중 설치된 런타임이 지원하는 것. OS: 설치된 런타임(기본: 최신) |
 | 생성 — 만들기 | `simless_<id>.ini` + `.avd/config.ini` 를 새로 쓴다(`hw.lcd.width/height/density`, `image.sysdir.1`) | `simctl create <이름> <종류> <런타임>` → UDID. `simctl clone` 은 앱·데이터가 따라와 쓰지 않는다 |
 | 슬림화 (R5) | `avdslim tune-avd` + 켠 뒤 `avdslim on <시리얼>` | `simslim on <udid> --preserve-boot-state` |
-| 슬림화하면 꺼지는 기능 (M4 — 생성 화면 «꺼지는 것 보기»·커스텀 목록) | avdslim 프로필이 끄는 패키지 목록(`avdslim profiles`)을 사람이 읽을 이름으로 묶어 보여 준다 | simslim 프로필이 끄는 서비스 목록을 묶어 보여 준다(Siri·Spotlight·iCloud·Wallet …) |
+| 슬림화하면 꺼지는 기능 (M4 — 생성 화면 «꺼지는 것 보기»·Custom 목록) | avdslim 프로필이 끄는 패키지 목록(`avdslim profiles`)을 사람이 읽을 이름으로 묶어 보여 준다 | simslim 프로필이 끄는 서비스 목록을 묶어 보여 준다(Siri·Spotlight·iCloud·Wallet …) |
 | 슬림 확인 (M6) | 프로필 패키지 중 꺼진 비율 ≥ 50% | `simslim verify` — 켜진 기기만 가능 |
 | 켜기 | `emulator -avd <AVD ID> -port <빈 포트> -no-snapshot-save` 를 서버와 분리(detached)해 실행. `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
 | 끄기 | `adb -s <시리얼> shell sync` → 슬림을 바꾼(`avdslim on`·`enable`·`off`) 지 20초가 안 됐으면 기다림 → `emu kill` (device-slim 시험: 바로 끄면 `off` 가 남지 않은 적이 있음) | `simctl shutdown` |
@@ -252,7 +253,7 @@ simless/
 - **슬림 확인과 자동 재적용** (M6): 슬림한 기기를 켤 때마다(서버 시작 시엔 켜진 것) 확인하고, 풀렸으면 바로 다시 적용한다. 실패하면 `slim: failed` + 이유를 남겨 `SLIM ⚠` 로 보인다. 원래 있던 기기(`createdBySimless: false`)는 슬림화하지 않는다 (N5).
 - **Simless 밖에서 한 슬림** (M6): 켜진 기기는 모두(만든 것·추가한 것) 15초마다 슬림 수치를 뒤에서 읽고 `slimSeen` 에 적는다. `slim: none` 인데 슬림돼 보이면(iOS 는 끈 데몬이 하나라도, Android 는 프로필 패키지가 절반 이상 꺼짐 — 위 «슬림 확인» 과 같은 기준) `SLIM` 으로 보인다. 꺼진 기기는 `slimSeen` 으로 판단해 흐리게, «마지막 확인» 시각과 함께. 이 슬림은 다시 적용하지 않는다. 판단은 `observedSlim()`(`src/shared/api.ts`) 하나를 화면·CLI·MCP 가 같이 쓴다.
 - **슬림 항목 고르기** (M15): 기기마다 `slimKeep`(남길 항목 ID)을 기억하고, 처음 슬림·변경·풀렸을 때 다시 적용 모두 이것으로 한다.
-  - iOS: `simslim on --except <묶음,…>`. 설정의 simslim 프로필(`--profile`)은 전체 슬림일 때만 쓴다(둘은 함께 못 준다). 이미 슬림한 기기의 남길 묶음이 바뀌어도 새 `--except` 로 `on` 한 번(끌 것은 끄고 다시 남길 것은 켬, 재부팅 한 번 — device-slim 0.6.0 이 확인). 확인은 `simslim verify --except …`.
+  - iOS: `simslim on --except <묶음,…>`. 설정의 simslim 프로필(`--profile`)은 UI(전체 슬림)일 때만 쓴다(둘은 함께 못 준다). 이미 슬림한 기기의 남길 묶음이 바뀌어도 새 `--except` 로 `on` 한 번(끌 것은 끄고 다시 남길 것은 켬, 재부팅 한 번 — device-slim 0.6.0 이 확인). 확인은 `simslim verify --except …`.
   - Android: 항목은 `avdslim profiles` 의 패키지 묶음(이름에서 만든 ID, 예: `assistant-search`) + 기기 설정 `location`·`sync`·`bglimit`·`bluetooth`·`setup` + 하드웨어 `camera`·`audio`. 기기 안 정리는 `avdslim on --skip=<남길 설정>` → 남길 설정을 `avdslim enable <설정>` 으로 되돌림(`setup` 은 되돌리는 명령이 없다) → 남길 묶음의 설치된 패키지를 `avdslim enable <패키지>`. 이 순서라 남길 항목이 바뀌어도 풀지 않고 그대로 맞춰진다. 하드웨어는 `tune-avd` 뒤 `avdslim enable camera|audio <AVD>`, 소리를 남기면 켤 때 `-no-audio` 를 뺀다. 슬림 확인·수치는 남긴 패키지를 세지 않는다.
   - 앱에 필요한 기능 찾기는 스킬이 한다 — simless 스킬의 «Finding what the app needs»(device-slim 스킬 4단계·기능 표를 Simless 항목 ID 로 옮긴 것, `.device-slim.json` 을 같이 씀). Simless 는 남길 ID 만 받는다.
 - **슬림 내역** (M16): 서버의 2초 주기 작업이 15초마다 켜진 기기 전부의 슬림 수치를 읽고(목록을 볼 때도), 수치가 바뀌었거나 내역이 없거나 10분이 지났으면 꺼진 항목을 읽어 `slimSeen.off` 에 적는다(적으면 기기 목록 캐시를 비운다). iOS 는 `simslim status <udid> --dropped` 의 묶음 ID. Android 는 avdslim 에 상태 조회가 없어 — 패키지 묶음은 설치된 패키지의 절반 이상이 꺼졌으면, `location`·`bluetooth`·`sync` 는 avdslim 이 바꾸는 기기 설정(`location_mode`·`bluetooth_on`·`auto_sync` 가 0), `camera` 는 config.ini 의 앞뒤 카메라가 `none`, `audio` 는 켤 때 `-no-audio` 를 줬거나 `hw.audioOutput=no`, `bglimit`·`setup` 은 읽을 수 없어 Simless 가 슬림했고 남기지 않았으면 꺼진 것으로. 앱 창은 목록 «슬림» 칸의 `SLIM ↗` 버튼이나 ⋯ «슬림 내역» 으로 창(대화 상자).
@@ -321,10 +322,10 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | `simless uninstall [--purge] [--yes]` | 제거 — 스킬(모든 위치)·모든 에이전트의 훅·규칙·MCP·앱·서버 등록, `--purge` 면 데이터·로그·설정·빌드 캐시까지. 만든 디바이스는 남긴다(§4) | S12 |
 | `simless ui` | 웹 화면을 브라우저로 연다 (앱 창은 `Simless.app`) | R11 |
 | `simless list [--platform] [--created] [--available]` | **Simless 목록** — 폭·이름·켜짐·SLIM·기본·사용 중인 세션·argent ID. `--json` 에는 슬림 내역(`slimOff`)도. `--available` 은 목록에 없는 이 Mac 의 디바이스 | M5·R20·M16 |
-| `simless catalog [--platform]` | 만들 수 있는 기종·OS 목록과 슬림 항목(`slimOff` — 커스텀 슬림에서 남길 ID) | M1·M15 |
-| `simless create <기종> [--os] [--name] [--no-slim \| --slim-keep <ID,…>] [--no-baseline]` · `simless create --width --height --density [--os]` | 새로 만들기. 슬림이면 `simless …` 이름, `--slim-keep` 은 남길 슬림 항목 | R1~R3·R5·M4·M15 |
+| `simless catalog [--platform]` | 만들 수 있는 기종·OS 목록과 슬림 항목(`slimOff` — App·Custom 에서 남길 ID) | M1·M15 |
+| `simless create <기종> [--os] [--name] [--no-slim \| --slim-keep <ID,…> [--app]] [--no-baseline]` · `simless create --width --height --density [--os]` | 새로 만들기. 슬림이면 `simless …` 이름, `--slim-keep` 은 남길 슬림 항목(`--app` 이면 App 방식, 아니면 Custom) | R1~R3·R5·M4·M15 |
 | `simless default [<dev>]` · `delete <dev> [-y]` · `add <dev>` · `unlist <dev>` | 관리. 삭제는 Simless 가 만든 것만, `add`·`unlist` 는 이 Mac 의 디바이스를 목록에 넣고 빼기 | M7·M8·R20·R22 |
-| `simless slim [<dev>…] [--off] [--check] [--keep <ID,…> \| --full]` | 슬림 적용·해제·확인, 남길 항목 바꾸기 (simless 가 만든 것만) | M6·M7·M15 |
+| `simless slim [<dev>…] [--off] [--check] [--keep <ID,…> [--app] \| --full]` | 슬림 적용·해제·확인, 남길 항목 바꾸기(`--app` 이면 App, 아니면 Custom, `--full` 은 UI) (simless 가 만든 것만) | M6·M7·M15 |
 | `simless group list` · `show <그룹>` · `create <이름> [--desc] [<dev>…]` · `edit <그룹> [--name] [--desc] [--add <dev>…] [--remove <dev>…]` · `delete <그룹>` | 그룹 관리 — 사람·에이전트 모두 | R21·S10 |
 | `simless acquire [<dev>… \| --group <그룹> \| --default [android\|ios]] [--available] [--wait] [--timeout 10m]` | 점유 (모드는 §8) | R14·R22·R23 |
 | `simless release [<dev>…]` | 점유 해제(자기 것만 — 강제 해제는 앱 창에서 사람만) | R17·S8 |
@@ -397,9 +398,9 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 - `SLIM` 배지에 마우스를 올리면 꺼진 항목 수·메모리·슬림 전후(«7.8GB → 1.6GB (−79%)», M10). 재적용 실패는 `SLIM ⚠` + 이유. 꺼진 기기는 마지막으로 본 수치와 «마지막 확인» 시각, Simless 밖에서 한 슬림이면 배지가 흐리다(M6).
 - 켜기·끄기는 점유 없이(사람), 다른 세션이 쓰는 중이면 막는다. SSE 로 바로 반영된다.
 
-**생성(+)** (M1·M4) — 위에 «새로 만들기 · 이 Mac 의 디바이스» 탭. «이 Mac 의 디바이스» 는 Simless 목록에 없는 기기(`device.available`)를 플랫폼·검색으로 거르고 «추가»(`device.add`). «새로 만들기» 는 번호 붙은 네 단계(구분선으로 나눔, «만들기» 버튼은 아래에 고정): ① 플랫폼 → ② 기종(iOS 기기 종류 / Android 기기 정의(Android Studio + 대표 프로필)·직접 입력) → ③ OS·이름(런타임·시스템 이미지는 기본값을 미리 골라 둠, 이름 기본값 `simless <기종>` 또는 `<기종>`, 겹치면 번호) → ④ **슬림**(«슬림 안 함 · 전체 슬림(UI 확인용, 기본) · 커스텀» 세 카드 중 하나. 전체 슬림은 «꺼지는 것 보기» 로 펼치고, 커스텀은 플랫폼마다 다른 항목에서 **남길 것**을 체크한다 — Android 는 앱·서비스 묶음 / 기기 설정 / 에뮬레이터 하드웨어로 나눠 보인다, M15)과 슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다(N4).
+**생성(+)** (M1·M4) — 위에 «새로 만들기 · 이 Mac 의 디바이스» 탭. «이 Mac 의 디바이스» 는 Simless 목록에 없는 기기(`device.available`)를 플랫폼·검색으로 거르고 «추가»(`device.add`). «새로 만들기» 는 번호 붙은 네 단계(구분선으로 나눔, «만들기» 버튼은 아래에 고정): ① 플랫폼 → ② 기종(iOS 기기 종류 / Android 기기 정의(Android Studio + 대표 프로필)·직접 입력) → ③ OS·이름(런타임·시스템 이미지는 기본값을 미리 골라 둠, 이름 기본값 `simless <기종>` 또는 `<기종>`, 겹치면 번호) → ④ **슬림**(«슬림 안 함 · UI(전체 슬림, 기본) · Custom» 세 카드 중 하나 — 방식 이름은 device-slim 과 같게 번역하지 않는다. UI 는 «꺼지는 것 보기» 로 펼치고, Custom 은 플랫폼마다 다른 항목에서 **남길 것**을 체크한다 — Android 는 앱·서비스 묶음 / 기기 설정 / 에뮬레이터 하드웨어로 나눠 보인다, M15)과 슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다(N4).
 
-**더보기(⋯) 메뉴** (M7·M8) — 그룹에 넣기/빼기 · 기본 디바이스로 · 슬림 내역(꺼진 것·켜진 것 창, M16) · 슬림 설정…(슬림 안 함·전체 슬림·커스텀을 고르는 창, 바꾸면 다시 맞춤 — simless 가 만든 것만) · 점유 강제 해제(다른 세션이 쓰는 중일 때, 사람만) · 목록에서 빼기(이 Mac 에서 추가한 것) · 삭제(simless 가 만든 것만, 확인 창. 기본 디바이스·켜짐·사용 중이면 이유와 함께 막음). 바깥을 누르거나 Esc 로 닫힌다.
+**더보기(⋯) 메뉴** (M7·M8) — 그룹에 넣기/빼기 · 기본 디바이스로 · 슬림 내역(꺼진 것·켜진 것 창, M16) · 슬림 설정…(슬림 안 함·UI·Custom 을 고르는 창 — 에이전트가 App 으로 슬림한 기기는 App 카드도 보이고, 항목을 바꾸면 Custom. 바꾸면 다시 맞춤 — simless 가 만든 것만) · 점유 강제 해제(다른 세션이 쓰는 중일 때, 사람만) · 목록에서 빼기(이 Mac 에서 추가한 것) · 삭제(simless 가 만든 것만, 확인 창. 기본 디바이스·켜짐·사용 중이면 이유와 함께 막음). 바깥을 누르거나 Esc 로 닫힌다.
 
 **그룹 화면** (M9·R21) — 그룹 목록(이름·설명·디바이스 수·마지막으로 고친 사람/에이전트), 만들기·고치기(이름·설명·디바이스 고르기 — 목록에서 체크), 삭제. 없는 디바이스(밖에서 지워짐)는 표시하고 빼게 한다.
 
@@ -441,7 +442,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | 4 ✅ | **사양 변경 (2026-10-05)** — ① 시안(디자인 M12)으로 화면 확정 (사용자 요청으로 건너뛰고 A안 — 라이트 그래파이트 + 파랑, 다크 잉크 + 민트 — 으로 바로 구현) ② 이 Mac 디바이스 전부 목록·레지스트리 재구성(R20, 사용 안 함 제거) ③ 생성: 기종 + OS, 슬림 선택·ⓘ(M1·M4) ④ 메모·기본 디바이스·그룹(R21·R22·R24) ⑤ 그룹 점유 모드·교착(R23, §8) ⑥ 슬림 자동 재적용·`SLIM` 배지(M6) ⑦ 오류 코드·현지화·설정(R25·M11) ⑧ 앱 창(WKWebView, R11) ⑨ 스킬 영어로 다시 쓰기. 항목마다 커밋 | 용도별 그룹·기본 디바이스로 요청하고, 앱 창에서 전부 관리한다 |
 | 5 ✅ | 보호 — Claude Code 훅(`simless hook claude pre-tool-use`), 규칙(`~/.claude/rules/simless.md`), 서버 꺼짐 처리, `simless install`·`doctor` 연동. 대상은 Simless 목록의 디바이스(P1). 설치는 사용자가 고른다 — 첫 실행 설정 창 또는 `--hook`(이 Mac 의 Claude Code 에는 켜져 있음). 다른 에이전트(Copilot·Codex·Cursor·Gemini) 어댑터도 만들었다 — 실제 에이전트로는 아직 확인 안 함(Q16) | 다른 세션이 남의 디바이스를 못 건드린다 |
 | 5.5 ✅ | 첫 실행 설정 창 (M14, 2026-10-05) — 앱을 처음 열면 점검 → 에이전트 연결(스킬·보호·MCP) → 기본 디바이스를 차례로. 서버 `setup.*`, `simless install` 은 보호·MCP 를 기본으로 넣지 않음(`--hook`·`--mcp`) | 터미널 없이 앱에서 설정을 끝낸다 |
-| 6 ✅ | MCP 래퍼 — `simless mcp`(stdio). 도구: `simless_status`·`simless_use`(디바이스·그룹·기본, all·available, 기다리기는 45초씩 나눠 «STILL_QUEUED → 다시 호출»)·`simless_release`·`simless_down`·`simless_catalog`·`simless_create`(`slimKeep`)·`simless_slim`(남길 항목 바꾸기·해제, M15)·`simless_group_save`. 오류는 코드부터(`BUSY: …`). 세션은 CLI 처럼 프로세스 트리, 서버가 꺼져 있으면 켠다. **등록은 사용자 결정** — 첫 실행 설정 창의 «MCP 도구» 또는 `simless install --mcp` | 에이전트가 사용법 없이 바로 쓴다 |
+| 6 ✅ | MCP 래퍼 — `simless mcp`(stdio). 도구: `simless_status`·`simless_use`(디바이스·그룹·기본, all·available, 기다리기는 45초씩 나눠 «STILL_QUEUED → 다시 호출»)·`simless_release`·`simless_down`·`simless_catalog`·`simless_create`(`slimKeep`·`slimMode`)·`simless_slim`(남길 항목 바꾸기·해제, M15)·`simless_group_save`. 오류는 코드부터(`BUSY: …`). 세션은 CLI 처럼 프로세스 트리, 서버가 꺼져 있으면 켠다. **등록은 사용자 결정** — 첫 실행 설정 창의 «MCP 도구» 또는 `simless install --mcp` | 에이전트가 사용법 없이 바로 쓴다 |
 | 6.5 ✅ | 쓰면서 더한 것 (2026-10-05~06) — 네이티브 빌드 캐시(`simless app`, R26), 보안 문서(`SECURITY.md`), 제거(`simless uninstall [--purge]`·설정 창 «Simless 제거», S12), 버전 표기·앱 창 새로 고침, 보안 약한 점 정리(다른 세션 작업 폴더 감추기·토큰 비교·파일 권한·앱 창 이동 제한), 훅 heredoc 오탐, 요구사항 «확인» 칸과 요구사항↔테스트 검사, Metro 연결 순서(스킬 — argent 의 «8081 하나» 덮어쓰기·dev client 스킴·`--android`·앱에서 확인), 메뉴바 메뉴 줄이기 | 빌드를 건너뛰고, 깔끔하게 지울 수 있다. 앱이 자기 Metro 에 붙는다 |
 | U | 업데이트 — `scripts/release.ts`, 확인·알림, `simless update`·되돌리기 (§19). **첫 Release 를 낸 뒤**(리모트는 2026-10-07 연결), 5단계 이후 아무 때나 | 새 버전을 알림 받고 명령 한 번으로 올린다 |
 | 나중 | 스크린샷 모아 보기 (화면 탭) · 일괄 설치·실행·딥링크 (L1~L3 — 캐시된 빌드 설치는 R26 으로 들어감) · 슬림된 디바이스 복제 (L4) — 필요하면 | — |

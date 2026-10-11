@@ -280,6 +280,23 @@ describe("슬림 항목 고르기 (M15)", () => {
     })) as DeviceView;
     expect(device.slimKeep).toEqual(["location", "media-consumer-apps"]);
     expect(driver.slimmed).toEqual([[device.id, ["location", "media-consumer-apps"]]]);
+    expect(device.slimMode).toBe("custom");
+    const app = (await A("device.create", {
+      ...android360,
+      name: "app",
+      baseline: false,
+      slimKeep: ["location"],
+      slimMode: "app",
+    })) as DeviceView;
+    expect(app.slimMode).toBe("app");
+    // 남길 것이 없으면 UI — 방식을 기억하지 않는다
+    const ui = (await A("device.create", {
+      ...android360,
+      name: "ui",
+      baseline: false,
+      slimMode: "app",
+    })) as DeviceView;
+    expect(ui.slimMode).toBeUndefined();
     expect(
       await A("device.create", { ...android360, name: "b", slimKeep: ["nope"] }),
     ).toMatchObject({ code: "INVALID" });

@@ -58,14 +58,14 @@ simless --json group list      # device groups — read each description
   simless create medium-phone                               # Android profile
   simless create --width 375 --height 812 --density 420     # Android custom size
   simless create "iPhone 17" --no-slim                      # a regular (non-slim) device
-  simless create "iPhone 17" --slim-keep store,web          # slim, but keep push and universal links
+  simless create "iPhone 17" --slim-keep store,web --app    # App mode: keep push and universal links the app uses
   ```
   A device that exists on this Mac but isn't in the list (e.g. one made in Xcode): `simless --json list --available` shows them; add one with `simless add <device>` **only when the user asks**.
-  Slim devices are named `simless …` and boot lighter, but slimming turns some features off (push notifications, iCloud, Siri …; see `simless catalog`). iOS slimming takes 2–3 minutes. No apps are installed.
+  Slim devices are named `simless …` and boot lighter, but slimming turns some features off (push notifications, iCloud, Siri …; see `simless catalog`). iOS slimming takes 2–3 minutes. No apps are installed. A device's name is set when it's created — Simless doesn't rename devices.
 
 #### Creating a slim device
 
-A slim device is one of three kinds — **full slim** (the default; UI and layout checks), **keep what the app needs** (testing a feature that relies on the device), or **custom** (the user names what to keep). How to choose, the `--slim-keep` IDs, and how to change an existing device: [references/slim.md](references/slim.md).
+A slim device uses one of three modes — keep these names in every language: **UI** (the default; screen and layout checks, everything slimmed), **App** (keep the features the app project uses), or **Custom** (keep what the user names). `simless --json list` shows each device's `slimMode`. How to choose and ask, the `--slim-keep` IDs, and how to change an existing device: [references/slim.md](references/slim.md).
 
 #### Does the test need device features?
 
@@ -76,7 +76,7 @@ Slimmed devices have some features off. `simless --json list` shows, per device,
   1. The device the purpose points to (group, default, named) fits → use it.
   2. It doesn't fit → look for another device in the list that fits (same platform), tell the user which one and why, and request it by ID.
   3. A fitting device is busy → if no other fitting device is free, wait for it (`--wait`) and tell the user.
-  4. No device fits → **ask the user**: change a Simless-made device's slim (`simless slim <device> --keep <id,…>`, only if nobody is using it) or create one with `--slim-keep`. Don't change or create a device without asking — other sessions use them.
+  4. No device fits → **ask the user**: change a Simless-made device's slim (`simless slim <device> --keep <id,…> --app`, only if nobody is using it) or create one with `--slim-keep <id,…> --app`. Don't change or create a device without asking — other sessions use them.
 
 ### 2. Acquire and boot
 
@@ -211,9 +211,9 @@ simless release
 - Release after reporting. You may keep the lease while waiting for the user or rebuilding — an idle lease (30 min) is released automatically only when someone is waiting.
 - **Ask the user** whether to shut the devices down. If yes, `simless down` before `release`.
 
-## Finding what the app needs (for «keep what the app needs»)
+## Finding what the app needs (App mode)
 
-Used when picking a device for a feature test (step 1) and when creating a slim device that keeps what the app needs. The result is a short list of app features, each with its evidence, mapped to Simless slim item IDs.
+Used when picking a device for a feature test (step 1) and when creating or changing a device in App mode. The result is a short list of app features, each with its evidence, mapped to Simless slim item IDs.
 
 1. **Which project** — the folder of the app the user will test, not necessarily the current one: a folder the user named; otherwise the current folder when it is an app project (`app.json` / `package.json` with `expo` or `react-native`); several apps under it (a monorepo, an `apps/` folder) → ask which; no app project → ask for the path. Say which folder you read — everything below is about that folder.
 2. **Reuse** — if that folder has `.device-slim.json` and it is still current, use its `features` and skip to 5. How to check it: [references/slim.md](references/slim.md) «Reuse a previous result».
@@ -247,7 +247,7 @@ simless default <device>                       # make it its platform's default 
 
 ## MCP tools
 
-If the `simless` MCP server is registered, the same steps are available as its tools (in Claude Code they appear as `mcp__simless__<tool>`): `simless_status` (devices with `slimOff`), `simless_use` (devices, group, or default; `mode: "available"`; `wait` — call again while it answers `STILL_QUEUED`), `simless_release`, `simless_down`, `simless_catalog`, `simless_create` (`slimKeep`), `simless_slim` (`keep`, `off`), `simless_group_save`. Errors start with the code (`BUSY: …`). Use either the CLI or the tools — they share the same session.
+If the `simless` MCP server is registered, the same steps are available as its tools (in Claude Code they appear as `mcp__simless__<tool>`): `simless_status` (devices with `slimOff`), `simless_use` (devices, group, or default; `mode: "available"`; `wait` — call again while it answers `STILL_QUEUED`), `simless_release`, `simless_down`, `simless_catalog`, `simless_create` (`slimKeep`, `slimMode`), `simless_slim` (`keep`, `slimMode`, `off`), `simless_group_save`. Errors start with the code (`BUSY: …`). Use either the CLI or the tools — they share the same session.
 
 ## Command summary
 
@@ -260,8 +260,8 @@ If the `simless` MCP server is registered, the same steps are available as its t
 | `simless acquire …` | Acquire without booting (same options) |
 | `simless who [<udid·serial>]` | Who is using a device |
 | `simless down` / `simless release` | Shut down / release |
-| `simless catalog` / `simless create … [--slim-keep <id,…>]` | Models and slim items / create one |
-| `simless slim <device> --keep <id,…>` / `--full` / `--off` | Change what a slim device keeps / full slim / remove slimming |
+| `simless catalog` / `simless create … [--slim-keep <id,…> [--app]]` | Models and slim items / create one (UI, or App / Custom with kept items) |
+| `simless slim <device> --keep <id,…> [--app]` / `--full` / `--off` | Change what a slim device keeps (App / Custom) / back to UI / remove slimming |
 | `simless --json app install` / `app save --platform <p>` | Install the cached native build on held devices / store the one you just built |
 | `simless app list` / `app prune` | Cached builds / keep only the newest 5 per app and platform |
 | `simless doctor` | Check the installation and how to fix it |

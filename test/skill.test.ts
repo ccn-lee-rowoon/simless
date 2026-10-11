@@ -136,8 +136,10 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("ignores `ANDROID_SERIAL`");
     // 원칙: 127.0.0.1 만, LAN IP 는 쓰지 않는다
     expect(text).toContain("never the Mac's LAN IP");
-    // 슬림 방식 셋 — 전체·앱에 필요한 것 남기기·커스텀 (M15)
+    // 슬림 방식 셋 — UI·App·Custom, 이름은 어느 언어에서나 그대로 (M15, device-slim 과 같게)
     expect(text).toContain("## Choosing how to slim");
+    expect(text).toContain("UI, App, Custom");
+    expect(text).toContain("--slim-keep <id,…> --app");
     expect(text).toContain("--slim-keep <id,…>");
     expect(text).toContain("simless slim <device> --keep <id,…>");
     // 앱에 필요한 기능 찾기 — device-slim 스킬 없이도 (M15)

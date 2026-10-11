@@ -6,6 +6,7 @@ import {
   observedSlim,
 } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
+import { SLIM_MODE_NAMES, slimModeOf } from "../shared/slim-mode.ts";
 import { when } from "../shared/time.ts";
 
 /** 한글 등 넓은 글자는 터미널에서 두 칸을 쓴다 */
@@ -78,8 +79,12 @@ function slimText(d: DeviceView): string {
   if (d.slim === "failed") return t("slim.failed");
   if (d.slim === "applying") return t("slim.applying");
   const stats = d.slimStats;
-  // 커스텀 슬림은 남긴 수를 붙인다 (M15)
-  const custom = d.slimKeep?.length ? `(${t("cli.slim.custom")} −${d.slimKeep.length})` : "";
+  // 방식(UI·App·Custom)과 남긴 수를 붙인다 (M15)
+  const mode = slimModeOf(d);
+  const custom =
+    mode === "none"
+      ? ""
+      : `(${SLIM_MODE_NAMES[mode]}${d.slimKeep?.length ? ` −${d.slimKeep.length}` : ""})`;
   if (!stats) return `${t("slim.applied")} ${custom}`.trim();
   const memory =
     memoryChange(d.slimBaseline?.memoryBytes, stats.memoryBytes) ??

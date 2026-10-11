@@ -76,6 +76,7 @@ export function registerDevices(program: Command, run: Run) {
     .option("--name <name>", t("cli.create.name"))
     .option("--no-slim", t("cli.create.noSlim"))
     .option("--slim-keep <ids>", t("cli.create.slimKeep"))
+    .option("--app", t("cli.slim.app"))
     .option("--no-baseline", t("cli.create.noBaseline"))
     .action(
       run(
@@ -91,6 +92,7 @@ export function registerDevices(program: Command, run: Run) {
             name?: string;
             slim: boolean;
             slimKeep?: string;
+            app?: boolean;
             baseline: boolean;
           },
         ) => {
@@ -111,6 +113,7 @@ export function registerDevices(program: Command, run: Run) {
             name: o.name,
             slim: o.slim,
             slimKeep: o.slimKeep !== undefined ? idList(o.slimKeep) : undefined,
+            slimMode: o.app ? "app" : undefined,
             baseline: o.baseline,
           });
           output(ctx, device, () => devicesTable([device]));
@@ -185,16 +188,22 @@ export function registerDevices(program: Command, run: Run) {
     .option("--check", t("cli.slim.check"))
     .option("--keep <ids>", t("cli.slim.keep"))
     .option("--full", t("cli.slim.full"))
+    .option("--app", t("cli.slim.app"))
     .action(
       run(
         async (
           ctx,
           devices: string[],
-          o: { off?: boolean; check?: boolean; keep?: string; full?: boolean },
+          o: { off?: boolean; check?: boolean; keep?: string; full?: boolean; app?: boolean },
         ) => {
           const mode = o.check ? "check" : o.off ? "off" : "on";
           const keep = o.full ? [] : o.keep !== undefined ? idList(o.keep) : undefined;
-          finish(ctx, await call(ctx, "device.slim", { devices, mode, keep }), t("cli.verb.slim"));
+          const slimMode = o.app ? "app" : undefined;
+          finish(
+            ctx,
+            await call(ctx, "device.slim", { devices, mode, keep, slimMode }),
+            t("cli.verb.slim"),
+          );
         },
       ),
     );

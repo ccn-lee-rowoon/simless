@@ -7,6 +7,7 @@ import {
   type SlimStats,
 } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
+import { SLIM_MODE_NAMES } from "../shared/slim-mode.ts";
 import { when } from "../shared/time.ts";
 import iconUrl from "./icon.svg";
 
@@ -92,8 +93,15 @@ export function SlimBadge({ device }: { device: DeviceView }) {
         </strong>
         {failed && device.slimError && <span>{device.slimError.split("\n")[0]}</span>}
         {device.slimKeep?.length ? (
-          <span>{t("web.slim.keptCount", { count: device.slimKeep.length })}</span>
-        ) : null}
+          <span>
+            {t("web.slim.keptCount", {
+              mode: SLIM_MODE_NAMES[device.slimMode ?? "custom"],
+              count: device.slimKeep.length,
+            })}
+          </span>
+        ) : (
+          <span>{SLIM_MODE_NAMES.ui}</span>
+        )}
         {stats && <span>{slimStatsText(stats)}</span>}
         {change ? (
           <span className="mono">{change}</span>

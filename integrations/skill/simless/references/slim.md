@@ -4,16 +4,18 @@ Contents: Choosing how to slim · Reuse a previous result · Features → Simles
 
 ## Choosing how to slim
 
-When you create a slim device, or the user asks to change how one is slimmed, pick one of three:
+When you create a slim device, or the user asks to change how one is slimmed, pick one of three modes. **Keep the mode names as they are — UI, App, Custom — in every language**, in the question and the report (the Simless app window and `simless list` show the same names, and so does the device-slim skill). After each name, one line in the user's language: what it does and what it costs. Recommend one with the reason: the request says it («레이아웃만» → UI, «앱 테스트» → App, features named → Custom); else an app project to read → App; else UI.
 
-1. **Full slim** (the default) — for UI and layout checks. Everything that can be turned off is off.
-2. **Keep what the app needs** — for testing an app feature that relies on the device (push notifications, universal links, photo picker, contacts, location, camera …).
+1. **UI** (the default) — for screen and layout checks. Everything that can be turned off is off; push, location, the photo picker and the like won't work. No `--slim-keep`.
+2. **App** — for testing an app feature that relies on the device (push notifications, universal links, photo picker, contacts, location, camera …).
    - Find the features the app needs and map them to slim items — follow SKILL.md «Finding what the app needs».
    - Items differ per platform (`simless --json catalog` → `slimOff[]`: `id`, `name`, and — for iOS categories and Android settings and hardware — `detail` saying what stops working; Android package groups have no `detail`, and `avdslim profiles` lists their packages): iOS has simslim categories, Android has avdslim package groups, device settings and emulator hardware.
-   - Tell the user which items you keep and why, then create with `--slim-keep <id,…>`.
-3. **Custom** — the user names what to keep. Pass those IDs.
+   - Tell the user which items you keep and why, then create with `--slim-keep <id,…> --app` (MCP: `slimKeep` + `slimMode: "app"`) — `--app` records that the items came from the app project.
+3. **Custom** — the user names what to keep. Map their features with the tables below (a slim item ID they give is taken as it is), show the list for them to confirm, and pass those IDs with `--slim-keep` (no `--app`). The app project isn't read.
 
-Change an existing device (only one Simless created) with `simless slim <device> --keep <id,…>` (or `--full` to go back to full slim, `--off` to remove slimming). iOS re-slims in 1–2 minutes; Android camera and audio take effect at the next boot. Use `--no-slim` only when the test needs a stock device.
+UI mode changes some screens, not only features: with `store` off a shop screen's prices may stay empty, with `photos` off the photo picker may be empty. When the user checks such a screen, keep that one item even in UI mode — it then becomes Custom.
+
+Change an existing device (only one Simless created) with `simless slim <device> --keep <id,…>` — add `--app` when the items came from the app project — or `--full` to go back to UI, `--off` to remove slimming. iOS re-slims in 1–2 minutes (one reboot); Android camera and audio take effect at the next boot. Use `--no-slim` only when the test needs a stock device.
 
 ## Reuse a previous result
 
