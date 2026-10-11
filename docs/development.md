@@ -103,7 +103,7 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 | `architecture.test.ts` | 폴더 경계(설계 §3) | — |
 | `server.test.ts` | 소켓 서버 — status·점유·BUSY·기다리기·세션 종료 해제·점유 기록 | R13·R14·R17·M13 |
 | `leases.test.ts` | LeaseManager 순수 로직 — 대기열·비어 있는 것만·교착·기록 | R13·R14·R17·R23·M13 |
-| `devices.test.ts` | 만들기·이름·슬림·켜기·삭제·추가·빼기, 사람의 켜기·끄기, 슬림 수치·기준값·항목 고르기·내역, 기본 디바이스 만들어 빌려주기 | R1·R3·R5·R20·R22·M1·M3·M4·M6·M8·M10·M15·M16·P1 |
+| `devices.test.ts` | 만들기·이름(만들 때만, 밖에서 바뀐 이름 따라가기)·슬림·켜기·삭제·추가·빼기, 사람의 켜기·끄기, 슬림 수치·기준값·항목 고르기·내역, 기본 디바이스 만들어 빌려주기 | R1·R3·R4·R5·R20·R22·M1·M3·M4·M6·M8·M10·M15·M16·P1 |
 | `groups.test.ts` | 그룹·기본 디바이스·그룹 점유(all·available·대기) | R21·R22·R23·R24 |
 | `registry.test.ts` | 레지스트리 저장·옮기기(예전 형식) | R4·R20·R21·R22 |
 | `android-driver.test.ts`·`ios-driver.test.ts` | 드라이버 — 가짜 명령으로 만들기·켜기·슬림(남길 항목·꺼진 항목 읽기)·기종 목록(Android Studio 기기 정의) | R1·R2·R4·R5·R7·M1·M4·M6·M10·M15·M16 |
