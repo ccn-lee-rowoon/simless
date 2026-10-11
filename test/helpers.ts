@@ -139,10 +139,6 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
       driver.existing.push({ native, name, spec });
       return { native };
     },
-    rename: async (device, name) => {
-      const item = driver.existing.find((e) => e.native === device.native);
-      if (item) item.name = name;
-    },
     remove: async (device) => {
       driver.existing = driver.existing.filter((e) => e.native !== device.native);
     },

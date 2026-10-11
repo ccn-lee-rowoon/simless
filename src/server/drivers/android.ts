@@ -498,15 +498,6 @@ export class AndroidDriver implements Driver {
     };
   }
 
-  async rename(device: Device, name: string): Promise<void> {
-    const path = this.configPath(device.native);
-    const text = readFileSync(path, "utf8").replace(
-      /^avd\.ini\.displayname=.*$/m,
-      `avd.ini.displayname=${name.replace(/[\r\n]/g, " ")}`,
-    );
-    writeFileSync(path, text);
-  }
-
   async remove(device: Device): Promise<void> {
     rmSync(join(this.avdHome, `${device.native}.avd`), { recursive: true, force: true });
     rmSync(join(this.avdHome, `${device.native}.ini`), { force: true });

@@ -52,18 +52,12 @@ describe("디바이스 명령 (R1·P1)", () => {
     });
   });
 
-  test("다른 세션이 쓰는 중이면 이름 변경·삭제를 막는다 (M8·P1)", async () => {
+  test("다른 세션이 쓰는 중이면 삭제를 막는다 (M8·P1)", async () => {
     const { A, B } = await start();
     await A("device.create", { model: "Large 412" }); // 처음 만든 것은 기본 디바이스라 못 지운다
     const device = (await A("device.create", android360)) as DeviceView;
     await A("lease.acquire", { devices: [device.id] });
-    expect(await B("device.rename", { device: device.id, name: "x" })).toMatchObject({
-      code: "BUSY",
-    });
     expect(await B("device.delete", { device: device.id })).toMatchObject({ code: "BUSY" });
-    expect(await A("device.rename", { device: device.id, name: "작은 폰" })).toMatchObject({
-      name: "작은 폰",
-    });
   });
 
   test("삭제하면 켜져 있던 것은 끄고 목록·점유에서 빠진다", async () => {
@@ -146,9 +140,19 @@ describe("디바이스 명령 (R1·P1)", () => {
     seedDevice(server, driver, "pix6", "Pixel 6a", false);
     expect(await A("device.delete", { device: "pix6" })).toMatchObject({ code: "NOT_ALLOWED" });
     expect(await A("device.slim", { devices: ["pix6"] })).toMatchObject({ code: "NOT_ALLOWED" });
-    expect(await A("device.rename", { device: "pix6", name: "계정 A 폰" })).toMatchObject({
-      name: "계정 A 폰",
+  });
+
+  test("Simless 에는 이름 변경이 없다 — 밖에서 바꾼 이름은 같은 디바이스로 보인다 (R4)", async () => {
+    const { A, server, driver } = await start();
+    seedDevice(server, driver, "pix6", "Pixel 6a", false);
+    expect(await A("device.rename", { device: "pix6", name: "x" })).toMatchObject({
+      code: "INVALID",
     });
+    const item = driver.existing.find((e) => e.native === "Pixel_6a_pix6");
+    if (item) item.name = "계정 A 폰";
+    server.invalidate();
+    const [device] = (await A("device.list")) as DeviceView[];
+    expect(device).toMatchObject({ id: "pix6", name: "계정 A 폰" });
   });
 
   test("밖에서 지워진 디바이스는 정보와 점유가 함께 사라진다", async () => {

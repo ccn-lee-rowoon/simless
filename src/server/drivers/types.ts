@@ -43,7 +43,6 @@ export interface Driver {
     input: { id: string; name: string; spec: DeviceSpec },
     progress: Progress,
   ): Promise<{ native: string }>;
-  rename(device: Device, name: string): Promise<void>;
   remove(device: Device): Promise<void>;
   states(devices: Device[]): Promise<Map<string, RuntimeState>>;
   boot(device: Device, progress: Progress): Promise<RuntimeState>;

@@ -219,8 +219,6 @@ export const ko = {
   "cli.create.noneGiven":
     "기종을 주거나 --width·--height·--density 로 직접 입력하세요 — simless catalog",
   "cli.create.badCustom": "직접 입력은 --width·--height·--density 를 모두 양수로 주세요",
-  "cli.rename": "이름을 바꾼다 — ID 는 그대로라 같은 디바이스로 실행된다",
-  "cli.rename.name": "새 이름",
   "cli.default": "기본 디바이스 — 플랫폼마다 하나. 주면 그 디바이스를 기본으로",
   "cli.default.set": "기본 디바이스({platform}): {name}",
   "cli.default.none":
@@ -427,7 +425,6 @@ export const ko = {
   "web.device.boot": "켜기",
   "web.device.shutdown": "끄기",
   "web.device.more": "더보기",
-  "web.device.rename": "이름 변경",
   "web.device.groups": "그룹",
   "web.device.makeDefault": "기본 디바이스로 정하기",
   "web.device.slimOff": "슬림 끄기",
@@ -469,7 +466,6 @@ export const ko = {
   "web.device.delete": "삭제…",
   "web.device.defaultCantDelete":
     "기본 디바이스는 지울 수 없습니다 — 다른 디바이스를 기본으로 정한 뒤 지우세요",
-  "web.rename.label": "새 이름 — ID({id})는 그대로라 같은 디바이스로 실행됩니다",
   "web.delete.title": "디바이스 삭제",
   "web.delete.body":
     "{name} 을(를) 지울까요? 켜져 있으면 끄고 지웁니다. 메모와 그룹 소속도 지워지고, 되돌릴 수 없습니다.",

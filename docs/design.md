@@ -170,7 +170,7 @@ simless/
 
 - **기기가 사라지면 붙인 정보도 지운다** — Simless 로 지웠을 때, 그리고 밖(Xcode·Android Studio)에서 지워 드라이버 목록에 없을 때 그 `id` 의 메모·슬림 정보·그룹 소속·기본 지정을 지운다. 밖에서 지운 경우는 **목록 읽기가 성공했을 때만** 지운다(`simctl` 오류로 빈 목록이 오면 지우지 않는다).
 - Android AVD ID 는 Simless 가 만든 것만 `simless_<id>` 다. 표시 이름은 슬림이면 `simless …` 접두사(R5), 슬림을 나중에 켜고 꺼도 이름은 그대로.
-- 이름 변경 시 Android `avd.ini.displayname`, iOS `simctl rename` 을 바꿔 에뮬레이터 창·Simulator 창에서도 알아보게 한다. 원래 있던 기기의 이름도 바꿀 수 있다.
+- 이름은 만들 때만 정한다 — Simless 에는 이름 변경이 없다(다른 도구가 이름으로 찾는다, «결정 기록»). 밖에서 바뀐 이름은 목록을 읽을 때 따라간다.
 - iOS 폭(pt) = `/Library/Developer/CoreSimulator/Profiles/DeviceTypes/<종류>.simdevicetype/Contents/Resources/profile.plist` 의 `mainScreenWidth ÷ mainScreenScale` (확인: iPhone 17 → 1206 ÷ 3 = 402pt). M2 의 «폭 맨 앞» 에 쓴다.
 
 **Group** (R21) — `id`, `name`(겹치지 않게), `description`(에이전트도 읽음, «모두 필요» 같은 힌트), `deviceIds[]`, `updatedBy`(마지막으로 고친 세션 — `human` 또는 에이전트 이름), `updatedAt`. 한 디바이스가 여러 그룹에 들 수 있다.
@@ -245,7 +245,6 @@ simless/
 | 슬림 확인 (M6) | 프로필 패키지 중 꺼진 비율 ≥ 50% | `simslim verify` — 켜진 기기만 가능 |
 | 켜기 | `emulator -avd <AVD ID> -port <빈 포트> -no-snapshot-save` 를 서버와 분리(detached)해 실행. `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
 | 끄기 | `adb -s <시리얼> emu kill` | `simctl shutdown` |
-| 이름 변경 | `avd.ini.displayname` | `simctl rename` |
 | 삭제 (M8, Simless 가 만든 것만) | 끄고 `.avd`·`.ini` 삭제 | 끄고 `simctl delete` |
 
 - **Android 시리얼을 서버가 정한다**: `-port` 로 켜면 시리얼이 `emulator-<port>` 로 정해진다. 밖에서 켠 경우는 `adb -s <시리얼> emu avd name` 으로 역조회한다.
@@ -324,7 +323,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | `simless list [--platform] [--created] [--available]` | **Simless 목록** — 폭·이름·켜짐·SLIM·기본·사용 중인 세션·argent ID. `--json` 에는 슬림 내역(`slimOff`)도. `--available` 은 목록에 없는 이 Mac 의 디바이스 | M5·R20·M16 |
 | `simless catalog [--platform]` | 만들 수 있는 기종·OS 목록과 슬림 항목(`slimOff` — 커스텀 슬림에서 남길 ID) | M1·M15 |
 | `simless create <기종> [--os] [--name] [--no-slim \| --slim-keep <ID,…>] [--no-baseline]` · `simless create --width --height --density [--os]` | 새로 만들기. 슬림이면 `simless …` 이름, `--slim-keep` 은 남길 슬림 항목 | R1~R3·R5·M4·M15 |
-| `simless rename <dev> <name>` · `default [<dev>]` · `delete <dev> [-y]` · `add <dev>` · `unlist <dev>` | 관리. 삭제는 Simless 가 만든 것만, `add`·`unlist` 는 이 Mac 의 디바이스를 목록에 넣고 빼기 | M7·M8·R20·R22 |
+| `simless default [<dev>]` · `delete <dev> [-y]` · `add <dev>` · `unlist <dev>` | 관리. 삭제는 Simless 가 만든 것만, `add`·`unlist` 는 이 Mac 의 디바이스를 목록에 넣고 빼기 | M7·M8·R20·R22 |
 | `simless slim [<dev>…] [--off] [--check] [--keep <ID,…> \| --full]` | 슬림 적용·해제·확인, 남길 항목 바꾸기 (simless 가 만든 것만) | M6·M7·M15 |
 | `simless group list` · `show <그룹>` · `create <이름> [--desc] [<dev>…]` · `edit <그룹> [--name] [--desc] [--add <dev>…] [--remove <dev>…]` · `delete <그룹>` | 그룹 관리 — 사람·에이전트 모두 | R21·S10 |
 | `simless acquire [<dev>… \| --group <그룹> \| --default [android\|ios]] [--available] [--wait] [--timeout 10m]` | 점유 (모드는 §8) | R14·R22·R23 |
@@ -400,7 +399,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 **생성(+)** (M1·M4) — 위에 «새로 만들기 · 이 Mac 의 디바이스» 탭. «이 Mac 의 디바이스» 는 Simless 목록에 없는 기기(`device.available`)를 플랫폼·검색으로 거르고 «추가»(`device.add`). «새로 만들기» 는 번호 붙은 네 단계(구분선으로 나눔, «만들기» 버튼은 아래에 고정): ① 플랫폼 → ② 기종(iOS 기기 종류 / Android 기기 정의(Android Studio + 대표 프로필)·직접 입력) → ③ OS·이름(런타임·시스템 이미지는 기본값을 미리 골라 둠, 이름 기본값 `simless <기종>` 또는 `<기종>`, 겹치면 번호) → ④ **슬림**(«슬림 안 함 · 전체 슬림(UI 확인용, 기본) · 커스텀» 세 카드 중 하나. 전체 슬림은 «꺼지는 것 보기» 로 펼치고, 커스텀은 플랫폼마다 다른 항목에서 **남길 것**을 체크한다 — Android 는 앱·서비스 묶음 / 기기 설정 / 에뮬레이터 하드웨어로 나눠 보인다, M15)과 슬림 전 기준값 측정 → 진행 표시. 같은 크기가 이미 있어도 막지 않는다(M3). 앱은 설치하지 않는다(N4).
 
-**더보기(⋯) 메뉴** (M7·M8) — 이름 변경(원래 있던 디바이스도) · 그룹에 넣기/빼기 · 기본 디바이스로 · 슬림 내역(꺼진 것·켜진 것 창, M16) · 슬림 설정…(슬림 안 함·전체 슬림·커스텀을 고르는 창, 바꾸면 다시 맞춤 — simless 가 만든 것만) · 점유 강제 해제(다른 세션이 쓰는 중일 때, 사람만) · 목록에서 빼기(이 Mac 에서 추가한 것) · 삭제(simless 가 만든 것만, 확인 창. 기본 디바이스·켜짐·사용 중이면 이유와 함께 막음). 바깥을 누르거나 Esc 로 닫힌다.
+**더보기(⋯) 메뉴** (M7·M8) — 그룹에 넣기/빼기 · 기본 디바이스로 · 슬림 내역(꺼진 것·켜진 것 창, M16) · 슬림 설정…(슬림 안 함·전체 슬림·커스텀을 고르는 창, 바꾸면 다시 맞춤 — simless 가 만든 것만) · 점유 강제 해제(다른 세션이 쓰는 중일 때, 사람만) · 목록에서 빼기(이 Mac 에서 추가한 것) · 삭제(simless 가 만든 것만, 확인 창. 기본 디바이스·켜짐·사용 중이면 이유와 함께 막음). 바깥을 누르거나 Esc 로 닫힌다.
 
 **그룹 화면** (M9·R21) — 그룹 목록(이름·설명·디바이스 수·마지막으로 고친 사람/에이전트), 만들기·고치기(이름·설명·디바이스 고르기 — 목록에서 체크), 삭제. 없는 디바이스(밖에서 지워짐)는 표시하고 빼게 한다.
 

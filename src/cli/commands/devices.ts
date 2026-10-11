@@ -119,18 +119,6 @@ export function registerDevices(program: Command, run: Run) {
     );
 
   program
-    .command("rename")
-    .description(t("cli.rename"))
-    .argument("<device>", t("cli.arg.device"))
-    .argument("<name>", t("cli.rename.name"))
-    .action(
-      run(async (ctx, device: string, name: string) => {
-        const result = await call<DeviceView>(ctx, "device.rename", { device, name });
-        output(ctx, result, () => devicesTable([result]));
-      }),
-    );
-
-  program
     .command("add")
     .description(t("cli.add"))
     .argument("<device>", t("cli.add.device"))

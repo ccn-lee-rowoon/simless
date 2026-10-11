@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { type DeviceView, observedSlim, type StatusResult } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
 import type { Group } from "../shared/model.ts";
@@ -68,7 +68,6 @@ export function DevicesView({
   const [groupFilter, setGroupFilterState] = useState(() => saved(GROUP_KEY, ""));
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<Set<string>>(new Set());
-  const [renaming, setRenaming] = useState<DeviceView | null>(null);
   const [grouping, setGrouping] = useState<DeviceView | null>(null);
   const [deleting, setDeleting] = useState<DeviceView | null>(null);
   const [slimming, setSlimming] = useState<DeviceView | null>(null);
@@ -217,9 +216,6 @@ export function DevicesView({
             {busy.has(d.id) ? "…" : d.booted ? t("web.device.shutdown") : t("web.device.boot")}
           </button>
           <Menu label={t("web.device.more")}>
-            <MenuItem disabled={lockedByOther} onClick={() => setRenaming(d)}>
-              {t("web.device.rename")}
-            </MenuItem>
             <MenuItem onClick={() => setGrouping(d)}>{t("web.device.groups")}</MenuItem>
             <MenuItem
               disabled={d.default}
@@ -357,20 +353,6 @@ export function DevicesView({
         </div>
       )}
 
-      <TextDialog
-        title={t("web.device.rename")}
-        label={t("web.rename.label", { id: renaming?.id ?? "" })}
-        device={renaming}
-        initial={renaming?.name ?? ""}
-        onClose={() => setRenaming(null)}
-        onSave={(d, name) => {
-          setRenaming(null);
-          if (name.trim())
-            void run(d, t("web.device.rename"), () =>
-              call("device.rename", { device: d.id, name: name.trim() }),
-            );
-        }}
-      />
       <SlimDetailDialog
         device={slimDetail}
         onClose={() => setSlimDetail(null)}
@@ -443,63 +425,6 @@ export function DevicesView({
         )}
       </Dialog>
     </>
-  );
-}
-
-/** 이름·메모 — 글 하나를 고치는 창 */
-function TextDialog({
-  title,
-  label,
-  device,
-  initial,
-  onClose,
-  onSave,
-}: {
-  title: string;
-  label: string;
-  device: DeviceView | null;
-  initial: string;
-  onClose: () => void;
-  onSave: (device: DeviceView, text: string) => void;
-}) {
-  const [text, setText] = useState(initial);
-  const inputId = useId();
-  // 다른 디바이스로 열 때마다 처음 값으로
-  useEffect(() => {
-    if (device) setText(initial);
-  }, [initial, device]);
-  return (
-    <Dialog open={device !== null} onClose={onClose} title={title}>
-      {device && (
-        <form
-          className="dialog-body"
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSave(device, text);
-          }}
-        >
-          <p className="sub">{device.name}</p>
-          <div className="field">
-            <label htmlFor={inputId}>{label}</label>
-            <input
-              id={inputId}
-              data-autofocus
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-          </div>
-          <footer className="dialog-footer">
-            <span className="spacer" />
-            <button type="button" className="button" onClick={onClose}>
-              {t("web.cancel")}
-            </button>
-            <button type="submit" className="button button-primary">
-              {t("web.save")}
-            </button>
-          </footer>
-        </form>
-      )}
-    </Dialog>
   );
 }
 

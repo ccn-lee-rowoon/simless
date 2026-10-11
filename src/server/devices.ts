@@ -39,7 +39,6 @@ const CreateParams = z
     "Give either model or custom",
   );
 const DeviceRef = z.object({ device: z.string() });
-const RenameParams = DeviceRef.extend({ name: z.string().min(1) });
 const MemoParams = DeviceRef.extend({ memo: z.string().max(500) });
 const DevicesParams = z.object({ devices: z.array(z.string()).default([]) });
 const SlimParams = DevicesParams.extend({
@@ -324,21 +323,6 @@ export function registerDeviceMethods(server: SimlessServer): void {
       device = await withLock(id, () => measureBaseline(device, progress));
     if (params.slim) device = await withLock(id, () => applySlim(device, progress));
     return view(session, device);
-  });
-
-  server.addMethod("device.rename", async (p, session) => {
-    const params = parse(RenameParams, p);
-    const [device] = await server.resolve([params.device]);
-    if (!device) throw new HandlerError("NOT_FOUND", params.device);
-    guardOthers(device, session);
-    const lower = params.name.toLowerCase();
-    if ((await server.devices()).some((d) => d.id !== device.id && d.name.toLowerCase() === lower))
-      throw new HandlerError("INVALID", t("err.nameTaken", { name: params.name }));
-    await withLock(device.id, () =>
-      server.driver(device.spec.platform).rename(device, params.name),
-    );
-    server.invalidate();
-    return view(session, { ...device, name: params.name });
   });
 
   /** 이 Mac 에 있지만 simless 목록에 없는 디바이스 — 생성 화면의 «이 Mac 의 디바이스» (M1·R20) */
