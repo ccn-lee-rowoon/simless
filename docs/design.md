@@ -244,7 +244,7 @@ simless/
 | 슬림화하면 꺼지는 기능 (M4 — 생성 화면 «꺼지는 것 보기»·커스텀 목록) | avdslim 프로필이 끄는 패키지 목록(`avdslim profiles`)을 사람이 읽을 이름으로 묶어 보여 준다 | simslim 프로필이 끄는 서비스 목록을 묶어 보여 준다(Siri·Spotlight·iCloud·Wallet …) |
 | 슬림 확인 (M6) | 프로필 패키지 중 꺼진 비율 ≥ 50% | `simslim verify` — 켜진 기기만 가능 |
 | 켜기 | `emulator -avd <AVD ID> -port <빈 포트> -no-snapshot-save` 를 서버와 분리(detached)해 실행. `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
-| 끄기 | `adb -s <시리얼> emu kill` | `simctl shutdown` |
+| 끄기 | `adb -s <시리얼> shell sync` → 슬림을 바꾼(`avdslim on`·`enable`·`off`) 지 20초가 안 됐으면 기다림 → `emu kill` (device-slim 시험: 바로 끄면 `off` 가 남지 않은 적이 있음) | `simctl shutdown` |
 | 삭제 (M8, Simless 가 만든 것만) | 끄고 `.avd`·`.ini` 삭제 | 끄고 `simctl delete` |
 
 - **Android 시리얼을 서버가 정한다**: `-port` 로 켜면 시리얼이 `emulator-<port>` 로 정해진다. 밖에서 켠 경우는 `adb -s <시리얼> emu avd name` 으로 역조회한다.

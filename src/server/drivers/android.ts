@@ -41,6 +41,8 @@ export interface AndroidDriverOptions {
   isPortFree?: (port: number) => Promise<boolean>;
   bootTimeoutMs?: number;
   pollMs?: number;
+  /** 슬림을 바꾼 뒤 끄기 전에 기다릴 시간 — 바로 끄면 바꾼 것이 남지 않은 적이 있다 (기본 20초) */
+  slimSettleMs?: number;
   /** 기기 정의 XML — 기본은 Android Studio 의 sdklib.jar 와 ~/.android/devices.xml (M1) */
   deviceDefinitions?: () => Promise<{ user: string[]; studio: string[] }>;
 }
@@ -166,6 +168,8 @@ export class AndroidDriver implements Driver {
   private readonly avdslimPath: () => string | undefined;
   private readonly spawnEmulator: NonNullable<AndroidDriverOptions["spawnEmulator"]>;
   private readonly isPortFree: NonNullable<AndroidDriverOptions["isPortFree"]>;
+  /** 시리얼 → 마지막으로 기기 안 슬림을 바꾼 시각 (avdslim on·enable·off) */
+  private readonly slimChangedAt = new Map<string, number>();
 
   constructor(
     private readonly config: Config,
@@ -601,9 +605,20 @@ export class AndroidDriver implements Driver {
     throw new Error(t("err.bootTimeout", { name: device.name, log: logPath }));
   }
 
+  /**
+   * 끄기 전에 디스크에 쓰게 한다 — device-slim 이 시험 AVD 에서 `avdslim off` 바로 뒤에 끄니 해제가
+   * 남지 않았고, `sync` 하고 20초쯤 기다리면 남았다. 슬림을 바꾼 직후면 그만큼 기다린다
+   */
   async shutdown(device: Device, state: RuntimeState): Promise<void> {
     const serial = state.targetId;
     if (!serial) return;
+    await this.runner([this.adb, "-s", serial, "shell", "sync"], { timeoutMs: 30_000 });
+    const changedAt = this.slimChangedAt.get(serial);
+    if (changedAt !== undefined) {
+      const wait = (this.options.slimSettleMs ?? 20_000) - (Date.now() - changedAt);
+      if (wait > 0) await Bun.sleep(wait);
+      this.slimChangedAt.delete(serial);
+    }
     await this.runner([this.adb, "-s", serial, "emu", "kill"]);
     for (let i = 0; i < 30; i++) {
       if (!(await this.running()).has(device.native)) return;
@@ -668,12 +683,14 @@ export class AndroidDriver implements Driver {
     for (const id of skip) {
       if (ENABLEABLE_SETTINGS.has(id)) await runOk(this.runner, [avdslim, "enable", id, serial]);
     }
+    this.slimChangedAt.set(serial, Date.now());
     const kept = await this.keptPackages(device);
     if (kept.size === 0) return;
     const installed = await this.packages(serial, false);
     for (const pkg of kept) {
       if (installed.has(pkg)) await runOk(this.runner, [avdslim, "enable", pkg, serial]);
     }
+    this.slimChangedAt.set(serial, Date.now());
   }
 
   async unslim(device: Device, progress: Progress): Promise<void> {
@@ -684,6 +701,7 @@ export class AndroidDriver implements Driver {
     }
     progress(t("progress.unslimAvd", { name: device.name }));
     await runOk(this.runner, [avdslim, "off", state.targetId], { timeoutMs: 5 * 60_000 });
+    this.slimChangedAt.set(state.targetId, Date.now());
   }
 
   private profilePackages?: Set<string>;
