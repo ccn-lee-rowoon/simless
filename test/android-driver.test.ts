@@ -210,6 +210,43 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
     expect(String(error)).toContain("exited while booting");
   });
 
+  test("shutdown — 슬림을 바꾼 직후면 sync 하고 잠깐 기다렸다 끈다, 켤 때 다시 건 것은 기다리지 않는다", async () => {
+    const { env } = sdkWithImages();
+    const adb = fakeAdb();
+    adb.running.set("emulator-5556", { avd: "simless_ab12", booted: true });
+    const d = driver(env, {
+      runner: adb.runner,
+      avdslimPath: () => "/bin/avdslim",
+      slimSettleMs: 80,
+    });
+    const device = { id: "ab12", native: "simless_ab12", name: "작은 폰" } as Device;
+    const state = { booted: true, targetId: "emulator-5556" };
+    await d.unslim(device, () => {});
+    const started = Date.now();
+    await d.shutdown(device, state);
+    expect(Date.now() - started).toBeGreaterThanOrEqual(60);
+    const tail = adb.calls.slice(adb.calls.indexOf("/bin/avdslim off emulator-5556"));
+    expect(tail.filter((c) => /shell sync|emu kill/.test(c))).toEqual([
+      expect.stringContaining("-s emulator-5556 shell sync"),
+      expect.stringContaining("-s emulator-5556 emu kill"),
+    ]);
+
+    // 슬림을 바꾸지 않았으면 sync 도 대기도 없이 바로 끈다
+    adb.running.set("emulator-5556", { avd: "simless_ab12", booted: true });
+    adb.calls.length = 0;
+    const again = Date.now();
+    await d.shutdown(device, state);
+    expect(Date.now() - again).toBeLessThan(60);
+    expect(adb.calls.some((c) => c.includes("shell sync"))).toBe(false);
+
+    // 켤 때마다 다시 거는 슬림(afterBoot)은 바꾼 것으로 보지 않는다
+    adb.running.set("emulator-5556", { avd: "simless_ab12", booted: true });
+    await d.afterBoot({ ...device, slim: "applied" }, state, () => {});
+    const afterBoot = Date.now();
+    await d.shutdown(device, state);
+    expect(Date.now() - afterBoot).toBeLessThan(60);
+  });
+
   test("slim — avdslim 이 없으면 TOOL_MISSING", async () => {
     const { env } = sdkWithImages();
     const error = await driver(env)
@@ -485,6 +522,26 @@ describe("AndroidDriver 기종 목록·만들기 (R1·R2·M1)", () => {
       recommended: true,
       id: expect.stringContaining("android-36/"),
     });
+  });
+
+  test("catalog — 추천 이미지는 google_apis(Play Store 없음)가 API 가 낮아도 먼저, 16KB 페이지는 맨 뒤", async () => {
+    const { env, sdk } = sdkWithImages();
+    for (const [target, tag] of [
+      ["android-35", "google_apis"],
+      ["android-36", "default"],
+    ]) {
+      const dir = join(sdk, "system-images", target ?? "", tag ?? "", "arm64-v8a");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "source.properties"), `SystemImage.TagId=${tag}\n`);
+    }
+    const { os } = await driver(env).catalog();
+    expect(os.map((o) => o.id)).toEqual([
+      "system-images/android-35/google_apis/arm64-v8a/",
+      expect.stringMatching(/android-36\/(default|google_apis_playstore)\//),
+      expect.stringMatching(/android-36\/(default|google_apis_playstore)\//),
+      "system-images/android-37.1/google_apis_playstore_ps16k/arm64-v8a/",
+    ]);
+    expect(os[0]?.recommended).toBe(true);
   });
 
   test("resolve — 직접 입력은 dp·밀도에서 px 를 계산하고, 이미지를 고를 수 있다", async () => {

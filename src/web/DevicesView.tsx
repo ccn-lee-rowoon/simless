@@ -377,7 +377,12 @@ export function DevicesView({
               "device.slim",
               mode === "none"
                 ? { devices: [d.id], mode: "off" }
-                : { devices: [d.id], mode: "on", keep },
+                : {
+                    devices: [d.id],
+                    mode: "on",
+                    keep,
+                    slimMode: keep.length > 0 ? (mode === "app" ? "app" : "custom") : undefined,
+                  },
             ),
           );
         }}

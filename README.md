@@ -8,7 +8,7 @@
 - **용도별 기기 묶음(그룹)** — «두 계정 확인»(계정 A 기기 + 계정 B 기기), «해상도별 레이아웃»(폭이 다른 세 대)처럼 묶어 두고 한 번에 빌린다
 - **기본 디바이스** — 플랫폼마다 한 대. «기본 디바이스로 테스트해 줘». 기기가 하나도 없으면 만들어서 빌려준다
 - **iOS 와 Android 를 함께** — 한 그룹에 iPhone 과 Android 를 섞을 수 있다
-- **UI 테스트용 슬림 기기** — Siri·iCloud 같은 것을 꺼서 가볍게(예: 7.8GB → 1.6GB). 만들 때 고른다
+- **슬림 기기** — Siri·iCloud 같은 것을 꺼서 가볍게(예: 7.8GB → 1.6GB). 만들 때 방식을 고른다 — **UI**(전체, 화면 확인용) · **App**(앱이 쓰는 기능만 남김, 에이전트가 앱을 읽어서) · **Custom**(남길 것을 고름)
 - **차례·교착** — 먼저 온 순서대로, 서로 기다리다 멈추는 요청은 미리 거절한다
 - **보호(선택)** — 점유하지 않은 세션이 argent·adb·simctl 로 기기를 건드리면 실행 직전에 막는다
 
@@ -53,8 +53,8 @@ bash simless-<버전>-install.sh   # 설치: 서버(로그인 시 자동 실행)
 | `simless status` | 기기·그룹·누가 쓰는지 |
 | `simless use --default ios` · `--group "two accounts"` · `<기기>…` | 빌려서 켜기 (`--available` 비어 있는 것만, `--wait` 기다리기, `--create` 없으면 만들기) |
 | `simless release` · `simless down` | 돌려주기 · 끄기 |
-| `simless catalog` · `simless create "iPhone 17"` | 만들 수 있는 기종·슬림 항목 · 만들기 (`--no-slim` 일반 기기, `--slim-keep <ID,…>` 남길 항목) |
-| `simless slim <기기> --keep <ID,…>` · `--full` · `--off` | 슬림 항목 바꾸기 · 전체 슬림 · 슬림 해제 (Simless 가 만든 것만) |
+| `simless catalog` · `simless create "iPhone 17"` | 만들 수 있는 기종·슬림 항목 · 만들기 (`--no-slim` 일반 기기, `--slim-keep <ID,…>` 남길 항목 — Custom, `--app` 을 붙이면 App) |
+| `simless slim <기기> --keep <ID,…> [--app]` · `--full` · `--off` | 남길 항목 바꾸기(Custom, `--app` 이면 App) · UI(전체 슬림)로 · 슬림 해제 (Simless 가 만든 것만) |
 | `simless group list` · `simless group create …` | 그룹 |
 | `simless history` | 점유 기록 (90일 보관) |
 | `simless app install` · `simless app save --platform ios` | 네이티브 빌드 캐시 — 네이티브 지문이 같은 빌드가 있으면 빌드 없이 설치 · 방금 빌드한 것 보관 (Expo 앱) |

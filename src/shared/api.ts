@@ -1,6 +1,7 @@
 import type { Lang } from "./i18n.ts";
 import type { Defaults, Device, Group } from "./model.ts";
 import type { SessionInfo } from "./protocol.ts";
+import type { SlimChoice } from "./slim-mode.ts";
 
 // 메서드별 결과 형식 — 서버와 CLI(나중에 MCP·웹 UI)가 같이 쓴다. 상세는 docs/protocol.md
 
@@ -26,7 +27,12 @@ export interface SlimStats {
   measuredAt: number;
 }
 
-export interface DeviceView extends Device {
+export interface DeviceView extends Omit<Device, "slimMode"> {
+  /**
+   * 슬림 방식 (M15) — 저장된 출처(`app`·`custom`)를 상태와 함께 본 값. 슬림하지 않았으면 none,
+   * 남긴 것이 없으면 ui. 저장된 값은 레지스트리에만 있다
+   */
+  slimMode: SlimChoice;
   /** 예: `Android 360dp` */
   label: string;
   layoutWidth: number;

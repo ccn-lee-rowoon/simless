@@ -83,8 +83,8 @@ export type FakeDriver = Driver & {
   existing: Discovered[];
   /** install() 로 설치한 것 — [디바이스 ID, 경로] */
   installed: [string, string][];
-  /** slim() 을 부른 기록 — [디바이스 ID, 남길 항목, reset] (M15) */
-  slimmed: [string, string[], boolean][];
+  /** slim() 을 부른 기록 — [디바이스 ID, 남길 항목] (M15) */
+  slimmed: [string, string[]][];
   /** slimOff() 가 돌려줄 값 — 켜진 기기에서 실제로 꺼진 항목 (M16) */
   observedOff: string[];
 };
@@ -153,8 +153,8 @@ export function fakeDriver(platform: "android" | "ios" = "android"): FakeDriver 
     install: async (d, _state, path) => {
       driver.installed.push([d.id, path]);
     },
-    slim: async (d, _progress, options) => {
-      driver.slimmed.push([d.id, d.slimKeep ?? [], options?.reset ?? false]);
+    slim: async (d) => {
+      driver.slimmed.push([d.id, d.slimKeep ?? []]);
     },
     slimItems: async () => FAKE_SLIM_ITEMS,
     slimOff: async (d) => (booted.has(d.id) ? driver.observedOff : undefined),

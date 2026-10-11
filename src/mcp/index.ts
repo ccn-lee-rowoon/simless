@@ -48,7 +48,9 @@ function brief(d: DeviceView) {
     targetId: d.targetId,
     // Simless 가 하지 않은 슬림도 슬림으로 (M6)
     slim: observedSlim(d) ? "applied" : d.slim,
-    // 커스텀 슬림에서 남긴 항목 (M15), 꺼진 항목 — 테스트에 맞는 기기를 고를 때 (M16)
+    // 슬림 방식(UI·App·Custom)과 남긴 항목 (M15), 꺼진 항목 — 테스트에 맞는 기기를 고를 때 (M16)
+    // Simless 밖에서 한 슬림은 방식을 모른다
+    slimMode: observedSlim(d) && d.slim === "none" ? undefined : d.slimMode,
     slimKeep: d.slimKeep,
     slimOff: d.slimOff,
     slimOffObserved: d.slimOffObserved,
@@ -104,7 +106,7 @@ export async function runMcp(): Promise<void> {
     {
       title: "simless status",
       description:
-        "Devices in the simless list (argent targetId, size label, booted, slim, slimKeep and slimOff — slim items kept and turned off, default, groups, who holds it), device groups with their descriptions, and what this session holds. Call this first to pick a device group or the default device.",
+        "Devices in the simless list (argent targetId, size label, booted, slim, slimMode (ui, app, custom — none when not slimmed, absent when slimmed outside Simless), slimKeep and slimOff — slim items kept and turned off, default, groups, who holds it), device groups with their descriptions, and what this session holds. Call this first to pick a device group or the default device.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
@@ -233,7 +235,7 @@ export async function runMcp(): Promise<void> {
     {
       title: "Create a device",
       description:
-        "Create a new simulator or emulator from a model (and optional OS). Slim by default (named `simless …`): full slim for UI and layout checks, or pass slimKeep to keep what the app needs (push, photos, location …). Only when the user asks. Takes several minutes.",
+        'Create a new simulator or emulator from a model (and optional OS). Slim by default (named `simless …`) in one of three modes — UI: everything slimmed, for screen and layout checks (omit slimKeep); App: keep the features you found in the app project (slimKeep + slimMode: "app"); Custom: keep what the user named (slimKeep). Only when the user asks. Takes several minutes.',
       inputSchema: {
         model: z.string().describe("Model name or ID from simless_catalog"),
         platform: z.enum(["android", "ios"]).optional(),
@@ -244,8 +246,12 @@ export async function runMcp(): Promise<void> {
           .array(z.string())
           .optional()
           .describe(
-            "Slim item IDs to keep on (simless_catalog slimOff[].id, per platform). Omit for full slim",
+            "Slim item IDs to keep on (simless_catalog slimOff[].id, per platform). Omit for UI mode (full slim)",
           ),
+        slimMode: z
+          .enum(["app", "custom"])
+          .optional()
+          .describe("Where slimKeep came from: app = found in the app project; custom (default)"),
       },
     },
     guard(async (args) => {
@@ -256,6 +262,7 @@ export async function runMcp(): Promise<void> {
         name: args.name,
         slim: args.slim ?? true,
         slimKeep: args.slimKeep,
+        slimMode: args.slimMode,
         baseline: false,
       });
       return json(`Created ${device.name} (${device.id}).`, brief(device));
@@ -267,10 +274,11 @@ export async function runMcp(): Promise<void> {
     {
       title: "Change how a device is slimmed",
       description:
-        "Slim a device Simless created, change what it keeps, or remove slimming. keep: [] is full slim (UI checks); keep: [ids] keeps those items (simless_catalog slimOff[].id); off: true restores it. Only when the user asks. iOS takes 1–2 minutes.",
+        'Slim a device Simless created, change what it keeps, or remove slimming. keep: [] is UI mode (full slim, for screen checks); keep: [ids] keeps those items (simless_catalog slimOff[].id) — add slimMode: "app" when they are features found in the app project (App mode), otherwise Custom; off: true restores it. Only when the user asks. iOS takes 1–2 minutes.',
       inputSchema: {
         devices: z.array(z.string()).min(1).describe("Device IDs or names"),
         keep: z.array(z.string()).optional(),
+        slimMode: z.enum(["app", "custom"]).optional(),
         off: z.boolean().optional(),
       },
     },
@@ -281,6 +289,7 @@ export async function runMcp(): Promise<void> {
           devices: args.devices,
           mode: args.off ? "off" : "on",
           keep: args.off ? undefined : args.keep,
+          slimMode: args.off ? undefined : args.slimMode,
         },
       );
       const failed = result.results.filter((r) => !r.ok);

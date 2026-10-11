@@ -9,17 +9,21 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import androidRef from "agent-skills/skills/device-slim/reference/app-android.md" with {
+import androidRef from "agent-skills/skills/device-slim/references/find-features-android.md" with {
   type: "file",
 };
-import expoRef from "agent-skills/skills/device-slim/reference/app-expo.md" with { type: "file" };
-import iosRef from "agent-skills/skills/device-slim/reference/app-ios.md" with { type: "file" };
-import reactNativeRef from "agent-skills/skills/device-slim/reference/app-react-native.md" with {
+import expoRef from "agent-skills/skills/device-slim/references/find-features-expo.md" with {
+  type: "file",
+};
+import iosRef from "agent-skills/skills/device-slim/references/find-features-ios.md" with {
+  type: "file",
+};
+import reactNativeRef from "agent-skills/skills/device-slim/references/find-features-react-native.md" with {
   type: "file",
 };
 import { z } from "zod";
-import slimRef from "../../integrations/skill/simless/reference/slim.md" with { type: "file" };
-import troubleshootingRef from "../../integrations/skill/simless/reference/troubleshooting.md" with {
+import slimRef from "../../integrations/skill/simless/references/slim.md" with { type: "file" };
+import troubleshootingRef from "../../integrations/skill/simless/references/troubleshooting.md" with {
   type: "file",
 };
 import skillPath from "../../integrations/skill/simless/SKILL.md" with { type: "file" };
@@ -61,18 +65,22 @@ export async function bundledSkill(): Promise<string> {
 
 /**
  * 스킬과 함께 넣는 참고 파일 — 본문(SKILL.md)이 길어지지 않게 필요할 때만 읽는 것을 뺐다.
- * slim·troubleshooting 은 이 저장소의 것, app-* 는 agent-skills 저장소의 device-slim 참고 파일을
+ * slim·troubleshooting 은 이 저장소의 것, find-features-* 는 agent-skills 저장소의 device-slim 참고 파일을
  * 그대로 쓴다(앱에 필요한 기기 기능 찾기, M15). 그쪽은 package.json 에 태그(`device-slim-vX.Y.Z`)로
  * 고정하고 bun.lock 이 커밋까지 고정한다.
  */
 const REFERENCES: Record<string, string> = {
-  "reference/slim.md": slimRef,
-  "reference/troubleshooting.md": troubleshootingRef,
-  "reference/app-ios.md": iosRef,
-  "reference/app-android.md": androidRef,
-  "reference/app-react-native.md": reactNativeRef,
-  "reference/app-expo.md": expoRef,
+  "references/slim.md": slimRef,
+  "references/troubleshooting.md": troubleshootingRef,
+  "references/find-features-ios.md": iosRef,
+  "references/find-features-android.md": androidRef,
+  "references/find-features-react-native.md": reactNativeRef,
+  "references/find-features-expo.md": expoRef,
 };
+
+/** 참고 파일 폴더 — 예전 이름(`reference/`, 0.3.0 까지)은 설치할 때 지운다 */
+const REFERENCES_DIR = "references";
+const LEGACY_REFERENCES_DIR = "reference";
 
 /** 스킬 폴더에 넣을 파일 — 폴더 안 경로 → 내용 */
 export async function bundledFiles(): Promise<Map<string, string>> {
@@ -83,9 +91,10 @@ export async function bundledFiles(): Promise<Map<string, string>> {
   return files;
 }
 
-/** 스킬 폴더에 넣는다 — reference/ 는 비우고 다시 써서 빠진 파일이 남지 않게 */
+/** 스킬 폴더에 넣는다 — references/ 는 비우고 다시 써서 빠진 파일이 남지 않게 */
 async function writeSkillDir(dir: string): Promise<void> {
-  rmSync(join(dir, "reference"), { recursive: true, force: true });
+  rmSync(join(dir, REFERENCES_DIR), { recursive: true, force: true });
+  rmSync(join(dir, LEGACY_REFERENCES_DIR), { recursive: true, force: true });
   for (const [path, text] of await bundledFiles()) {
     mkdirSync(dirname(join(dir, path)), { recursive: true });
     writeFileSync(join(dir, path), text);
@@ -107,9 +116,10 @@ async function fileState(file: string): Promise<InstallState> {
     const target = join(dir, path);
     if (!existsSync(target) || readFileSync(target, "utf8") !== text) return "outdated";
   }
-  const refDir = join(dir, "reference");
+  if (existsSync(join(dir, LEGACY_REFERENCES_DIR))) return "outdated";
+  const refDir = join(dir, REFERENCES_DIR);
   const extra = existsSync(refDir)
-    ? readdirSync(refDir).filter((name) => !files.has(`reference/${name}`))
+    ? readdirSync(refDir).filter((name) => !files.has(`${REFERENCES_DIR}/${name}`))
     : [];
   return extra.length === 0 ? "current" : "outdated";
 }

@@ -89,6 +89,12 @@ describe("simless mcp (R12)", () => {
     expect(result.isError).toBeFalsy();
     expect(textOf(result)).toContain("Slim updated.");
     expect(textOf(result)).toContain('"slimKeep": [\n      "location"\n    ]');
+    expect(textOf(result)).toContain('"slimMode": "custom"');
+    const app = await client.callTool({
+      name: "simless_slim",
+      arguments: { devices: ["ab12"], keep: ["location"], slimMode: "app" },
+    });
+    expect(textOf(app)).toContain('"slimMode": "app"');
     const bad = await client.callTool({
       name: "simless_slim",
       arguments: { devices: ["ab12"], keep: ["nope"] },

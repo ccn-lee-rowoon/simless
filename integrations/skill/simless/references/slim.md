@@ -4,16 +4,18 @@ Contents: Choosing how to slim · Reuse a previous result · Features → Simles
 
 ## Choosing how to slim
 
-When you create a slim device, or the user asks to change how one is slimmed, pick one of three:
+When you create a slim device, or the user asks to change how one is slimmed, pick one of three modes. **Keep the mode names as they are — UI, App, Custom — in every language**, in the question and the report (the Simless app window and `simless list` show the same names, and so does the device-slim skill). After each name, one line in the user's language: what it does and what it costs. Recommend one with the reason: the request says it («레이아웃만» → UI, «앱 테스트» → App, features named → Custom); else an app project to read → App; else UI.
 
-1. **Full slim** (the default) — for UI and layout checks. Everything that can be turned off is off.
-2. **Keep what the app needs** — for testing an app feature that relies on the device (push notifications, universal links, photo picker, contacts, location, camera …).
+1. **UI** (the default) — for screen and layout checks. Everything that can be turned off is off; push, location, the photo picker and the like won't work. No `--slim-keep`.
+2. **App** — for testing an app feature that relies on the device (push notifications, universal links, photo picker, contacts, location, camera …).
    - Find the features the app needs and map them to slim items — follow SKILL.md «Finding what the app needs».
    - Items differ per platform (`simless --json catalog` → `slimOff[]`: `id`, `name`, and — for iOS categories and Android settings and hardware — `detail` saying what stops working; Android package groups have no `detail`, and `avdslim profiles` lists their packages): iOS has simslim categories, Android has avdslim package groups, device settings and emulator hardware.
-   - Tell the user which items you keep and why, then create with `--slim-keep <id,…>`.
-3. **Custom** — the user names what to keep. Pass those IDs.
+   - Tell the user which items you keep and why, then create with `--slim-keep <id,…> --app` (MCP: `slimKeep` + `slimMode: "app"`) — `--app` records that the items came from the app project.
+3. **Custom** — the user names what to keep. Map their features with the tables below (a slim item ID they give is taken as it is), show the list for them to confirm, and pass those IDs with `--slim-keep` (no `--app`). The app project isn't read.
 
-Change an existing device (only one Simless created) with `simless slim <device> --keep <id,…>` (or `--full` to go back to full slim, `--off` to remove slimming). iOS re-slims in 1–2 minutes; Android camera and audio take effect at the next boot. Use `--no-slim` only when the test needs a stock device.
+UI mode changes some screens, not only features: with `store` off a shop screen's prices may stay empty, with `photos` off the photo picker may be empty. When the user checks such a screen, keep that one item even in UI mode — it then becomes Custom.
+
+Change an existing device (only one Simless created) with `simless slim <device> --keep <id,…>` — add `--app` when the items came from the app project — or `--full` to go back to UI, `--off` to remove slimming. iOS re-slims in 1–2 minutes (one reboot); Android camera and audio take effect at the next boot. Use `--no-slim` only when the test needs a stock device.
 
 ## Reuse a previous result
 
@@ -37,11 +39,11 @@ Hash the `sources` (paths are relative to the app root) the same way it was made
 find <sources…> -type f | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256 | cut -d' ' -f1
 ```
 
-1. Same hash, and no new evidence file since (a new patch, local module, extension target or config plugin — the places the `app-*.md` files list) → use `features` as is.
+1. Same hash, and no new evidence file since (a new patch, local module, extension target or config plugin — the places the `find-features-*.md` files list) → use `features` as is.
 2. Otherwise → read the app again (SKILL.md «Finding what the app needs») and **write the file from scratch**, so features and sources that are gone disappear. Tell the user what changed («added location, dropped camera»).
 3. The native folders appeared or were removed since (a prebuild, or a clean) → read the app again: the evidence changed place. When there were no native folders, the evidence was `expo config --type introspect`, so `sources` lists the app config, `.env` and local plugins.
 
-Saving is optional. When there is no `.device-slim.json` yet, ask in **the same question** that confirms the features (SKILL.md «Finding what the app needs» step 4): save it · save it but keep it out of git (add `/.device-slim.json` to `.git/info/exclude`) · don't save. Write it only after they choose to save. When the file already exists, it was saved before — rewrite it without asking and say what changed. `features` holds **every feature found**, not only the ones this test keeps; even when the file is current and you don't read the app again, still confirm which features this test needs.
+Saving is optional. When there is no `.device-slim.json` yet, ask in **the same question** that confirms the features (SKILL.md «Finding what the app needs» step 5): save it · save it but keep it out of git (add `/.device-slim.json` to `.git/info/exclude`) · don't save. Write it only after they choose to save. When the file already exists, it was saved before — rewrite it without asking and say what changed. `features` holds **every feature found**, not only the ones this test keeps; even when the file is current and you don't read the app again, still confirm which features this test needs.
 
 ## Features → Simless slim items
 

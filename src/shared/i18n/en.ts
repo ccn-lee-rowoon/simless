@@ -227,9 +227,11 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.slim.off": "Remove slimming",
   "cli.slim.check": "Only check the slim state",
   "cli.create.slimKeep":
-    "Slim item IDs to keep, comma-separated (slim items in simless catalog) — full slim if omitted",
+    "Slim item IDs to keep, comma-separated (slim items in simless catalog) — UI (full slim) if omitted",
+  "cli.slim.app":
+    "The items to keep are features found in the app project — remembered as App mode (Custom if omitted)",
   "cli.slim.keep": "Slim again keeping these item IDs (comma-separated)",
-  "cli.slim.full": "Full slim, keeping nothing",
+  "cli.slim.full": "UI (full slim), keeping nothing",
   "cli.up": "Boot the devices you hold",
   "cli.down": "Shut down the devices you hold",
   "cli.upDown.devices": "Device IDs or names (default: everything this session holds)",
@@ -287,6 +289,8 @@ export const en: Record<keyof typeof ko, string> = {
   "slim.unit.packages": "packages",
   "err.slimKeepUnknown": "Unknown slim items: {ids} — available: {valid}",
   "err.slimKeepOnlyOn": "Items to keep (keep) can only be given when applying slim",
+  "err.slimModeNeedsKeep":
+    "The slim mode (slimMode) can only be given together with items to keep (keep)",
   "slim.android.location": "Location",
   "slim.android.location.detail":
     "Turns location services off — features that use location stop working.",
@@ -441,10 +445,14 @@ export const en: Record<keyof typeof ko, string> = {
   "web.slimDetail.count": "{off} of {total} off",
   "web.slim.intro": "Choose how to slim {name}.",
   "web.slim.mode": "Slim mode",
-  "web.slim.full": "Full slim",
-  "web.slim.fullHint": "For UI and layout checks. The lightest",
+  "web.slim.ui": "UI",
+  "web.slim.uiHint":
+    "For screen and layout checks. Turns off almost every device feature — the lightest",
   "web.slim.custom": "Custom",
-  "web.slim.customHint": "Keeps only what your app needs",
+  "web.slim.customHint": "Pick the features to keep yourself",
+  "web.slim.app": "App",
+  "web.slim.appHint":
+    "An agent read the app project and kept only the features it uses. Changing the items makes it Custom",
   "web.slim.customIntro": "Check what to keep. Everything else is turned off.",
   "web.slim.kind.packages": "App and service groups",
   "web.slim.kind.settings": "Device settings",
@@ -452,8 +460,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.slim.apply": "Apply",
   "web.slim.applyHint": "Applying slims it right away",
   "web.slim.reapplyHint": "Applying slims it again with the new choices (iOS takes 1–2 min)",
-  "web.slim.keptCount": "Custom — {count} kept",
-  "cli.slim.custom": "custom",
+  "web.slim.keptCount": "{mode} — {count} kept",
   "web.device.forceRelease": "Force release",
   "web.device.delete": "Delete…",
   "web.device.defaultCantDelete":

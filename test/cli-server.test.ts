@@ -48,7 +48,7 @@ describe("CLI ↔ 서버 (R13·R14)", () => {
     expect((await simless(["release"], { SIMLESS_SESSION_ID: "A" })).exitCode).toBe(0);
   });
 
-  test("슬림 항목 — create --slim-keep, slim --keep·--full (M15)", async () => {
+  test("슬림 항목 — create --slim-keep, slim --keep·--full·--app, 방식은 UI·App·Custom (M15)", async () => {
     const created = await simless([
       "--json",
       "create",
@@ -60,14 +60,31 @@ describe("CLI ↔ 서버 (R13·R14)", () => {
     expect(created.exitCode).toBe(0);
     const device = JSON.parse(created.stdout);
     expect(device.slimKeep).toEqual(["location", "assistant-search"]);
+    expect(device.slimMode).toBe("custom");
 
-    const kept = await simless(["--json", "slim", device.id, "--keep", "location"]);
+    const kept = await simless(["--json", "slim", device.id, "--keep", "location", "--app"]);
     expect(kept.exitCode).toBe(0);
-    expect(JSON.parse(kept.stdout).devices[0].slimKeep).toEqual(["location"]);
+    expect(JSON.parse(kept.stdout).devices[0]).toMatchObject({
+      slimKeep: ["location"],
+      slimMode: "app",
+    });
+    const table = await simless(["list"]);
+    expect(table.stdout).toContain("(App −1)");
 
     const full = await simless(["--json", "slim", device.id, "--full"]);
     expect(full.exitCode).toBe(0);
     expect(JSON.parse(full.stdout).devices[0].slimKeep).toBeUndefined();
+    expect(JSON.parse(full.stdout).devices[0].slimMode).toBe("ui");
+    expect((await simless(["list"])).stdout).toContain("(UI)");
+
+    // App 으로 남긴 뒤 슬림을 풀면 none — 저장된 출처(app)가 남아도 보이는 방식은 상태를 따른다
+    await simless(["--json", "slim", device.id, "--keep", "location", "--app"]);
+    const off = await simless(["--json", "slim", device.id, "--off"]);
+    expect(JSON.parse(off.stdout).devices[0]).toMatchObject({ slim: "none", slimMode: "none" });
+
+    // 방식만 주면 무엇을 남길지 몰라 INVALID
+    const modeOnly = await simless(["--json", "slim", device.id, "--app"]);
+    expect(JSON.parse(modeOnly.stdout).error).toMatchObject({ code: "INVALID" });
 
     const bad = await simless(["--json", "slim", device.id, "--keep", "nope"]);
     expect(bad.exitCode).toBe(2);
@@ -89,6 +106,7 @@ describe("표 출력 — 슬림 실패 이유 (M6)", () => {
     const device = {
       ...androidDevice("cccc"),
       slim: "failed" as const,
+      slimMode: "ui" as const,
       slimError: "avdslim 이 없습니다 — simless doctor\n자세한 내용",
       label: "Android 360dp",
       layoutWidth: 360,
@@ -110,6 +128,7 @@ describe("표 출력 — 슬림 실패 이유 (M6)", () => {
       ...androidDevice("dddd"),
       createdBySimless: false,
       slim: "none" as const,
+      slimMode: "none" as const,
       slimSeen: {
         disabled: 49,
         total: 52,
@@ -127,12 +146,13 @@ describe("표 출력 — 슬림 실패 이유 (M6)", () => {
     expect(devicesTable([device])).toContain("SLIM 49/52 packages (checked just now)");
   });
 
-  test("커스텀 슬림은 남긴 수를 붙인다 (M15)", async () => {
+  test("슬림 방식(UI·App·Custom)과 남긴 수를 붙인다 (M15)", async () => {
     const { devicesTable } = await import("../src/cli/format.ts");
     const device = {
       ...androidDevice("eeee"),
       slim: "applied" as const,
       slimKeep: ["location", "camera"],
+      slimMode: "custom" as const,
       label: "Android 360dp",
       layoutWidth: 360,
       layoutHeight: 760,
@@ -141,6 +161,10 @@ describe("표 출력 — 슬림 실패 이유 (M6)", () => {
       default: false,
       groups: [],
     };
-    expect(devicesTable([device])).toContain("SLIM (custom −2)");
+    expect(devicesTable([device])).toContain("SLIM (Custom −2)");
+    expect(devicesTable([{ ...device, slimMode: "app" as const }])).toContain("SLIM (App −2)");
+    expect(devicesTable([{ ...device, slimKeep: undefined, slimMode: "ui" as const }])).toContain(
+      "SLIM (UI)",
+    );
   });
 });

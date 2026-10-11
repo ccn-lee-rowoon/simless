@@ -38,6 +38,11 @@ interface ScreenProfile {
 }
 
 const SLIM_TIMEOUT_MS = 15 * 60_000;
+/**
+ * `simslim on` 한 번으로 남길 묶음을 바꿀 수 있다고 확인한 버전 — 예전에 끈 것도 다시 켠다
+ * (device-slim 0.6.0 이 시험 기기로 확인). 이보다 낮거나 버전을 모르면 풀었다 다시 건다
+ */
+const RESLIM_IN_PLACE_SIMSLIM = "0.12.0";
 const BOOT_TIMEOUT_MS = 10 * 60_000;
 
 const UNITS: Record<string, number> = { KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3 };
@@ -382,9 +387,29 @@ export class IosDriver implements Driver {
     return (await this.slimCategories()).off;
   }
 
-  async slim(device: Device, progress: Progress, options?: { reset?: boolean }): Promise<void> {
-    // 남길 묶음이 바뀌었으면 풀고 다시 — 이전에 끈 것이 남지 않게
-    if (options?.reset) await this.unslim(device, progress);
+  private simslimVersion?: Promise<string | undefined>;
+
+  /** `simslim version` — «simslim 0.12.0». 서버가 켜져 있는 동안 기억한다 */
+  private installedSimslim(): Promise<string | undefined> {
+    this.simslimVersion ??= this.runner([this.simslim(), "version"], { timeoutMs: 10_000 }).then(
+      (r) => (r.code === 0 ? /(\d+\.\d+\.\d+)/.exec(r.stdout)?.[1] : undefined),
+      () => undefined,
+    );
+    return this.simslimVersion;
+  }
+
+  /**
+   * 남길 묶음이 바뀌어도 `on` 한 번 — 더는 남기지 않는 것은 끄고 새로 남길 것은 켠다(재부팅 한 번).
+   * 전에는 `off` 뒤 `on` 이라 두 번 재부팅했다. 그렇게 확인한 simslim 보다 오래됐으면, 이미 슬림한
+   * 기기는 예전처럼 풀었다 다시 건다
+   */
+  async slim(device: Device, progress: Progress): Promise<void> {
+    if (device.slim !== "none") {
+      const version = await this.installedSimslim();
+      if (!version || compareVersions(version, RESLIM_IN_PLACE_SIMSLIM) < 0) {
+        await this.unslim(device, progress);
+      }
+    }
     progress(t("progress.slimSim", { name: device.name }));
     await runOk(
       this.runner,

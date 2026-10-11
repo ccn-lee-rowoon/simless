@@ -41,6 +41,8 @@ export interface AndroidDriverOptions {
   isPortFree?: (port: number) => Promise<boolean>;
   bootTimeoutMs?: number;
   pollMs?: number;
+  /** 슬림을 바꾼 뒤 끄기 전에 기다릴 시간 — 바로 끄면 바꾼 것이 남지 않은 적이 있다 (기본 20초) */
+  slimSettleMs?: number;
   /** 기기 정의 XML — 기본은 Android Studio 의 sdklib.jar 와 ~/.android/devices.xml (M1) */
   deviceDefinitions?: () => Promise<{ user: string[]; studio: string[] }>;
 }
@@ -166,6 +168,11 @@ export class AndroidDriver implements Driver {
   private readonly avdslimPath: () => string | undefined;
   private readonly spawnEmulator: NonNullable<AndroidDriverOptions["spawnEmulator"]>;
   private readonly isPortFree: NonNullable<AndroidDriverOptions["isPortFree"]>;
+  /**
+   * 시리얼 → 사람·에이전트가 기기 안 슬림을 바꾼 시각 (slim·unslim). 켤 때마다 다시 거는 것(afterBoot)은
+   * 넣지 않는다 — 그것은 남지 않아도 다음에 켤 때 다시 걸린다
+   */
+  private readonly slimChangedAt = new Map<string, number>();
 
   constructor(
     private readonly config: Config,
@@ -213,7 +220,11 @@ export class AndroidDriver implements Driver {
     return join(this.avdDir(avdId), "config.ini");
   }
 
-  /** 설치된 시스템 이미지 — 이 Mac 의 CPU 용만, 4KB 페이지 우선·API 높은 순 (avdslim 권장) */
+  /**
+   * 설치된 시스템 이미지 — 이 Mac 의 CPU 용만. 추천 순서는 device-slim 과 같게: 4KB 페이지 우선
+   * (16KB 페이지 이미지는 RAM 을 4GB 아래로 못 줄임) → `google_apis`(Play Store 없음 — 가장 가볍고
+   * 루트가 열림, avdslim 권장) → API 높은 순
+   */
   private systemImages() {
     const root = join(this.sdk, "system-images");
     if (!existsSync(root)) return [];
@@ -239,7 +250,11 @@ export class AndroidDriver implements Driver {
         });
       }
     }
-    return images.sort((a, b) => Number(a.page16k) - Number(b.page16k) || b.api - a.api);
+    const plain = (tag: string) => (tag === "google_apis" ? 0 : 1);
+    return images.sort(
+      (a, b) =>
+        Number(a.page16k) - Number(b.page16k) || plain(a.tag) - plain(b.tag) || b.api - a.api,
+    );
   }
 
   private image(wanted?: string) {
@@ -593,9 +608,21 @@ export class AndroidDriver implements Driver {
     throw new Error(t("err.bootTimeout", { name: device.name, log: logPath }));
   }
 
+  /**
+   * 슬림을 바꾼 직후면 디스크에 쓰게 하고 끈다 — device-slim 이 시험 AVD 에서 `avdslim off` 바로 뒤에
+   * 끄니 해제가 남지 않았고, `sync` 하고 20초쯤 기다리면 남았다. 바꾸지 않았으면 바로 끈다(응답 없는
+   * 에뮬레이터를 끌 때 늦어지지 않게)
+   */
   async shutdown(device: Device, state: RuntimeState): Promise<void> {
     const serial = state.targetId;
     if (!serial) return;
+    const changedAt = this.slimChangedAt.get(serial);
+    if (changedAt !== undefined) {
+      this.slimChangedAt.delete(serial);
+      await this.runner([this.adb, "-s", serial, "shell", "sync"], { timeoutMs: 10_000 });
+      const wait = (this.options.slimSettleMs ?? 20_000) - (Date.now() - changedAt);
+      if (wait > 0) await Bun.sleep(wait);
+    }
     await this.runner([this.adb, "-s", serial, "emu", "kill"]);
     for (let i = 0; i < 30; i++) {
       if (!(await this.running()).has(device.native)) return;
@@ -634,7 +661,10 @@ export class AndroidDriver implements Driver {
         await runOk(this.runner, [avdslim, "enable", host, device.native]);
     }
     const state = (await this.states([device])).get(device.id);
-    if (state?.booted && state.targetId) await this.slimGuest(device, state.targetId, progress);
+    if (state?.booted && state.targetId) {
+      await this.slimGuest(device, state.targetId, progress);
+      this.slimChangedAt.set(state.targetId, Date.now());
+    }
   }
 
   async afterBoot(device: Device, state: RuntimeState, progress: Progress): Promise<void> {
@@ -676,6 +706,7 @@ export class AndroidDriver implements Driver {
     }
     progress(t("progress.unslimAvd", { name: device.name }));
     await runOk(this.runner, [avdslim, "off", state.targetId], { timeoutMs: 5 * 60_000 });
+    this.slimChangedAt.set(state.targetId, Date.now());
   }
 
   private profilePackages?: Set<string>;

@@ -45,7 +45,7 @@ export function CreateDialog({
   const [size, setSize] = useState({ widthDp: "375", heightDp: "812", density: "420" });
   const [name, setName] = useState("");
   const [baseline, setBaseline] = useState(true);
-  const [slimMode, setSlimMode] = useState<SlimMode>("full");
+  const [slimMode, setSlimMode] = useState<SlimMode>("ui");
   const [slimKeep, setSlimKeep] = useState<string[]>([]);
   const slim = slimMode !== "none";
   const [creating, setCreating] = useState(false);
@@ -56,7 +56,7 @@ export function CreateDialog({
     setModelId("");
     setOsId("");
     // 남길 항목은 플랫폼마다 다르다 — 커스텀이었으면 전체 슬림으로 (M15)
-    setSlimMode((m) => (m === "custom" ? "full" : m));
+    setSlimMode((m) => (m === "custom" ? "ui" : m));
     setSlimKeep([]);
     try {
       localStorage.setItem(PLATFORM_KEY, next);
@@ -72,7 +72,7 @@ export function CreateDialog({
     setOsId("");
     setName("");
     setBaseline(true);
-    setSlimMode("full");
+    setSlimMode("ui");
     setSlimKeep([]);
     setCreating(false);
   }, [open]);

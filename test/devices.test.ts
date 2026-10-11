@@ -280,7 +280,27 @@ describe("슬림 항목 고르기 (M15)", () => {
       slimKeep: ["location", "media-consumer-apps"],
     })) as DeviceView;
     expect(device.slimKeep).toEqual(["location", "media-consumer-apps"]);
-    expect(driver.slimmed).toEqual([[device.id, ["location", "media-consumer-apps"], false]]);
+    expect(driver.slimmed).toEqual([[device.id, ["location", "media-consumer-apps"]]]);
+    expect(device.slimMode).toBe("custom");
+    const app = (await A("device.create", {
+      ...android360,
+      name: "app",
+      baseline: false,
+      slimKeep: ["location"],
+      slimMode: "app",
+    })) as DeviceView;
+    expect(app.slimMode).toBe("app");
+    expect(app.slimMode).toBe("app");
+    // 남길 것 없이 방식만 주면 INVALID — 조용히 UI 로 만들지 않는다
+    expect(
+      await A("device.create", { ...android360, name: "ui", baseline: false, slimMode: "app" }),
+    ).toMatchObject({ code: "INVALID" });
+    const ui = (await A("device.create", {
+      ...android360,
+      name: "ui",
+      baseline: false,
+    })) as DeviceView;
+    expect(ui.slimMode).toBe("ui");
     expect(
       await A("device.create", { ...android360, name: "b", slimKeep: ["nope"] }),
     ).toMatchObject({ code: "INVALID" });
@@ -292,13 +312,10 @@ describe("슬림 항목 고르기 (M15)", () => {
     expect(device.slimKeep).toBeUndefined();
     const changed = await A("device.slim", { devices: [device.id], keep: ["location"] });
     expect(changed.devices[0]).toMatchObject({ slim: "applied", slimKeep: ["location"] });
-    expect(driver.slimmed.at(-1)).toEqual([device.id, ["location"], true]);
-    // 같은 항목이면 풀지 않고 다시 적용만
-    await A("device.slim", { devices: [device.id], keep: ["location"] });
-    expect(driver.slimmed.at(-1)).toEqual([device.id, ["location"], false]);
+    expect(driver.slimmed.at(-1)).toEqual([device.id, ["location"]]);
     const full = await A("device.slim", { devices: [device.id], keep: [] });
     expect(full.devices[0].slimKeep).toBeUndefined();
-    expect(driver.slimmed.at(-1)).toEqual([device.id, [], true]);
+    expect(driver.slimmed.at(-1)).toEqual([device.id, []]);
   });
 
   test("남길 항목은 슬림을 적용할 때만", async () => {
