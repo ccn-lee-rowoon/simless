@@ -213,7 +213,11 @@ export class AndroidDriver implements Driver {
     return join(this.avdDir(avdId), "config.ini");
   }
 
-  /** 설치된 시스템 이미지 — 이 Mac 의 CPU 용만, 4KB 페이지 우선·API 높은 순 (avdslim 권장) */
+  /**
+   * 설치된 시스템 이미지 — 이 Mac 의 CPU 용만. 추천 순서는 device-slim 과 같게: 4KB 페이지 우선
+   * (16KB 페이지 이미지는 RAM 을 4GB 아래로 못 줄임) → `google_apis`(Play Store 없음 — 가장 가볍고
+   * 루트가 열림, avdslim 권장) → API 높은 순
+   */
   private systemImages() {
     const root = join(this.sdk, "system-images");
     if (!existsSync(root)) return [];
@@ -239,7 +243,11 @@ export class AndroidDriver implements Driver {
         });
       }
     }
-    return images.sort((a, b) => Number(a.page16k) - Number(b.page16k) || b.api - a.api);
+    const plain = (tag: string) => (tag === "google_apis" ? 0 : 1);
+    return images.sort(
+      (a, b) =>
+        Number(a.page16k) - Number(b.page16k) || plain(a.tag) - plain(b.tag) || b.api - a.api,
+    );
   }
 
   private image(wanted?: string) {

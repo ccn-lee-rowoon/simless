@@ -487,6 +487,26 @@ describe("AndroidDriver 기종 목록·만들기 (R1·R2·M1)", () => {
     });
   });
 
+  test("catalog — 추천 이미지는 google_apis(Play Store 없음)가 API 가 낮아도 먼저, 16KB 페이지는 맨 뒤", async () => {
+    const { env, sdk } = sdkWithImages();
+    for (const [target, tag] of [
+      ["android-35", "google_apis"],
+      ["android-36", "default"],
+    ]) {
+      const dir = join(sdk, "system-images", target ?? "", tag ?? "", "arm64-v8a");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "source.properties"), `SystemImage.TagId=${tag}\n`);
+    }
+    const { os } = await driver(env).catalog();
+    expect(os.map((o) => o.id)).toEqual([
+      "system-images/android-35/google_apis/arm64-v8a/",
+      expect.stringMatching(/android-36\/(default|google_apis_playstore)\//),
+      expect.stringMatching(/android-36\/(default|google_apis_playstore)\//),
+      "system-images/android-37.1/google_apis_playstore_ps16k/arm64-v8a/",
+    ]);
+    expect(os[0]?.recommended).toBe(true);
+  });
+
   test("resolve — 직접 입력은 dp·밀도에서 px 를 계산하고, 이미지를 고를 수 있다", async () => {
     const { env } = sdkWithImages();
     const { spec, modelName } = await driver(env).resolve({
