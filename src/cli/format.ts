@@ -6,7 +6,7 @@ import {
   observedSlim,
 } from "../shared/api.ts";
 import { t } from "../shared/i18n.ts";
-import { SLIM_MODE_NAMES, slimModeOf } from "../shared/slim-mode.ts";
+import { SLIM_MODE_NAMES } from "../shared/slim-mode.ts";
 import { when } from "../shared/time.ts";
 
 /** 한글 등 넓은 글자는 터미널에서 두 칸을 쓴다 */
@@ -79,18 +79,15 @@ function slimText(d: DeviceView): string {
   if (d.slim === "failed") return t("slim.failed");
   if (d.slim === "applying") return t("slim.applying");
   const stats = d.slimStats;
-  // 방식(UI·App·Custom)과 남긴 수를 붙인다 (M15)
-  const mode = slimModeOf(d);
-  const custom =
-    mode === "none"
-      ? ""
-      : `(${SLIM_MODE_NAMES[mode]}${d.slimKeep?.length ? ` −${d.slimKeep.length}` : ""})`;
-  if (!stats) return `${t("slim.applied")} ${custom}`.trim();
+  // 방식(UI·App·Custom)과 남긴 수를 붙인다 (M15) — 여기까지 오면 슬림한 기기라 none 이 아니다
+  const mode = d.slimMode === "none" ? "ui" : d.slimMode;
+  const modeText = `(${SLIM_MODE_NAMES[mode]}${d.slimKeep?.length ? ` −${d.slimKeep.length}` : ""})`;
+  if (!stats) return `${t("slim.applied")} ${modeText}`;
   const memory =
     memoryChange(d.slimBaseline?.memoryBytes, stats.memoryBytes) ??
     (stats.memoryBytes ? `${(stats.memoryBytes / 1024 ** 3).toFixed(1)}GB` : "");
   const unit = t(stats.unit === "packages" ? "slim.unit.packages" : "slim.unit.daemons");
-  return `${t("slim.applied")}${custom ? ` ${custom}` : ""} ${stats.disabled}/${stats.total} ${unit} ${memory}`.trim();
+  return `${t("slim.applied")} ${modeText} ${stats.disabled}/${stats.total} ${unit} ${memory}`.trim();
 }
 
 export function devicesTable(devices: DeviceView[]): string {

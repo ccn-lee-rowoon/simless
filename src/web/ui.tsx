@@ -92,15 +92,15 @@ export function SlimBadge({ device }: { device: DeviceView }) {
           {t(failed ? "slim.failed" : applying ? "slim.applying" : "web.slim.applied")}
         </strong>
         {failed && device.slimError && <span>{device.slimError.split("\n")[0]}</span>}
-        {device.slimKeep?.length ? (
+        {!failed && !applying && device.slimMode !== "none" && (
           <span>
-            {t("web.slim.keptCount", {
-              mode: SLIM_MODE_NAMES[device.slimMode ?? "custom"],
-              count: device.slimKeep.length,
-            })}
+            {device.slimKeep?.length
+              ? t("web.slim.keptCount", {
+                  mode: SLIM_MODE_NAMES[device.slimMode],
+                  count: device.slimKeep.length,
+                })
+              : SLIM_MODE_NAMES.ui}
           </span>
-        ) : (
-          <span>{SLIM_MODE_NAMES.ui}</span>
         )}
         {stats && <span>{slimStatsText(stats)}</span>}
         {change ? (

@@ -232,17 +232,35 @@ describe("IosDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
   });
 
   test("slim — 남길 묶음은 --except 로, 바뀌어도 off 없이 on 한 번 (M15)", async () => {
-    const { runner, calls } = fakeRunner();
+    const { runner, calls } = fakeRunner({
+      "/bin/simslim version": { stdout: "simslim 0.12.0\n" },
+    });
     const driver = new IosDriver(config, runner, () => "/bin/simslim");
     const custom = { ...device, slimKeep: ["store", "web"] };
     await driver.slim(custom, () => {});
     expect(calls).toContain("/bin/simslim on UDID-1 --except store,web --preserve-boot-state");
     calls.length = 0;
-    await driver.slim({ ...custom, slimKeep: ["photos"] }, () => {});
-    expect(calls).toEqual(["/bin/simslim on UDID-1 --except photos --preserve-boot-state"]);
+    await driver.slim({ ...custom, slim: "applied", slimKeep: ["photos"] }, () => {});
+    expect(calls).toEqual([
+      "/bin/simslim version",
+      "/bin/simslim on UDID-1 --except photos --preserve-boot-state",
+    ]);
     calls.length = 0;
     await driver.checkSlim(custom, { booted: true });
     expect(calls).toContain("/bin/simslim verify UDID-1 --except store,web");
+  });
+
+  test("slim — 0.12.0 보다 오래된 simslim 이면 이미 슬림한 기기는 풀었다 다시 (M15)", async () => {
+    const { runner, calls } = fakeRunner({
+      "/bin/simslim version": { stdout: "simslim 0.11.0\n" },
+    });
+    const driver = new IosDriver(config, runner, () => "/bin/simslim");
+    await driver.slim({ ...device, slim: "applied", slimKeep: ["photos"] }, () => {});
+    expect(calls).toEqual([
+      "/bin/simslim version",
+      "/bin/simslim off UDID-1 --preserve-boot-state",
+      "/bin/simslim on UDID-1 --except photos --preserve-boot-state",
+    ]);
   });
 
   test("slimOff — simslim status --dropped 의 묶음 ID, 꺼진 기기는 알 수 없다 (M16)", async () => {

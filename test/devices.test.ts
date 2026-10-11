@@ -290,14 +290,17 @@ describe("슬림 항목 고르기 (M15)", () => {
       slimMode: "app",
     })) as DeviceView;
     expect(app.slimMode).toBe("app");
-    // 남길 것이 없으면 UI — 방식을 기억하지 않는다
+    expect(app.slimMode).toBe("app");
+    // 남길 것 없이 방식만 주면 INVALID — 조용히 UI 로 만들지 않는다
+    expect(
+      await A("device.create", { ...android360, name: "ui", baseline: false, slimMode: "app" }),
+    ).toMatchObject({ code: "INVALID" });
     const ui = (await A("device.create", {
       ...android360,
       name: "ui",
       baseline: false,
-      slimMode: "app",
     })) as DeviceView;
-    expect(ui.slimMode).toBeUndefined();
+    expect(ui.slimMode).toBe("ui");
     expect(
       await A("device.create", { ...android360, name: "b", slimKeep: ["nope"] }),
     ).toMatchObject({ code: "INVALID" });

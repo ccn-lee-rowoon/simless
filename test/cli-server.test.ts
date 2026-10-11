@@ -74,8 +74,13 @@ describe("CLI ↔ 서버 (R13·R14)", () => {
     const full = await simless(["--json", "slim", device.id, "--full"]);
     expect(full.exitCode).toBe(0);
     expect(JSON.parse(full.stdout).devices[0].slimKeep).toBeUndefined();
-    expect(JSON.parse(full.stdout).devices[0].slimMode).toBeUndefined();
+    expect(JSON.parse(full.stdout).devices[0].slimMode).toBe("ui");
     expect((await simless(["list"])).stdout).toContain("(UI)");
+
+    // App 으로 남긴 뒤 슬림을 풀면 none — 저장된 출처(app)가 남아도 보이는 방식은 상태를 따른다
+    await simless(["--json", "slim", device.id, "--keep", "location", "--app"]);
+    const off = await simless(["--json", "slim", device.id, "--off"]);
+    expect(JSON.parse(off.stdout).devices[0]).toMatchObject({ slim: "none", slimMode: "none" });
 
     // 방식만 주면 무엇을 남길지 몰라 INVALID
     const modeOnly = await simless(["--json", "slim", device.id, "--app"]);
@@ -101,6 +106,7 @@ describe("표 출력 — 슬림 실패 이유 (M6)", () => {
     const device = {
       ...androidDevice("cccc"),
       slim: "failed" as const,
+      slimMode: "ui" as const,
       slimError: "avdslim 이 없습니다 — simless doctor\n자세한 내용",
       label: "Android 360dp",
       layoutWidth: 360,
@@ -122,6 +128,7 @@ describe("표 출력 — 슬림 실패 이유 (M6)", () => {
       ...androidDevice("dddd"),
       createdBySimless: false,
       slim: "none" as const,
+      slimMode: "none" as const,
       slimSeen: {
         disabled: 49,
         total: 52,
@@ -145,6 +152,7 @@ describe("표 출력 — 슬림 실패 이유 (M6)", () => {
       ...androidDevice("eeee"),
       slim: "applied" as const,
       slimKeep: ["location", "camera"],
+      slimMode: "custom" as const,
       label: "Android 360dp",
       layoutWidth: 360,
       layoutHeight: 760,
@@ -155,6 +163,8 @@ describe("표 출력 — 슬림 실패 이유 (M6)", () => {
     };
     expect(devicesTable([device])).toContain("SLIM (Custom −2)");
     expect(devicesTable([{ ...device, slimMode: "app" as const }])).toContain("SLIM (App −2)");
-    expect(devicesTable([{ ...device, slimKeep: undefined }])).toContain("SLIM (UI)");
+    expect(devicesTable([{ ...device, slimKeep: undefined, slimMode: "ui" as const }])).toContain(
+      "SLIM (UI)",
+    );
   });
 });

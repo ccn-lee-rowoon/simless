@@ -210,7 +210,7 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
     expect(String(error)).toContain("exited while booting");
   });
 
-  test("shutdown — 끄기 전에 sync, 슬림을 바꾼 직후면 잠깐 기다렸다 끈다", async () => {
+  test("shutdown — 슬림을 바꾼 직후면 sync 하고 잠깐 기다렸다 끈다, 켤 때 다시 건 것은 기다리지 않는다", async () => {
     const { env } = sdkWithImages();
     const adb = fakeAdb();
     adb.running.set("emulator-5556", { avd: "simless_ab12", booted: true });
@@ -231,11 +231,20 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
       expect.stringContaining("-s emulator-5556 emu kill"),
     ]);
 
-    // 슬림을 바꾸지 않았으면 기다리지 않는다
+    // 슬림을 바꾸지 않았으면 sync 도 대기도 없이 바로 끈다
     adb.running.set("emulator-5556", { avd: "simless_ab12", booted: true });
+    adb.calls.length = 0;
     const again = Date.now();
     await d.shutdown(device, state);
     expect(Date.now() - again).toBeLessThan(60);
+    expect(adb.calls.some((c) => c.includes("shell sync"))).toBe(false);
+
+    // 켤 때마다 다시 거는 슬림(afterBoot)은 바꾼 것으로 보지 않는다
+    adb.running.set("emulator-5556", { avd: "simless_ab12", booted: true });
+    await d.afterBoot({ ...device, slim: "applied" }, state, () => {});
+    const afterBoot = Date.now();
+    await d.shutdown(device, state);
+    expect(Date.now() - afterBoot).toBeLessThan(60);
   });
 
   test("slim — avdslim 이 없으면 TOOL_MISSING", async () => {

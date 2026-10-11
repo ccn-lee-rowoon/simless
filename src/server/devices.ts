@@ -290,6 +290,9 @@ export function registerDeviceMethods(server: SimlessServer): void {
     const params = parse(CreateParams, p);
     const { platform, spec, modelName } = await resolveModel(params);
     const slimKeep = params.slim ? await checkKeep(platform, params.slimKeep) : [];
+    if (params.slimMode && slimKeep.length === 0) {
+      throw new HandlerError("INVALID", t("err.slimModeNeedsKeep"));
+    }
     const all = await server.devices();
     // 같은 크기도 여러 대 만들 수 있다 — 막는 건 이름 중복뿐 (M3)
     const taken = new Set(all.map((d) => d.name.toLowerCase()));

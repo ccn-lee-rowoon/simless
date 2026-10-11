@@ -17,7 +17,6 @@ import type { Group } from "../shared/model.ts";
 import { resolvePaths } from "../shared/paths.ts";
 import type { SessionInfo } from "../shared/protocol.ts";
 import { detectSession } from "../shared/session.ts";
-import { slimModeOf } from "../shared/slim-mode.ts";
 import { systemLanguages } from "../shared/system-language.ts";
 import { VERSION } from "../shared/version.ts";
 
@@ -50,7 +49,8 @@ function brief(d: DeviceView) {
     // Simless 가 하지 않은 슬림도 슬림으로 (M6)
     slim: observedSlim(d) ? "applied" : d.slim,
     // 슬림 방식(UI·App·Custom)과 남긴 항목 (M15), 꺼진 항목 — 테스트에 맞는 기기를 고를 때 (M16)
-    slimMode: slimModeOf(d),
+    // Simless 밖에서 한 슬림은 방식을 모른다
+    slimMode: observedSlim(d) && d.slim === "none" ? undefined : d.slimMode,
     slimKeep: d.slimKeep,
     slimOff: d.slimOff,
     slimOffObserved: d.slimOffObserved,
@@ -106,7 +106,7 @@ export async function runMcp(): Promise<void> {
     {
       title: "simless status",
       description:
-        "Devices in the simless list (argent targetId, size label, booted, slim, slimMode (ui, app, custom — none when not slimmed), slimKeep and slimOff — slim items kept and turned off, default, groups, who holds it), device groups with their descriptions, and what this session holds. Call this first to pick a device group or the default device.",
+        "Devices in the simless list (argent targetId, size label, booted, slim, slimMode (ui, app, custom — none when not slimmed, absent when slimmed outside Simless), slimKeep and slimOff — slim items kept and turned off, default, groups, who holds it), device groups with their descriptions, and what this session holds. Call this first to pick a device group or the default device.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
@@ -262,7 +262,7 @@ export async function runMcp(): Promise<void> {
         name: args.name,
         slim: args.slim ?? true,
         slimKeep: args.slimKeep,
-        slimMode: args.slimKeep?.length ? args.slimMode : undefined,
+        slimMode: args.slimMode,
         baseline: false,
       });
       return json(`Created ${device.name} (${device.id}).`, brief(device));
@@ -289,7 +289,7 @@ export async function runMcp(): Promise<void> {
           devices: args.devices,
           mode: args.off ? "off" : "on",
           keep: args.off ? undefined : args.keep,
-          slimMode: args.off || !args.keep?.length ? undefined : args.slimMode,
+          slimMode: args.off ? undefined : args.slimMode,
         },
       );
       const failed = result.results.filter((r) => !r.ok);

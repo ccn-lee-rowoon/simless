@@ -15,6 +15,7 @@ import { type Device, layoutHeight, layoutWidth, sizeLabel } from "../shared/mod
 import type { Paths } from "../shared/paths.ts";
 import { isAlive as defaultIsAlive } from "../shared/proc.ts";
 import type { Request, SessionInfo } from "../shared/protocol.ts";
+import { slimModeOf } from "../shared/slim-mode.ts";
 import { VERSION } from "../shared/version.ts";
 import { registerDeviceMethods } from "./devices.ts";
 import type { Discovered, Driver, RuntimeState } from "./drivers/types.ts";
@@ -523,6 +524,7 @@ export class SimlessServer {
       const holderSession = lease ? this.leases.session(lease.sessionKey) : undefined;
       return {
         ...device,
+        slimMode: slimModeOf(device),
         label: sizeLabel(device.spec),
         layoutWidth: layoutWidth(device.spec),
         layoutHeight: layoutHeight(device.spec),

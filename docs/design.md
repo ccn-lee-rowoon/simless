@@ -161,7 +161,7 @@ simless/
 | `slim` | 레지스트리 | `none`·`applying`·`applied`·`failed` (+ `slimError`). 풀림은 켤 때 자동 재적용하므로 따로 두지 않는다 (M6) |
 | `slimBaseline` | 레지스트리 | 슬림 전 메모리 기준값 (M10) |
 | `slimKeep` | 레지스트리 | 슬림해도 남길 항목 ID — 없으면 UI(전체 슬림) (M15) |
-| `slimMode` | 레지스트리 | 남길 항목이 어디서 왔나 — `app`(에이전트가 앱 프로젝트에서 찾음) · `custom`(없으면 이것). 남길 것이 없으면 두지 않는다. 방식 이름 UI·App·Custom 은 `src/shared/slim-mode.ts` (M15) |
+| `slimMode` | 레지스트리 | 남길 항목이 어디서 왔나 — `app`(에이전트가 앱 프로젝트에서 찾음) · `custom`(없으면 이것). 남길 것이 없으면 두지 않는다. 방식 이름 UI·App·Custom 과 보이는 방식(`DeviceView.slimMode` — none·ui·app·custom, 상태와 출처로 계산)은 `src/shared/slim-mode.ts` (M15) |
 | `slimSeen.off` | 레지스트리 | 켜져 있을 때 실제로 읽은 꺼진 슬림 항목 ID — `DeviceView.slimOff`(못 읽었으면 `slimKeep` 으로 계산, `slimOffObserved: false`) (M16) |
 | `slimSeen` | 레지스트리 | 켜져 있을 때 마지막으로 읽은 슬림 수치 `{ disabled, total, unit, seenAt }` — 누가 슬림했든 적는다. 값이 같으면 10분에 한 번만 쓴다 (M6) |
 | `memo` | 레지스트리 | 디바이스 메모 — R24 보류: 저장만 하고 화면·CLI·스킬에는 보이지 않는다 |
@@ -245,7 +245,7 @@ simless/
 | 슬림화하면 꺼지는 기능 (M4 — 생성 화면 «꺼지는 것 보기»·Custom 목록) | avdslim 프로필이 끄는 패키지 목록(`avdslim profiles`)을 사람이 읽을 이름으로 묶어 보여 준다 | simslim 프로필이 끄는 서비스 목록을 묶어 보여 준다(Siri·Spotlight·iCloud·Wallet …) |
 | 슬림 확인 (M6) | 프로필 패키지 중 꺼진 비율 ≥ 50% | `simslim verify` — 켜진 기기만 가능 |
 | 켜기 | `emulator -avd <AVD ID> -port <빈 포트> -no-snapshot-save` 를 서버와 분리(detached)해 실행. `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
-| 끄기 | `adb -s <시리얼> shell sync` → 슬림을 바꾼(`avdslim on`·`enable`·`off`) 지 20초가 안 됐으면 기다림 → `emu kill` (device-slim 시험: 바로 끄면 `off` 가 남지 않은 적이 있음) | `simctl shutdown` |
+| 끄기 | 슬림을 바꾼(`simless slim`·만들기·풀림 재적용 — 켤 때마다 다시 거는 것은 빼고) 뒤면 `adb -s <시리얼> shell sync` 하고 바꾼 지 20초가 될 때까지 기다림 → `emu kill` (device-slim 시험: 바로 끄면 `off` 가 남지 않은 적이 있음. 바꾸지 않았으면 바로 끈다) | `simctl shutdown` |
 | 삭제 (M8, Simless 가 만든 것만) | 끄고 `.avd`·`.ini` 삭제 | 끄고 `simctl delete` |
 
 - **Android 시리얼을 서버가 정한다**: `-port` 로 켜면 시리얼이 `emulator-<port>` 로 정해진다. 밖에서 켠 경우는 `adb -s <시리얼> emu avd name` 으로 역조회한다.
@@ -253,7 +253,7 @@ simless/
 - **슬림 확인과 자동 재적용** (M6): 슬림한 기기를 켤 때마다(서버 시작 시엔 켜진 것) 확인하고, 풀렸으면 바로 다시 적용한다. 실패하면 `slim: failed` + 이유를 남겨 `SLIM ⚠` 로 보인다. 원래 있던 기기(`createdBySimless: false`)는 슬림화하지 않는다 (N5).
 - **Simless 밖에서 한 슬림** (M6): 켜진 기기는 모두(만든 것·추가한 것) 15초마다 슬림 수치를 뒤에서 읽고 `slimSeen` 에 적는다. `slim: none` 인데 슬림돼 보이면(iOS 는 끈 데몬이 하나라도, Android 는 프로필 패키지가 절반 이상 꺼짐 — 위 «슬림 확인» 과 같은 기준) `SLIM` 으로 보인다. 꺼진 기기는 `slimSeen` 으로 판단해 흐리게, «마지막 확인» 시각과 함께. 이 슬림은 다시 적용하지 않는다. 판단은 `observedSlim()`(`src/shared/api.ts`) 하나를 화면·CLI·MCP 가 같이 쓴다.
 - **슬림 항목 고르기** (M15): 기기마다 `slimKeep`(남길 항목 ID)을 기억하고, 처음 슬림·변경·풀렸을 때 다시 적용 모두 이것으로 한다.
-  - iOS: `simslim on --except <묶음,…>`. 설정의 simslim 프로필(`--profile`)은 UI(전체 슬림)일 때만 쓴다(둘은 함께 못 준다). 이미 슬림한 기기의 남길 묶음이 바뀌어도 새 `--except` 로 `on` 한 번(끌 것은 끄고 다시 남길 것은 켬, 재부팅 한 번 — device-slim 0.6.0 이 확인). 확인은 `simslim verify --except …`.
+  - iOS: `simslim on --except <묶음,…>`. 설정의 simslim 프로필(`--profile`)은 UI(전체 슬림)일 때만 쓴다(둘은 함께 못 준다). 이미 슬림한 기기의 남길 묶음이 바뀌어도 새 `--except` 로 `on` 한 번(끌 것은 끄고 다시 남길 것은 켬, 재부팅 한 번 — device-slim 0.6.0 이 simslim 0.12.0 으로 확인). `simslim version` 이 0.12.0 보다 낮거나 읽히지 않으면 예전처럼 `off` 뒤 `on`. 확인은 `simslim verify --except …`.
   - Android: 항목은 `avdslim profiles` 의 패키지 묶음(이름에서 만든 ID, 예: `assistant-search`) + 기기 설정 `location`·`sync`·`bglimit`·`bluetooth`·`setup` + 하드웨어 `camera`·`audio`. 기기 안 정리는 `avdslim on --skip=<남길 설정>` → 남길 설정을 `avdslim enable <설정>` 으로 되돌림(`setup` 은 되돌리는 명령이 없다) → 남길 묶음의 설치된 패키지를 `avdslim enable <패키지>`. 이 순서라 남길 항목이 바뀌어도 풀지 않고 그대로 맞춰진다. 하드웨어는 `tune-avd` 뒤 `avdslim enable camera|audio <AVD>`, 소리를 남기면 켤 때 `-no-audio` 를 뺀다. 슬림 확인·수치는 남긴 패키지를 세지 않는다.
   - 앱에 필요한 기능 찾기는 스킬이 한다 — simless 스킬의 «Finding what the app needs»(device-slim 스킬 4단계·기능 표를 Simless 항목 ID 로 옮긴 것, `.device-slim.json` 을 같이 씀). Simless 는 남길 ID 만 받는다.
 - **슬림 내역** (M16): 서버의 2초 주기 작업이 15초마다 켜진 기기 전부의 슬림 수치를 읽고(목록을 볼 때도), 수치가 바뀌었거나 내역이 없거나 10분이 지났으면 꺼진 항목을 읽어 `slimSeen.off` 에 적는다(적으면 기기 목록 캐시를 비운다). iOS 는 `simslim status <udid> --dropped` 의 묶음 ID. Android 는 avdslim 에 상태 조회가 없어 — 패키지 묶음은 설치된 패키지의 절반 이상이 꺼졌으면, `location`·`bluetooth`·`sync` 는 avdslim 이 바꾸는 기기 설정(`location_mode`·`bluetooth_on`·`auto_sync` 가 0), `camera` 는 config.ini 의 앞뒤 카메라가 `none`, `audio` 는 켤 때 `-no-audio` 를 줬거나 `hw.audioOutput=no`, `bglimit`·`setup` 은 읽을 수 없어 Simless 가 슬림했고 남기지 않았으면 꺼진 것으로. 앱 창은 목록 «슬림» 칸의 `SLIM ↗` 버튼이나 ⋯ «슬림 내역» 으로 창(대화 상자).

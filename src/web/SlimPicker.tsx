@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CatalogResult, DeviceView, PlatformCatalog, SlimCategory } from "../shared/api.ts";
 import { type MessageKey, t } from "../shared/i18n.ts";
-import { slimModeOf } from "../shared/slim-mode.ts";
+import type { SlimChoice } from "../shared/slim-mode.ts";
 import { when } from "../shared/time.ts";
 import { call } from "./api.ts";
 import { Dialog, Loading } from "./ui.tsx";
@@ -11,7 +11,7 @@ import { Dialog, Loading } from "./ui.tsx";
  * (R5·M15). 이름은 device-slim 스킬과 같게, 어느 언어에서나 그대로. App 은 화면에서 고를 수 없고,
  * 에이전트가 App 으로 슬림한 기기를 고칠 때만 보인다
  */
-export type SlimMode = "none" | "ui" | "app" | "custom";
+export type SlimMode = SlimChoice;
 
 const MODES: { mode: SlimMode; title: MessageKey; hint: MessageKey }[] = [
   { mode: "none", title: "web.slim.none", hint: "web.slim.noneHint" },
@@ -177,7 +177,7 @@ export function SlimDialog({
 
   useEffect(() => {
     if (!device) return;
-    setMode(slimModeOf(device));
+    setMode(device.slimMode);
     setKeep(device.slimKeep ?? []);
     setCatalog(undefined);
     setError("");
@@ -187,7 +187,7 @@ export function SlimDialog({
     );
   }, [device]);
 
-  const current = device ? slimModeOf(device) : "none";
+  const current = device?.slimMode ?? "none";
   const unchanged =
     device !== null &&
     mode === current &&
