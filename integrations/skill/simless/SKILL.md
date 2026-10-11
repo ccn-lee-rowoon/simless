@@ -65,7 +65,7 @@ simless --json group list      # device groups — read each description
 
 #### Creating a slim device
 
-A slim device is one of three kinds — **full slim** (the default; UI and layout checks), **keep what the app needs** (testing a feature that relies on the device), or **custom** (the user names what to keep). How to choose, the `--slim-keep` IDs, and how to change an existing device: [reference/slim.md](reference/slim.md).
+A slim device is one of three kinds — **full slim** (the default; UI and layout checks), **keep what the app needs** (testing a feature that relies on the device), or **custom** (the user names what to keep). How to choose, the `--slim-keep` IDs, and how to change an existing device: [references/slim.md](references/slim.md).
 
 #### Does the test need device features?
 
@@ -215,26 +215,27 @@ simless release
 
 Used when picking a device for a feature test (step 1) and when creating a slim device that keeps what the app needs. The result is a short list of app features, each with its evidence, mapped to Simless slim item IDs.
 
-1. **Reuse** — if the app root has `.device-slim.json` and it is still current, use its `features` and skip to 4. How to check it: [reference/slim.md](reference/slim.md) «Reuse a previous result».
-2. **Read the project — don't guess.** A feature can enter the app from several places, and dependency names alone miss most of them. Read these files next to this skill, in order, and note where each feature came from (file and line, or «built app»):
-   1. [reference/app-expo.md](reference/app-expo.md) — app config, config plugins, Expo modules, and how to read the app as it is now. Skip it for bare React Native.
-   2. [reference/app-react-native.md](reference/app-react-native.md) — JavaScript dependencies (and whether source files import them), local native modules, patches.
-   3. The platform you're testing: [reference/app-ios.md](reference/app-ios.md) for an iOS simulator, [reference/app-android.md](reference/app-android.md) for an Android emulator — the native project, and a built app made from it as it is now.
+1. **Which project** — the folder of the app the user will test, not necessarily the current one: a folder the user named; otherwise the current folder when it is an app project (`app.json` / `package.json` with `expo` or `react-native`); several apps under it (a monorepo, an `apps/` folder) → ask which; no app project → ask for the path. Say which folder you read — everything below is about that folder.
+2. **Reuse** — if that folder has `.device-slim.json` and it is still current, use its `features` and skip to 5. How to check it: [references/slim.md](references/slim.md) «Reuse a previous result».
+3. **Read the project — don't guess.** A feature can enter the app from several places, and dependency names alone miss most of them. Read these files next to this skill, in order, and note where each feature came from (file and line, or «built app»):
+   1. [references/find-features-expo.md](references/find-features-expo.md) — app config, config plugins, Expo modules, and how to read the app as it is now. Skip it for bare React Native.
+   2. [references/find-features-react-native.md](references/find-features-react-native.md) — JavaScript dependencies (and whether source files import them), local native modules, patches.
+   3. The platform you're testing: [references/find-features-ios.md](references/find-features-ios.md) for an iOS simulator, [references/find-features-android.md](references/find-features-android.md) for an Android emulator — the native project, and a built app made from it as it is now.
 
    **Read the app as it is now — don't ask which environment or build profile.** The evidence is what building from this folder right now would produce: the native folders `ios/` / `android/` when they exist (they are what gets built — if an Expo app's folders are older than its app config, still use them and say a fresh `npx expo prebuild` would change the result); with no native folders, `npx expo config --type introspect --json` (what a prebuild would write now, with the current environment variables and `.env`); and a built app made from that state. Say which one you used.
-3. **Check each feature's evidence** before listing it:
+4. **Check each feature's evidence** before listing it:
    ```
    - [ ] Not only a package.json / Podfile / Gradle line — a dependency is never proof on its own
    - [ ] A config plugin, entitlement, Info.plist key or manifest permission — and a source file that imports or calls it (or the built app)
    - [ ] Dependencies no source file imports are dropped, and you say so
    - [ ] The evidence is the app as it is now (native folders, or `expo config --type introspect`, plus a built app from them), and you say which
    ```
-4. List the features with their evidence and **confirm with the user** — always, even when you then continue with a default; they may only need some of them for this test. When the app root has no `.device-slim.json`, ask in the same question whether to save the result ([reference/slim.md](reference/slim.md) «Reuse a previous result»).
-5. Map them to slim item IDs with the tables in [reference/slim.md](reference/slim.md) «Features → Simless slim items».
+5. List the features with their evidence and **confirm with the user** — always, even when you then continue with a default; they may only need some of them for this test. When the app root has no `.device-slim.json`, ask in the same question whether to save the result ([references/slim.md](references/slim.md) «Reuse a previous result»).
+6. Map them to slim item IDs with the tables in [references/slim.md](references/slim.md) «Features → Simless slim items».
 
 ## When things go wrong
 
-Read [reference/troubleshooting.md](reference/troubleshooting.md) when `simless --json` output won't parse, a screenshot is entirely black, argent gestures fail on an Android emulator, argent on iOS reports a sandbox error, or `debugger-connect` refuses a device when iOS and Android share one Metro.
+Read [references/troubleshooting.md](references/troubleshooting.md) when `simless --json` output won't parse, a screenshot is entirely black, argent gestures fail on an Android emulator, argent on iOS reports a sandbox error, or `debugger-connect` refuses a device when iOS and Android share one Metro.
 
 ## Device groups (only when the user asks)
 

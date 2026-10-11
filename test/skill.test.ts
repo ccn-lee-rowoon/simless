@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -14,7 +14,7 @@ const dirs: string[] = [];
 afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
-/** 설치되는 스킬 전체(SKILL.md + reference/) — 안내가 어느 파일에 있든 찾는다 */
+/** 설치되는 스킬 전체(SKILL.md + references/) — 안내가 어느 파일에 있든 찾는다 */
 async function skillText(): Promise<string> {
   return [...(await bundledFiles()).values()].join("\n");
 }
@@ -66,17 +66,24 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(readFileSync(target, "utf8")).toBe(await bundledSkill());
     // 앱 기능 찾기 참고 파일도 같이 — 하나라도 다르거나 남은 파일이 있으면 outdated (M15)
     const dir = dirname(target);
-    expect(readFileSync(join(dir, "reference/app-expo.md"), "utf8")).toContain(
+    expect(readFileSync(join(dir, "references/find-features-expo.md"), "utf8")).toContain(
       "# Finding app features — Expo",
     );
-    writeFileSync(join(dir, "reference/app-ios.md"), "old");
+    writeFileSync(join(dir, "references/find-features-ios.md"), "old");
     expect(await skillStatus(env)).toBe("outdated");
     await installSkill(env);
     expect(await skillStatus(env)).toBe("current");
-    writeFileSync(join(dir, "reference/gone.md"), "left over");
+    writeFileSync(join(dir, "references/gone.md"), "left over");
     expect(await skillStatus(env)).toBe("outdated");
     await installSkill(env);
-    expect(existsSync(join(dir, "reference/gone.md"))).toBe(false);
+    expect(existsSync(join(dir, "references/gone.md"))).toBe(false);
+    // 예전 폴더 이름(reference/)이 남아 있으면 outdated, 설치하면 지운다
+    mkdirSync(join(dir, "reference"));
+    writeFileSync(join(dir, "reference/app-ios.md"), "old");
+    expect(await skillStatus(env)).toBe("outdated");
+    await installSkill(env);
+    expect(existsSync(join(dir, "reference"))).toBe(false);
+    expect(await skillStatus(env)).toBe("current");
   });
 
   // 스킬 문서가 요구사항을 담고 있는지 — 문서를 고치다 빠뜨리지 않게
@@ -202,7 +209,7 @@ describe("에이전트 스킬 (R16·S9)", () => {
     }
     expect(skill).toContain("**Progress** — copy this list");
     expect(skill).toContain(
-      "Read [reference/troubleshooting.md](reference/troubleshooting.md) when",
+      "Read [references/troubleshooting.md](references/troubleshooting.md) when",
     );
   });
 
