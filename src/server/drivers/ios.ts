@@ -320,10 +320,6 @@ export class IosDriver implements Driver {
     return { native: udid };
   }
 
-  async rename(device: Device, name: string): Promise<void> {
-    await runOk(this.runner, this.simctl("rename", device.native, name));
-  }
-
   async remove(device: Device): Promise<void> {
     await this.runner(this.simctl("shutdown", device.native));
     await runOk(this.runner, this.simctl("delete", device.native));

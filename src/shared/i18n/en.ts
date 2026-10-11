@@ -212,8 +212,6 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.create.noneGiven":
     "Give a model, or a custom size with --width, --height and --density — see simless catalog",
   "cli.create.badCustom": "A custom size needs positive --width, --height and --density",
-  "cli.rename": "Rename a device — its ID stays, so it is still the same device",
-  "cli.rename.name": "New name",
   "cli.default": "Default devices — one per platform. Give a device to make it the default",
   "cli.default.set": "Default device ({platform}): {name}",
   "cli.default.none":
@@ -419,7 +417,6 @@ export const en: Record<keyof typeof ko, string> = {
   "web.device.boot": "Boot",
   "web.device.shutdown": "Shut down",
   "web.device.more": "More",
-  "web.device.rename": "Rename",
   "web.device.groups": "Groups",
   "web.device.makeDefault": "Make default",
   "web.device.slimOff": "Turn slim off",
@@ -461,7 +458,6 @@ export const en: Record<keyof typeof ko, string> = {
   "web.device.delete": "Delete…",
   "web.device.defaultCantDelete":
     "A default device can't be deleted — make another device the default first",
-  "web.rename.label": "New name — the ID ({id}) stays, so it is still the same device",
   "web.delete.title": "Delete device",
   "web.delete.body":
     "Delete {name}? It is shut down first if it's running. Its memo and group memberships go too, and this can't be undone.",

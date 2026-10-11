@@ -147,7 +147,7 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
     ]);
   });
 
-  test("만든 AVD 는 이름을 바꿔도 ID 가 그대로이고, 지우면 사라진다 — 다른 AVD 는 그대로", async () => {
+  test("만든 AVD 는 지우면 사라진다 — 다른 AVD 는 그대로", async () => {
     const { env } = sdkWithImages();
     sourceAvd(env.ANDROID_AVD_HOME, "Size_Small_360dp", small);
     const d = driver(env, { runner: fakeAdb().runner });
@@ -158,11 +158,6 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
     expect(readFileSync(join(dir, "config.ini"), "utf8")).toContain("AvdId=simless_ab12");
 
     const device = { id: "ab12", native, name: "simless Small", spec } as Device;
-    await d.rename(device, "작은 폰");
-    const config = readFileSync(join(dir, "config.ini"), "utf8");
-    expect(config).toContain("avd.ini.displayname=작은 폰");
-    expect(config).toContain("AvdId=simless_ab12");
-
     await d.remove(device);
     expect(existsSync(dir)).toBe(false);
     expect(

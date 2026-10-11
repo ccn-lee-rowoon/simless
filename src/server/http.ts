@@ -31,7 +31,6 @@ const WEB_METHODS = new Set([
   "device.list",
   "catalog",
   "device.create",
-  "device.rename",
   "device.setMemo",
   "device.setDefault",
   "device.available",
