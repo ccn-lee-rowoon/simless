@@ -10,7 +10,7 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 ### 바뀜
 
 - 스킬 참고 파일을 device-slim 0.7.0 으로 — 폴더 이름 `reference/` → `references/`(Agent Skills 권장 이름, 설치할 때 예전 폴더는 지운다), 앱 기능 찾기 파일 `app-*.md` → `find-features-*.md`, iOS 에서 `GameController` 를 쓰는 앱도 찾는다. 스킬이 앱 기능을 찾을 때 **어느 앱 폴더를 읽을지** 먼저 정하고(말한 폴더 → 앱 프로젝트인 지금 폴더 → 여럿이거나 없으면 묻기) 알린다
-- **디바이스 이름 변경을 뺐다** — 앱 창 ⋯ «이름 변경», `simless rename`. 다른 도구·스크립트가 시뮬레이터·에뮬레이터를 이름으로 찾아, 만든 뒤에 이름을 바꾸면 그것들이 기기를 잃는다. 이름은 만들 때 정하고, Xcode·Android Studio 에서 바꾼 이름은 그대로 따라간다
+- **디바이스 이름 변경을 뺐다** — 앱 창 ⋯ «이름 변경», `simless rename`. 다른 도구·스크립트가 시뮬레이터·에뮬레이터를 이름으로 찾아, 만든 뒤에 이름을 바꾸면 그것들이 기기를 잃는다. 이름은 만들 때 정하고, Xcode·Android Studio 에서 바꾼 표시 이름은 그대로 따라간다(UDID·AVD ID 가 그대로일 때)
 - **슬림 방식 이름을 device-slim 과 같게 UI · App · Custom 으로** — 앱 창(만들기·슬림 설정·`SLIM` 툴팁), `simless list`, MCP, 스킬이 같은 이름을 쓰고 어느 언어에서나 그대로 둔다. 에이전트가 앱 프로젝트에서 찾은 기능을 남겼으면 App(`simless create … --slim-keep <ID> --app`, `simless slim … --keep <ID> --app`, MCP `slimMode: "app"`), 고른 것이면 Custom 으로 기기마다 기억한다. 앱 창에서 App 기기의 항목을 바꾸면 Custom 이 된다
 - Android 디바이스를 만들 때 추천 OS 이미지는 Play Store 없는 `google_apis` 를 먼저 — 가장 가볍고 루트가 열린다(device-slim 과 같은 기준). 16KB 페이지 이미지는 그것뿐일 때만
 - 첫 실행 설정의 «권장»·«선택»·«실험적» 표시를 색으로 구분 — 권장 초록, 선택 테두리만, 실험적 주황
