@@ -1,4 +1,11 @@
-import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   type DeviceView,
   type HolderView,
@@ -60,6 +67,80 @@ function seenText(seenAt: string): string {
   });
 }
 
+/**
+ * 배지 + 마우스를 올리거나 포커스하면 뜨는 설명. 표는 가로 스크롤 상자 안에 있어 그 안에서
+ * `position: absolute` 로 띄우면 마지막 줄의 설명이 상자에 잘린다 — 메뉴처럼 화면 기준(fixed)으로
+ * 띄우고, 아래가 모자라면 위로 뒤집는다. 스크롤하면 위치가 어긋나므로 닫는다
+ */
+function TipBadge({
+  className,
+  label,
+  children,
+}: {
+  className: string;
+  label: ReactNode;
+  children: ReactNode;
+}) {
+  const anchor = useRef<HTMLSpanElement>(null);
+  const tip = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+  const [style, setStyle] = useState<CSSProperties>({ visibility: "hidden" });
+
+  // 열린 뒤 설명의 크기를 재서 자리를 정한다
+  useLayoutEffect(() => {
+    if (!open) return;
+    const a = anchor.current?.getBoundingClientRect();
+    const box = tip.current?.getBoundingClientRect();
+    if (!a || !box) return;
+    const gap = 6;
+    const margin = 8;
+    const below = a.bottom + gap + box.height <= window.innerHeight - margin;
+    setStyle({
+      top: below ? a.bottom + gap : Math.max(margin, a.top - gap - box.height),
+      left: Math.max(margin, Math.min(a.left, window.innerWidth - box.width - margin)),
+    });
+  }, [open]);
+
+  // 마우스가 배지에 들어오고 나갈 때 — 배지는 버튼 안의 글자라 직접 이벤트를 받지 않는다
+  useEffect(() => {
+    const el = anchor.current;
+    if (!el) return;
+    const show = () => {
+      setStyle({ visibility: "hidden" });
+      setOpen(true);
+    };
+    const hide = () => setOpen(false);
+    el.addEventListener("mouseenter", show);
+    el.addEventListener("mouseleave", hide);
+    return () => {
+      el.removeEventListener("mouseenter", show);
+      el.removeEventListener("mouseleave", hide);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
+
+  return (
+    <span ref={anchor} className={className}>
+      {label}
+      {open && (
+        <span ref={tip} className="tip" role="tooltip" style={style}>
+          {children}
+        </span>
+      )}
+    </span>
+  );
+}
+
 /** `SLIM` 배지 (M6) — 마우스를 올리면 슬림 수치·전후 비교 (M10), 실패면 이유 */
 export function SlimBadge({ device }: { device: DeviceView }) {
   if (device.slim === "none") {
@@ -67,17 +148,14 @@ export function SlimBadge({ device }: { device: DeviceView }) {
     const seen = observedSlim(device);
     if (!seen) return null;
     return (
-      <span className={device.booted ? "slim" : "slim slim-stale"}>
-        SLIM
-        <span className="tip" role="tooltip">
-          <strong>{t("web.slim.applied")}</strong>
-          <span>{slimStatsText(seen)}</span>
-          {device.booted && device.slimStats?.memoryBytes ? (
-            <span className="mono">{gigabytes(device.slimStats.memoryBytes)}</span>
-          ) : null}
-          {!device.booted && seen.seenAt && <span>{seenText(seen.seenAt)}</span>}
-        </span>
-      </span>
+      <TipBadge className={device.booted ? "slim" : "slim slim-stale"} label="SLIM">
+        <strong>{t("web.slim.applied")}</strong>
+        <span>{slimStatsText(seen)}</span>
+        {device.booted && device.slimStats?.memoryBytes ? (
+          <span className="mono">{gigabytes(device.slimStats.memoryBytes)}</span>
+        ) : null}
+        {!device.booted && seen.seenAt && <span>{seenText(seen.seenAt)}</span>}
+      </TipBadge>
     );
   }
   const failed = device.slim === "failed";
@@ -85,38 +163,36 @@ export function SlimBadge({ device }: { device: DeviceView }) {
   const stats = device.slimStats;
   const change = memoryChange(device.slimBaseline?.memoryBytes, stats?.memoryBytes);
   return (
-    <span className={failed ? "slim slim-warn" : applying ? "slim slim-busy" : "slim"}>
-      {failed ? "SLIM ⚠" : "SLIM"}
-      <span className="tip" role="tooltip">
-        <strong>
-          {t(failed ? "slim.failed" : applying ? "slim.applying" : "web.slim.applied")}
-        </strong>
-        {failed && device.slimError && <span>{device.slimError.split("\n")[0]}</span>}
-        {!failed && !applying && device.slimMode !== "none" && (
-          <span>
-            {device.slimKeep?.length
-              ? t("web.slim.keptCount", {
-                  mode: SLIM_MODE_NAMES[device.slimMode],
-                  count: device.slimKeep.length,
-                })
-              : SLIM_MODE_NAMES.ui}
-          </span>
-        )}
-        {stats && <span>{slimStatsText(stats)}</span>}
-        {change ? (
-          <span className="mono">{change}</span>
-        ) : stats?.memoryBytes ? (
-          <span className="mono">{gigabytes(stats.memoryBytes)}</span>
-        ) : null}
-        {!stats && !failed && device.slimSeen && (
-          <>
-            <span>{slimStatsText(device.slimSeen)}</span>
-            <span>{seenText(device.slimSeen.seenAt)}</span>
-          </>
-        )}
-        {!stats && !failed && !device.slimSeen && <span>{t("web.slim.statsWhenOn")}</span>}
-      </span>
-    </span>
+    <TipBadge
+      className={failed ? "slim slim-warn" : applying ? "slim slim-busy" : "slim"}
+      label={failed ? "SLIM ⚠" : "SLIM"}
+    >
+      <strong>{t(failed ? "slim.failed" : applying ? "slim.applying" : "web.slim.applied")}</strong>
+      {failed && device.slimError && <span>{device.slimError.split("\n")[0]}</span>}
+      {!failed && !applying && device.slimMode !== "none" && (
+        <span>
+          {device.slimKeep?.length
+            ? t("web.slim.keptCount", {
+                mode: SLIM_MODE_NAMES[device.slimMode],
+                count: device.slimKeep.length,
+              })
+            : SLIM_MODE_NAMES.ui}
+        </span>
+      )}
+      {stats && <span>{slimStatsText(stats)}</span>}
+      {change ? (
+        <span className="mono">{change}</span>
+      ) : stats?.memoryBytes ? (
+        <span className="mono">{gigabytes(stats.memoryBytes)}</span>
+      ) : null}
+      {!stats && !failed && device.slimSeen && (
+        <>
+          <span>{slimStatsText(device.slimSeen)}</span>
+          <span>{seenText(device.slimSeen.seenAt)}</span>
+        </>
+      )}
+      {!stats && !failed && !device.slimSeen && <span>{t("web.slim.statsWhenOn")}</span>}
+    </TipBadge>
   );
 }
 
