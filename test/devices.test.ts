@@ -145,11 +145,12 @@ describe("디바이스 명령 (R1·P1)", () => {
   test("Simless 에는 이름 변경이 없다 — 밖에서 바꾼 이름은 같은 디바이스로 보인다 (R4)", async () => {
     const { A, server, driver } = await start();
     seedDevice(server, driver, "pix6", "Pixel 6a", false);
-    expect(await A("device.rename", { device: "pix6", name: "x" })).toMatchObject({
-      code: "INVALID",
-    });
+    const rename = await A("device.rename", { device: "pix6", name: "x" });
+    expect(rename).toMatchObject({ code: "INVALID" });
+    expect(rename.message).toContain("device.rename"); // «모르는 메서드»
     const item = driver.existing.find((e) => e.native === "Pixel_6a_pix6");
-    if (item) item.name = "계정 A 폰";
+    if (!item) throw new Error("seedDevice 가 기기를 넣지 않았다");
+    item.name = "계정 A 폰";
     server.invalidate();
     const [device] = (await A("device.list")) as DeviceView[];
     expect(device).toMatchObject({ id: "pix6", name: "계정 A 폰" });

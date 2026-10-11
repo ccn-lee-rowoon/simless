@@ -255,7 +255,7 @@ export class SimlessServer {
 
   private readonly invalidators: (() => void)[] = [];
 
-  /** 목록·켜짐이 바뀌는 작업(만들기·이름 변경·삭제·켜기·끄기) 뒤에 부른다 */
+  /** 목록·켜짐이 바뀌는 작업(만들기·추가·삭제·켜기·끄기) 뒤에 부른다 */
   invalidate(): void {
     this.inventoryCache = undefined;
     for (const fn of this.invalidators) fn();
