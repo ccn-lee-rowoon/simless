@@ -47,7 +47,7 @@ Saving is optional. When there is no `.device-slim.json` yet, ask in **the same 
 
 ## Features → Simless slim items
 
-Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keeps whole items (a simslim category, an avdslim package group, setting or hardware) — not single daemons or packages. The IDs below were checked with simslim 0.12.0 and avdslim 1.0.15; if the catalog shows different ones, use the catalog — its `detail` text, or for an Android package group the packages `avdslim profiles` lists under it.
+Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keeps whole items (a simslim category, an avdslim package group, setting or hardware) — not single daemons or packages. The IDs below were checked with simslim 0.12.2 and avdslim 1.0.15; if the catalog shows different ones, use the catalog — its `detail` text, or for an Android package group the packages `avdslim profiles` lists under it.
 
 ### iOS
 
@@ -68,7 +68,7 @@ Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keep
 | AirDrop · Continuity · Find My | sharing / nearby features | `connectivity` |
 | Screen Time · Family | Family Controls entitlement | `family` |
 
-**Never slimmed on iOS** — nothing to keep: camera, microphone, location, sign-in services (AuthenticationServices / web auth sessions), Face ID, App Tracking Transparency, Game Center (simslim 0.12.0 and later keep it on; a simulator slimmed with an older simslim has it off until it is slimmed or unslimmed again with 0.12.0 or later). **Check by hand after slimming**: the tracking prompt, Face ID, web sign-in sessions (Google / Firebase sign-in). Don't keep `web` «for sign-in» — no sign-in service is in it. The Contacts, Photos and Calendar pickers can act up without their categories — keep `pim` / `photos` when a test opens them.
+**Never slimmed on iOS** — nothing to keep: camera, microphone, location, sign-in services (AuthenticationServices / web auth sessions), Face ID, App Tracking Transparency, Game Center (simslim 0.12.0 and later keep it on), dictation (`assistantd` — 0.12.1 and later keep it on; without it the Spotlight app leaks memory). A simulator slimmed with an older simslim has them off until it is slimmed or unslimmed again with a newer one. Keeping `widgets` also keeps `navd`, which the Maps widget needs (0.12.2). **Check by hand after slimming**: the tracking prompt, Face ID, web sign-in sessions (Google / Firebase sign-in). Don't keep `web` «for sign-in» — no sign-in service is in it. The Contacts, Photos and Calendar pickers can act up without their categories — keep `pim` / `photos` when a test opens them.
 
 ### Android
 
@@ -82,7 +82,7 @@ Item IDs are what `simless --json catalog` lists in `slimOff[].id`. Simless keep
 | Camera | `CAMERA` permission, camera library | `camera` (emulator hardware — takes effect at the next boot) |
 | Microphone · audio playback | `RECORD_AUDIO`, audio / video playback | `audio` (emulator hardware — next boot) |
 | System photo picker | `PickVisualMedia` / `ACTION_PICK_IMAGES`, or `ACTION_GET_CONTENT` with an image type. An image picker library is evidence only through the intent it uses — check its Android source | nothing — the system photo picker and DocumentsUI aren't turned off |
-| Opens Google Maps, Google Photos or YouTube, or picks with `ACTION_PICK` | `geo:` / maps intents, intents naming those apps; `ACTION_PICK` with an image type (once Photos is off no other app handles it) | `media-consumer-apps` |
+| Opens Google Maps, Google Photos or YouTube, picks with `ACTION_PICK`, or takes a photo with the system camera app | `geo:` / maps intents, intents naming those apps; `ACTION_PICK` with an image type (once Photos is off no other app handles it); `MediaStore.ACTION_IMAGE_CAPTURE` / `ACTION_VIDEO_CAPTURE`, an image picker's «take photo» (the stock camera app `com.android.camera2` is in this item) | `media-consumer-apps` |
 | Opens the dialer, contacts or messaging app | `tel:` / `sms:` intents, contacts intents | `telephony-emergency-satellite` |
 | Opens the calendar, clock or calculator app | calendar / alarm intents | `telemetry-feedback-screensavers` |
 | Text-to-speech · accessibility tests | TTS, TalkBack testing | `accessibility-speech` |
