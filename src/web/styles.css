@@ -1507,23 +1507,9 @@ summary:focus-visible {
   font-size: 13px;
 }
 
-.progress {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--surface-2);
-  font-size: 13px;
-}
-
-/* 안내·진행 표시도 단계와 같은 여백 */
-.create > p,
-.create > .progress {
+/* 안내도 단계와 같은 여백 */
+.create > p {
   margin: 12px 18px 0;
-}
-
-.progress p {
-  margin: 0 0 2px;
 }
 
 /* 작업 기록·알림 */
@@ -2209,9 +2195,18 @@ summary:focus-visible {
   animation: spin 0.8s linear infinite;
 }
 
-/* 만드는 중(디바이스 만들기) — 도는 원을 첫 줄 글자에 맞춘다 */
-.progress .spinner {
-  margin-top: 2px;
+/* 목록의 «만드는 중» — 상태 칸의 글자 옆 작은 도는 원 (M4) */
+.creating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.spinner-small {
+  width: 12px;
+  height: 12px;
 }
 
 .skeleton-rows {

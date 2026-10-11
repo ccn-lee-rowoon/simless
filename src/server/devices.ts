@@ -98,6 +98,13 @@ export function registerDeviceMethods(server: SimlessServer): void {
     }
   };
 
+  /** 만드는 중이면 막는다 — 기준값을 재거나 슬림하는 동안 켜고 끄거나 지우면 엉킨다 (M4) */
+  const guardCreating = (device: Device) => {
+    if (server.creating.has(device.id)) {
+      throw new HandlerError("BUSY", t("err.deviceCreating", { name: device.name }));
+    }
+  };
+
   /** simless 가 만든 디바이스만 — 삭제·슬림 켜고 끄기 (M7·M8·N5) */
   const guardCreated = (device: Device, what: "delete" | "slim") => {
     if (!device.createdBySimless) {
@@ -118,6 +125,7 @@ export function registerDeviceMethods(server: SimlessServer): void {
         ? await server.resolve(refs)
         : (await server.devices()).filter((d) => held.has(d.id));
     if (devices.length === 0) throw new HandlerError("NOT_HELD", t("err.notHeldAny"));
+    for (const device of devices) guardCreating(device);
     // 사람(웹 UI 등)이 직접 켜고 끄는 건 점유가 아니다 — 다른 세션이 쓰는 중인 것만 막는다
     if (session.human) {
       for (const device of devices) guardOthers(device, session);
@@ -321,11 +329,20 @@ export function registerDeviceMethods(server: SimlessServer): void {
     });
     // 그 플랫폼에 기본 디바이스가 없으면 처음 만든 것이 기본이 된다 (R22)
     if (!server.registry.defaults()[platform]) server.registry.setDefault(platform, id);
+    // 목록에는 바로 «만드는 중» 으로 보이고, 기준값·슬림이 끝나면 풀린다 (M4)
+    server.creating.add(id);
     server.invalidate();
+    // 메서드가 끝날 때까지 기다리지 않고 화면에 바로 알린다 — 목록에 «만드는 중» 줄이 생기게
+    server.notify();
     let device: Device = { ...meta, listed: true, name, spec };
-    if (params.slim && params.baseline)
-      device = await withLock(id, () => measureBaseline(device, progress));
-    if (params.slim) device = await withLock(id, () => applySlim(device, progress));
+    try {
+      if (params.slim && params.baseline)
+        device = await withLock(id, () => measureBaseline(device, progress));
+      if (params.slim) device = await withLock(id, () => applySlim(device, progress));
+    } finally {
+      server.creating.delete(id);
+      server.invalidate();
+    }
     return view(session, device);
   });
 
@@ -398,6 +415,7 @@ export function registerDeviceMethods(server: SimlessServer): void {
     const [device] = await server.resolve([params.device]);
     if (!device) throw new HandlerError("NOT_FOUND", params.device);
     guardCreated(device, "delete");
+    guardCreating(device);
     if (server.registry.defaults()[device.platform] === device.id) {
       throw new HandlerError("NOT_ALLOWED", t("err.deleteDefault", { name: device.name }));
     }
@@ -425,7 +443,12 @@ export function registerDeviceMethods(server: SimlessServer): void {
         : (await server.devices()).filter((d) => d.createdBySimless);
     const progress = progressOf(connection);
     for (const device of devices) guardCreated(device, "slim");
-    if (params.mode !== "check") for (const device of devices) guardOthers(device, session);
+    if (params.mode !== "check") {
+      for (const device of devices) {
+        guardCreating(device);
+        guardOthers(device, session);
+      }
+    }
     if (params.keep && params.mode !== "on") {
       throw new HandlerError("INVALID", t("err.slimKeepOnlyOn"));
     }

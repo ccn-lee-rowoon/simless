@@ -4,7 +4,6 @@ import { t } from "../shared/i18n.ts";
 import { call } from "./api.ts";
 import { PlatformIcon } from "./icons.tsx";
 import { type SlimMode, SlimPicker } from "./SlimPicker.tsx";
-import type { LogLine } from "./types.ts";
 import { Dialog, Loading, osText, resolutionText, widthText } from "./ui.tsx";
 
 type Platform = "android" | "ios";
@@ -20,21 +19,27 @@ function savedPlatform(): Platform {
   }
 }
 
-/** 생성(+) — 플랫폼 → 기종 → OS → 이름·슬림 (M1·M4) */
+/** 만들기를 눌렀을 때 — 창은 닫고, 다 될 때까지 목록에 «만드는 중» 으로 (M4) */
+export interface CreateStart {
+  name: string;
+  platform: Platform;
+  /** 다 만들면 이 기기의 이름, 실패하면 오류 */
+  done: Promise<DeviceView>;
+}
+
+/** 생성(+) — 플랫폼 → 기종 → OS → 이름·슬림 (M1·M4). «만들기» 를 누르면 바로 닫힌다 */
 export function CreateDialog({
   open,
   catalog,
-  log,
   onClose,
-  onCreated,
+  onStarted,
   onAdded,
   onError,
 }: {
   open: boolean;
   catalog: CatalogResult | null;
-  log: LogLine[];
   onClose: () => void;
-  onCreated: (name: string) => void;
+  onStarted: (start: CreateStart) => void;
   onAdded: (name: string) => void;
   onError: (message: string) => void;
 }) {
@@ -48,8 +53,6 @@ export function CreateDialog({
   const [slimMode, setSlimMode] = useState<SlimMode>("ui");
   const [slimKeep, setSlimKeep] = useState<string[]>([]);
   const slim = slimMode !== "none";
-  const [creating, setCreating] = useState(false);
-  const [logStart, setLogStart] = useState(0);
 
   const setPlatform = (next: Platform) => {
     setPlatformState(next);
@@ -74,7 +77,6 @@ export function CreateDialog({
     setBaseline(true);
     setSlimMode("ui");
     setSlimKeep([]);
-    setCreating(false);
   }, [open]);
 
   const current: PlatformCatalog | undefined = catalog?.platforms.find(
@@ -98,38 +100,32 @@ export function CreateDialog({
   const defaultName = modelName ? (slim ? `simless ${modelName}` : modelName) : "";
   const problems = catalog?.problems.filter((p) => p.platform === platform) ?? [];
 
-  const create = async () => {
+  // 서버는 기기를 만들자마자 목록에 «만드는 중» 으로 올리고, 기준값·슬림이 끝나면 돌려준다 (M4)
+  const create = () => {
     if (!model && !custom) return;
-    setCreating(true);
-    setLogStart(log.at(-1)?.id ?? 0);
-    try {
-      const device = await call<DeviceView>("device.create", {
-        platform,
-        model: custom ? undefined : model?.id,
-        custom: custom
-          ? {
-              widthDp: Number(size.widthDp),
-              heightDp: Number(size.heightDp),
-              density: Number(size.density),
-            }
-          : undefined,
-        os: os?.id,
-        name: name.trim() || undefined,
-        slim,
-        slimKeep: slim && slimMode === "custom" ? slimKeep : undefined,
-        baseline: slim && baseline,
-      });
-      onCreated(device.name);
-    } catch (error) {
-      onError(t("web.create.failed", { message: (error as Error).message }));
-      setCreating(false);
-    }
+    const done = call<DeviceView>("device.create", {
+      platform,
+      model: custom ? undefined : model?.id,
+      custom: custom
+        ? {
+            widthDp: Number(size.widthDp),
+            heightDp: Number(size.heightDp),
+            density: Number(size.density),
+          }
+        : undefined,
+      os: os?.id,
+      name: name.trim() || undefined,
+      slim,
+      slimKeep: slim && slimMode === "custom" ? slimKeep : undefined,
+      baseline: slim && baseline,
+    });
+    onStarted({ name: name.trim() || defaultName, platform, done });
   };
 
   const group = (form: CatalogModel["form"]) => models.filter((m) => m.form === form);
 
   return (
-    <Dialog open={open} onClose={creating ? () => {} : onClose} title={t("web.create.title")} wide>
+    <Dialog open={open} onClose={onClose} title={t("web.create.title")} wide>
       <div className="mode-tabs" role="tablist" aria-label={t("web.create.title")}>
         {(["new", "mac"] as const).map((m) => (
           <button
@@ -138,7 +134,6 @@ export function CreateDialog({
             role="tab"
             aria-selected={mode === m}
             className={mode === m ? "mode-tab mode-tab-active" : "mode-tab"}
-            disabled={creating}
             onClick={() => setMode(m)}
           >
             {t(m === "new" ? "web.create.modeNew" : "web.create.modeMac")}
@@ -152,7 +147,7 @@ export function CreateDialog({
           className="dialog-body create"
           onSubmit={(e) => {
             e.preventDefault();
-            void create();
+            create();
           }}
         >
           <Section step={1} title={t("web.platform")}>
@@ -163,7 +158,6 @@ export function CreateDialog({
                   type="button"
                   aria-pressed={platform === p}
                   className={platform === p ? "segment segment-active" : "segment"}
-                  disabled={creating}
                   onClick={() => setPlatform(p)}
                 >
                   {p === "ios" ? "iOS" : "Android"}
@@ -180,7 +174,7 @@ export function CreateDialog({
           ))}
 
           <Section step={2} title={t("table.model")}>
-            <fieldset className="models" disabled={creating}>
+            <fieldset className="models">
               <legend className="visually-hidden">{t("table.model")}</legend>
               {(["phone", "tablet"] as const).map((form) =>
                 group(form).length === 0 ? null : (
@@ -270,7 +264,7 @@ export function CreateDialog({
                 <span>{t(platform === "ios" ? "web.create.runtime" : "web.create.image")}</span>
                 <select
                   value={os?.id ?? ""}
-                  disabled={creating || osChoices.length === 0}
+                  disabled={osChoices.length === 0}
                   onChange={(e) => setOsId(e.target.value)}
                 >
                   {osChoices.map((o) => (
@@ -286,7 +280,6 @@ export function CreateDialog({
                 <input
                   value={name}
                   placeholder={defaultName}
-                  disabled={creating}
                   onChange={(e) => setName(e.target.value)}
                 />
               </label>
@@ -300,7 +293,6 @@ export function CreateDialog({
                 catalog={current}
                 mode={slimMode}
                 keep={slimKeep}
-                disabled={creating}
                 onChange={(m, k) => {
                   setSlimMode(m);
                   setSlimKeep(k);
@@ -312,7 +304,6 @@ export function CreateDialog({
                 <input
                   type="checkbox"
                   checked={baseline}
-                  disabled={creating}
                   onChange={(e) => setBaseline(e.target.checked)}
                 />
                 {t("web.create.baseline")}
@@ -320,18 +311,13 @@ export function CreateDialog({
             )}
           </Section>
 
-          {creating && <Progress log={log} logStart={logStart} />}
           <footer className="dialog-footer">
             <span className="spacer" />
-            <button type="button" className="button" disabled={creating} onClick={onClose}>
+            <button type="button" className="button" onClick={onClose}>
               {t("web.cancel")}
             </button>
-            <button
-              type="submit"
-              className="button button-primary"
-              disabled={creating || (!model && !custom)}
-            >
-              {creating ? t("web.create.creating") : t("web.create.submit")}
+            <button type="submit" className="button button-primary" disabled={!model && !custom}>
+              {t("web.create.submit")}
             </button>
           </footer>
         </form>
@@ -465,22 +451,5 @@ function Section({ step, title, children }: { step: number; title: string; child
       </h3>
       {children}
     </section>
-  );
-}
-
-/** 만드는 중 — 서버가 보내는 진행 알림 */
-function Progress({ log, logStart }: { log: LogLine[]; logStart: number }) {
-  return (
-    <div className="progress">
-      <div className="spinner" />
-      <div>
-        {log
-          .filter((line) => line.id > logStart)
-          .map((line) => (
-            <p key={line.id}>{line.text}</p>
-          ))}
-        {(log.at(-1)?.id ?? 0) === logStart && <p className="sub">{t("web.create.starting")}</p>}
-      </div>
-    </div>
   );
 }

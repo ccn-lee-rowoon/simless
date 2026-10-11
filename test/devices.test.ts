@@ -218,6 +218,38 @@ describe("기종 목록과 만들기 (M1·M4)", () => {
     });
   });
 
+  test("만드는 동안 목록에 «만드는 중» 으로 보이고, 켜기·슬림·삭제는 BUSY (M4)", async () => {
+    const { A, H, driver } = await start();
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const slim = driver.slim;
+    driver.slim = async (d, progress) => {
+      await gate;
+      await slim(d, progress);
+    };
+    const created = A("device.create", { ...android360, baseline: false });
+    // 기기는 바로 목록에 올라가고 슬림이 끝날 때까지 creating
+    let listed: DeviceView | undefined;
+    for (let i = 0; i < 50 && !listed; i++) {
+      await Bun.sleep(10);
+      listed = ((await H("device.list")) as DeviceView[]).find((d) => d.creating);
+    }
+    if (!listed) throw new Error("만드는 중인 기기가 목록에 없다");
+    expect(listed).toMatchObject({ creating: true, slim: "applying" });
+    expect(await H("device.up", { devices: [listed.id] })).toMatchObject({ code: "BUSY" });
+    expect(await H("device.slim", { devices: [listed.id], mode: "on" })).toMatchObject({
+      code: "BUSY",
+    });
+    expect(await H("device.delete", { device: listed.id })).toMatchObject({ code: "BUSY" });
+
+    release();
+    expect(await created).toMatchObject({ id: listed.id, slim: "applied" });
+    const [after] = (await H("device.list")) as DeviceView[];
+    expect(after?.creating).toBeUndefined();
+  });
+
   test("슬림하지 않으면 접두사 없이 기종 이름으로 (R5)", async () => {
     const { A } = await start();
     expect(await A("device.create", { model: "large-412", slim: false })).toMatchObject({

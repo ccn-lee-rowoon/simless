@@ -5,7 +5,7 @@ import { language, resolveLanguage, setLanguage, t } from "../shared/i18n.ts";
 import { ApiError, call, subscribe, token } from "./api.ts";
 import { postToApp } from "./bridge.ts";
 import { CreateDialog } from "./CreateDialog.tsx";
-import { DevicesView } from "./DevicesView.tsx";
+import { DevicesView, type PendingCreate } from "./DevicesView.tsx";
 import { GroupsView } from "./GroupsView.tsx";
 import {
   DevicesIcon,
@@ -56,6 +56,7 @@ interface Notice {
 }
 
 let noticeId = 0;
+let pendingId = 0;
 let logId = 0;
 
 // 서버 상태가 오기 전까지는 브라우저(macOS) 언어로
@@ -76,6 +77,8 @@ function App() {
   const [log, setLog] = useState<LogLine[]>([]);
   const [showLog, setShowLog] = useState(true);
   const [creating, setCreating] = useState(false);
+  /** 화면에서 만들기를 눌러 아직 끝나지 않은 기기 (M4) */
+  const [pending, setPending] = useState<PendingCreate[]>([]);
   /** 머리의 «새 그룹» 을 누를 때마다 늘어난다 — 그룹 화면이 만들기 창을 연다 */
   const [newGroup, setNewGroup] = useState(0);
   const [, setLang] = useState(language());
@@ -171,12 +174,28 @@ function App() {
     <CreateDialog
       open={creating}
       catalog={catalog}
-      log={log}
       onClose={() => setCreating(false)}
-      onCreated={(name) => {
+      onStarted={({ name, platform, done }) => {
+        // 창은 바로 닫고, 다 될 때까지 목록에 «만드는 중» 으로 둔다 (M4)
         setCreating(false);
-        notify("info", t("web.created", { name }));
-        refreshStatus();
+        const key = ++pendingId;
+        const knownIds = new Set(status?.devices.map((d) => d.id));
+        setPending((list) => [...list, { key, name, platform, knownIds }]);
+        notify("info", t("web.create.started", { name }));
+        const finish = () => {
+          setPending((list) => list.filter((p) => p.key !== key));
+          refreshStatus();
+        };
+        done.then(
+          (device) => {
+            notify("info", t("web.created", { name: device.name }));
+            finish();
+          },
+          (error: unknown) => {
+            notify("error", t("web.create.failed", { message: (error as Error).message }));
+            finish();
+          },
+        );
       }}
       onAdded={(name) => {
         notify("info", t("web.create.added", { name }));
@@ -358,7 +377,12 @@ function App() {
         {!status ? (
           <Loading variant="page" />
         ) : view === "devices" ? (
-          <DevicesView status={status} act={act} onCreate={() => setCreating(true)} />
+          <DevicesView
+            status={status}
+            act={act}
+            onCreate={() => setCreating(true)}
+            pending={pending}
+          />
         ) : view === "groups" ? (
           <GroupsView status={status} act={act} newRequest={newGroup} />
         ) : (

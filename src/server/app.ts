@@ -95,6 +95,8 @@ export type ServerEvent =
   | { type: "job"; job: JobView };
 
 export class SimlessServer {
+  /** 만드는 중인 디바이스 ID — 목록에 올라간 뒤 기준값·슬림이 끝날 때까지 (M4) */
+  readonly creating = new Set<string>();
   readonly registry: Registry;
   readonly leases: LeaseManager;
   readonly history: History;
@@ -525,6 +527,7 @@ export class SimlessServer {
       return {
         ...device,
         slimMode: slimModeOf(device),
+        creating: this.creating.has(device.id) || undefined,
         label: sizeLabel(device.spec),
         layoutWidth: layoutWidth(device.spec),
         layoutHeight: layoutHeight(device.spec),
