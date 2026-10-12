@@ -1,12 +1,15 @@
-// Simless.app 안이면 Swift 에 창 열기·닫기를 알린다 (window.webkit.messageHandlers.simless).
+// Simless.app 안이면 Swift 에 창 열기·닫기와 바뀐 언어를 알린다 (window.webkit.messageHandlers.simless).
 // 브라우저에서 열었으면 false — 부르는 쪽이 window.open 등으로 대신한다.
+
+import type { Lang } from "../shared/i18n.ts";
 
 export type AppMessage =
   | { open: "settings" }
   | { open: "setup" }
   | { open: "dashboard" }
   | { open: "session"; key: string }
-  | { close: "setup" };
+  | { close: "setup" }
+  | { language: Lang };
 
 export function postToApp(message: AppMessage): boolean {
   const bridge = (
