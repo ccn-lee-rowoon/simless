@@ -33,6 +33,8 @@ export interface DeviceView extends Omit<Device, "slimMode"> {
    * 남긴 것이 없으면 ui. 저장된 값은 레지스트리에만 있다
    */
   slimMode: SlimChoice;
+  /** 만드는 중 — 목록에는 올라갔지만 기준값 측정·슬림이 아직 (M4). 그동안 켜기·슬림·삭제는 BUSY */
+  creating?: boolean;
   /** 예: `Android 360dp` */
   label: string;
   layoutWidth: number;

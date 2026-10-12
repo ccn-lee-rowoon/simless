@@ -32,6 +32,7 @@ export const ko = {
   "err.noTarget": "점유할 디바이스·그룹·기본 디바이스를 지정하세요",
   "err.busy": "다른 세션이 사용 중입니다",
   "err.busyDevice": "다른 세션이 사용 중입니다: {name}",
+  "err.deviceCreating": "{name} 을 만드는 중입니다 — 다 만든 뒤에 하세요",
   "err.deadlock":
     "기다리면 서로를 기다리게 됩니다({cycle}) — 쥔 디바이스로 진행하거나, 놓고 다시 요청하세요",
   "err.forceHumanOnly":
@@ -529,7 +530,7 @@ export const ko = {
   "web.create.submit": "만들기",
   "web.create.slimInfoMissing": "{tool} 이 없어 목록을 읽지 못했습니다.",
   "web.create.slimKeeps": "그대로 남는 것",
-  "web.create.starting": "시작하는 중…",
+  "web.create.started": "만드는 중: {name} — 다 되면 알려 드립니다",
   "web.nav.sessions": "세션",
   "web.sessions.empty": "아직 세션이 없습니다",
   "web.sessions.emptyHint": "에이전트가 simless use 로 디바이스를 점유하면 여기에 보입니다.",

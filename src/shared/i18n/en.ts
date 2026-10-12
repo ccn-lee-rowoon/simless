@@ -31,6 +31,7 @@ export const en: Record<keyof typeof ko, string> = {
   "err.noTarget": "Specify devices, a group, or the default device to acquire",
   "err.busy": "Another session is using it",
   "err.busyDevice": "Another session is using {name}",
+  "err.deviceCreating": "{name} is still being created — try again when it is done",
   "err.deadlock":
     "Waiting would deadlock ({cycle}) — continue with the devices you hold, or release them and ask again",
   "err.forceHumanOnly": "Only a person can force a release — agents should wait or ask the user",
@@ -524,7 +525,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.create.submit": "Create",
   "web.create.slimInfoMissing": "{tool} isn't installed, so the list couldn't be read.",
   "web.create.slimKeeps": "What stays on",
-  "web.create.starting": "Starting…",
+  "web.create.started": "Creating {name} — you'll be told when it's done",
   "web.nav.sessions": "Sessions",
   "web.sessions.empty": "No sessions yet",
   "web.sessions.emptyHint":

@@ -22,6 +22,28 @@ import {
 
 type Platform = "all" | "android" | "ios";
 
+/**
+ * 화면에서 «만들기» 를 누른 뒤 서버가 아직 목록에 올리지 않은 기기 — 기기를 만드는 몇 초 동안
+ * 자리를 지킨다. 그 뒤로는 서버의 `creating` 줄이 대신한다 (M4)
+ */
+export interface PendingCreate {
+  key: number;
+  name: string;
+  platform: "android" | "ios";
+  /** 누를 때 이미 있던 기기 — 그 밖의 «만드는 중» 기기가 보이면 그것이 이 기기다 */
+  knownIds: Set<string>;
+}
+
+/** 만드는 중 — 도는 원과 글자 */
+function Creating() {
+  return (
+    <span className="creating">
+      <span className="spinner spinner-small" aria-hidden="true" />
+      {t("web.create.creating")}
+    </span>
+  );
+}
+
 const TAB_KEY = "simless-tab";
 const GROUP_KEY = "simless-group-filter";
 
@@ -56,10 +78,12 @@ export function DevicesView({
   status,
   act,
   onCreate,
+  pending = [],
 }: {
   status: StatusResult;
   act: Act;
   onCreate: () => void;
+  pending?: PendingCreate[];
 }) {
   const [platform, setPlatformState] = useState<Platform>(() => {
     const value = saved(TAB_KEY, "all");
@@ -100,6 +124,13 @@ export function DevicesView({
       .filter((d) => q === "" || `${d.name} ${osText(d)} ${widthText(d)}`.toLowerCase().includes(q))
       .sort(compare);
   }, [status.devices, platform, activeGroup, query]);
+
+  // 서버가 목록에 올렸으면(새 «만드는 중» 기기) 자리 표시는 뺀다
+  const placeholders = pending.filter(
+    (p) =>
+      (platform === "all" || p.platform === platform) &&
+      !status.devices.some((d) => d.creating && d.platform === p.platform && !p.knownIds.has(d.id)),
+  );
 
   const run = async (device: DeviceView, label: string, fn: () => Promise<unknown>) => {
     setBusy((s) => new Set(s).add(device.id));
@@ -149,8 +180,14 @@ export function DevicesView({
           )}
         </td>
         <td>
-          <span className={d.booted ? "dot dot-on" : "dot"} />
-          {d.booted ? t("common.on") : t("common.off")}
+          {d.creating ? (
+            <Creating />
+          ) : (
+            <>
+              <span className={d.booted ? "dot dot-on" : "dot"} />
+              {d.booted ? t("common.on") : t("common.off")}
+            </>
+          )}
           {d.booted && d.targetId && (
             <div className="sub mono nowrap" title={d.targetId}>
               {d.targetId.length > 16 ? `${d.targetId.slice(0, 8)}…` : d.targetId}
@@ -205,7 +242,7 @@ export function DevicesView({
           <button
             type="button"
             className="button button-small"
-            disabled={busy.has(d.id) || lockedByOther}
+            disabled={busy.has(d.id) || lockedByOther || d.creating}
             title={lockedByOther ? t("web.device.lockedByOther") : undefined}
             onClick={() =>
               d.booted
@@ -215,64 +252,66 @@ export function DevicesView({
           >
             {busy.has(d.id) ? "…" : d.booted ? t("web.device.shutdown") : t("web.device.boot")}
           </button>
-          <Menu label={t("web.device.more")}>
-            <MenuItem onClick={() => setGrouping(d)}>{t("web.device.groups")}</MenuItem>
-            <MenuItem
-              disabled={d.default}
-              onClick={() =>
-                run(d, t("web.device.makeDefault"), () =>
-                  call("device.setDefault", { device: d.id }),
-                )
-              }
-            >
-              {t("web.device.makeDefault")}
-            </MenuItem>
-            {(d.createdBySimless || d.slimOff) && <MenuSeparator />}
-            {d.slimOff && (
-              <MenuItem onClick={() => setSlimDetail(d)}>{t("web.slimDetail.title")}</MenuItem>
-            )}
-            {d.createdBySimless && (
+          {!d.creating && (
+            <Menu label={t("web.device.more")}>
+              <MenuItem onClick={() => setGrouping(d)}>{t("web.device.groups")}</MenuItem>
               <MenuItem
-                disabled={lockedByOther || d.slim === "applying"}
-                onClick={() => setSlimming(d)}
-              >
-                {t("web.device.slimSettings")}
-              </MenuItem>
-            )}
-            {lockedByOther && (
-              <>
-                <MenuSeparator />
-                <MenuItem
-                  onClick={() =>
-                    run(d, t("web.device.forceRelease"), () =>
-                      call("lease.forceRelease", { device: d.id }),
-                    )
-                  }
-                >
-                  {t("web.device.forceRelease")}
-                </MenuItem>
-              </>
-            )}
-            <MenuSeparator />
-            {d.createdBySimless ? (
-              <MenuItem
-                danger
-                disabled={lockedByOther || d.default}
-                title={d.default ? t("web.device.defaultCantDelete") : undefined}
-                onClick={() => setDeleting(d)}
-              >
-                {t("web.device.delete")}
-              </MenuItem>
-            ) : (
-              <MenuItem
+                disabled={d.default}
                 onClick={() =>
-                  run(d, t("web.device.unlist"), () => call("device.unlist", { device: d.id }))
+                  run(d, t("web.device.makeDefault"), () =>
+                    call("device.setDefault", { device: d.id }),
+                  )
                 }
               >
-                {t("web.device.unlist")}
+                {t("web.device.makeDefault")}
               </MenuItem>
-            )}
-          </Menu>
+              {(d.createdBySimless || d.slimOff) && <MenuSeparator />}
+              {d.slimOff && (
+                <MenuItem onClick={() => setSlimDetail(d)}>{t("web.slimDetail.title")}</MenuItem>
+              )}
+              {d.createdBySimless && (
+                <MenuItem
+                  disabled={lockedByOther || d.slim === "applying"}
+                  onClick={() => setSlimming(d)}
+                >
+                  {t("web.device.slimSettings")}
+                </MenuItem>
+              )}
+              {lockedByOther && (
+                <>
+                  <MenuSeparator />
+                  <MenuItem
+                    onClick={() =>
+                      run(d, t("web.device.forceRelease"), () =>
+                        call("lease.forceRelease", { device: d.id }),
+                      )
+                    }
+                  >
+                    {t("web.device.forceRelease")}
+                  </MenuItem>
+                </>
+              )}
+              <MenuSeparator />
+              {d.createdBySimless ? (
+                <MenuItem
+                  danger
+                  disabled={lockedByOther || d.default}
+                  title={d.default ? t("web.device.defaultCantDelete") : undefined}
+                  onClick={() => setDeleting(d)}
+                >
+                  {t("web.device.delete")}
+                </MenuItem>
+              ) : (
+                <MenuItem
+                  onClick={() =>
+                    run(d, t("web.device.unlist"), () => call("device.unlist", { device: d.id }))
+                  }
+                >
+                  {t("web.device.unlist")}
+                </MenuItem>
+              )}
+            </Menu>
+          )}
         </td>
       </tr>
     );
@@ -321,7 +360,7 @@ export function DevicesView({
         />
       </div>
 
-      {status.devices.length === 0 ? (
+      {status.devices.length === 0 && placeholders.length === 0 ? (
         <div className="empty">
           <p>{t("web.empty.title")}</p>
           <p className="sub">{t("web.empty.body")}</p>
@@ -346,9 +385,35 @@ export function DevicesView({
                   </th>
                 </tr>
               </thead>
-              <tbody>{filtered.map(row)}</tbody>
+              <tbody>
+                {placeholders.map((p) => (
+                  <tr key={`pending-${p.key}`}>
+                    <td>
+                      <span className="sub">—</span>
+                    </td>
+                    <td className="name-cell">
+                      <div className="strong name-line">
+                        <PlatformIcon platform={p.platform} />
+                        <span>{p.name}</span>
+                      </div>
+                    </td>
+                    <td className="col-slim" />
+                    <td>
+                      <Creating />
+                    </td>
+                    <td />
+                    <td>
+                      <span className="sub">—</span>
+                    </td>
+                    <td className="actions" />
+                  </tr>
+                ))}
+                {filtered.map(row)}
+              </tbody>
             </table>
-            {filtered.length === 0 && <p className="sub empty-row">{t("web.noMatch")}</p>}
+            {filtered.length === 0 && placeholders.length === 0 && (
+              <p className="sub empty-row">{t("web.noMatch")}</p>
+            )}
           </div>
         </div>
       )}
