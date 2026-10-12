@@ -383,10 +383,11 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 | 호출 | 대상 |
 | --- | --- |
-| argent 도구의 `udid`·`device_id`·`avdName` 인자 | 그 값 |
+| argent 도구의 `udid`·`device_id`·`avdName`·`device`(`flow-execute`) 인자, `devices` 배열(`stop-all-simulator-servers`) | 그 값. 이름은 argent 패키지의 도구 인자 목록(`dist/tool-args.generated.d.ts`, 0.28.0 부터)과 대조한다 |
+| argent `flow-execute` 에 기기를 안 줌 | flow 가 켜진 기기 하나를 스스로 고른다 — 켜진 것 전부(`platform` 이 `ios`·`android` 면 그쪽만, `chromium`·`vega` 면 없음) |
 | argent `list-devices` 등 기기 인자 없는 도구 | 없음 → 통과 (P6) |
 | argent `boot-device` · Bash `emulator -avd …` 로 디바이스 켜기 | 점유와 상관없이 **차단** → `simless up` 안내 (S6 «켜기는 Simless 로») |
-| Bash 명령 문자열 안에 디바이스 식별자(UDID·AVD ID·현재 시리얼)가 보임 | 그 디바이스 — 명령을 파싱하지 않고 **문자열 포함**으로 본다. `&&`·`$(…)`·변수 등으로 우회되기 어렵다. 예외: heredoc 을 여는 줄에 셸·인터프리터·명령 실행 도구(`sh`·`bash`·`python`·`node`·`bun`·`osascript`·`eval`·`xargs`·`adb` …)가 없으면 그 본문은 글이라 지우고 본다(`stripDataHeredocs`) — 파일에 쓰는 스크립트·커밋 메시지에 기기 이름과 `adb` 가 같이 들어 있어 막히던 오탐 |
+| Bash 명령 문자열 안에 디바이스 식별자(UDID·AVD ID·현재 시리얼)가 보임 | 그 디바이스 — 명령을 파싱하지 않고 **문자열 포함**으로 본다. `&&`·`$(…)`·변수 등으로 우회되기 어렵다. 예외: heredoc 을 여는 줄에 셸·인터프리터·명령 실행 도구(`sh`·`bash`·`python`·`node`·`bun`·`osascript`·`eval`·`xargs`·`adb` …)가 없으면 그 본문은 글이라 지우고 본다(`stripDataHeredocs`) — 파일에 쓰는 스크립트·커밋 메시지에 기기 이름과 `adb` 가 같이 들어 있어 막히던 오탐. 실행기는 **heredoc 이 붙은 명령부터 줄 끝까지**에서만 찾는다(`commandStart` — 따옴표 밖의 `;`·`&&`·`||` 로 나눔, 파이프·`2>&1` 은 나누지 않음, 따옴표가 안 닫혔으면 줄 전체). 앞에서 끝난 명령은 본문을 받지 못해서다 — `bun run check; git commit -F - <<EOF` 의 커밋 메시지를 `bun` 때문에 검사하던 오탐(2026-10-12). 뒤의 명령은 본다(`cat <<EOF > a.sh; bash a.sh`) |
 | `adb` 를 기기 지정 없이 기기 명령에 씀(`adb shell` 등, `ANDROID_SERIAL` 미지정) | 켜진 Android 전부 |
 | `simctl … booted` | 켜진 iOS 전부 |
 | `adb devices`·`emulator -list-avds`·`simctl list` 등 목록 조회 | 없음 → 통과 (P6) |
@@ -472,7 +473,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | ✅ 컴파일한 바이너리에 웹 UI·파일이 잘 들어가는지, 훅 경로 시작 시간 — **확인됨(0단계)**: `with { type: "file" }` 는 `/$bunfs/root/…` 경로로 들어가 `Bun.file` 로 읽히고, HTML import 는 TSX 까지 번들돼 `Bun.serve` 로 서빙된다(`--bytecode` 포함, 다른 폴더로 옮겨도 동작). 훅 경로 약 21ms | §2·§3·§13 | 0단계 |
 | ✅ launchd 로 띄운 서버가 `emulator`·`xcrun` 을 PATH·권한 문제 없이 실행하는지 — **확인됨(2단계 전)**: `simless install` 로 등록한 서버가 Android·iOS 를 만들고 함께 켰다(1분 16초, 슬림 없이). 등록하면 macOS 가 «백그라운드 항목 추가됨» 알림을 띄우고, 로그인 항목에 실행 파일 서명자 이름(개발 모드는 bun 의 «Jarred Sumner»)이 보인다 | launchd 는 로그인 셸 환경을 안 받는다 | 2단계 전 |
 | 에이전트별 MCP 서버의 부모가 에이전트 프로세스인지 (Claude Code 는 확인됨) | §7 | 6단계 |
-| argent 여러 버전(homebrew 0.17.0 이 PATH 우선, mise 의 node 마다 0.25.1·0.27.0 — 2026-10-07 확인) 정리 | 훅이 보는 argent 도구 인자가 버전마다 다를 수 있다 | 5단계 전 |
+| argent 여러 버전(homebrew 0.17.0 이 PATH 우선, mise 의 node 마다 0.25.1·0.27.0 — 2026-10-07 확인. 10-12 에 셋 다 0.28.0 으로 맞춤 — 깔린 곳이 여럿인 것은 그대로) 정리 | 훅이 보는 argent 도구 인자가 버전마다 다를 수 있다 | 5단계 전 |
 | 다른 에이전트의 실행 직전 훅 지원 여부·설정 위치·입력 형식, 전역 규칙·스킬 위치 | §13 어댑터·P2·S9 | 5단계 전 |
 | avdslim·simslim 이 끄는 항목을 사람이 읽을 이름으로 묶는 방법 (`avdslim profiles`·simslim 프로필 JSON) | M4 | 4단계 ③ 전 |
 | `simctl list devicetypes`·`runtimes` 의 지원 관계(`supportedDeviceTypes`) | M1 iOS 기종·OS 고르기 | 4단계 ③ 전 |

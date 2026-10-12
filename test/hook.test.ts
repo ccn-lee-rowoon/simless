@@ -55,6 +55,32 @@ describe("훅 대상 뽑기 (P4·P6)", () => {
     ]);
   });
 
+  test("flow-execute 의 device, stop-all-simulator-servers 의 devices 도 대상 (P4)", () => {
+    expect(
+      extractTargets("mcp__argent__flow-execute", { name: "login", device: "emulator-9990" }),
+    ).toEqual({ ids: ["emulator-9990"], boots: [], allAndroid: false, allIos: false });
+    expect(
+      extractTargets("mcp__argent__stop-all-simulator-servers", { devices: ["U1", "", 3, "U2"] })
+        ?.ids,
+    ).toEqual(["U1", "U2"]);
+    expect(extractTargets("mcp__argent__stop-all-simulator-servers", {})).toBeUndefined();
+  });
+
+  test("기기를 안 준 flow-execute 는 스스로 고르므로 켜진 기기 전부 — platform 으로 좁힌다 (P4)", () => {
+    expect(extractTargets("mcp__argent__flow-execute", { name: "login" })).toEqual({
+      ids: [],
+      boots: [],
+      allAndroid: true,
+      allIos: true,
+    });
+    expect(
+      extractTargets("mcp__argent__flow-execute", { name: "login", platform: "ios" }),
+    ).toMatchObject({ allAndroid: false, allIos: true });
+    expect(
+      extractTargets("mcp__argent__flow-execute", { name: "login", platform: "chromium" }),
+    ).toBeUndefined();
+  });
+
   test("파일·커밋 메시지로 가는 heredoc 본문은 글이라 보지 않는다 — 실행되는 heredoc 은 본다 (P4)", () => {
     // 문서를 고치는 스크립트를 파일로 쓰기만 한다 — 본문에 adb 와 AVD ID 가 있어도 통과
     expect(
@@ -80,6 +106,29 @@ describe("훅 대상 뽑기 (P4·P6)", () => {
     );
     // 끝 표시가 없으면 끝까지 본문
     expect(bash("cat > a.txt <<EOF\nadb -s emulator-5554 shell ls")).toBeUndefined();
+  });
+
+  test("heredoc 앞에서 끝난 명령의 실행기는 보지 않는다 — 뒤의 명령·파이프·따옴표 안은 본다 (P4)", () => {
+    const message = "fix: 기기를 지정하지 않은 adb shell 처럼\nEOF";
+    // `;`·`&&`·`||` 앞의 bun·bash 는 본문을 받지 못한다 — 커밋 메시지는 글
+    expect(
+      bash(
+        `bun run check >/dev/null 2>&1; echo $?; git add -A && git commit -F - <<'EOF'\n${message}`,
+      ),
+    ).toBeUndefined();
+    expect(bash(`bash build.sh && git commit -F - <<'EOF'\n${message}`)).toBeUndefined();
+    expect(bash(`bun test || tee log.md <<EOF\n${message}`)).toBeUndefined();
+    // 따옴표 안의 ; 는 나누는 자리가 아니다
+    expect(bash(`bash -c 'a; b' <<EOF\nadb shell ls\nEOF`)?.allAndroid).toBe(true);
+    expect(bash(`python3 -c "x; y" - <<EOF\nadb shell ls\nEOF`)?.allAndroid).toBe(true);
+    // 리다이렉션의 & 로 나누지 않는다
+    expect(bash("bash 2>&1 <<EOF\nadb shell ls\nEOF")?.allAndroid).toBe(true);
+    // 뒤의 명령은 본문을 쓴 파일을 실행할 수 있다
+    expect(bash("cat > a.sh <<EOF\nadb shell ls\nEOF")).toBeUndefined();
+    expect(bash("cat > a.sh <<EOF; bash a.sh\nadb shell ls\nEOF")?.allAndroid).toBe(true);
+    expect(bash("echo x; cat <<EOF | sh\nadb shell ls\nEOF")?.allAndroid).toBe(true);
+    // 따옴표가 닫히지 않은 채 heredoc 이 나오면 줄 전체를 본다
+    expect(bash('bash -c "x; $(cat <<EOF\nadb shell ls\nEOF\n)"')?.allAndroid).toBe(true);
   });
 });
 

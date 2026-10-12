@@ -106,7 +106,7 @@
 | P1 | Simless 목록의 디바이스(만든 것 + 추가한 것, R20)는 **점유한 세션만** 조작할 수 있다 | 테스트 |
 | P2 | **규칙**: 전역 argent 규칙에 «디바이스는 Simless 로 점유한 뒤에만 건드린다, 켜기는 Simless 로» 를 추가한다 | 테스트 |
 | P3 | **강제**: 규칙은 안내일 뿐이라, 실행 직전 **훅**을 지원하는 에이전트는 훅으로 실제로 막는다 — Claude Code PreToolUse 부터 만들고, 다른 에이전트는 훅 지원을 확인해 붙인다. **2026-10-05**: Copilot CLI·Codex·Cursor·Gemini CLI 어댑터를 붙였다(실제 에이전트로는 아직 확인 안 함) | 테스트 |
-| P4 | 훅이 보는 호출 — argent 도구(`udid`·`device_id`·`avdName` 인자), Bash 의 `adb -s`·`xcrun simctl`·`emulator -avd`. 파일·커밋 메시지로만 가는 heredoc 본문(`cat > 파일 <<EOF`·`git commit -F - <<EOF`)은 글이라 보지 않는다 — 셸·인터프리터로 들어가는 본문은 본다 | 테스트 |
+| P4 | 훅이 보는 호출 — argent 도구(`udid`·`device_id`·`avdName`·`device`·`devices` 인자 — 기기를 안 준 `flow-execute` 는 스스로 고르므로 켜진 기기 전부), Bash 의 `adb -s`·`xcrun simctl`·`emulator -avd`. 파일·커밋 메시지로만 가는 heredoc 본문(`cat > 파일 <<EOF`·`git commit -F - <<EOF`)은 글이라 보지 않는다 — 셸·인터프리터로 들어가는 본문은 본다(heredoc 이 붙은 명령과 그 뒤의 명령만 — 같은 줄에서 `;`·`&&`·`||` 앞에 끝난 명령은 본문을 받지 못한다) | 테스트 |
 | P5 | 훅 판정 — 대상 디바이스를 이 세션이 점유하지 않았으면 **차단**하고, 누가 쓰는 중인지와 점유 방법을 알려 준다 | 테스트 |
 | P6 | 막지 않는 것 — 기기를 지정하지 않는 **목록 조회**(`adb devices`·`emulator -list-avds`·`simctl list`·argent `list-devices`), USB 로 연결한 실기기 | 테스트 |
 | P7 | 사람이 직접 Simulator 창·에뮬레이터 창을 만지는 건 막지 않는다 (막을 방법도 없다) | — |
