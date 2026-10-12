@@ -99,6 +99,7 @@ export async function runHook(
     ...detected,
     key: input.sessionKey ?? detected.key,
     agentSessionId: input.sessionId ?? detected.agentSessionId,
+    cwd: input.cwd ?? detected.cwd,
     human: input.sessionKey ? false : detected.human,
   };
 

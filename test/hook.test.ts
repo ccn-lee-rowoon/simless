@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { normalize } from "../src/hook/adapters.ts";
 import { offlineDecision } from "../src/hook/index.ts";
 import { extractTargets } from "../src/hook/targets.ts";
 import { SimlessServer } from "../src/server/app.ts";
@@ -204,5 +205,30 @@ describe("simless hook claude pre-tool-use", () => {
     expect(JSON.parse(result.stdout)).toMatchObject({
       hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny" },
     });
+  });
+});
+
+describe("훅 입력의 작업 폴더 (P3·M13)", () => {
+  test("에이전트가 준 cwd(절대 경로)를 세션 폴더로 — 훅 프로세스의 폴더는 처음 폴더일 수 있다", () => {
+    const bash = { tool_name: "Bash", tool_input: { command: "adb devices" } };
+    expect(
+      normalize("claude", "pre-tool-use", { ...bash, cwd: "/repo/.claude/worktrees/x" }),
+    ).toMatchObject({ tool: "Bash", cwd: "/repo/.claude/worktrees/x" });
+    expect(
+      normalize("codex", "pre-tool-use", { ...bash, cwd: "/r", session_id: "t1" }),
+    ).toMatchObject({
+      cwd: "/r",
+      sessionKey: "s:codex:t1",
+    });
+    expect(normalize("cursor", "before-shell", { command: "adb devices", cwd: "/c" })?.cwd).toBe(
+      "/c",
+    );
+  });
+
+  test("cwd 가 없거나 상대 경로면 넣지 않는다", () => {
+    const bash = { tool_name: "Bash", tool_input: { command: "adb devices" } };
+    expect(normalize("claude", "pre-tool-use", bash)?.cwd).toBeUndefined();
+    expect(normalize("claude", "pre-tool-use", { ...bash, cwd: "repo" })?.cwd).toBeUndefined();
+    expect(normalize("claude", "pre-tool-use", { ...bash, cwd: 3 })?.cwd).toBeUndefined();
   });
 });

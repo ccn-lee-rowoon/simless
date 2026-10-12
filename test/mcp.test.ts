@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { ListRootsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { SimlessServer } from "../src/server/app.ts";
 import { listen } from "../src/server/socket.ts";
 import { call } from "../src/shared/client.ts";
@@ -11,10 +12,12 @@ const entry = new URL("../bin/simless.ts", import.meta.url).pathname;
 const env = tempEnv();
 let stop = () => {};
 let client: Client;
+let simless: SimlessServer;
 
 beforeAll(async () => {
   const driver = fakeDriver();
   const server = new SimlessServer({ ...env, drivers: [driver] });
+  simless = server;
   seedDevice(server, driver, "ab12", "Small");
   seedDevice(server, driver, "cd34", "Large");
   await server.registry.addGroup({
@@ -101,5 +104,38 @@ describe("simless mcp (R12)", () => {
     });
     expect(bad.isError).toBe(true);
     expect(textOf(bad)).toStartWith("INVALID:");
+  });
+  test("작업 폴더는 요청마다 roots 로 — worktree 로 옮기면 따라가고, roots 가 없으면 앞서 받은 폴더를 지킨다 (M13)", async () => {
+    let root = "/repo";
+    const rooted = new Client(
+      { name: "rooted", version: "0" },
+      { capabilities: { roots: { listChanged: true } } },
+    );
+    rooted.setRequestHandler(ListRootsRequestSchema, async () => ({
+      roots: [{ uri: `file://${root}` }],
+    }));
+    await rooted.connect(
+      new StdioClientTransport({
+        command: process.execPath,
+        args: [entry, "mcp"],
+        env: {
+          ...(process.env as Record<string, string>),
+          ...env.env,
+          SIMLESS_SESSION_ID: "mcp-R",
+        },
+      }),
+    );
+    try {
+      await rooted.callTool({ name: "simless_status", arguments: {} });
+      expect(simless.leases.session("x:mcp-R")?.cwd).toBe("/repo");
+      root = "/repo/.claude/worktrees/x";
+      await rooted.callTool({ name: "simless_status", arguments: {} });
+      expect(simless.leases.session("x:mcp-R")?.cwd).toBe("/repo/.claude/worktrees/x");
+    } finally {
+      await rooted.close();
+    }
+    // roots 없는 클라이언트(맨 위 client)는 띄운 폴더를 보낸다
+    await client.callTool({ name: "simless_status", arguments: {} });
+    expect(simless.leases.session("x:mcp-A")?.cwdKind).toBe("launch");
   });
 });
