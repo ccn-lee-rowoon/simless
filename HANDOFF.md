@@ -52,7 +52,7 @@
 - Android SDK `~/Library/Android/sdk` — `emulator`·`adb` 있음, **cmdline-tools(`avdmanager`) 없음**
 - 시스템 이미지: `android-37.1/google_apis_playstore_ps16k/arm64-v8a`, `android-36/google_apis_playstore`
 - iOS 런타임: 18.6 · 26.0 · 26.2 · 26.5
-- 설치됨: simslim **0.12.2**(2026-10-11 `brew upgrade` — 0.12.1 은 `assistantd` 늘 켬, 0.12.2 는 `--except widgets` 때 `navd` 도 남김. 옵션·묶음 ID 는 그대로) · scrcpy 4.1 · Bun · argent 0.17.0(`/opt/homebrew/bin`)·mise 의 node 마다 0.25.1·0.27.0(2026-10-07 확인) 여러 벌 — `simless doctor` 주의 1개(argent 여러 벌)
+- 설치됨: simslim **0.12.2**(2026-10-11 `brew upgrade` — 0.12.1 은 `assistantd` 늘 켬, 0.12.2 는 `--except widgets` 때 `navd` 도 남김. 옵션·묶음 ID 는 그대로) · scrcpy 4.1 · Bun · argent 여럿 — `/opt/homebrew/bin` 0.17.0(PATH 에서 먼저 잡힘) · mise node 22.17.0 의 0.27.0(Claude Code 의 argent MCP·tool-server 가 이것) · mise node 24.19.0 의 0.25.1, 최신 0.28.0(2026-10-12 확인 — 업데이트는 사용자 결정 대기)·mise 의 node 마다 0.25.1·0.27.0(2026-10-07 확인) 여러 벌 — `simless doctor` 주의 1개(argent 여러 벌)
 - **avdslim 1.0.15 설치됨** (2026-10-02) — `brew install kdbhalala/avdslim/avdslim` 가 `brew trust` 없이 설치됐다(전에는 비공식 tap 이라 거부한다고 봤음 — brew 버전에 따라 다를 수 있어 `simless doctor` 는 둘 다 안내)
 - baguette 미설치 (iOS 화면 스트리밍용, 지금 범위 밖)
 

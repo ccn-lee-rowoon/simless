@@ -40,8 +40,17 @@ const ADB_DEVICE_COMMANDS = new Set([
   "get-state",
 ]);
 
-/** argent 도구 인자 중 기기를 가리키는 것 */
-const ARGENT_DEVICE_KEYS = ["udid", "device_id", "deviceId", "serial", "avdName"] as const;
+/** argent 도구 인자 중 기기를 가리키는 것 — `device` 는 flow-execute (argent 0.28.0 의 도구 인자 목록과 대조) */
+const ARGENT_DEVICE_KEYS = [
+  "udid",
+  "device_id",
+  "deviceId",
+  "serial",
+  "avdName",
+  "device",
+] as const;
+/** 기기 여럿을 가리키는 인자 — stop-all-simulator-servers 의 `devices` */
+const ARGENT_DEVICE_LIST_KEYS = ["devices"] as const;
 
 function words(command: string): string[] {
   return command
@@ -128,9 +137,26 @@ function bashTargets(full: string): Targets | undefined {
 }
 
 function argentTargets(tool: string, input: Record<string, unknown>): Targets | undefined {
-  const ids = ARGENT_DEVICE_KEYS.map((key) => input[key]).filter(
-    (v): v is string => typeof v === "string" && v.length > 0,
-  );
+  const isId = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+  const ids = [
+    ...ARGENT_DEVICE_KEYS.map((key) => input[key]).filter(isId),
+    ...ARGENT_DEVICE_LIST_KEYS.flatMap((key) => {
+      const list = input[key];
+      return Array.isArray(list) ? list.filter(isId) : [];
+    }),
+  ];
+  if (ids.length === 0 && tool.endsWith("__flow-execute")) {
+    // 기기를 안 주면 flow 가 켜진 기기 하나를 스스로 고른다 — 어느 것인지 몰라 켜진 것 전부로 본다
+    // (기기 지정 없는 `adb shell` 과 같은 규칙, P4). chromium·vega 는 Simless 기기가 아니다
+    const platform = input.platform;
+    if (platform === "chromium" || platform === "vega") return undefined;
+    return {
+      ids: [],
+      boots: [],
+      allAndroid: platform !== "ios",
+      allIos: platform !== "android",
+    };
+  }
   if (ids.length === 0) return undefined; // list-devices 처럼 기기를 지정하지 않는 도구 (P6)
   const boots = tool.endsWith("__boot-device") ? ids : [];
   return { ids, boots, allAndroid: false, allIos: false };

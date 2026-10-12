@@ -55,6 +55,32 @@ describe("훅 대상 뽑기 (P4·P6)", () => {
     ]);
   });
 
+  test("flow-execute 의 device, stop-all-simulator-servers 의 devices 도 대상 (P4)", () => {
+    expect(
+      extractTargets("mcp__argent__flow-execute", { name: "login", device: "emulator-9990" }),
+    ).toEqual({ ids: ["emulator-9990"], boots: [], allAndroid: false, allIos: false });
+    expect(
+      extractTargets("mcp__argent__stop-all-simulator-servers", { devices: ["U1", "", 3, "U2"] })
+        ?.ids,
+    ).toEqual(["U1", "U2"]);
+    expect(extractTargets("mcp__argent__stop-all-simulator-servers", {})).toBeUndefined();
+  });
+
+  test("기기를 안 준 flow-execute 는 스스로 고르므로 켜진 기기 전부 — platform 으로 좁힌다 (P4)", () => {
+    expect(extractTargets("mcp__argent__flow-execute", { name: "login" })).toEqual({
+      ids: [],
+      boots: [],
+      allAndroid: true,
+      allIos: true,
+    });
+    expect(
+      extractTargets("mcp__argent__flow-execute", { name: "login", platform: "ios" }),
+    ).toMatchObject({ allAndroid: false, allIos: true });
+    expect(
+      extractTargets("mcp__argent__flow-execute", { name: "login", platform: "chromium" }),
+    ).toBeUndefined();
+  });
+
   test("파일·커밋 메시지로 가는 heredoc 본문은 글이라 보지 않는다 — 실행되는 heredoc 은 본다 (P4)", () => {
     // 문서를 고치는 스크립트를 파일로 쓰기만 한다 — 본문에 adb 와 AVD ID 가 있어도 통과
     expect(
