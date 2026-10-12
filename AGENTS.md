@@ -23,7 +23,7 @@
 - [ ] 폴더 경계(설계 §3)를 지킨다 — `test/architecture.test.ts` 가 검사한다
 - [ ] 보안 규칙(`SECURITY.md` §3)을 깨지 않았다 — 외부로 보내는 데이터 없음, HTTP 는 루프백 + 토큰·Host·Origin, 외부 명령은 인자 배열, 웹이 보낸 명령을 실행하지 않음, 상태 파일 `0600`. 깨야 하면 결정 기록과 `SECURITY.md` 를 같은 커밋에서
 - [ ] 토큰·비밀·다른 MCP 의 `env`·`args` 를 출력·로그·커밋·대화에 남기지 않았다
-- [ ] 문구는 `src/shared/i18n/ko.ts`(정본)와 `en.ts` 둘 다. 스킬·규칙 문서는 영어
+- [ ] 문구는 `src/shared/i18n/ko.ts`(정본)와 `en.ts`·`ja.ts` 모두(메뉴바는 `tray/SimlessTray.swift` 의 `Strings`). 스킬·규칙 문서는 영어
 - [ ] 스킬·규칙은 **특정 앱에 묶지 않는다** — 어느 모바일 앱 프로젝트에서나 쓰인다. 특정 앱에서 겪은 일도 일반 규칙으로 쓰고, 예시는 지어낸 이름(`MyApp`)으로. `test/skill.test.ts` 가 앱 이름을 잡는다
 - [ ] 요구사항·설계·메시지가 바뀌면 `requirements.md`·`docs/design.md`·`docs/protocol.md` 를 **같은 커밋에서**
 - [ ] `bun run check`·`bun run test` 가 **종료 코드로** 통과했다(출력을 `grep` 에 넘기면 실패해도 성공처럼 보일 수 있다)

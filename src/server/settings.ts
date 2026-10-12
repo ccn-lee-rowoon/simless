@@ -9,7 +9,7 @@ import { parse } from "./params.ts";
 // → SettingsResult(api.ts) → 설정 창(SettingsView)·`simless config` 키(config.ts) (docs/development.md)
 
 const SettingsParams = z.object({
-  language: z.enum(["system", "ko", "en"]).optional(),
+  language: z.enum(["system", "ko", "en", "ja"]).optional(),
   idleReleaseMinutes: z
     .number()
     .positive()

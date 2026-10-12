@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import type { SettingsResult, StatusResult } from "../shared/api.ts";
-import { t } from "../shared/i18n.ts";
+import { LANGS, type Lang, t } from "../shared/i18n.ts";
 import { call } from "./api.ts";
 import { openSetup } from "./bridge.ts";
 import type { Act } from "./types.ts";
 import { Dialog, Loading } from "./ui.tsx";
 
 const RAM_CHOICES = [1536, 2048, 3072, 4096];
+// 언어 이름은 그 언어로 — 지금 언어를 읽지 못해도 자기 언어를 찾을 수 있게
+const LANGUAGE_NAMES: Record<Lang, string> = { ko: "한국어", en: "English", ja: "日本語" };
 
 /** 설정 화면 — 언어·자동 해제 시간·Android RAM·simslim 프로필 (M11·R25) */
 export function SettingsView({
@@ -42,7 +44,7 @@ export function SettingsView({
   const createdCount = status.devices.filter((d) => d.createdBySimless).length;
 
   const changed = JSON.stringify(draft) !== JSON.stringify(settings);
-  const systemName = status.systemLanguage === "ko" ? "한국어" : "English";
+  const systemName = LANGUAGE_NAMES[status.systemLanguage];
 
   return (
     <form
@@ -89,7 +91,7 @@ export function SettingsView({
         <h3>{t("web.settings.language")}</h3>
         <fieldset className="radio-list">
           <legend className="visually-hidden">{t("web.settings.language")}</legend>
-          {(["system", "ko", "en"] as const).map((value) => (
+          {(["system", ...LANGS] as const).map((value) => (
             <label key={value} className="check">
               <input
                 type="radio"
@@ -99,9 +101,7 @@ export function SettingsView({
               />
               {value === "system"
                 ? t("web.settings.languageSystem", { current: systemName })
-                : value === "ko"
-                  ? "한국어"
-                  : "English"}
+                : LANGUAGE_NAMES[value]}
             </label>
           ))}
         </fieldset>

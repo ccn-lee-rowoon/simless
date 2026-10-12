@@ -8,51 +8,62 @@ import WebKit
 
 /// 메뉴 문구 — 서버의 언어 설정(status.language)을 따른다 (R25). 웹 화면은 공용 사전을 쓰고, 여기는 몇 줄뿐이라 따로 둔다
 enum Strings {
-  static var lang = Locale.preferredLanguages.first?.hasPrefix("ko") == true ? "ko" : "en"
+  static var lang: String = {
+    let first = Locale.preferredLanguages.first ?? ""
+    for code in ["ko", "ja"] where first.hasPrefix(code) { return code }
+    return "en"
+  }()
 
   static func get(_ key: String) -> String {
-    let table: [String: (String, String)] = [
-      "connected": ("Simless — 서버 연결됨 (%@)", "Simless — server connected (%@)"),
-      "noToken": ("서버 토큰이 없습니다 — 서버를 켜세요", "No server token — start the server"),
-      "serverDown": ("서버가 꺼져 있습니다", "The server is not running"),
-      "badResponse": ("서버 응답을 읽지 못했습니다", "Couldn't read the server's answer"),
-      "connecting": ("연결 중…", "Connecting…"),
-      "startServer": ("서버 켜기", "Start server"),
-      "dashboard": ("대시보드 열기", "Open Dashboard"),
-      "quitMenubar": ("Simless 종료", "Quit Simless"),
-      "close": ("창 닫기", "Close Window"),
-      "minimize": ("최소화", "Minimize"),
-      "edit": ("편집", "Edit"),
-      "window": ("윈도우", "Window"),
-      "undo": ("실행 취소", "Undo"),
-      "redo": ("실행 복귀", "Redo"),
-      "cut": ("오려두기", "Cut"),
-      "copy": ("복사하기", "Copy"),
-      "paste": ("붙여넣기", "Paste"),
-      "selectAll": ("전체 선택", "Select All"),
-      "reload": ("새로 고침", "Reload"),
-      "view": ("보기", "View"),
-      "settings": ("설정…", "Settings…"),
+    // (한국어, English, 日本語)
+    let table: [String: (String, String, String)] = [
+      "connected": ("Simless — 서버 연결됨 (%@)", "Simless — server connected (%@)", "Simless — サーバーに接続済み (%@)"),
+      "noToken": ("서버 토큰이 없습니다 — 서버를 켜세요", "No server token — start the server", "サーバートークンがありません — サーバーを起動してください"),
+      "serverDown": ("서버가 꺼져 있습니다", "The server is not running", "サーバーが停止しています"),
+      "badResponse": ("서버 응답을 읽지 못했습니다", "Couldn't read the server's answer", "サーバーの応答を読み取れませんでした"),
+      "connecting": ("연결 중…", "Connecting…", "接続中…"),
+      "startServer": ("서버 켜기", "Start server", "サーバーを起動"),
+      "dashboard": ("대시보드 열기", "Open Dashboard", "ダッシュボードを開く"),
+      "quitMenubar": ("Simless 종료", "Quit Simless", "Simless を終了"),
+      "close": ("창 닫기", "Close Window", "ウインドウを閉じる"),
+      "minimize": ("최소화", "Minimize", "しまう"),
+      "edit": ("편집", "Edit", "編集"),
+      "window": ("윈도우", "Window", "ウインドウ"),
+      "undo": ("실행 취소", "Undo", "取り消す"),
+      "redo": ("실행 복귀", "Redo", "やり直す"),
+      "cut": ("오려두기", "Cut", "カット"),
+      "copy": ("복사하기", "Copy", "コピー"),
+      "paste": ("붙여넣기", "Paste", "ペースト"),
+      "selectAll": ("전체 선택", "Select All", "すべてを選択"),
+      "reload": ("새로 고침", "Reload", "再読み込み"),
+      "view": ("보기", "View", "表示"),
+      "settings": ("설정…", "Settings…", "設定…"),
       // 메뉴바 메뉴에서는 «설정…» 대신 — macOS 26 이 표준 이름(설정…) 항목 옆에 톱니 아이콘을 붙인다
-      "openSettings": ("설정 열기", "Open Settings"),
-      "settingsTitle": ("Simless 설정", "Simless Settings"),
-      "setupTitle": ("Simless 시작하기", "Get started with Simless"),
-      "skillUpdate": ("스킬 업데이트 있음 — 업데이트", "Skill update available — Update"),
-      "skillUpdated": ("Simless 스킬을 업데이트했습니다", "Updated the Simless skill"),
+      "openSettings": ("설정 열기", "Open Settings", "設定を開く"),
+      "settingsTitle": ("Simless 설정", "Simless Settings", "Simless 設定"),
+      "setupTitle": ("Simless 시작하기", "Get started with Simless", "Simless をはじめる"),
+      "skillUpdate": ("스킬 업데이트 있음 — 업데이트", "Skill update available — Update", "スキルのアップデートがあります — アップデート"),
+      "skillUpdated": ("Simless 스킬을 업데이트했습니다", "Updated the Simless skill", "Simless スキルをアップデートしました"),
       // macOS 알림 (M18)
-      "noticeServerDown": ("Simless 서버가 꺼져 있습니다", "The Simless server is not running"),
+      "noticeServerDown": ("Simless 서버가 꺼져 있습니다", "The Simless server is not running", "Simless サーバーが停止しています"),
       "noticeServerDownBody": (
         "1분 넘게 연결되지 않습니다. 보호 훅이 기기 명령을 막을 수 있습니다 — 누르면 서버를 켭니다.",
-        "Unreachable for over a minute. The protection hook may block device commands — click to start it."
+        "Unreachable for over a minute. The protection hook may block device commands — click to start it.",
+        "1分以上接続できません。保護フックがデバイスのコマンドをブロックする場合があります — クリックするとサーバーを起動します。"
       ),
-      "noticeSkillUpdate": ("Simless 스킬 업데이트가 있습니다", "A Simless skill update is available"),
+      "noticeSkillUpdate": ("Simless 스킬 업데이트가 있습니다", "A Simless skill update is available", "Simless スキルのアップデートがあります"),
       "noticeSkillUpdateBody": (
         "새 에이전트 세션이 새 스킬을 읽도록 대시보드나 메뉴바에서 «업데이트» 를 누르세요.",
-        "Click «Update» in the dashboard or the menu bar so new agent sessions read the new skill."
+        "Click «Update» in the dashboard or the menu bar so new agent sessions read the new skill.",
+        "新しいエージェントセッションが新しいスキルを読み込めるよう、ダッシュボードかメニューバーで「アップデート」をクリックしてください。"
       ),
     ]
-    guard let pair = table[key] else { return key }
-    return lang == "ko" ? pair.0 : pair.1
+    guard let row = table[key] else { return key }
+    switch lang {
+    case "ko": return row.0
+    case "ja": return row.2
+    default: return row.1
+    }
   }
 }
 
