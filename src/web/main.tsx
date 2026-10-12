@@ -111,6 +111,8 @@ function App() {
           setLanguage(next.language);
           document.documentElement.lang = next.language;
           setLang(next.language);
+          // 앱 창 제목·메뉴(Swift)도 — 창 안이 아니면 아무 일도 없다
+          postToApp({ language: next.language });
         }
         setStatus(next);
       },

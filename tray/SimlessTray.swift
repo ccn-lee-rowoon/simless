@@ -246,7 +246,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
         if let data,
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let result = json["result"] as? [String: Any] {
-          if let lang = result["language"] as? String { Strings.lang = lang }
+          if let lang = result["language"] as? String { self.applyLanguage(lang) }
           self.serverVersion = result["serverVersion"] as? String
           self.setupNeeded = (result["setupNeeded"] as? Bool) == true
           self.skillUpdate = (result["skillUpdate"] as? Bool) == true
@@ -369,6 +369,11 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
   ) {
     guard let body = message.body as? [String: Any] else { return }
+    // 설정에서 언어를 바꿨다 — 다음 상태 확인(15초)을 기다리지 않고 창 제목·앱 메뉴를 바꾼다 (R25)
+    if let lang = body["language"] as? String {
+      applyLanguage(lang)
+      return
+    }
     if body["close"] as? String == "setup" {
       setupWindow?.close()
       return
@@ -407,6 +412,19 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
       web.load(URLRequest(url: url))
     }
     return window
+  }
+
+  /// 언어가 바뀌면 이미 만든 창 제목과 앱 메뉴를 새 언어로 — 창·메뉴는 처음 만들 때 한 번만 문구를 읽는다
+  private func applyLanguage(_ lang: String) {
+    guard lang != Strings.lang else { return }
+    Strings.lang = lang
+    settingsWindow?.title = Strings.get("settingsTitle")
+    setupWindow?.title = Strings.get("setupTitle")
+    if NSApp.mainMenu?.items.count ?? 0 > 1 {
+      NSApp.mainMenu = nil
+      installMainMenu()
+    }
+    rebuild()
   }
 
   private func show(_ window: NSWindow?) {
