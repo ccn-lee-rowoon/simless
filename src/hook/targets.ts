@@ -75,6 +75,32 @@ const HEREDOC_EXECUTORS =
   /(^|[\s/;|&(`$])(sh|bash|zsh|fish|dash|ksh|python[\d.]*|node|bun|bunx|deno|npx|ruby|perl|php|lua|osascript|swift|expect|tclsh|eval|source|exec|xargs|env|sudo|ssh|nohup|time|watch|adb|xcrun|simctl|emulator|simslim|avdslim)(?=$|[\s;|&)`])/;
 
 /**
+ * `line[at]` 이 든 명령이 시작하는 자리 — 따옴표 밖의 `;`·`&&`·`||` 바로 뒤. 파이프(`|`)와 리다이렉션의
+ * `&`(`2>&1`)로는 나누지 않는다 — 같은 명령 줄이라 본문을 받을 수 있다. 확실하지 않으면 앞쪽(더 넓게)을 고른다
+ */
+function commandStart(line: string, at: number): number {
+  let start = 0;
+  let quote: "'" | '"' | undefined;
+  for (let i = 0; i < at; i++) {
+    const c = line[i];
+    if (quote) {
+      if (c === "\\" && quote === '"') i++;
+      else if (c === quote) quote = undefined;
+      continue;
+    }
+    if (c === "\\") i++;
+    else if (c === "'" || c === '"') quote = c;
+    else if (c === ";") start = i + 1;
+    else if ((c === "&" || c === "|") && line[i + 1] === c) {
+      start = i + 2;
+      i++;
+    }
+  }
+  // 따옴표가 닫히지 않은 채 heredoc 이 나오면(`bash -c "$(cat <<EOF`) 나눈 자리를 믿지 않는다
+  return quote ? 0 : start;
+}
+
+/**
  * 실행되지 않는 heredoc 본문을 지운다 (P4, 결정 기록 «훅은 … 문자열 포함»).
  * 파일에 쓰는 스크립트·커밋 메시지·문서 본문에 기기 이름과 adb 가 같이 들어 있으면 막히던 오탐을 없앤다.
  * 그렇게 쓴 파일을 나중에 실행하는 호출은 원래부터 훅이 안을 볼 수 없으므로 새 구멍이 아니다.
@@ -89,7 +115,11 @@ export function stripDataHeredocs(command: string): string {
     const ends: { tag: string; dash: boolean }[] = [];
     for (const m of line.matchAll(opener)) ends.push({ dash: m[1] === "-", tag: m[3] ?? "" });
     if (ends.length === 0) continue;
-    const keep = HEREDOC_EXECUTORS.test(line.replace(opener, " "));
+    // 본문을 받을 수 있는 것은 heredoc 이 붙은 명령과 그 뒤의 명령뿐이다 — `;`·`&&`·`||` 앞에서 이미 끝난
+    // 명령(`bun run check; git commit -F - <<EOF`)의 실행기 때문에 커밋 메시지까지 검사하던 오탐을 없앤다.
+    // 뒤쪽은 계속 본다(`cat <<EOF > a.sh; bash a.sh`, 파이프 `cat <<EOF | sh`)
+    const first = line.search(opener);
+    const keep = HEREDOC_EXECUTORS.test(line.slice(commandStart(line, first)).replace(opener, " "));
     // 한 줄에 heredoc 이 여럿이면 차례로 본문이 온다
     for (const { tag, dash } of ends) {
       while (i + 1 < lines.length) {

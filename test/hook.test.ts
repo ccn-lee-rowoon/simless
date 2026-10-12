@@ -107,6 +107,29 @@ describe("훅 대상 뽑기 (P4·P6)", () => {
     // 끝 표시가 없으면 끝까지 본문
     expect(bash("cat > a.txt <<EOF\nadb -s emulator-5554 shell ls")).toBeUndefined();
   });
+
+  test("heredoc 앞에서 끝난 명령의 실행기는 보지 않는다 — 뒤의 명령·파이프·따옴표 안은 본다 (P4)", () => {
+    const message = "fix: 기기를 지정하지 않은 adb shell 처럼\nEOF";
+    // `;`·`&&`·`||` 앞의 bun·bash 는 본문을 받지 못한다 — 커밋 메시지는 글
+    expect(
+      bash(
+        `bun run check >/dev/null 2>&1; echo $?; git add -A && git commit -F - <<'EOF'\n${message}`,
+      ),
+    ).toBeUndefined();
+    expect(bash(`bash build.sh && git commit -F - <<'EOF'\n${message}`)).toBeUndefined();
+    expect(bash(`bun test || tee log.md <<EOF\n${message}`)).toBeUndefined();
+    // 따옴표 안의 ; 는 나누는 자리가 아니다
+    expect(bash(`bash -c 'a; b' <<EOF\nadb shell ls\nEOF`)?.allAndroid).toBe(true);
+    expect(bash(`python3 -c "x; y" - <<EOF\nadb shell ls\nEOF`)?.allAndroid).toBe(true);
+    // 리다이렉션의 & 로 나누지 않는다
+    expect(bash("bash 2>&1 <<EOF\nadb shell ls\nEOF")?.allAndroid).toBe(true);
+    // 뒤의 명령은 본문을 쓴 파일을 실행할 수 있다
+    expect(bash("cat > a.sh <<EOF\nadb shell ls\nEOF")).toBeUndefined();
+    expect(bash("cat > a.sh <<EOF; bash a.sh\nadb shell ls\nEOF")?.allAndroid).toBe(true);
+    expect(bash("echo x; cat <<EOF | sh\nadb shell ls\nEOF")?.allAndroid).toBe(true);
+    // 따옴표가 닫히지 않은 채 heredoc 이 나오면 줄 전체를 본다
+    expect(bash('bash -c "x; $(cat <<EOF\nadb shell ls\nEOF\n)"')?.allAndroid).toBe(true);
+  });
 });
 
 describe("서버가 꺼졌을 때 (P9)", () => {
