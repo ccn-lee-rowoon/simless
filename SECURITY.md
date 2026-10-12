@@ -16,6 +16,7 @@ Simless 는 **한 사용자의 Mac 안에서만** 도는 도구다. 기본 약�
 - **보호(훅·규칙)는 보안 경계가 아니다.** 세션끼리 기기를 실수로 건드리지 않게 하는 협조 장치다.
   - 서버가 이상한 답을 하면 에이전트가 멈추지 않도록 통과시킨다.
   - «사람인지» 는 프로세스로 판단하므로 일부러 속이면 우회할 수 있다.
+  - 훅은 **그 호출의 명령 문자열과 도구 인자만** 본다. 글로 판단한 heredoc 본문(본문을 받는 명령과 그 뒤에 셸·인터프리터가 없을 때), 파일에 써 둔 스크립트를 다른 호출에서 실행하는 것, 훅이 모르는 argent 인자 이름은 보지 못한다.
 - **사용자가 설치를 고른 외부 도구.** simslim(`mobai-app/tap`)·avdslim(개인 저장소 `kdbhalala/avdslim`, `brew trust`)·argent(`npx @swmansion/argent@latest`, 버전 고정 없음)는 그 출처를 믿는 것이다.
 - **받은 설치 파일.** 설치 파일(`simless-<버전>-install.sh`)은 서명이 없다. 안에 든 실행 파일의 sha256 은 받다가 깨진 것만 잡고, 누가 바꾼 파일은 막지 못한다 — 파일을 보낸 사람(메신저·드라이브)을 믿는 것이다.
 - **앱 프로젝트의 코드.**
@@ -39,7 +40,7 @@ Simless 는 **한 사용자의 Mac 안에서만** 도는 도구다. 기본 약�
 | AppleScript (`setup.openTerminal`) | 정해 둔 명령만, `\`·`"` 를 이스케이프해서 | `setup.ts` |
 | 경로를 받는 메서드 (`device.install`·`setup.skillScope`) | 확장자·존재·폴더인지 확인하고, 그 경로로는 정해 둔 일만 한다(설치·스킬 파일 쓰기). 경로로 받은 파일을 실행하지 않는다 | `devices.ts`·`setup.ts` |
 | 에이전트 설정 파일 (`~/.claude`·`~/.codex`·`~/.cursor`·`~/.gemini`·`~/.copilot`) | Simless 항목만 넣고 뺀다. 읽지 못하는 파일은 건드리지 않는다. 다른 MCP 의 `env`·`args`(토큰이 있을 수 있음)는 출력하지 않는다. 사용자가 고르기 전에는 넣지 않는다(`simless install` 기본에 훅·MCP 없음) | `install/agents.ts`·`claude-*.ts` |
-| 훅 (`src/hook`) | 서버에는 **기기 ID 만** 보낸다. 에이전트의 명령 내용·도구 입력은 저장하지 않는다 | `hook.check` |
+| 훅 (`src/hook`) | 서버에는 **기기 ID 와 세션 정보**(세션 키·에이전트 이름·에이전트 세션 ID·작업 폴더 — 훅 입력의 `cwd`)만 보낸다. 에이전트의 명령 내용·도구 입력은 보내지도 저장하지도 않는다 | `hook.check` |
 | 기록 (`history.db`) | 사건 종류·세션·에이전트·작업 폴더·기기 ID 만. 명령·환경 변수·화면 내용은 넣지 않는다. 기본 90일 뒤 지운다 | `history.ts` |
 | 웹 화면 (`src/web`) | 외부 글꼴·스크립트·CDN·분석 도구를 넣지 않는다. `dangerouslySetInnerHTML` 금지(React 가 글자를 이스케이프하게) | — |
 | 앱 창 (`tray/SimlessTray.swift`) | 창 안에서는 이 앱의 화면(`127.0.0.1:<포트>`)만 연다. 그 밖의 주소로는 옮겨 가지 않고, 사람이 누른 링크면 기본 브라우저로 연다 | `decidePolicyFor` |
@@ -68,7 +69,8 @@ Simless 는 **한 사용자의 Mac 안에서만** 도는 도구다. 기본 약�
 
 | 내용 | 위험 | 고치는 법 |
 | --- | --- | --- |
-| argent 를 `@latest` 로 설치 | 중간 (공급망) | 확인한 버전으로 고정 |
+| argent 를 `@latest` 로 설치 | 중간 (공급망) | 확인한 버전으로 고정 (이 Mac 은 2026-10-12 세 곳 모두 0.28.0 으로 맞춤 — 아직 고정은 아님) |
+| argent 가 기기를 가리키는 인자를 새로 더하면 훅이 놓친다 — 2026-10-12 `flow-execute` 의 `device`·`stop-all-simulator-servers` 의 `devices` 를 놓친 것을 찾아 고침 | 낮음 (협조 장치, §2) | argent 를 올릴 때 패키지의 도구 인자 목록(`dist/tool-args.generated.d.ts`, 0.28.0~)과 `src/hook/targets.ts` 의 인자 이름을 대조한다. 테스트나 `simless doctor` 가 설치된 argent 와 자동으로 대조하게 할 수 있다 |
 | avdslim 이 개인 저장소 tap + `brew trust` | 중간 (공급망) | 설정 창에 출처를 보여 주고, 공식 배포처가 생기면 바꾼다 |
 | SSE 는 토큰을 주소의 `?token=` 으로 받는다(EventSource 가 헤더를 못 붙임) | 매우 낮음 (로그에 안 남김) | 짧게 쓰는 SSE 전용 토큰 |
 
