@@ -61,6 +61,7 @@ let logId = 0;
 
 // 서버 상태가 오기 전까지는 브라우저(macOS) 언어로
 setLanguage(resolveLanguage("system", navigator.languages));
+document.documentElement.lang = language();
 
 function App() {
   const [view, setViewState] = useState<View>(savedView);

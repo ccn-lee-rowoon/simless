@@ -6,7 +6,7 @@ import { language, t } from "./i18n.ts";
 // 마우스를 올리면 보이는 전체 시각은 fullTime — «2026년 10월 7일 (수) 14:05:31».
 
 function locale(): string {
-  return language() === "ko" ? "ko-KR" : "en-US";
+  return { ko: "ko-KR", en: "en-US", ja: "ja-JP" }[language()];
 }
 
 function clock(at: Date, seconds: boolean): string {

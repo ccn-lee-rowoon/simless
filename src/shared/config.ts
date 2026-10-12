@@ -5,7 +5,7 @@ import { z } from "zod";
 /** 사용자 설정 `~/.config/simless/config.json` — 없는 값은 기본값. */
 export const Config = z.object({
   /** 화면·CLI 언어 — system 이면 macOS 언어 설정을 따른다 (R25) */
-  language: z.enum(["system", "ko", "en"]).default("system"),
+  language: z.enum(["system", "ko", "en", "ja"]).default("system"),
   /** 마지막 사용 후 이 시간이 지나고 기다리는 세션이 있으면 점유를 푼다 (R17) */
   idleReleaseMinutes: z.number().positive().default(30),
   /** 점유 기록을 남겨 두는 날 수 — 지난 것은 서버가 지운다 (M13) */

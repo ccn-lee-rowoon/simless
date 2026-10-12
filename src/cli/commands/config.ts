@@ -7,7 +7,8 @@ import { CliError, output, type Run, request } from "../context.ts";
 /** CLI 이름 → settings.set 매개변수. 값은 문자열로 받아 바꾼다 */
 const KEYS = {
   language: (v: string) => {
-    if (v !== "system" && v !== "ko" && v !== "en") throw new Error("system | ko | en");
+    if (v !== "system" && v !== "ko" && v !== "en" && v !== "ja")
+      throw new Error("system | ko | en | ja");
     return { language: v };
   },
   idleReleaseMinutes: (v: string) => ({ idleReleaseMinutes: Number(v) }),

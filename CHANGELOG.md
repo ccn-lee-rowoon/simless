@@ -7,6 +7,10 @@ simless 의 버전마다 사용자에게 보이는 변화를 적는다. 형식�
 
 ## 아직 내지 않은 것
 
+### 추가
+
+- **일본어** — 앱 창·메뉴바·CLI 문구. 설정의 언어에서 «日本語» 를 고르거나(`simless config language ja`), «시스템 따름» 이면 macOS 언어가 일본어일 때 일본어로 나온다
+
 ### 바뀜
 
 - 스킬 참고 파일을 device-slim 0.7.0 으로 — 폴더 이름 `reference/` → `references/`(Agent Skills 권장 이름, 설치할 때 예전 폴더는 지운다), 앱 기능 찾기 파일 `app-*.md` → `find-features-*.md`, iOS 에서 `GameController` 를 쓰는 앱도 찾는다. 스킬이 앱 기능을 찾을 때 **어느 앱 폴더를 읽을지** 먼저 정하고(말한 폴더 → 앱 프로젝트인 지금 폴더 → 여럿이거나 없으면 묻기) 알린다

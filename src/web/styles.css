@@ -33,6 +33,11 @@
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
+/* 일본어면 한자를 일본어 글꼴로 — 한국어 글꼴이 먼저 잡히면 자형이 달라진다 */
+:root:lang(ja) {
+  --font: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;

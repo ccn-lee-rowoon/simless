@@ -5,6 +5,7 @@ import { listen } from "../src/server/socket.ts";
 import type { SettingsResult, StatusResult } from "../src/shared/api.ts";
 import { call } from "../src/shared/client.ts";
 import { en } from "../src/shared/i18n/en.ts";
+import { ja } from "../src/shared/i18n/ja.ts";
 import { ko } from "../src/shared/i18n/ko.ts";
 import { language, resolveLanguage, setLanguage, t } from "../src/shared/i18n.ts";
 import { VERSION } from "../src/shared/version.ts";
@@ -17,11 +18,13 @@ afterEach(() => {
 });
 
 describe("i18n (R25)", () => {
-  test("두 사전의 키가 같고, 자리 표시자도 같다", () => {
-    expect(Object.keys(en).sort()).toEqual(Object.keys(ko).sort());
-    for (const key of Object.keys(ko) as (keyof typeof ko)[]) {
-      const holes = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
-      expect([key, holes(en[key])]).toEqual([key, holes(ko[key])]);
+  test("세 사전의 키가 같고, 자리 표시자도 같다", () => {
+    const holes = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+    for (const dict of [en, ja]) {
+      expect(Object.keys(dict).sort()).toEqual(Object.keys(ko).sort());
+      for (const key of Object.keys(ko) as (keyof typeof ko)[]) {
+        expect([key, holes(dict[key])]).toEqual([key, holes(ko[key])]);
+      }
     }
   });
 
@@ -29,13 +32,18 @@ describe("i18n (R25)", () => {
     expect(t("err.noDevice", { ref: "x" }, "ko")).toBe("없는 디바이스: x");
     setLanguage("en");
     expect(t("err.noDevice", { ref: "x" })).toBe("No such device: x");
+    setLanguage("ja");
+    expect(t("err.noDevice", { ref: "x" })).toContain("x");
+    expect(t("err.noDevice", { ref: "x" })).not.toBe(t("err.noDevice", { ref: "x" }, "en"));
   });
 
   test("system 이면 선호 언어 목록에서 처음 맞는 것, 없으면 영어", () => {
-    expect(resolveLanguage("system", ["ja-JP", "ko-KR", "en-US"])).toBe("ko");
+    expect(resolveLanguage("system", ["ja-JP", "ko-KR", "en-US"])).toBe("ja");
+    expect(resolveLanguage("system", ["fr-FR", "ko-KR"])).toBe("ko");
     expect(resolveLanguage("system", ["en_US.UTF-8"])).toBe("en");
     expect(resolveLanguage("system", ["fr-FR"])).toBe("en");
     expect(resolveLanguage("ko", ["en-US"])).toBe("ko");
+    expect(resolveLanguage("ja", ["ko-KR"])).toBe("ja");
   });
 });
 

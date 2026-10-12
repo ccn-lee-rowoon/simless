@@ -55,9 +55,9 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 
 ### 문구 하나 더하기 (i18n, R25)
 
-- 키는 `src/shared/i18n/ko.ts` 가 정본이다. `en.ts` 는 `Record<keyof typeof ko, string>` 이라 빠뜨리면 타입 오류가 난다. 자리 표시자(`{name}`)도 같아야 한다(`test/i18n.test.ts`).
+- 키는 `src/shared/i18n/ko.ts` 가 정본이다. `en.ts`·`ja.ts` 는 `Record<keyof typeof ko, string>` 이라 빠뜨리면 타입 오류가 난다. 자리 표시자(`{name}`)도 같아야 한다(`test/i18n.test.ts`).
 - 키 이름은 `묶음.뜻` — `err.*`(오류) · `cli.*` · `web.*` · `doctor.*` · `hint.*` · `setup.*` …
-- 메뉴바(Swift)는 따로 작은 사전(`tray/SimlessTray.swift` 의 `Strings`)이 있다.
+- 메뉴바(Swift)는 따로 작은 사전(`tray/SimlessTray.swift` 의 `Strings` — 한 줄에 한국어·영어·일본어)이 있다.
 - 스킬·규칙은 영어로 쓴다(읽는 쪽이 에이전트).
 
 ### 웹 화면·창 하나 더하기

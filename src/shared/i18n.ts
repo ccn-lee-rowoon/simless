@@ -1,15 +1,17 @@
 import { en } from "./i18n/en.ts";
+import { ja } from "./i18n/ja.ts";
 import { ko } from "./i18n/ko.ts";
 
-// 한국어·영어 문구 (R25). 서버·CLI·웹 화면이 같은 사전을 쓴다 — 키는 ko.ts 가 정본이고,
-// en.ts 는 같은 키를 모두 갖춰야 컴파일된다. 문구 안의 {이름} 은 params 로 채운다.
+// 한국어·영어·일본어 문구 (R25). 서버·CLI·웹 화면이 같은 사전을 쓴다 — 키는 ko.ts 가 정본이고,
+// en.ts·ja.ts 는 같은 키를 모두 갖춰야 컴파일된다. 문구 안의 {이름} 은 params 로 채운다.
 
-export type Lang = "ko" | "en";
+export type Lang = "ko" | "en" | "ja";
+export const LANGS = ["ko", "en", "ja"] as const satisfies readonly Lang[];
 export type LanguageSetting = "system" | Lang;
 export type MessageKey = keyof typeof ko;
 export type Params = Record<string, string | number>;
 
-const dictionaries: Record<Lang, Record<MessageKey, string>> = { ko, en };
+const dictionaries: Record<Lang, Record<MessageKey, string>> = { ko, en, ja };
 
 let current: Lang = "en";
 
@@ -34,7 +36,7 @@ export function resolveLanguage(setting: LanguageSetting, preferred: readonly st
   if (setting !== "system") return setting;
   for (const tag of preferred) {
     const base = tag.toLowerCase().split(/[-_]/)[0];
-    if (base === "ko" || base === "en") return base;
+    if ((LANGS as readonly string[]).includes(base ?? "")) return base as Lang;
   }
   return "en";
 }
