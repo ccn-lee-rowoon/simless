@@ -189,7 +189,7 @@ Pass `targetId` as argent's device argument, device by device, following the arg
      - Not your port → it's on another server; repeat this step.
    - **An Android deep link can restart the app** — `am start … -d <url>` may recreate the activity even when the app is up, and the dev client then falls back to its saved default server (usually 8081 or a LAN address). Check the dev menu again after any deep link (step 4.3 too); if it fell back, the quickest fix is restarting your Metro with `--android` (step 3).
    - Pass `port: <port>` to **every** argent `debugger-*` and `react-profiler-*` call — without it they use 8081, which is another session's Metro.
-3. **Same screen everywhere** — `open-url <deep link>` if there is one, otherwise replay an argent flow (`flow-execute`) per device. Don't reuse tap coordinates across sizes.
+3. **Same screen everywhere** — `open-url <deep link>` if there is one, otherwise replay an argent flow per device with `flow-execute` and `device: <targetId>` (without `device` the flow picks a booted device itself, so the protection hook treats it as touching every booted device and blocks it while other sessions have devices on). Don't reuse tap coordinates across sizes.
 4. **Screenshots** — `screenshot`, tagged with each device's `label`.
 
 ### 5. Report
