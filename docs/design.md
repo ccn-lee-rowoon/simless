@@ -215,7 +215,7 @@ simless/
 | MCP | 요청마다 MCP **roots** 의 첫 `file://` (`mcp/folder.ts`, `cwdKind: "workspace"`). 클라이언트가 roots 를 지원하지 않거나 답하지 않으면 MCP 서버를 띄운 폴더(`cwdKind: "launch"`) | roots 는 작업 공간 단위, 띄운 폴더는 처음 폴더 |
 
 - MCP 서버는 에이전트를 켤 때 한 번 떠서 처음 폴더에 머문다. 대화 도중 worktree 로 옮겨 가면 `process.cwd()` 는 그대로라, 예전에는 같은 세션이 CLI 로 부르면 worktree, MCP 로 부르면 처음 폴더로 번갈아 보였다(터미널·에이전트와 상관없음).
-- 실측(2026-10-12, Claude Code): roots 기능(`listChanged`)을 켜 두고, `EnterWorktree` 뒤에는 roots 를 `<저장소>/.claude/worktrees/<이름>` 으로 바꾼다. MCP 서버의 폴더는 처음 그대로였다. 같은 방식으로 simless MCP 가 worktree 에 들어간 뒤 그 폴더를 보내는 것을 확인했다.
+- 실측(2026-10-12, Claude Code): roots 기능(`listChanged`)을 켜 두고, `EnterWorktree` 뒤에는 roots 를 `<저장소>/.claude/worktrees/<이름>` 으로 바꾼다. MCP 서버의 폴더는 처음 그대로였다. 같은 날 이 브랜치의 서버(가짜 드라이버)와 실제 Claude Code 로 MCP 점유 → 셸 `cd sub` 뒤 CLI → MCP → `EnterWorktree` → MCP → CLI → 훅(`adb -s …`) → MCP 를 차례로 불러, 서버가 기억한 폴더가 `<저장소>` → `sub` → `sub` 유지 → worktree 로 이어지는 것을 확인했다(Claude Code 의 권한 검사는 `cd` 와 쓰기가 섞인 셸 명령을 막아, 폴더는 미리 만들어 둠).
 - 서버(`leases.touch` 의 `keepFolder`)는 덜 정확한 값이 더 정확한 값을 덮지 않게 한다 — 지금 폴더는 늘 따르고, `workspace` 는 앞서 받은 지금 폴더가 그 안이면(셸 `cd` 로 하위 폴더·worktree) 두며, `launch` 는 아무것도 덮지 않는다(처음부터 `launch` 뿐이면 그 값을 보인다 — 더 나은 정보가 없다).
 - roots 요청은 2초 안에 답이 없으면 그 MCP 서버가 사는 동안 다시 묻지 않는다(요청마다 기다리지 않게).
 - 한계: roots 를 바꾸지 않는 이동(셸의 `cd`)은 MCP 만 쓰는 세션에서 따라가지 못한다 — CLI·훅이 한 번이라도 부르면 맞춰진다. 반대로 하위 폴더에서 작업 공간 맨 위로 `cd` 해 돌아가고 MCP 만 부르면 하위 폴더가 남는다(roots 만으로는 돌아간 것을 알 수 없다).
