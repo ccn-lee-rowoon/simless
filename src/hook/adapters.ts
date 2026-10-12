@@ -2,6 +2,7 @@
 // 대상 추출(targets.ts)은 Claude Code 의 도구 이름(Bash·mcp__argent__<도구>)을 기준으로 하므로
 // 다른 에이전트의 입력은 그 이름으로 바꿔 넘기고, 막을 때는 그 에이전트가 읽는 모양으로 출력한다.
 
+import { isAbsolute } from "node:path";
 import { agentSessionKey } from "../shared/session.ts";
 
 export type HookAgent = "claude" | "copilot" | "codex" | "cursor" | "gemini";
@@ -28,6 +29,8 @@ export interface HookInput {
   sessionId?: string;
   /** 세션 키를 에이전트 세션 ID 로 만든다 (CLI 쪽 session.ts 와 같은 규칙) */
   sessionKey?: string;
+  /** 에이전트의 지금 작업 폴더 — 훅 프로세스의 폴더는 에이전트를 켠 폴더일 수 있다 */
+  cwd?: string;
 }
 
 type Raw = Record<string, unknown>;
@@ -45,6 +48,13 @@ function parseMaybe(text: unknown): unknown {
 
 /** 에이전트 입력 → 공통 모양. 판단할 게 없으면 undefined(통과) */
 export function normalize(agent: HookAgent, event: string, raw: Raw): HookInput | undefined {
+  const input = byAgent(agent, event, raw);
+  // 모든 에이전트가 `cwd` 로 준다(Cursor 는 셸 호출에만, docs/agent-integrations.md) — 절대 경로만 믿는다
+  const cwd = str(raw.cwd);
+  return input && cwd && isAbsolute(cwd) ? { ...input, cwd } : input;
+}
+
+function byAgent(agent: HookAgent, event: string, raw: Raw): HookInput | undefined {
   switch (agent) {
     case "claude": {
       // Cursor 는 Claude Code 훅도 가져와 Cursor 식 입력으로 돌린다 — Cursor 용 훅이 따로 판단한다

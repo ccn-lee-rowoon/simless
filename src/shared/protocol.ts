@@ -16,6 +16,12 @@ export const SessionInfo = z.object({
   /** 에이전트가 주는 세션 ID (Claude Code 의 CLAUDE_CODE_SESSION_ID 등) */
   agentSessionId: z.string().optional(),
   cwd: z.string(),
+  /**
+   * cwd 가 얼마나 정확한가 (docs/design.md §7 «작업 폴더»). 없으면 지금 폴더(CLI·훅).
+   * `workspace` = MCP roots — 작업 공간 단위라 앞서 받은 지금 폴더가 그 안이면 덮지 않는다.
+   * `launch` = MCP 서버를 띄운 폴더뿐(roots 없음) — 다른 값을 덮지 않는다
+   */
+  cwdKind: z.enum(["workspace", "launch"]).optional(),
   human: z.boolean(),
 });
 export type SessionInfo = z.infer<typeof SessionInfo>;

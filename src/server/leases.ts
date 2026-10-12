@@ -133,7 +133,14 @@ export class LeaseManager {
       // 새 대화(/clear 등)는 자기가 점유했다는 걸 모른다 — 이전 점유를 푼다 (§7)
       this.endSession(info.key);
     }
-    const record: SessionRecord = { ...info, lastUsedAt: this.now() };
+    const prev = this.sessions.get(info.key);
+    const keep = prev !== undefined && keepFolder(prev, info);
+    const record: SessionRecord = {
+      ...info,
+      cwd: keep ? prev.cwd : info.cwd,
+      cwdKind: keep ? prev.cwdKind : info.cwdKind,
+      lastUsedAt: this.now(),
+    };
     this.sessions.set(info.key, record);
     return record;
   }
@@ -391,6 +398,21 @@ export class LeaseManager {
   private changed(): void {
     this.options.onChange?.(this.snapshot());
   }
+}
+
+/**
+ * 앞서 받은 작업 폴더를 지킬지 (docs/design.md §7 «작업 폴더») — 덜 정확한 값이 더 정확한 값을 덮지 않게.
+ * 대화 도중 worktree 로 옮겨 간 세션이 MCP 로 부를 때마다 처음 폴더로 되돌아 보이던 것을 막는다.
+ */
+function keepFolder(prev: SessionInfo, next: SessionInfo): boolean {
+  if (next.cwdKind === undefined) return false; // 지금 폴더(CLI·훅)는 늘 따른다
+  if (next.cwdKind === "launch") return prev.cwdKind !== "launch"; // 띄운 폴더는 아무것도 덮지 않는다
+  // roots — 지금 폴더가 그 작업 공간 안이면(셸 cd 로 하위 폴더·worktree) 더 구체적인 쪽을 둔다
+  return prev.cwdKind === undefined && within(prev.cwd, next.cwd);
+}
+
+function within(path: string, folder: string): boolean {
+  return path === folder || path.startsWith(folder.endsWith("/") ? folder : `${folder}/`);
 }
 
 const SessionRecordSchema = SessionInfoSchema.extend({ lastUsedAt: z.number() });

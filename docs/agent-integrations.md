@@ -19,6 +19,7 @@
 - 스킬은 `~/.agents/skills/simless/SKILL.md` 하나로 Codex·Copilot·Cursor·Gemini(새 버전)가 같이 읽는다. OpenCode 는 지금 넣는 `~/.claude/skills` 를 읽는다.
 - 세션 구분은 부모 프로세스보다 **에이전트가 셸에 주는 세션 ID** 가 정확하다 — Codex(공용 데몬 아래에서 돎)·OpenCode(서버 프로세스 하나에 세션 여럿)는 부모 프로세스로는 가릴 수 없다. CLI 가 `COPILOT_AGENT_SESSION_ID`·`CURSOR_CONVERSATION_ID`·`CODEX_THREAD_ID`·`OPENCODE_SESSION_ID` 를 읽고, 훅은 입력의 세션 ID 를 쓰면 같은 세션으로 묶인다. Gemini 만 셸에 세션 ID 가 없다.
 - **Cursor 는 Claude Code 훅도 읽는다**(CLI 는 설정과 상관없이 항상) — `~/.claude/settings.json` 의 Simless 훅이 Cursor 에서도 돌지만 입력 모양이 Cursor 식(`Shell`·`MCP:<도구>`)이라 지금 훅은 전부 통과시킨다. 해는 없지만 Cursor 용 어댑터를 붙이면 같은 명령이 두 번 돌지 않게 해야 한다.
+- **작업 폴더** — 훅 입력에는 모두 `cwd` 가 있다(Cursor 는 셸 호출만) — 훅은 이것을 세션 폴더로 쓴다. MCP 서버는 처음 폴더에 머물러, 요청마다 MCP roots 로 지금 폴더를 묻는다(`docs/design.md` §7). Claude Code 는 roots 를 주고 worktree 에 들어가면 바꾼다 [L, 2026-10-12]. 다른 에이전트의 roots 는 확인 안 함 [?] — 주지 않으면 CLI·훅이 알려 준 폴더를 지킨다
 - 시간 초과·오류 때 동작이 다르다 — Copilot·Gemini 는 시간 초과면 그냥 실행, Cursor 는 `failClosed` 를 안 주면 실행.
 - 업그레이드 뒤 로그인이 다시 필요했다 — Cursor(`unauthenticated` 로 업데이트 실패 → 다시 로그인), Gemini(도움말이 로그인 페이지를 열려고 함).
 

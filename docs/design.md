@@ -180,7 +180,7 @@ simless/
 
 실행 중 값(켜짐 여부, Android 시리얼)은 저장하지 않고 서버가 들고 있다.
 
-**Session** — `id`(§7 세션 키), `agent`(표시용 — `claude-code`·`codex`·`gemini`·…·`human`·`unknown`), `pid`·`pidStartedAt`, `agentSessionId`(어댑터가 주면), `cwd`(표시용), `lastUsedAt`
+**Session** — `id`(§7 세션 키), `agent`(표시용 — `claude-code`·`codex`·`gemini`·…·`human`·`unknown`), `pid`·`pidStartedAt`, `agentSessionId`(어댑터가 주면), `cwd`(표시용 — 지금 작업 폴더, §7), `cwdKind`(없으면 지금 폴더 · `workspace` MCP roots · `launch` MCP 를 띄운 폴더, §7), `lastUsedAt`
 
 **Lease** — `deviceId → sessionId, acquiredAt` · **대기열** — `[{sessionId, deviceIds, enqueuedAt}]` (디바이스마다 FIFO)
 
@@ -205,6 +205,20 @@ simless/
 - 에이전트 세션 ID 로 키 만들기: Copilot CLI(`COPILOT_AGENT_SESSION_ID`)·Codex(`CODEX_THREAD_ID`)·Cursor(`CURSOR_CONVERSATION_ID`)는 셸 명령에 세션 ID 를 준다 — 이 값이 있으면 세션 키를 `s:<에이전트>:<ID>` 로 만들고(프로세스는 살아 있는지 보는 데만), 훅은 입력의 세션 ID 로 같은 키를 만든다(`hook/adapters.ts`). Codex 는 셸을 공용 데몬 아래에서 돌려 부모 프로세스로는 세션이 섞인다. Gemini CLI 는 셸에 주지 않아 프로세스로 찾는다.
 - 보조 세션 ID: Claude Code 는 CLI 에 `CLAUDE_CODE_SESSION_ID`, 훅 입력에 `session_id` 를 준다. 기록해 두고, **같은 프로세스에서 값이 바뀌면**(`/clear` 등) 새 세션으로 보고 이전 점유를 푼다 — 새 대화는 자기가 점유했다는 걸 모르기 때문.
 - 실행 직전 훅: §13.
+
+**작업 폴더** (M13) — 화면·기록에 보이는 세션의 `cwd` 는 «에이전트가 지금 일하는 폴더» 다. 보내는 쪽마다 아는 것이 달라, 더 정확한 값을 덜 정확한 값으로 덮지 않는다.
+
+| 보내는 쪽 | 폴더 | 정확한가 |
+| --- | --- | --- |
+| CLI | 명령을 실행한 셸의 폴더(`process.cwd()`) — 부를 때마다 새로 뜬다 | 지금 폴더 |
+| 훅 | 에이전트가 훅 입력에 주는 `cwd`(Claude Code·Codex·Copilot·Gemini, Cursor 는 셸 호출만). 없으면 훅 프로세스의 폴더 | 지금 폴더 |
+| MCP | 요청마다 MCP **roots** 의 첫 `file://` (`mcp/folder.ts`, `cwdKind: "workspace"`). 클라이언트가 roots 를 지원하지 않거나 답하지 않으면 MCP 서버를 띄운 폴더(`cwdKind: "launch"`) | roots 는 작업 공간 단위, 띄운 폴더는 처음 폴더 |
+
+- MCP 서버는 에이전트를 켤 때 한 번 떠서 처음 폴더에 머문다. 대화 도중 worktree 로 옮겨 가면 `process.cwd()` 는 그대로라, 예전에는 같은 세션이 CLI 로 부르면 worktree, MCP 로 부르면 처음 폴더로 번갈아 보였다(터미널·에이전트와 상관없음).
+- 실측(2026-10-12, Claude Code): roots 기능(`listChanged`)을 켜 두고, `EnterWorktree` 뒤에는 roots 를 `<저장소>/.claude/worktrees/<이름>` 으로 바꾼다. MCP 서버의 폴더는 처음 그대로였다. 같은 날 이 브랜치의 서버(가짜 드라이버)와 실제 Claude Code 로 MCP 점유 → 셸 `cd sub` 뒤 CLI → MCP → `EnterWorktree` → MCP → CLI → 훅(`adb -s …`) → MCP 를 차례로 불러, 서버가 기억한 폴더가 `<저장소>` → `sub` → `sub` 유지 → worktree 로 이어지는 것을 확인했다(Claude Code 의 권한 검사는 `cd` 와 쓰기가 섞인 셸 명령을 막아, 폴더는 미리 만들어 둠).
+- 서버(`leases.touch` 의 `keepFolder`)는 덜 정확한 값이 더 정확한 값을 덮지 않게 한다 — 지금 폴더는 늘 따르고, `workspace` 는 앞서 받은 지금 폴더가 그 안이면(셸 `cd` 로 하위 폴더·worktree) 두며, `launch` 는 아무것도 덮지 않는다(처음부터 `launch` 뿐이면 그 값을 보인다 — 더 나은 정보가 없다).
+- roots 요청은 2초 안에 답이 없으면 그 MCP 서버가 사는 동안 다시 묻지 않는다(요청마다 기다리지 않게).
+- 한계: roots 를 바꾸지 않는 이동(셸의 `cd`)은 MCP 만 쓰는 세션에서 따라가지 못한다 — CLI·훅이 한 번이라도 부르면 맞춰진다. 반대로 하위 폴더에서 작업 공간 맨 위로 `cd` 해 돌아가고 MCP 만 부르면 하위 폴더가 남는다(roots 만으로는 돌아간 것을 알 수 없다).
 
 **사람·앱 창** — `human` 세션은 프로세스 기준 해제를 하지 않고 30분 규칙만 적용한다. 앱 창·브라우저의 웹 화면은 항상 `human`.
 
@@ -359,7 +373,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 **다른 에이전트 설치** (`src/install/agents.ts`) — 보호 = 훅 + 규칙. 규칙은 전역 지시 파일에 `<!-- simless:start … -->` 블록 하나(Codex `~/.codex/AGENTS.md`, Copilot `~/.copilot/copilot-instructions.md`, Gemini `~/.gemini/GEMINI.md`), Cursor 는 `~/.cursor/rules/simless.mdc`. MCP 는 Copilot `~/.copilot/mcp-config.json`·Cursor `~/.cursor/mcp.json`·Gemini `~/.gemini/settings.json` 을 직접 고치고(Gemini 명령은 로그인 창을 열 수 있음), Codex 는 `codex mcp add`(TOML 이라). Simless 항목만 넣고 빼며 고치기 전에 `.simless-backup`, 못 읽는 파일(주석 든 JSON 등)은 건드리지 않고 오류를 낸다. 설정 창 «에이전트 연결» 의 «다른 에이전트», `simless install --hook --mcp --agents codex,copilot,…` 로 넣고, `simless uninstall` 은 모두 뺀다. 실제 에이전트로는 아직 확인하지 않았다.
 
 **흐름**
-1. 어댑터가 stdin 입력을 공통 형식으로 바꾼다. 세션은 §7 방식(훅 프로세스의 부모 체인)으로 찾고, 입력에 세션 ID 가 있으면 보조로 쓴다.
+1. 어댑터가 stdin 입력을 공통 형식으로 바꾼다. 세션은 §7 방식(훅 프로세스의 부모 체인)으로 찾고, 입력에 세션 ID 가 있으면 보조로 쓴다. 입력의 `cwd`(절대 경로)는 세션의 작업 폴더로 쓴다(§7 «작업 폴더»).
 2. **빠른 통과**: Bash 명령에 `adb`·`simctl`·`emulator`·`simslim`·`avdslim` 이 없고, argent 도구에 기기 인자가 없으면 바로 통과한다(소켓 안 엶). `main.ts` 는 이 경로에서 서버·웹 코드를 불러오지 않는다.
 3. 대상(`src/hook/targets.ts` — 순수 함수)을 뽑아 서버에 `hook.check` → 허용/차단 + 사유. 대상은 **Simless 목록의 디바이스**만(P1) — AVD ID·UDID·지금 시리얼로 잇는다(simless ID 는 흔한 낱말과 겹칠 수 있어 빼고). 켜짐 상태(시리얼)를 읽는 데 0.5초쯤 걸려 서버가 10초 기억하고, 상태를 바꾸는 요청이 오면 버린다. 허용이면 서버가 같은 요청으로 `lastUsedAt` 을 갱신한다. 실측: 빠른 통과 약 20ms, 판정 약 30ms(기억이 없을 때 0.6초).
 4. **서버가 꺼져 있으면** `managed-index.json` 으로 이 Mac 의 디바이스인지만 본다. 맞으면(또는 시리얼을 판정 못 하면) 차단하고 «`simless status` 로 서버를 켜세요» 를 알려 준다 (P9).

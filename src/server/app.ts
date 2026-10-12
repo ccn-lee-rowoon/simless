@@ -151,7 +151,9 @@ export class SimlessServer {
       this.leases.touch(request.session);
     const { session } = request;
     // 에이전트에게는 다른 세션의 작업 폴더를 폴더 이름만 보인다 — 출력이 AI 제공사로 넘어간다 (SECURITY.md §5)
-    const shown = session.human ? (v: unknown) => v : (v: unknown) => redactCwd(v, session.cwd);
+    // 자기 폴더는 요청에 실린 값이 아니라 기억한 값으로 — MCP 가 보낸 덜 정확한 폴더는 기억에 남지 않을 수 있다
+    const own = this.leases.session(session.key)?.cwd ?? session.cwd;
+    const shown = session.human ? (v: unknown) => v : (v: unknown) => redactCwd(v, own);
     const conn: Connection = session.human
       ? connection
       : {

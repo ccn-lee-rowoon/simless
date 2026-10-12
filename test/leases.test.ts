@@ -262,3 +262,59 @@ describe("LeaseManager — 기록 (M13)", () => {
     ]);
   });
 });
+
+describe("LeaseManager — 작업 폴더 (M13)", () => {
+  const WT = "/repo/.claude/worktrees/x";
+
+  test("지금 폴더(CLI·훅)는 늘 따르고, 띄운 폴더(launch)는 아무것도 덮지 않는다", () => {
+    const { leases } = setup();
+    leases.touch({ ...A, cwd: "/repo" });
+    leases.touch({ ...A, cwd: WT });
+    leases.touch({ ...A, cwd: "/repo", cwdKind: "launch" }); // roots 없는 MCP
+    expect(leases.session("A")).toMatchObject({ cwd: WT });
+    expect(leases.session("A")?.cwdKind).toBeUndefined();
+    leases.touch({ ...A, cwd: "/elsewhere" }); // 다시 지금 폴더가 오면 그대로 따른다
+    expect(leases.session("A")?.cwd).toBe("/elsewhere");
+  });
+
+  test("roots(workspace)는 지금 폴더가 그 안이면 더 구체적인 쪽을 두고, 밖이면 바꾼다", () => {
+    const { leases } = setup();
+    leases.touch({ ...B, cwd: WT }); // 셸 cd 로 worktree — CLI 가 알림
+    leases.touch({ ...B, cwd: "/repo", cwdKind: "workspace" }); // roots 는 저장소 그대로
+    expect(leases.session("B")?.cwd).toBe(WT);
+    leases.touch({ ...B, cwd: "/repo2", cwdKind: "workspace" }); // 다른 작업 공간으로
+    expect(leases.session("B")).toMatchObject({ cwd: "/repo2", cwdKind: "workspace" });
+    leases.touch({ ...B, cwd: WT, cwdKind: "workspace" }); // EnterWorktree — roots 가 바뀜
+    expect(leases.session("B")?.cwd).toBe(WT);
+    leases.touch({ ...B, cwd: "/launch", cwdKind: "launch" });
+    expect(leases.session("B")).toMatchObject({ cwd: WT, cwdKind: "workspace" });
+  });
+
+  test("처음 받은 것이 띄운 폴더면 그대로 보이고, 더 나은 값이 오면 바꾼다", () => {
+    const { leases } = setup();
+    leases.touch({ ...C, cwd: "/launch", cwdKind: "launch" });
+    expect(leases.session("C")).toMatchObject({ cwd: "/launch", cwdKind: "launch" });
+    leases.touch({ ...C, cwd: "/launch2", cwdKind: "launch" });
+    expect(leases.session("C")?.cwd).toBe("/launch2");
+    leases.touch({ ...C, cwd: "/repo", cwdKind: "workspace" });
+    expect(leases.session("C")).toMatchObject({ cwd: "/repo", cwdKind: "workspace" });
+  });
+
+  test("이름이 겹치는 형제 폴더는 «안» 이 아니다", () => {
+    const { leases } = setup();
+    leases.touch({ ...A, cwd: "/repo-old" });
+    leases.touch({ ...A, cwd: "/repo", cwdKind: "workspace" });
+    expect(leases.session("A")?.cwd).toBe("/repo");
+  });
+
+  test("점유 기록에도 지금 폴더가 남는다", () => {
+    const cwds: string[] = [];
+    const leases = new LeaseManager(
+      { sessions: [], leases: [], queue: [] },
+      { idleMs: 1000, onHistory: (e) => cwds.push(e.cwd) },
+    );
+    leases.touch({ ...C, cwd: WT });
+    leases.acquire({ ...C, cwd: "/repo", cwdKind: "launch" }, ["d1"], { wait: false });
+    expect(cwds).toEqual([WT]);
+  });
+});

@@ -19,9 +19,11 @@ import type { SessionInfo } from "../shared/protocol.ts";
 import { detectSession } from "../shared/session.ts";
 import { systemLanguages } from "../shared/system-language.ts";
 import { VERSION } from "../shared/version.ts";
+import { agentFolder } from "./folder.ts";
 
 // 로컬 MCP 서버 (R12, 6단계) — CLI 와 같은 소켓 메서드를 부르는 얇은 래퍼다. 상태는 없다.
 // 세션은 CLI 처럼 프로세스 트리로 찾는다 — MCP 서버의 부모가 에이전트다 (docs/design.md §7).
+// 작업 폴더는 요청마다 MCP roots 로 묻는다 — 서버는 한 번 떠서 처음 폴더에 머물기 때문이다 (folder.ts).
 // 긴 기다림은 MCP 호출 시간 제한 때문에 «아직 대기 중 → 다시 호출» 로 나눈다.
 
 /** 한 번의 기다리기 — MCP 클라이언트의 호출 시간 제한보다 짧게 */
@@ -72,9 +74,13 @@ export async function runMcp(): Promise<void> {
     extraHosts: config.session.extraHosts,
   });
 
+  const server = new McpServer({ name: "simless", version: VERSION });
+  const folder = agentFolder(server.server, process.cwd());
+
   /** 서버가 꺼져 있으면 launchd 로 켜고 한 번 더 (Q10) */
   const request = async <T>(method: string, params: unknown = {}): Promise<T> => {
-    const send = () => call<T>(paths.socket, method, params, session);
+    const current: SessionInfo = { ...session, ...(await folder()) };
+    const send = () => call<T>(paths.socket, method, params, current);
     const { result } = await send().catch(async (error: unknown) => {
       if (error instanceof ServerDownError && (await kickstart(paths))) return send();
       throw error;
@@ -98,8 +104,6 @@ export async function runMcp(): Promise<void> {
         return text(`FAILED: ${error instanceof Error ? error.message : String(error)}`, true);
       }
     };
-
-  const server = new McpServer({ name: "simless", version: VERSION });
 
   server.registerTool(
     "simless_status",
