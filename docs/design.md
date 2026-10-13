@@ -18,7 +18,7 @@
                   ├─ 드라이버 — Android: emulator·adb·avdslim / iOS: simctl·simslim
                   └─ HTTP 127.0.0.1 ── 웹 화면 (Simless.app 창 · 브라우저) · 메뉴바
                                    ▼
-                  에뮬레이터 · 시뮬레이터  ◀── 화면 안 조작·스크린샷은 argent (S6)
+                  에뮬레이터 · 시뮬레이터  ◀── 화면 안 조작·테스트는 프로젝트의 도구 (S6·P10)
 ```
 
 - 실행 파일은 **`simless` 하나**다. `serve`·`hook`·`mcp`·나머지 CLI 명령이 모두 서브커맨드고, 사람이 여는 `Simless.app` 도 같은 파일을 담은 껍데기다(§4).
@@ -245,7 +245,7 @@ simless/
 - **자동 해제**
   1. 세션 프로세스 종료 → 바로. 2초 간격으로 PID 생존과 시작 시각(PID 재사용 거르기)을 확인한다. 대기열에서도 뺀다.
   2. `lastUsedAt` 후 30분(설정) 지나고 **대기열에 누가 있을 때만**.
-- `lastUsedAt` 갱신: 그 세션의 CLI 요청, MCP 요청, 훅이 통과시킨 호출(argent 포함).
+- `lastUsedAt` 갱신: 그 세션의 CLI 요청, MCP 요청, 훅이 통과시킨 기기 호출(어느 도구든).
 - **사람(앱 창)** 은 점유 없이 켜고 끈다. 다른 세션이 잡고 있으면 막는다.
 - **강제 해제**: 사람만 — 앱 창 ⋯ «강제 해제»(`lease.forceRelease`, 확인 질문). CLI 에는 없다. 스킬·규칙에는 «에이전트는 하지 않는다» 로 적는다.
 
@@ -274,19 +274,19 @@ simless/
 - **슬림 내역** (M16): 서버의 2초 주기 작업이 15초마다 켜진 기기 전부의 슬림 수치를 읽고(목록을 볼 때도), 수치가 바뀌었거나 내역이 없거나 10분이 지났으면 꺼진 항목을 읽어 `slimSeen.off` 에 적는다(적으면 기기 목록 캐시를 비운다). iOS 는 `simslim status <udid> --dropped` 의 묶음 ID. Android 는 avdslim 에 상태 조회가 없어 — 패키지 묶음은 설치된 패키지의 절반 이상이 꺼졌으면, `location`·`bluetooth`·`sync` 는 avdslim 이 바꾸는 기기 설정(`location_mode`·`bluetooth_on`·`auto_sync` 가 0), `camera` 는 config.ini 의 앞뒤 카메라가 `none`, `audio` 는 켤 때 `-no-audio` 를 줬거나 `hw.audioOutput=no`, `bglimit`·`setup` 은 읽을 수 없어 Simless 가 슬림했고 남기지 않았으면 꺼진 것으로. 앱 창은 목록 «슬림» 칸의 `SLIM ↗` 버튼이나 ⋯ «슬림 내역» 으로 창(대화 상자).
 - 생성·슬림화는 멱등 — 이미 맞으면 아무것도 안 한다.
 
-## 10. 앱 설치·실행·같은 화면 이동 (R8·R9·R10) — argent 로
+## 10. 앱 설치·실행·같은 화면 이동 (R8·R9·R10) — 기기마다, Simless 밖에서
 
-simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `simless use --json`)에서 기기마다 **argent 에 넘길 ID**(`targetId` — UDID·시리얼)와 **크기 라벨**(`label` — 예: `Android 360dp`)을 받아, argent 로 기기마다 한다 (S6, 결정 기록).
+simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `simless use --json`)에서 기기마다 **도구에 넘길 ID**(`targetId` — UDID·시리얼)와 **크기 라벨**(`label` — 예: `Android 360dp`)을 받아, 기기마다 한다 (S6, 결정 기록). 설치·실행은 플랫폼 도구로 스킬이 안내하고, 화면 조작·테스트는 프로젝트가 고른 도구로 한다(P10) — Simless 는 특정 도구를 전제하지 않는다.
 
-| 할 일 | argent | 비고 |
+| 할 일 | 무엇으로 | 비고 |
 | --- | --- | --- |
-| 앱 설치 | `reinstall-app` | Android APK·iOS 시뮬레이터용 .app |
-| 앱 실행 | `launch-app`, dev client 는 `open-url` | Android 는 `adb -s <시리얼> reverse tcp:8081 tcp:<내 Metro 포트>` 로 그 기기만 내 Metro 에 붙인다 — 스킬이 안내 (S11) |
-| 같은 화면 | `open-url <딥링크>`, 딥링크 없는 화면은 argent 흐름 재생 | |
-| 화면 확인 | `screenshot` | 크기 라벨을 붙여 보고 |
+| 앱 설치 | `xcrun simctl install`·`adb -s … install -r` (캐시가 있으면 `simless app install`) | Android APK·iOS 시뮬레이터용 .app |
+| 앱 실행 | dev client 는 `xcrun simctl openurl`·`adb -s … shell am start -d <주소>`, 그 밖에는 `simctl launch`·`adb … monkey` | Android 는 `adb -s <시리얼> reverse tcp:8081 tcp:<내 Metro 포트>` 로 그 기기만 내 Metro 에 붙인다 — 스킬이 안내 (S11) |
+| 같은 화면 | 딥링크, 딥링크 없는 화면은 프로젝트 도구의 흐름·테스트를 기기마다 | |
+| 화면 확인·테스트 | 프로젝트 도구 | 크기 라벨을 붙여 보고 |
 
-- Metro 는 **세션마다 따로** 띄운다 (S11) — 8081부터 비어 있는 포트에 자기 작업 폴더의 Metro 를 띄우고, 점유한 기기만 그 포트를 보게 한다. 앱은 언제나 `127.0.0.1:<세션 포트>` 로 Metro 에 붙고 Mac 의 LAN IP 는 쓰지 않는다(결정 기록) — iOS 시뮬레이터는 Mac 의 네트워크를 같이 써서 그대로 닿고, Android 에뮬레이터 안의 `127.0.0.1` 은 에뮬레이터 자신이라 `adb reverse tcp:<포트> tcp:<포트>` 가 Mac 으로 잇는다. Expo 가 `run:*` 로 열 때도 `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1` 로 LAN IP 대신 이 주소를 쓰게 한다. Metro 는 IPv4 로 띄우고(`--dns-result-order=ipv4first` — macOS 가 `[::1]` 에만 열면 앱이 못 붙는다) argent `debugger-status`(포트 지정)로 준비를 기다린다. Android 는 기기마다 `adb reverse` 를 자기 포트와 8081 둘 다 걸어 다시 빌드할 필요가 없고, 앱은 그냥 실행하지 않는다 — Expo dev client 는 포트를 넣은 주소(`open-url`)로, Expo 없는 iOS 는 `RCT_jsLocation` 을 써 둔 뒤 실행한다. 실행한 뒤 `debugger-status` 가 `connected` 인지로 붙었는지 확인하고, argent 디버거 도구에는 항상 그 포트를 넘긴다. argent 스킬의 «8081 Metro 하나» 안내는 Simless 스킬이 덮어쓴다. 포트는 Simless 가 나눠 주지 않고 스킬이 비어 있는 것을 고른다 — 필요해지면 점유 대상으로 넣는다. 남의 Metro 는 끄지 않는다 (S7).
-- 점유한 디바이스만 argent 로 다룬다 — 5단계 훅이 지킨다 (P1·P8).
+- Metro 는 **세션마다 따로** 띄운다 (S11) — 8081부터 비어 있는 포트에 자기 작업 폴더의 Metro 를 띄우고, 점유한 기기만 그 포트를 보게 한다. 앱은 언제나 `127.0.0.1:<세션 포트>` 로 Metro 에 붙고 Mac 의 LAN IP 는 쓰지 않는다(결정 기록) — iOS 시뮬레이터는 Mac 의 네트워크를 같이 써서 그대로 닿고, Android 에뮬레이터 안의 `127.0.0.1` 은 에뮬레이터 자신이라 `adb reverse tcp:<포트> tcp:<포트>` 가 Mac 으로 잇는다. Expo 가 `run:*` 로 열 때도 `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1` 로 LAN IP 대신 이 주소를 쓰게 한다. Metro 는 IPv4 로 띄우고(`--dns-result-order=ipv4first` — macOS 가 `[::1]` 에만 열면 앱이 못 붙는다) Metro 의 `/status`(`packager-status:running`)로 준비를 기다린다. Android 는 기기마다 `adb reverse` 를 자기 포트와 8081 둘 다 걸어 다시 빌드할 필요가 없고, 앱은 그냥 실행하지 않는다 — Expo dev client 는 포트를 넣은 주소로, Expo 없는 iOS 는 `RCT_jsLocation` 을 써 둔 뒤 실행한다. 실행한 뒤 앱에서(Android Dev 메뉴, iOS 는 Metro 로그의 «iOS Bundled») 붙었는지 확인하고, Metro 에 붙는 도구(디버거·프로파일러)에는 항상 그 포트를 넘긴다. 도구의 «8081 Metro 하나» 안내는 Simless 스킬이 덮어쓴다. 포트는 Simless 가 나눠 주지 않고 스킬이 비어 있는 것을 고른다 — 필요해지면 점유 대상으로 넣는다. 남의 Metro 는 끄지 않는다 (S7).
+- 점유한 디바이스만 다룬다(어느 도구든) — 5단계 훅이 지킨다 (P1·P8·P10).
 
 **네이티브 빌드 캐시 (R26)** — 설치의 예외. 캐시를 Simless 가 가지고 있어 설치도 Simless 가 한다.
 
@@ -399,11 +399,11 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | `simctl … booted` | 켜진 iOS 전부 |
 | `adb devices`·`emulator -list-avds`·`simctl list` 등 목록 조회 | 없음 → 통과 (P6) |
 
-**규칙 (P2)** — `integrations/rules/simless.md` 를 `simless install` 이 `~/.claude/rules/simless.md` 로 따로 설치한다(argent 의 `argent.md` 에 붙이면 argent 업데이트가 덮어쓴다). 다른 에이전트의 전역 규칙 위치는 조사 후.
+**규칙 (P2)** — `integrations/rules/simless.md` 를 `simless install` 이 `~/.claude/rules/simless.md` 로 따로 설치한다(다른 도구의 규칙 파일에 붙이면 그 도구의 업데이트가 덮어쓴다). 특정 도구 이름을 쓰지 않는다(P10). 다른 에이전트의 전역 규칙 위치는 조사 후.
 
 **설치** — 첫 실행 설정 창(M14)의 «보호» 또는 `simless install --hook` 이 `~/.claude/settings.json` 의 `hooks.PreToolUse` 에 matcher `Bash|mcp__.*`, 명령 `<simless 절대 경로> hook claude pre-tool-use` 한 줄을 넣는다. 다른 설정·훅은 그대로 두고, 예전 Simless 훅(명령이 ` hook claude pre-tool-use` 로 끝남)은 바꾸며, 쓰기 전에 `settings.json.simless-backup` 을 남긴다. 기본으로는 넣지 않는다 — 다른 세션이 Simless 없이 쓰는 기기가 목록에 있으면 그 세션까지 막으므로 사람이 고른다. `simless uninstall` 이 지운다. `simless doctor` 가 훅·규칙을 점검하고, `--fix` 는 이미 넣은 것이 예전 것(명령·matcher 가 다름)일 때만 고친다.
 
-> Simless 목록(`simless list`)의 시뮬레이터·에뮬레이터는 `simless use` 로 점유한 뒤에만 조작한다(스크린샷·describe 포함). 켜기·끄기는 argent `boot-device` 가 아니라 `simless use`·`simless down` 으로 한다. 전문은 `integrations/rules/simless.md`(영어).
+> Simless 목록(`simless list`)의 시뮬레이터·에뮬레이터는 어느 도구로든 `simless use` 로 점유한 뒤에만 조작한다(스크린샷·접근성 트리 포함). 기기를 늘 지정한다. 켜기·끄기는 도구의 명령이 아니라 `simless use`·`simless down` 으로 한다. 끝나면 해제를 권한다. 전문은 `integrations/rules/simless.md`(영어).
 
 ## 14. 앱 창·웹 화면 (R11·M1~M17)
 
@@ -445,7 +445,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 `integrations/skill/simless/SKILL.md` 와 참고 파일 — 이 저장소의 `references/slim.md`(슬림 방식 고르기·`.device-slim.json` 다시 쓰기·기능 → 슬림 항목 표)·`references/troubleshooting.md`(문제가 생길 때), agent-skills 저장소 device-slim 의 «앱 기능 찾기» `references/find-features-*.md`(의존성으로 태그 고정, M15) — 를 빌드에 넣어 폴더째 → 기본 `~/.claude/skills/simless`, 고르면 프로젝트 `<폴더>/.claude/skills/simless`(작업 트리마다, `git worktree list` 로 찾음 — git 공용 폴더의 `info/exclude` 에 `/.claude/skills/simless/` 를 적어 저장소에는 안 보이게) (S9). 넣은 곳은 `…/Simless/skills.json` 에 기억하고, `simless install`·`simless skill install`·설정 창이 모든 곳을 같이 고친다. 위치를 바꾸면 빠진 곳의 스킬은 지운다. 서버는 켤 때·10분마다·설치를 바꿀 때 넣어 둔 곳을 다시 보고, 예전 스킬이 있으면 `status.skillUpdate` 를 켠다 → 대시보드 위 띠 «Simless 스킬 업데이트가 있습니다 [업데이트]», 메뉴바 «스킬 업데이트 있음 — 업데이트». 누르면 `setup.apply { item: "skill" }` 로 모든 곳을 고친다. 새로 시작하는 에이전트 세션부터 새 스킬을 읽는다. **영어로 쓴다**(R25 — 읽는 쪽이 에이전트). 형식은 Anthropic 스킬 작성 가이드를 따른다 — description 은 3인칭 «무엇을 하는지 → 언제 쓰는지» 로 1024자 아래, 본문은 500줄 아래에 진행 체크리스트, 필요할 때만 읽는 것은 `references/` 로 빼고(Agent Skills 사양이 권장하는 이름 — 예전 `reference/` 는 설치할 때 지운다) 참고 파일끼리는 링크하지 않는다(본문에서 한 단계만). 스킬 형식을 읽는 다른 에이전트(Codex 등)는 `simless install --agents <이름,…>` 으로 그 에이전트 위치에도 설치한다.
 
 - description 에 S3 의 반응 프롬프트(디바이스가 필요한 작업 전부), S4 의 비반응(디바이스를 쓰지 않는 작업)을 넣는다. 테스트하는 앱의 «그룹» 기능과 헷갈리지 않게 «device group» 이라고 쓴다.
-- 본문 순서(S5): `simless status` → **용도 고르기**: `simless group list --json`(설명)·`simless list --json`(슬림 내역 `slimOff` — S13)을 보고 맞는 그룹, 없으면 `--default` → `simless use … [--available] [--wait]` — 일부가 사용 중이면 R23 기준(그룹 설명의 «모두 필요», 작업에 몇 대가 꼭 필요한지)으로 판단, 애매하면 사용자에게 묻기(S7) → `simless list --json` 으로 기기별 `targetId`·`label` 받기 → 기기마다 argent: 앱 설치(`reinstall-app`)·실행(`launch-app`, Android 는 먼저 `adb reverse`)·같은 화면(`open-url` 또는 argent 흐름)·`screenshot` → 크기 라벨을 붙여 보고 → `simless release` → 끌지 묻기(S8).
+- 본문 순서(S5): `simless status` → **용도 고르기**: `simless group list --json`(설명)·`simless list --json`(슬림 내역 `slimOff` — S13)을 보고 맞는 그룹, 없으면 `--default` → `simless use … [--available] [--wait]` — 일부가 사용 중이면 R23 기준(그룹 설명의 «모두 필요», 작업에 몇 대가 꼭 필요한지)으로 판단, 애매하면 사용자에게 묻기(S7) → `simless list --json` 으로 기기별 `targetId`·`label` 받기 → React Native 면 자기 Metro(S11)·기기마다 설치(캐시 먼저)·실행 → **프로젝트의 도구에 넘기기**: 기기 ID·플랫폼·Metro 포트·라벨, 기기를 늘 지정, 켜기·끄기는 Simless, 도구의 기기 세션은 해제 전에 닫기(S6·P10) → 크기 라벨을 붙여 보고 → **해제 권하기**(S8) → 끌지 묻기.
 - 그룹 만들기·고치기(S10): 사용자가 요청할 때만 `simless group create|edit`. 요청 없이 남이 만든 그룹을 바꾸지 않는다.
 - 오류는 `code` 로 판단한다(`BUSY`·`DEADLOCK`·`NO_DEFAULT` …). `DEADLOCK` 이면 쥔 것으로 진행할지 놓을지 정한다.
 - 설치·연결 문제는 `simless doctor` 결과를 따른다 (S1·S2).
@@ -459,7 +459,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | --- | --- | --- |
 | 0 ✅ | 저장소 뼈대 — `package.json`·`tsconfig`·Biome·`mise.toml`, `bin/simless.ts`·`main.ts` 서브커맨드 틀, `scripts/build.ts`, 검사 통과. **컴파일한 바이너리에서 파일 포함·훅 시작 시간 확인** | `bun link` 와 `dist/simless` 양쪽에서 `simless --version` 이 돈다 |
 | 1 ✅ | 서버 + CLI 코어 — 레지스트리, Android·iOS 드라이버(생성·목록·이름·사용 안 함·삭제·켜기·끄기·슬림), 점유·대기·자동 해제, 소켓, launchd, `protocol.md`. **실제 디바이스로 확인**: iOS 생성+슬림 2분 22초, Android·iOS 동시 켜기 29초. 남은 확인은 §17 | CLI 로 크기별 디바이스를 만들고 점유해서 켠다 |
-| 2 ✅ | `doctor` + 스킬 — 설치·연결 점검(S1·S2), 스킬(S3~S8 — 앱 설치·실행·화면 이동은 argent 로 안내), `simless install` 이 스킬도 설치. **남은 확인**: 실제 앱으로 «심리스로 확인해 줘» 흐름을 처음부터 끝까지 돌려 보기 | «심리스로 확인해 줘» 로 주 흐름(R15)이 돈다 |
+| 2 ✅ | `doctor` + 스킬 — 설치·연결 점검(S1·S2), 스킬(S3~S8 — 앱 설치·실행·화면 이동은 argent 로 안내, 2026-10-13 프로젝트 도구로 넘기기로 바꿈), `simless install` 이 스킬도 설치. **남은 확인**: 실제 앱으로 «심리스로 확인해 줘» 흐름을 처음부터 끝까지 돌려 보기 | «심리스로 확인해 줘» 로 주 흐름(R15)이 돈다 |
 | 3 ✅ | 웹 UI + `Simless.app` (앞당김 — 사람이 직접 보고 확인하려고) — HTTP API·SSE·토큰, 메인 목록(All·Android·iOS 탭), 생성(+)(iOS 시뮬레이터·Android 대표 프로필·직접 입력), 슬림 수치와 슬림 전후 비교, 메뉴바 앱(단색 아이콘·«대시보드 열기»), `simless ui` | 사람이 메뉴바·브라우저로 전부 관리한다 |
 | 4 ✅ | **사양 변경 (2026-10-05)** — ① 시안(디자인 M12)으로 화면 확정 (사용자 요청으로 건너뛰고 A안 — 라이트 그래파이트 + 파랑, 다크 잉크 + 민트 — 으로 바로 구현) ② 이 Mac 디바이스 전부 목록·레지스트리 재구성(R20, 사용 안 함 제거) ③ 생성: 기종 + OS, 슬림 선택·ⓘ(M1·M4) ④ 메모·기본 디바이스·그룹(R21·R22·R24) ⑤ 그룹 점유 모드·교착(R23, §8) ⑥ 슬림 자동 재적용·`SLIM` 배지(M6) ⑦ 오류 코드·현지화·설정(R25·M11) ⑧ 앱 창(WKWebView, R11) ⑨ 스킬 영어로 다시 쓰기. 항목마다 커밋 | 용도별 그룹·기본 디바이스로 요청하고, 앱 창에서 전부 관리한다 |
 | 5 ✅ | 보호 — Claude Code 훅(`simless hook claude pre-tool-use`), 규칙(`~/.claude/rules/simless.md`), 서버 꺼짐 처리, `simless install`·`doctor` 연동. 대상은 Simless 목록의 디바이스(P1). 설치는 사용자가 고른다 — 첫 실행 설정 창 또는 `--hook`(이 Mac 의 Claude Code 에는 켜져 있음). 다른 에이전트(Copilot·Codex·Cursor·Gemini) 어댑터도 만들었다 — 실제 에이전트로는 아직 확인 안 함(Q16) | 다른 세션이 남의 디바이스를 못 건드린다 |

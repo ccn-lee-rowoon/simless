@@ -88,12 +88,14 @@ describe("Claude Code 훅 설치 (P3)", () => {
     expect(hookStatus(["/bin/simless"], env)).toBe("missing");
   });
 
-  test("규칙은 점유한 뒤에만 건드리고 켜기는 Simless 로 하라고 적는다 (P2)", async () => {
+  test("규칙은 점유한 뒤에만 건드리고 켜기는 Simless 로, 끝나면 해제를 권하라고 적는다 (P2·S8)", async () => {
     const env = home();
     const text = readFileSync(await installRule(env), "utf8");
-    // 점유한 뒤에만 — argent·adb·simctl, 읽기(스크린샷·describe)도
-    expect(text).toContain("Before touching one with argent, adb, or simctl");
-    expect(text).toContain("screenshots and `describe` included");
+    // 점유한 뒤에만 — 어느 도구든, 읽기(스크린샷·접근성 트리)도
+    expect(text).toContain("Before touching one with any tool");
+    expect(text).toContain("screenshots and accessibility trees included");
+    expect(text).toContain("Name the device on every call");
+    expect(text).toContain("recommend releasing");
     expect(text).toContain("simless use --default ios|android");
     // 켜기·끄기는 Simless 로
     expect(text).toContain("Boot and shut down with `simless use` / `simless down`");

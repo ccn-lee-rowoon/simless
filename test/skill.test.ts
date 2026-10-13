@@ -95,15 +95,15 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(description).toContain("심리스로 확인해 줘");
   });
 
-  test("순서 — 용도 고르기 → 점유·켜기 → Metro → argent → 보고 → 정리 (S5·S6·S8)", async () => {
+  test("순서 — 용도 고르기 → 점유·켜기 → Metro → 설치·실행 → 프로젝트 도구에 넘기기 → 정리 (S5·S6·S8)", async () => {
     const headings = [...(await bundledSkill()).matchAll(/^### \d+\. (.*)$/gm)].map((m) => m[1]);
     expect(headings).toEqual([
       "Check and pick what to use",
       "Acquire and boot",
       "Start your own Metro (React Native · Expo apps)",
-      "Drive each device with argent",
-      "Report",
-      "Clean up",
+      "Install and launch onto your Metro",
+      "Hand off to the project's tools",
+      "Clean up — recommend releasing",
     ]);
   });
 
@@ -115,13 +115,15 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("kill <your Metro PID>");
   });
 
-  test("argent 의 Metro 하나 안내 대신 — IPv4·준비 확인·주소를 넣은 실행·붙었는지 확인·디버거 포트 (S11)", async () => {
+  test("도구의 Metro 하나 안내 대신 — IPv4·준비 확인·주소를 넣은 실행·붙었는지 확인·도구에 포트 (S11)", async () => {
     const text = await skillText();
     const skill = await bundledSkill();
-    expect(text).toContain("overrides the argent React Native workflow's single-Metro advice");
+    expect(text).toContain("overrides any tool's single-Metro advice");
     expect(text).toContain("NODE_OPTIONS=--dns-result-order=ipv4first");
-    expect(text).toContain("`debugger-status` with `device_id: <targetId>` and `port: <port>`");
-    expect(text).toContain("not with `launch-app`");
+    expect(text).toContain(
+      "curl -s http://127.0.0.1:<port>/status | grep -q 'packager-status:running'",
+    );
+    expect(text).toContain("not with a plain launch");
     expect(text).toContain("expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<port>");
     expect(text).toContain("RCT_jsLocation 127.0.0.1:<port>");
     // 스킴은 slug 로 만들지 않고 앱이 등록한 것을 찾는다 — 환경마다 slug 가 바뀌는 앱에서 실제로 틀렸다
@@ -177,10 +179,9 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(text).toContain("These mappings disappear");
     expect(text).toContain("Run `simless use` on its own");
     expect(text).toContain("ask the user before restarting it");
-    expect(text).toContain("logicalDeviceId");
     expect(text).toContain("simless --json use … 2>/dev/null | jq");
     expect(text).toContain("A screenshot is entirely black");
-    expect(text).toContain("Pass `port: <port>` to **every** argent `debugger-*`");
+    expect(text).toContain("debugger, profiler and reload tools default to 8081");
   });
 
   test("직접 빌드·설치할 때는 기기를 꼭 지정한다 — 남의 에뮬레이터에 깔리지 않게 (S7)", async () => {
@@ -213,6 +214,20 @@ describe("에이전트 스킬 (R16·S9)", () => {
     expect(skill).toContain(
       "Read [references/troubleshooting.md](references/troubleshooting.md) when",
     );
+  });
+
+  test("도구 중립 — 특정 도구 이름 없이 넘길 것·기기 명시·켜기는 Simless·해제 권유 (S6·S8·P10)", async () => {
+    // 화면 조작·테스트 도구는 프로젝트가 고른다 — 스킬·규칙이 특정 도구에 묶이지 않게
+    for (const text of [await skillText(), await Bun.file("integrations/rules/simless.md").text()])
+      expect(
+        [...text.matchAll(/\b(argent|maestro|agent-device|appium|detox)\b/gi)].map((m) => m[0]),
+      ).toEqual([]);
+    const skill = await bundledSkill();
+    expect(skill).toContain("Use what the project names");
+    expect(skill).toContain("**Name the device on every call**");
+    expect(skill).toContain("**Don't let a tool boot, create or shut down devices**");
+    expect(skill).toContain("close them before you release");
+    expect(skill).toContain("When your device work is done, **recommend releasing**");
   });
 
   test("그룹은 사용자가 요청할 때만 (S10)", async () => {

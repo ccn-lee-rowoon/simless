@@ -14,7 +14,7 @@
 
 **지원하는 앱: React Native (Expo)** — 스킬의 흐름(세션마다 Metro, dev client 로 앱 실행, 네이티브 빌드 캐시)은 Expo dev client 를 쓰는 React Native 앱을 기준으로 만들었고, 사실상 이것만 지원한다. 기기 만들기·빌려주기·보호는 앱 종류와 상관없이 동작하지만, 네이티브(Swift·Kotlin)·Flutter·Expo 없는 React Native 앱의 실행·연결 단계는 안내하지 않는다.
 
-화면 안 조작(탭·스크린샷·앱 실행)은 [argent](https://argent.swmansion.com) 가 하고, Simless 는 기기를 만들고·관리하고·빌려준다.
+Simless 는 기기를 만들고·관리하고·빌려주기만 한다. 화면 안 조작·테스트(탭·스크린샷·UI 테스트·회귀 테스트)는 프로젝트가 고르고 설정한 도구(argent·Maestro·agent-device 등)가 하고, 스킬은 그 도구에 기기 ID 를 넘긴다. 기기 작업이 끝나면 해제를 권한다.
 
 ## 설치·업데이트
 
