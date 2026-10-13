@@ -366,7 +366,11 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 - matcher 는 셸 + 모든 MCP(`src/shared/hook-scope.ts` 의 `HOOK_MATCHERS` — 설치와 훅이 같이 쓰므로 `shared`). Simless 자신의 MCP(`mcp__simless__*`)는 점유 요청에 기기 ID 가 들어가므로 보지 않는다
 - 훅 설치 상태는 명령과 **matcher 까지** 비교한다 — 보는 범위가 바뀌면 «예전 것» 으로 보이고, Claude Code 는 `simless doctor --fix`, 다른 에이전트는 설정 창의 «업데이트» 로 고친다
 - 비용: MCP 호출마다 훅 프로세스가 떠 30~40ms(2026-10-13 실측 — 기기 ID 가 없으면 소켓을 열지 않는다)
-- 잃는 것: 기기를 안 준 호출(도구가 켜진 기기를 스스로 고름)과 구동 도구로 켜기는 알 수 없다 — 규칙·스킬이 «기기를 늘 지정, 켜기는 Simless» 로 다룬다
+- 기기 ID 찾기(`deviceIds`): UDID·`emulator-<포트>` 는 원문에서 모양으로 찾는다 — 붙은 인자(`id=<UDID>,arch=…`·`ios:<UDID>`) 안에서도, UDID 는 대문자로 맞춘다(서버가 글자 그대로 비교). 모양이 없는 AVD 이름은 `_`·숫자가 든 4자 이상 낱말만 관리 목록 파일과 대조한다 — `test`·`main` 같은 흔한 낱말로 이름 지은 AVD 가 관계없는 명령을 막지 않게. 목록 파일은 그런 낱말이 있을 때만 읽는다
+- Simless 자신의 명령(`simless use <UDID>` …)은 셸 명령에서도 빼고 본다 — 점유하려는 것이다
+- MCP 인자에서 512자보다 긴 글은 보지 않는다 — 기기 인자는 짧고, 긴 글은 문서·이슈 본문이다. 짧은 글(이슈 제목 등)에 다른 세션이 쥔 기기 ID 를 쓰면 막힌다(알려진 오탐)
+- 이름이 켜기처럼 보이는 MCP 도구(`boot`·`boot-device`·`start_device` …)는 켜기로 본다 — 도구 이름 목록 없이 이름의 낱말로(S6)
+- 잃는 것: 기기를 안 준 호출(도구가 켜진 기기를 스스로 고름)은 알 수 없다 — 규칙·스킬이 «기기를 늘 지정» 으로 다룬다
 
 **에이전트 어댑터**: 실행 직전 훅은 에이전트마다 지원 여부·설정 위치·입력 형식이 다르다. `simless hook <에이전트> <이벤트>` 로 나누고, 어댑터는 입력을 공통 형식 `{tool, input, agentSessionId?}` 로 바꾼 뒤 같은 판정을 쓴다.
 
@@ -392,7 +396,9 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | 호출 | 대상 |
 | --- | --- |
 | MCP 도구(어느 서버든 — Simless 자신은 빼고)의 인자 글자 안에 디바이스 식별자가 보임 | 그 디바이스 — 인자 이름(`udid`·`device_id`·`serial` …)은 보지 않고 모든 글자를 낱말로 나눠 본다(깊이 8·글자 2000개까지). 기기를 가리키지 않는 도구(목록 등)는 통과 (P6) |
-| 구동 도구에 기기를 안 줌(`maestro test`·세션 기기를 쓰는 agent-device 명령·기기 없는 argent flow) · 구동 도구로 켜기(argent `boot-device`) | 알 수 없다 → 통과. 켜기는 기기 ID 를 주므로 점유만 확인한다. 규칙·스킬이 «기기를 늘 지정, 켜기는 Simless» 로 다룬다 (P10) |
+| 구동 도구에 기기를 안 줌(`maestro test`·세션 기기를 쓰는 agent-device 명령·기기 없는 argent flow) | 알 수 없다 → 통과. 규칙·스킬이 «기기를 늘 지정» 으로 다룬다 (P10) |
+| 이름이 켜기처럼 보이는 MCP 도구(`boot-device`·`boot`·`start_device` …)에 기기 ID | 점유와 상관없이 **차단** → `simless up` 안내 (S6) |
+| Simless 자신의 명령(`simless use <UDID>` 등) | 없음 → 통과 |
 | Bash `simctl boot`·`emulator -avd …` 로 디바이스 켜기 | 점유와 상관없이 **차단** → `simless up` 안내 (S6 «켜기는 Simless 로») |
 | Bash 명령 문자열 안에 디바이스 식별자(UDID·AVD ID·현재 시리얼)가 보임 | 그 디바이스 — 어떤 명령이든(`maestro --device …`·`npx agent-device … --serial …`) 파싱하지 않고 **문자열 포함**으로 본다. `&&`·`$(…)`·변수 등으로 우회되기 어렵다. 예외: heredoc 을 여는 줄에 셸·인터프리터·명령 실행 도구(`sh`·`bash`·`python`·`node`·`bun`·`osascript`·`eval`·`xargs`·`adb` …)가 없으면 그 본문은 글이라 지우고 본다(`stripDataHeredocs`) — 파일에 쓰는 스크립트·커밋 메시지에 기기 이름과 `adb` 가 같이 들어 있어 막히던 오탐. 실행기는 **heredoc 이 붙은 명령부터 줄 끝까지**에서만 찾는다(`commandStart` — 따옴표 밖의 `;`·`&&`·`||` 로 나눔, 파이프·`2>&1` 은 나누지 않음, 따옴표가 안 닫혔으면 줄 전체). 앞에서 끝난 명령은 본문을 받지 못해서다 — `bun run check; git commit -F - <<EOF` 의 커밋 메시지를 `bun` 때문에 검사하던 오탐(2026-10-12). 뒤의 명령은 본다(`cat <<EOF > a.sh; bash a.sh`) |
 | `adb` 를 기기 지정 없이 기기 명령에 씀(`adb shell` 등, `ANDROID_SERIAL` 미지정) | 켜진 Android 전부 |

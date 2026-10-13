@@ -81,13 +81,24 @@ export async function runHook(
   }
   const input = normalize(agent, event, raw);
   if (!input) return allow();
-  // 관리 디바이스의 ID — 모양이 없는 AVD 이름을 알아본다. 서버가 목록을 만들 때마다 써 둔다 (P9·P10)
+  // 관리 디바이스의 ID — 모양이 없는 AVD 이름을 알아본다. 서버가 목록을 만들 때마다 써 둔다 (P9·P10).
+  // 이름처럼 보이는 낱말이 있거나 서버가 꺼졌을 때만 읽는다 — 셸 명령·MCP 호출마다 훅이 뜨므로
   const paths = resolvePaths();
-  const index = readIndex(paths.managedIndex);
-  const known = new Set(
-    (index?.devices ?? []).flatMap((d) => (d.targetId ? [d.native, d.targetId] : [d.native])),
-  );
-  const targets = extractTargets(input.tool, input.input, known);
+  let index: ManagedIndex | undefined | null = null;
+  const loadIndex = () => {
+    if (index === null) index = readIndex(paths.managedIndex);
+    return index;
+  };
+  let known: Set<string> | undefined;
+  const knownIds = () => {
+    known ??= new Set(
+      (loadIndex()?.devices ?? []).flatMap((d) =>
+        d.targetId ? [d.native, d.targetId] : [d.native],
+      ),
+    );
+    return known;
+  };
+  const targets = extractTargets(input.tool, input.input, knownIds);
   if (!targets) return allow(); // 빠른 통과 — 기기 ID 로 보이는 것이 없다
 
   let config: ReturnType<typeof loadConfig> | undefined;
@@ -119,7 +130,7 @@ export async function runHook(
       return allow();
     }
     setLanguage(resolveLanguage(config?.language ?? "system", systemLanguages()));
-    decision = offlineDecision(index, targets);
+    decision = offlineDecision(loadIndex(), targets);
   }
   if (decision.allow) return allow();
   console.log(denyOutput(agent, decision.reason ?? ""));

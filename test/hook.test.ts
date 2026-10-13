@@ -14,10 +14,56 @@ const UDID = "5B6D77EF-2AE9-47D0-9A62-70A1ABBC5FA2";
 
 describe("도구 중립 훅 — 도구 이름이 아니라 기기 ID 를 본다 (P10)", () => {
   const bash = (command: string, known: string[] = []) =>
-    extractTargets("Bash", { command }, new Set(known));
+    extractTargets("Bash", { command }, () => new Set(known));
   const mcp = (tool: string, input: unknown, known: string[] = []) =>
-    extractTargets(tool, input, new Set(known));
+    extractTargets(tool, input, () => new Set(known));
   const only = (ids: string[]) => ({ ids, boots: [], allAndroid: false, allIos: false });
+
+  test("simless 자신의 명령은 보지 않는다 — 기기 ID 로 점유하려는 것이다 (리뷰)", () => {
+    expect(bash(`simless --json use ${UDID}`)).toBeUndefined();
+    expect(bash("~/.bun/bin/simless release emulator-5554")).toBeUndefined();
+    // 같은 줄의 다른 명령은 그대로 본다
+    expect(bash(`simless use ${UDID} && xcrun simctl io ${UDID} screenshot a.png`)?.ids).toContain(
+      UDID,
+    );
+  });
+
+  test("흔한 낱말로 이름 지은 AVD 는 관계없는 명령을 막지 않는다 — 목록 파일도 필요할 때만 (리뷰)", () => {
+    expect(bash("bun run test && git checkout main", ["test", "main"])).toBeUndefined();
+    let reads = 0;
+    const known = () => {
+      reads++;
+      return new Set(["Pixel_6a"]);
+    };
+    expect(extractTargets("Bash", { command: "git status" }, known)).toBeUndefined();
+    expect(extractTargets("Bash", { command: "ls -la src" }, known)).toBeUndefined();
+    expect(reads).toBe(0);
+    expect(extractTargets("Bash", { command: "some-tool --avd Pixel_6a" }, known)?.ids).toEqual([
+      "Pixel_6a",
+    ]);
+  });
+
+  test("소문자 UDID·붙은 인자 안의 기기 ID 도 — UDID 는 대문자로 맞춘다 (리뷰)", () => {
+    expect(bash(`some-tool --udid ${UDID.toLowerCase()}`)).toEqual(only([UDID]));
+    expect(
+      bash(`xcodebuild test -destination 'platform=iOS Simulator,id=${UDID},arch=arm64'`)?.ids,
+    ).toEqual([UDID]);
+    expect(mcp("mcp__x__open", { target: `ios:${UDID}` })?.ids).toEqual([UDID]);
+    expect(mcp("mcp__x__open", { target: "emulator-5554/app" })?.ids).toEqual(["emulator-5554"]);
+    // 플랫폼 도구가 든 명령에서도 대문자 UDID 를 더한다
+    expect(bash(`xcrun simctl io ${UDID.toLowerCase()} screenshot a.png`)?.ids).toContain(UDID);
+  });
+
+  test("MCP 의 긴 글(문서·이슈 본문)은 보지 않고, 켜기처럼 보이는 도구는 켜기다 (리뷰)", () => {
+    const body = `crash on emulator-5554 — ${"log line\n".repeat(80)}`;
+    expect(mcp("mcp__github__create_issue", { title: "crash", body })).toBeUndefined();
+    expect(mcp("mcp__argent__boot-device", { udid: UDID })?.boots).toEqual([UDID]);
+    expect(mcp("mcp__agent-device__boot", { serial: "emulator-5554" })?.boots).toEqual([
+      "emulator-5554",
+    ]);
+    expect(mcp("mcp__maestro__start_device", { device_id: UDID })?.boots).toEqual([UDID]);
+    expect(mcp("mcp__x__reboot_hint", { udid: UDID })?.boots).toEqual([]);
+  });
 
   test("어느 셸 명령이든 UDID·에뮬레이터 시리얼·관리 AVD ID 가 보이면 후보, 없으면 통과", () => {
     expect(bash(`maestro --device ${UDID} test flow.yaml`)).toEqual(only([UDID]));
