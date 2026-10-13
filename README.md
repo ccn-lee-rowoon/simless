@@ -30,7 +30,7 @@ bash simless-<버전>-install.sh   # 설치: 서버(로그인 시 자동 실행)
 
 `Simless.app` 을 처음 열면 **«Simless 시작하기»** 창이 뜬다.
 
-1. **이 Mac 점검** — Xcode·simslim·Android SDK·avdslim·argent. 빠진 것은 설치 명령을 보여 준다
+1. **이 Mac 점검** — Xcode·simslim·Android SDK·avdslim. 빠진 것은 설치 명령을 보여 준다(화면 조작·테스트 도구는 프로젝트가 설치한다)
 2. **에이전트 연결** — 스킬(권장, 전역 또는 프로젝트) · 보호(권장) · MCP 도구(선택). Copilot CLI·Codex·Cursor·Gemini CLI 도 보호·MCP 를 켤 수 있다(실험적)
 3. **기본 디바이스** — 고르거나 만든다
 

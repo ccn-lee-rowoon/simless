@@ -259,8 +259,8 @@ describe("설정 창에서 바로 설치 (M14)", () => {
               },
             ],
           },
-          "argent.install": {
-            id: "argent.install",
+          "avdslim.upgrade": {
+            id: "avdslim.upgrade",
             kind: "run",
             steps: [{ command: sh("echo slow; sleep 5") }],
           },
@@ -318,9 +318,9 @@ describe("설정 창에서 바로 설치 (M14)", () => {
     await H("setup.run", { fix: "simslim.upgrade" });
     expect(await finished(H, "simslim.upgrade")).toMatchObject({ status: "failed", exitCode: 3 });
 
-    const slow = (await H("setup.run", { fix: "argent.install" })) as JobView;
+    const slow = (await H("setup.run", { fix: "avdslim.upgrade" })) as JobView;
     // 같은 항목을 또 누르면 돌던 것을 그대로 준다
-    expect(((await H("setup.run", { fix: "argent.install" })) as JobView).id).toBe(slow.id);
+    expect(((await H("setup.run", { fix: "avdslim.upgrade" })) as JobView).id).toBe(slow.id);
     expect(((await H("setup.cancel", { job: slow.id })) as JobView).status).toBe("canceled");
   });
 

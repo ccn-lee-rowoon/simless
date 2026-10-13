@@ -39,7 +39,7 @@ function json(summary: string, data: unknown): Text {
   return text(`${summary}\n\n${JSON.stringify(data, null, 2)}`);
 }
 
-/** 디바이스 한 대 — 에이전트가 쓰는 것만 (argent ID·크기 라벨·상태) */
+/** 디바이스 한 대 — 에이전트가 쓰는 것만 (기기 ID·크기 라벨·상태) */
 function brief(d: DeviceView) {
   return {
     id: d.id,
@@ -110,7 +110,7 @@ export async function runMcp(): Promise<void> {
     {
       title: "simless status",
       description:
-        "Devices in the simless list (argent targetId, size label, booted, slim, slimMode (ui, app, custom — none when not slimmed, absent when slimmed outside Simless), slimKeep and slimOff — slim items kept and turned off, default, groups, who holds it), device groups with their descriptions, and what this session holds. Call this first to pick a device group or the default device.",
+        "Devices in the simless list (targetId — the device ID to pass to your tools, size label, booted, slim, slimMode (ui, app, custom — none when not slimmed, absent when slimmed outside Simless), slimKeep and slimOff — slim items kept and turned off, default, groups, who holds it), device groups with their descriptions, and what this session holds. Call this first to pick a device group or the default device.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
@@ -139,7 +139,7 @@ export async function runMcp(): Promise<void> {
     {
       title: "Acquire and boot devices",
       description:
-        "Acquire devices and boot them — by device IDs/names, a device group, or the default device. mode 'all' (default) takes all or nothing; 'available' takes the free ones now. With wait, joins the queue; if it returns STILL_QUEUED, call again with the same arguments (your place is kept). Returns each device's targetId to pass to argent tools. Errors: BUSY (someone holds a device — show the holder to the user or wait), DEADLOCK, NO_DEFAULT (data.missing tells, per platform, how many devices exist — 0 means call again with create: true; otherwise ask the user which device).",
+        "Acquire devices and boot them — by device IDs/names, a device group, or the default device. mode 'all' (default) takes all or nothing; 'available' takes the free ones now. With wait, joins the queue; if it returns STILL_QUEUED, call again with the same arguments (your place is kept). Returns each device's targetId to pass to your tools — name the device on every tool call. Errors: BUSY (someone holds a device — show the holder to the user or wait), DEADLOCK, NO_DEFAULT (data.missing tells, per platform, how many devices exist — 0 means call again with create: true; otherwise ask the user which device).",
       inputSchema: {
         devices: z.array(z.string()).optional().describe("Device IDs or names"),
         group: z.string().optional().describe("Device group name or ID"),

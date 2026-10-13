@@ -187,7 +187,7 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.holder.using": "using",
   "cli.holder.waiting": "waiting first",
   "cli.holder.since": "{device}{who} · {cwd} · {what} since {ago}",
-  "cli.list": "Devices in the simless list (created + added) — state, slim, lease, argent ID",
+  "cli.list": "Devices in the simless list (created + added) — state, slim, lease, device ID",
   "cli.opt.platform": "android or ios",
   "cli.opt.created": "Only devices Simless created",
   "cli.list.available":
@@ -362,9 +362,6 @@ export const en: Record<keyof typeof ko, string> = {
   "doctor.simslim.missing": "missing — iOS devices can't be slimmed (R5)",
   "doctor.newer": " → {version} available",
   "doctor.present": "installed",
-  "doctor.argent.missing": "missing — screens are driven and captured with argent (S6)",
-  "doctor.argent.many": "several versions on PATH — the first one wins: {versions}",
-  "doctor.argent.fix": "Keep only one, or fix the PATH order",
   "doctor.skill": "simless skill",
   "doctor.skill.missing": "not installed",
   "doctor.skill.outdated": "differs from the skill in this Simless (older version)",
@@ -577,7 +574,7 @@ export const en: Record<keyof typeof ko, string> = {
     "Protection — also install the Claude Code hook (~/.claude/settings.json) and rule (~/.claude/rules/simless.md)",
   "doctor.hook": "Claude Code hook",
   "doctor.hook.missing":
-    "missing — agents can touch devices they don't hold through argent or adb directly (P3)",
+    "missing — agents can touch devices they don't hold through other tools or adb directly (P3)",
   "doctor.hook.outdated":
     "points to a different Simless (moved, or switched between development and release)",
   "doctor.rule": "simless rule",
@@ -595,7 +592,6 @@ export const en: Record<keyof typeof ko, string> = {
   "web.setup.check.server": "simless server",
   "web.setup.check.ios": "iOS simulators",
   "web.setup.check.android": "Android emulators",
-  "web.setup.check.screen": "Screen control",
   "web.setup.check.recheck": "Check again",
   "web.setup.check.checking": "Checking…",
   "web.setup.check.summary": "{fails} problem(s) · {warns} warning(s)",
@@ -617,7 +613,7 @@ export const en: Record<keyof typeof ko, string> = {
     "Couldn't find the claude command — install Claude Code, then press «Check again».",
   "web.setup.protect.title": "Protection (hook + rule)",
   "web.setup.protect.desc":
-    "Blocks sessions that touch a device in the simless list through adb, simctl or argent without holding it, and tells them how to acquire it. Adds about 20 ms to each tool call.",
+    "Blocks sessions that touch a device in the simless list with any tool (shell commands, MCP tools) without holding it, and tells them how to acquire it. Adds about 30 ms to each shell command and MCP tool call.",
   "web.setup.protect.warn":
     "If a device in the simless list is already in use without Simless, that session gets blocked too. Remove the device from the list first, or turn this on after that work is done.",
   "web.setup.state.current": "Installed",
@@ -698,8 +694,6 @@ export const en: Record<keyof typeof ko, string> = {
   "web.setup.fix.cancel": "Cancel",
   "web.setup.fix.terminal": "Open in Terminal",
   "web.setup.fix.hide": "Hide",
-  "web.setup.fix.argentWarn":
-    "argent's installer also changes agent settings (MCP, rules) for Claude Code and others.",
   "web.setup.fix.inputHint":
     "If it needs your password or an answer, run it with «Open in Terminal».",
   "setup.agentConfig":
@@ -721,5 +715,5 @@ export const en: Record<keyof typeof ko, string> = {
     "Agents for --hook and --mcp (comma-separated): claude, copilot, codex, cursor, gemini",
   "web.slogan": "Make simulator management seamless.",
   "cli.helpAgents":
-    '\nFor agents (AI):\n  - Always pass --json. Results are JSON on stdout; errors are {"error": {code, message, data}}\n  - Exit codes: 0 ok · 1 failed · 2 usage error · 3 in use by another session, still waiting, or deadlock · 4 can\'t reach the server\n  - Decide on error codes (messages follow the user\'s language): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - Acquire a device before touching it — the full flow is in the simless skill (~/.claude/skills/simless, ~/.agents/skills/simless)\n\nExamples:\n  simless --json status                          devices, groups, defaults, who holds what\n  simless --json use --default ios               acquire and boot the iOS default device (add --create if there is none)\n  simless --json use --group "two accounts" --wait  the whole group; wait if it is in use\n  simless --json use --group "layout" --available  take the free ones first\n  simless --json list                            targetId and size label to pass to argent\n  simless --json app install                     install the cached build if the native fingerprint matches (Expo apps)\n  simless release                                give the devices back when done\n  simless doctor                                 installation and connection problems',
+    '\nFor agents (AI):\n  - Always pass --json. Results are JSON on stdout; errors are {"error": {code, message, data}}\n  - Exit codes: 0 ok · 1 failed · 2 usage error · 3 in use by another session, still waiting, or deadlock · 4 can\'t reach the server\n  - Decide on error codes (messages follow the user\'s language): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - Acquire a device before touching it — the full flow is in the simless skill (~/.claude/skills/simless, ~/.agents/skills/simless)\n\nExamples:\n  simless --json status                          devices, groups, defaults, who holds what\n  simless --json use --default ios               acquire and boot the iOS default device (add --create if there is none)\n  simless --json use --group "two accounts" --wait  the whole group; wait if it is in use\n  simless --json use --group "layout" --available  take the free ones first\n  simless --json list                            device ID (targetId) and size label for your tools\n  simless --json app install                     install the cached build if the native fingerprint matches (Expo apps)\n  simless release                                give the devices back when done\n  simless doctor                                 installation and connection problems',
 };

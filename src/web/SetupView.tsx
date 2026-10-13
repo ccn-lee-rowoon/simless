@@ -35,7 +35,6 @@ const CHECK_SECTIONS: { label: MessageKey; ids: CheckId[] }[] = [
   { label: "web.setup.check.server", ids: ["server", "launchd"] },
   { label: "web.setup.check.ios", ids: ["xcode", "simslim"] },
   { label: "web.setup.check.android", ids: ["androidSdk", "images", "avdslim"] },
-  { label: "web.setup.check.screen", ids: ["argent"] },
 ];
 
 export function SetupView({
@@ -295,9 +294,6 @@ function CheckRow({ check: c, fixes }: { check: CheckView; fixes: FixControls })
         <span className="sub">{c.detail}</span>
         {/* 버튼으로 못 고치는 것만 명령을 보여 준다(복사) */}
         {c.fix && !action && <Command text={c.fix} />}
-        {action?.fix === "argent.install" && !job && (
-          <span className="notice-inline setup-fix-warn">{t("web.setup.fix.argentWarn")}</span>
-        )}
         {job && action && <FixTerminal job={job} fixes={fixes} openOnly={action.kind === "open"} />}
       </div>
       {action && (

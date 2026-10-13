@@ -58,4 +58,20 @@ describe("폴더 경계", () => {
     }
     expect(broken).toEqual([]);
   });
+
+  test("화면 조작·테스트 도구에 엮이지 않는다 — 코드에 도구 이름이 없다, 주석의 예시만 (P10)", () => {
+    // 도구는 프로젝트가 고른다. 훅은 도구 이름이 아니라 기기 ID 를 본다(docs/design.md §13 «도구 중립»)
+    const found: string[] = [];
+    for (const file of sources(SRC)) {
+      readFileSync(file, "utf8")
+        .split("\n")
+        .forEach((line, i) => {
+          const code = line.trim();
+          if (code.startsWith("//") || code.startsWith("*") || code.startsWith("/*")) return;
+          if (/\b(argent|maestro|agent-device|appium|detox)\b/i.test(code))
+            found.push(`${relative(SRC, file)}:${i + 1}`);
+        });
+    }
+    expect(found).toEqual([]);
+  });
 });

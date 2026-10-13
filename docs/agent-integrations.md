@@ -37,7 +37,7 @@
 
 - **훅** — 이벤트 `PreToolUse`. 사용자 전역 `~/.codex/hooks.json`(또는 `config.toml` 의 `[hooks]`), 저장소 `.codex/hooks.json` 이 우선. 기능 플래그 `hooks` 는 stable·켜짐 [L].
   ```json
-  {"hooks":{"PreToolUse":[{"matcher":"^Bash$|^mcp__argent__.*","hooks":[{"type":"command","command":"<Simless> hook codex pre-tool-use","timeout":30}]}]}}
+  {"hooks":{"PreToolUse":[{"matcher":"^Bash$|^mcp__.*","hooks":[{"type":"command","command":"<Simless> hook codex pre-tool-use","timeout":30}]}]}}
   ```
   matcher 는 `tool_name` 정규식. 셸(`Bash`)·MCP 도구 모두. timeout 은 **초**.
 - **입력** [D] — `session_id`·`turn_id`·`cwd`·`tool_name`·`tool_input`. 셸은 `tool_input.command`, MCP 는 인자 그대로(`udid`·`serial`). MCP 이름은 `mcp__<서버>__<도구>`.
@@ -56,7 +56,7 @@
 
 - **훅** — `hooksConfig.enabled` 기본 켜짐 [L]. 이벤트 `BeforeTool`, `~/.gemini/settings.json` 의 `hooks`.
   ```json
-  {"hooks":{"BeforeTool":[{"matcher":"^run_shell_command$|^mcp_argent_","hooks":[{"type":"command","command":"<Simless> hook gemini before-tool","name":"simless","timeout":10000}]}]}}
+  {"hooks":{"BeforeTool":[{"matcher":"^run_shell_command$|^mcp_","hooks":[{"type":"command","command":"<Simless> hook gemini before-tool","name":"simless","timeout":10000}]}]}}
   ```
   matcher 는 앵커 없는 정규식, timeout 은 **밀리초**(기본 60000). 같은 훅은 하나로 합치고 기본으로 함께 돈다.
 - **신뢰한 폴더에서만** [L] — 사용자 훅도 «프로젝트» 출처로 묶여서, 작업 폴더를 신뢰하지 않으면 건너뛴다(`security.folderTrust.enabled` 기본 켜짐). 신뢰: 대화 중 `/trust`, `~/.gemini/trustedFolders.json`, `GEMINI_CLI_TRUST_WORKSPACE=true`, `--skip-trust`. **이 Mac 에는 아직 신뢰한 폴더가 없다** — 지금은 어떤 훅도 돌지 않는다. stdio MCP 서버도 신뢰한 폴더에서만 뜬다.
@@ -74,7 +74,7 @@
 
 - **훅** — `~/.copilot/hooks/*.json`(Orca 의 `orca.json` 이 이미 있음 — 옆에 `simless.json`). 저장소 `.github/hooks/*.json` 과 합쳐진다.
   ```json
-  {"version":1,"hooks":{"preToolUse":[{"type":"command","bash":"<Simless> hook copilot pre-tool-use","timeoutSec":10,"matcher":"bash|argent-.*"}]}}
+  {"version":1,"hooks":{"preToolUse":[{"type":"command","bash":"<Simless> hook copilot pre-tool-use","timeoutSec":10,"matcher":"bash|.+-.+"}]}}
   ```
   Claude 의 `{"hooks":{"PreToolUse":[{"matcher","hooks":[…]}]}}` 형식도 받는다(1.0.6~) [L]. matcher 는 도구 이름 전체에 맞추는 정규식. 셸·MCP·하위 에이전트 호출 모두 [L].
 - **입력** [L] — 이벤트 이름을 camelCase 로 쓰면 `{sessionId, cwd, toolName, toolArgs}`(셸 `bash`), PascalCase 면 Claude 식 `{session_id, cwd, tool_name, tool_input}`(셸 `Bash`). MCP 도구 이름은 `<서버>-<도구>`(예 `argent-gesture-tap`) — 서버 이름에 `-` 가 들어갈 수 있어 `argent-` 접두어로 본다.

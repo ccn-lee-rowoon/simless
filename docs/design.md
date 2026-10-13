@@ -332,11 +332,11 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | 명령 | 하는 일 | 요구사항 |
 | --- | --- | --- |
 | `simless status` | 서버 연결, 디바이스, 그룹, 점유·대기 한눈에 | S2·R13 |
-| `simless doctor [--fix]` | 서버·launchd·Android SDK·시스템 이미지·avdslim·Xcode·simslim·argent(여러 버전)·스킬 점검과 고치는 방법. `--fix` 는 launchd·스킬만 고친다. 훅 점검은 5단계 | S1·S2 |
+| `simless doctor [--fix]` | 서버·launchd·Android SDK·시스템 이미지·avdslim·Xcode·simslim·스킬 점검과 고치는 방법(화면 조작·테스트 도구는 프로젝트 몫이라 보지 않는다 — P10). `--fix` 는 launchd·스킬만 고친다. 훅 점검은 5단계 | S1·S2 |
 | `simless install [--no-launchd] [--no-skill] [--no-app] [--hook] [--mcp] [--agents <이름,…>]` | launchd 등록 + 스킬 + `Simless.app` (§4). 보호(훅)·MCP 는 고를 때만, `--agents` 는 어느 에이전트에(기본 `claude`) | S1·Q16 |
 | `simless uninstall [--purge] [--yes]` | 제거 — 스킬(모든 위치)·모든 에이전트의 훅·규칙·MCP·앱·서버 등록, `--purge` 면 데이터·로그·설정·빌드 캐시까지. 만든 디바이스는 남긴다(§4) | S12 |
 | `simless ui` | 웹 화면을 브라우저로 연다 (앱 창은 `Simless.app`) | R11 |
-| `simless list [--platform] [--created] [--available]` | **Simless 목록** — 폭·이름·켜짐·SLIM·기본·사용 중인 세션·argent ID. `--json` 에는 슬림 내역(`slimOff`)도. `--available` 은 목록에 없는 이 Mac 의 디바이스 | M5·R20·M16 |
+| `simless list [--platform] [--created] [--available]` | **Simless 목록** — 폭·이름·켜짐·SLIM·기본·사용 중인 세션·기기 ID(`targetId`). `--json` 에는 슬림 내역(`slimOff`)도. `--available` 은 목록에 없는 이 Mac 의 디바이스 | M5·R20·M16 |
 | `simless catalog [--platform]` | 만들 수 있는 기종·OS 목록과 슬림 항목(`slimOff` — App·Custom 에서 남길 ID) | M1·M15 |
 | `simless create <기종> [--os] [--name] [--no-slim \| --slim-keep <ID,…> [--app]] [--no-baseline]` · `simless create --width --height --density [--os]` | 새로 만들기. 슬림이면 `simless …` 이름, `--slim-keep` 은 남길 슬림 항목(`--app` 이면 App 방식, 아니면 Custom) | R1~R3·R5·M4·M15 |
 | `simless default [<dev>]` · `delete <dev> [-y]` · `add <dev>` · `unlist <dev>` | 관리. 삭제는 Simless 가 만든 것만, `add`·`unlist` 는 이 Mac 의 디바이스를 목록에 넣고 빼기 | M7·M8·R20·R22 |
@@ -480,7 +480,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | ✅ 컴파일한 바이너리에 웹 UI·파일이 잘 들어가는지, 훅 경로 시작 시간 — **확인됨(0단계)**: `with { type: "file" }` 는 `/$bunfs/root/…` 경로로 들어가 `Bun.file` 로 읽히고, HTML import 는 TSX 까지 번들돼 `Bun.serve` 로 서빙된다(`--bytecode` 포함, 다른 폴더로 옮겨도 동작). 훅 경로 약 21ms | §2·§3·§13 | 0단계 |
 | ✅ launchd 로 띄운 서버가 `emulator`·`xcrun` 을 PATH·권한 문제 없이 실행하는지 — **확인됨(2단계 전)**: `simless install` 로 등록한 서버가 Android·iOS 를 만들고 함께 켰다(1분 16초, 슬림 없이). 등록하면 macOS 가 «백그라운드 항목 추가됨» 알림을 띄우고, 로그인 항목에 실행 파일 서명자 이름(개발 모드는 bun 의 «Jarred Sumner»)이 보인다 | launchd 는 로그인 셸 환경을 안 받는다 | 2단계 전 |
 | 에이전트별 MCP 서버의 부모가 에이전트 프로세스인지 (Claude Code 는 확인됨) | §7 | 6단계 |
-| argent 여러 버전(homebrew 0.17.0 이 PATH 우선, mise 의 node 마다 0.25.1·0.27.0 — 2026-10-07 확인. 10-12 에 셋 다 0.28.0 으로 맞춤 — 깔린 곳이 여럿인 것은 그대로) 정리 | 훅이 보는 argent 도구 인자가 버전마다 다를 수 있다 | 5단계 전 |
+| argent 여러 버전(homebrew 0.17.0 이 PATH 우선, mise 의 node 마다 0.25.1·0.27.0 — 2026-10-07 확인. 10-12 에 셋 다 0.28.0 으로 맞춤 — 깔린 곳이 여럿인 것은 그대로) 정리 | ~~훅이 보는 argent 도구 인자가 버전마다 다를 수 있다~~ — 2026-10-13 훅이 도구 인자 이름을 보지 않게 되어(P10) Simless 와 상관없어짐 | — |
 | 다른 에이전트의 실행 직전 훅 지원 여부·설정 위치·입력 형식, 전역 규칙·스킬 위치 | §13 어댑터·P2·S9 | 5단계 전 |
 | avdslim·simslim 이 끄는 항목을 사람이 읽을 이름으로 묶는 방법 (`avdslim profiles`·simslim 프로필 JSON) | M4 | 4단계 ③ 전 |
 | `simctl list devicetypes`·`runtimes` 의 지원 관계(`supportedDeviceTypes`) | M1 iOS 기종·OS 고르기 | 4단계 ③ 전 |

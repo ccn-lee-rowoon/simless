@@ -20,7 +20,7 @@ function emptyMac(home: string): Partial<Probe> {
   return { run: async () => fail, which: () => undefined, env: { HOME: home, PATH: "" } };
 }
 
-/** 다 갖춘 Mac — Android SDK·도구·Xcode·argent 하나 */
+/** 다 갖춘 Mac — Android SDK·도구·Xcode */
 function readyMac(home: string, sdk: string): Partial<Probe> {
   for (const file of ["platform-tools/adb", "emulator/emulator"]) {
     mkdirSync(join(sdk, file, ".."), { recursive: true });
@@ -29,7 +29,6 @@ function readyMac(home: string, sdk: string): Partial<Probe> {
   mkdirSync(join(sdk, "system-images", "android-36"), { recursive: true });
   const bin = join(home, "bin");
   mkdirSync(bin, { recursive: true });
-  writeFileSync(join(bin, "argent"), "");
   return {
     env: { HOME: home, PATH: bin },
     which: (name) =>
@@ -63,10 +62,8 @@ describe("설치 안내·연결 확인 (S1·S2)", () => {
     expect(checks.get("avdslim")?.action).toEqual({ fix: "avdslim.install", kind: "install" });
     expect(checks.get("simslim")?.action).toEqual({ fix: "simslim.install", kind: "install" });
     expect(checks.get("xcode")?.action?.fix).toBe("xcode.open");
-    expect(checks.get("argent")).toMatchObject({
-      status: "warn",
-      action: { fix: "argent.install" },
-    });
+    // 화면 조작·테스트 도구는 프로젝트가 고른다 — Mac 점검에 넣지 않는다 (P10)
+    expect(checks.has("argent" as CheckId)).toBe(false);
     // 서버 등록·스킬·앱이 없으면 simless install 로
     expect(checks.get("launchd")).toMatchObject({ status: "warn", fix: "simless install" });
     expect(checks.get("skill")?.status).toBe("warn");
@@ -85,7 +82,7 @@ describe("설치 안내·연결 확인 (S1·S2)", () => {
         { serverVersion: VERSION, probe },
       ),
     );
-    for (const id of ["androidSdk", "images", "avdslim", "xcode", "simslim", "argent"] as CheckId[])
+    for (const id of ["androidSdk", "images", "avdslim", "xcode", "simslim"] as CheckId[])
       expect(checks.get(id)?.status).toBe("ok");
     expect(checks.get("images")?.detail).toBe("android-36");
 
