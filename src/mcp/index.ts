@@ -155,6 +155,12 @@ export async function runMcp(): Promise<void> {
             "With default: if the platform has no devices at all, create a slim recommended one first (takes a few minutes)",
           ),
         wait: z.boolean().optional().describe("Wait in the queue when devices are busy"),
+        purpose: z
+          .string()
+          .optional()
+          .describe(
+            'What you are using the devices for — one short line in the user\'s language (e.g. "login screen layout check"). Shown to people on the Simless Sessions screen and to sessions that find the device in use. Always give it',
+          ),
       },
     },
     guard(async (args) => {
@@ -166,6 +172,7 @@ export async function runMcp(): Promise<void> {
         create: args.create ?? false,
         wait: args.wait ?? false,
         timeoutMs: WAIT_SLICE_MS,
+        purpose: args.purpose,
       });
       if (acquired.status === "queued") {
         return json(

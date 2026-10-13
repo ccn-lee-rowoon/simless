@@ -68,10 +68,14 @@ describe("simless mcp (R12)", () => {
   });
 
   test("use — 그룹을 점유하고 켜서 targetId 를 돌려주고, release 로 푼다", async () => {
-    const result = await client.callTool({ name: "simless_use", arguments: { group: "Layout" } });
+    const result = await client.callTool({
+      name: "simless_use",
+      arguments: { group: "Layout", purpose: "layout check" },
+    });
     expect(result.isError).toBeFalsy();
     expect(textOf(result)).toContain("Acquired and booted 2 device(s)");
     expect(textOf(result)).toContain('"targetId": "emulator-');
+    expect(simless.leases.holding("ab12")?.purpose).toBe("layout check");
     const released = await client.callTool({ name: "simless_release", arguments: {} });
     expect(textOf(released)).toContain("ab12");
   });

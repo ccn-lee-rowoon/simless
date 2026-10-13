@@ -165,6 +165,8 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.opt.available": "Take only free devices — report the busy ones",
   "cli.opt.wait": "Wait until devices in use are released (with --available, only the rest)",
   "cli.opt.timeout": "Longest time to wait (e.g. 90s, 10m — default 10m)",
+  "cli.opt.purpose":
+    'What you\'re using the devices for, in one line (e.g. "login screen layout check") — shown on the Sessions screen and to others who find them in use',
   "cli.badDuration": "Bad duration: {text} (e.g. 90s, 10m)",
   "cli.queued": "Waiting — #{position} in line",
   "cli.stillQueued":
@@ -187,6 +189,7 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.holder.using": "using",
   "cli.holder.waiting": "waiting first",
   "cli.holder.since": "{device}{who} · {cwd} · {what} since {ago}",
+  "cli.holder.purpose": "for: {purpose}",
   "cli.list": "Devices in the simless list (created + added) — state, slim, lease, device ID",
   "cli.opt.platform": "android or ios",
   "cli.opt.created": "Only devices Simless created",
@@ -529,6 +532,7 @@ export const en: Record<keyof typeof ko, string> = {
     "Sessions show up here when an agent acquires devices with simless use.",
   "web.sessions.lastUsed": "last used {ago}",
   "web.sessions.since": "since {ago}",
+  "web.sessions.purpose": "Task",
   "web.sessions.queued": "Waiting — #{position} in line",
   "web.device.unlist": "Remove from list",
   "web.create.modeNew": "Create new",

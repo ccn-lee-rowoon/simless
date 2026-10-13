@@ -25,6 +25,8 @@ export interface AcquireOptions {
   create?: boolean;
   wait?: boolean;
   timeout?: string;
+  /** 무슨 작업으로 쓰는지 (M13) */
+  purpose?: string;
 }
 
 /** acquire·use 공통 옵션 */
@@ -35,7 +37,8 @@ export function acquireOptions(command: Command): Command {
     .option("--available", t("cli.opt.available"))
     .option("--create", t("cli.opt.create"))
     .option("--wait", t("cli.opt.wait"))
-    .option("--timeout <duration>", t("cli.opt.timeout"));
+    .option("--timeout <duration>", t("cli.opt.timeout"))
+    .option("--purpose <text>", t("cli.opt.purpose"));
 }
 
 function itemLine(item: LeaseItem): string {
@@ -69,6 +72,7 @@ export async function acquire(
       create: options.create ?? false,
       wait: options.wait ?? false,
       timeoutMs: options.timeout ? parseDuration(options.timeout) : undefined,
+      purpose: options.purpose,
     },
     (event, data) => {
       if (event === "progress" && !ctx.json)
@@ -142,7 +146,7 @@ export function registerLease(program: Command, run: Run) {
             : events
                 .map(
                   (e) =>
-                    `${when(e.at, { seconds: true })}  ${e.human ? t("common.human") : e.agent} (${e.sessionKey})  ${t(`web.history.${e.kind}`)}: ${e.deviceIds.join(", ")}`,
+                    `${when(e.at, { seconds: true })}  ${e.human ? t("common.human") : e.agent} (${e.sessionKey})  ${t(`web.history.${e.kind}`)}: ${e.deviceIds.join(", ")}${e.purpose ? `  — ${e.purpose}` : ""}`,
                 )
                 .join("\n"),
         );

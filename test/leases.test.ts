@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { LeaseManager, type LeaseManager as LM } from "../src/server/leases.ts";
+import { LeaseManager, LeaseStateSchema, type LeaseManager as LM } from "../src/server/leases.ts";
 import type { SessionInfo } from "../src/shared/protocol.ts";
 
 function session(key: string, agentSessionId?: string): SessionInfo {
@@ -316,5 +316,72 @@ describe("LeaseManager — 작업 폴더 (M13)", () => {
     leases.touch({ ...C, cwd: WT });
     leases.acquire({ ...C, cwd: "/repo", cwdKind: "launch" }, ["d1"], { wait: false });
     expect(cwds).toEqual([WT]);
+  });
+});
+
+describe("LeaseManager — 작업 (M13)", () => {
+  function withHistory() {
+    let now = 0;
+    const events: { kind: string; sessionKey: string; deviceIds: string[]; purpose?: string }[] =
+      [];
+    const leases = new LeaseManager(
+      { sessions: [], leases: [], queue: [] },
+      {
+        idleMs: 1000,
+        now: () => now,
+        onHistory: ({ kind, sessionKey, deviceIds, purpose }) =>
+          events.push({ kind, sessionKey, deviceIds, purpose }),
+      },
+    );
+    const lines = () =>
+      events.map((e) => `${e.kind} ${e.sessionKey} ${e.deviceIds.join(",")} ${e.purpose ?? "-"}`);
+    return { leases, lines, advance: (ms: number) => (now += ms) };
+  }
+
+  test("점유·대기에 준 작업이 기록과 점유자에 남고, 해제 기록은 풀린 점유의 작업을 따른다", () => {
+    const { leases, lines } = withHistory();
+    leases.acquire(A, ["d1"], { wait: false, purpose: "로그인 화면" });
+    leases.acquire(A, ["d2"], { wait: false, purpose: "결제 화면" });
+    expect(leases.holding("d1")).toMatchObject({ reason: "held", purpose: "로그인 화면" });
+
+    const busy = leases.acquire(B, ["d1"], { wait: false, purpose: "다른 작업" });
+    expect(busy.status === "busy" && busy.holders[0]?.purpose).toBe("로그인 화면");
+
+    leases.acquire(B, ["d1"], { wait: true, purpose: "다른 작업" });
+    // 대기 중인 세션도 무슨 작업으로 기다리는지 남는다
+    expect(leases.snapshot().queue[0]?.purpose).toBe("다른 작업");
+
+    leases.release("A");
+    expect(leases.holding("d1")?.purpose).toBe("다른 작업");
+    expect(lines()).toEqual([
+      "acquired A d1 로그인 화면",
+      "acquired A d2 결제 화면",
+      "queued B d1 다른 작업",
+      "released A d1 로그인 화면",
+      "released A d2 결제 화면",
+      "granted B d1 다른 작업",
+    ]);
+  });
+
+  test("이미 쥔 기기를 새 작업으로 다시 요청하면 작업만 바꾸고 기록하지 않는다 — 작업을 안 주면 그대로", () => {
+    const { leases, lines } = withHistory();
+    leases.acquire(A, ["d1"], { wait: false, purpose: "처음 작업" });
+    leases.acquire(A, ["d1"], { wait: false });
+    expect(leases.holding("d1")?.purpose).toBe("처음 작업");
+    leases.acquire(A, ["d1"], { wait: false, purpose: "다음 작업" });
+    expect(leases.holding("d1")?.purpose).toBe("다음 작업");
+    leases.endSession("A");
+    expect(lines()).toEqual(["acquired A d1 처음 작업", "ended A d1 다음 작업"]);
+  });
+
+  test("작업은 서버를 다시 켜도 남는다 (leases.json)", () => {
+    const { leases } = withHistory();
+    leases.acquire(A, ["d1"], { wait: false, purpose: "레이아웃" });
+    leases.acquire(B, ["d1"], { wait: true, purpose: "기다리는 작업" });
+    const restored = new LeaseManager(LeaseStateSchema.parse(leases.snapshot()), { idleMs: 1000 });
+    expect(restored.holding("d1")?.purpose).toBe("레이아웃");
+    expect(restored.snapshot().queue[0]?.purpose).toBe("기다리는 작업");
+    restored.release("A");
+    expect(restored.holding("d1")?.purpose).toBe("기다리는 작업");
   });
 });

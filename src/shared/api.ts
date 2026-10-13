@@ -13,6 +13,8 @@ export interface HolderView {
   /** 점유(또는 대기) 시작 시각 (ms) */
   since: number;
   reason: "held" | "queued";
+  /** 무슨 작업으로 잡았(기다리)는지 — 에이전트가 점유할 때 준 한 줄 (M13) */
+  purpose?: string;
 }
 
 /** 얼마나 슬림화됐는지 — 켜진 디바이스만 (M6) */
@@ -67,9 +69,11 @@ export interface SessionView {
   cwd: string;
   human: boolean;
   lastUsedAt: number;
-  held: { deviceId: string; since: number }[];
+  held: { deviceId: string; since: number; purpose?: string }[];
   /** 대기열에서 기다리는 디바이스 */
   queued: string[];
+  /** 기다리는 디바이스로 할 작업 */
+  queuedPurpose?: string;
   queuePosition?: number;
 }
 
@@ -259,6 +263,8 @@ export interface HistoryEvent {
   cwd: string;
   human: boolean;
   deviceIds: string[];
+  /** 무슨 작업으로 잡았(기다렸)는지 — 해제 기록에는 풀린 점유의 작업 (M13) */
+  purpose?: string;
 }
 
 /** 기록에 남은 세션 하나 — 세션 화면의 «지난 세션» (M13) */
@@ -272,6 +278,8 @@ export interface HistorySession {
   lastAt: number;
   /** 기록 수 */
   events: number;
+  /** 마지막으로 남긴 작업 (M13) */
+  purpose?: string;
 }
 
 /** 점검 항목 — simless doctor 와 첫 실행 설정 창이 같이 쓴다 (S1·S2·M14) */

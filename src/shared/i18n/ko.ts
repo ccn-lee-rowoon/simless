@@ -171,6 +171,8 @@ export const ko = {
   "cli.opt.available": "비어 있는 것만 잡는다 — 바쁜 것은 상태만 알려 준다",
   "cli.opt.wait": "다른 세션이 쓰는 중이면 풀릴 때까지 기다린다 (--available 과 함께면 나머지만)",
   "cli.opt.timeout": "기다리기 최대 시간 (예: 90s, 10m — 기본 10m)",
+  "cli.opt.purpose":
+    '무슨 작업으로 쓰는지 한 줄 (예: "로그인 화면 레이아웃 확인") — 세션 화면과 «누가 쓰는 중» 안내에 보인다',
   "cli.badDuration": "시간 형식이 잘못됐습니다: {text} (예: 90s, 10m)",
   "cli.queued": "대기 중 — {position}번째",
   "cli.stillQueued":
@@ -193,6 +195,7 @@ export const ko = {
   "cli.holder.using": "사용 중",
   "cli.holder.waiting": "먼저 기다리는 중",
   "cli.holder.since": "{device}{who} · {cwd} · {ago}부터 {what}",
+  "cli.holder.purpose": "작업: {purpose}",
 
   // CLI — 디바이스
   "cli.list": "simless 목록의 디바이스(만든 것 + 추가한 것) — 켜짐·슬림·점유·기기 ID",
@@ -533,6 +536,7 @@ export const ko = {
   "web.sessions.emptyHint": "에이전트가 simless use 로 디바이스를 점유하면 여기에 보입니다.",
   "web.sessions.lastUsed": "마지막 사용 {ago}",
   "web.sessions.since": "{ago}부터",
+  "web.sessions.purpose": "작업",
   "web.sessions.queued": "기다리는 중 — 대기 {position}번째",
   "web.device.unlist": "목록에서 빼기",
   "web.create.modeNew": "새로 만들기",

@@ -67,7 +67,7 @@
 | (클라이언트) `SERVER_DOWN` | 서버에 연결 못 함 | 4 |
 | (클라이언트) `QUEUED` | 기다리기 시간이 지남 — 순번은 남아 있음 | 3 |
 
-`holders` 항목: `{ deviceId, sessionKey, agent, cwd, human, since, reason: "held" | "queued" }` (`since` 는 ms).
+`holders` 항목: `{ deviceId, sessionKey, agent, cwd, human, since, reason: "held" | "queued", purpose? }` (`since` 는 ms, `purpose` 는 그 세션이 점유(대기)할 때 준 작업 — M13).
 
 **작업 폴더(`cwd`)** — 에이전트 세션이 받는 결과·오류 data·진행 알림에서 **다른 세션의** `cwd` 는 마지막 폴더 이름만 온다(예: `app`). 자기 세션과 사람(웹 화면)에게는 전체 경로. 출력이 AI 제공사로 넘어가기 때문이다(`SECURITY.md`).
 
@@ -77,7 +77,7 @@
 
 | 메서드 | params | result | 비고 |
 | --- | --- | --- | --- |
-| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en·ja)·시스템 언어 `systemLanguage`, 첫 실행 설정을 안 끝냈는지 `setupNeeded`(M14), 넣어 둔 스킬이 예전 것인지 `skillUpdate`(S9)·들어 있는 스킬의 지문 `skillHash`(M18 — 메뉴바 앱이 버전마다 한 번 알림), 이 세션, 점유·대기 순번, `DeviceView[]`(simless 목록), 그룹 `groups`, 세션마다 점유·대기 `sessions`(점유하거나 기다리는 세션만 — `{ sessionKey, agentSessionId?, agent, cwd, human, lastUsedAt, held: [{deviceId, since}], queued, queuePosition? }`, M13), 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
+| `status` | `{}` | `StatusResult` — 지금 언어 `language`(ko·en·ja)·시스템 언어 `systemLanguage`, 첫 실행 설정을 안 끝냈는지 `setupNeeded`(M14), 넣어 둔 스킬이 예전 것인지 `skillUpdate`(S9)·들어 있는 스킬의 지문 `skillHash`(M18 — 메뉴바 앱이 버전마다 한 번 알림), 이 세션, 점유·대기 순번, `DeviceView[]`(simless 목록), 그룹 `groups`, 세션마다 점유·대기 `sessions`(점유하거나 기다리는 세션만 — `{ sessionKey, agentSessionId?, agent, cwd, human, lastUsedAt, held: [{deviceId, since, purpose?}], queued, queuedPurpose?, queuePosition? }`, M13), 기본 디바이스 `defaults`(`{ android?, ios? }`), 대기열 | |
 | `setup.status` | `{}` | `{ needed, finishedAt?, checks: CheckView[], agents: { claude, skill, skillLocations: [{ location, state, targets }], mcp, hook, rule, others: [{ agent, label, installed, hook, rule, mcp }] } }` | 첫 실행 설정 창 (M14). `checks` 는 `simless doctor` 와 같은 점검(항목마다 `id` — `server`·`launchd`·`xcode`·`simslim`·`androidSdk`·`images`·`avdslim`·…). `agents` 는 설치 상태 `missing`·`outdated`·`current`, `claude` 는 claude 명령이 있는지. 점검에 몇 초 걸린다 |
 | `setup.skillScope` | `{ kind: "global" }` · `{ kind: "project", paths: [폴더] }` | `agents` | 스킬을 넣는 곳 바꾸기 (S9) — 빠진 곳은 지우고 새 곳에 넣는다. 프로젝트는 작업 트리마다 넣고 `.git/info/exclude` 에 적는다. 없는 폴더는 `INVALID` |
 | `setup.apply` | `{ item: "skill" \| "mcp" \| "protection", enabled, agent = "claude" \| "copilot" \| "codex" \| "cursor" \| "gemini" }` | `agents` (위와 같음) | 켜면 설치·끄면 제거. `protection` = 훅 + 규칙. `mcp` 는 `claude mcp add --scope user simless -- <simless> mcp` — claude 가 없으면 `TOOL_MISSING` |
@@ -106,10 +106,10 @@
 | `group.create` | `{ name, description?, devices? }` | `Group` | 이름이 겹치면 `INVALID` |
 | `group.update` | `{ group, name?, description?, devices?, add?, remove? }` | `Group` | `devices` 는 통째로 바꾸기, `add`·`remove` 는 넣고 빼기. 안 준 값은 그대로 |
 | `group.delete` | `{ group }` | `{ deleted }` | 디바이스는 그대로 |
-| `lease.acquire` | `{ devices?, group?, default?: "android" \| "ios" \| "both", create = false, mode = "all" \| "available", wait = false, timeoutMs = 600000 }` | `{ status: "granted", deviceIds, devices }` · `{ status: "partial", deviceIds, devices, queued }` · `{ status: "queued", position, holders, devices }` | 디바이스·그룹·기본 디바이스를 합쳐 요청한다. `devices` 는 기기마다 `{ deviceId, name, state: held·queued·busy·free, holder? }` (R23). `all` 은 전부 아니면 아무것도 — 바쁘면 `BUSY`(data 에 `devices`), `available` 은 비어 있는 것만 잡는다(하나도 없으면 `BUSY`). `wait` 면 대기열에 넣는다 — `all` 은 전부 빌 때까지 기다리고, `available` 은 비어 있던 것을 잡고 바로 돌아오며 나머지는 빌 때마다 서버가 잡아 준다(비어 있던 게 없으면 처음 잡힐 때까지 기다린다). 대기열에 넣으면 교착이 생기는 요청은 `DEADLOCK`. `create` 면 기본 디바이스를 달라는데 디바이스가 하나도 없는 플랫폼에 추천 기종을 슬림으로 만들고 점유한다(진행 알림 있음, 몇 분) |
+| `lease.acquire` | `{ devices?, group?, default?: "android" \| "ios" \| "both", create = false, mode = "all" \| "available", wait = false, timeoutMs = 600000, purpose? }` | `{ status: "granted", deviceIds, devices }` · `{ status: "partial", deviceIds, devices, queued }` · `{ status: "queued", position, holders, devices }` | 디바이스·그룹·기본 디바이스를 합쳐 요청한다. `devices` 는 기기마다 `{ deviceId, name, state: held·queued·busy·free, holder? }` (R23). `all` 은 전부 아니면 아무것도 — 바쁘면 `BUSY`(data 에 `devices`), `available` 은 비어 있는 것만 잡는다(하나도 없으면 `BUSY`). `wait` 면 대기열에 넣는다 — `all` 은 전부 빌 때까지 기다리고, `available` 은 비어 있던 것을 잡고 바로 돌아오며 나머지는 빌 때마다 서버가 잡아 준다(비어 있던 게 없으면 처음 잡힐 때까지 기다린다). 대기열에 넣으면 교착이 생기는 요청은 `DEADLOCK`. `create` 면 기본 디바이스를 달라는데 디바이스가 하나도 없는 플랫폼에 추천 기종을 슬림으로 만들고 점유한다(진행 알림 있음, 몇 분). `purpose` 는 무슨 작업으로 잡는지 한 줄(M13) — 서버가 한 줄·200자로 줄여 점유·대기·기록·`holders` 에 싣는다. 이미 쥔 기기를 새 `purpose` 로 다시 요청하면 작업만 바꾼다. 없는 필드라 예전 서버는 무시한다 — `PROTOCOL_VERSION` 은 그대로 |
 | `lease.release` | `{ devices? }` | `{ released }` | 안 주면 이 세션의 점유·대기 전부 |
-| `lease.history` | `{ limit = 100 (최대 5000), session? }` | `[{ at, kind, sessionKey, agentSessionId?, agent, cwd, human, deviceIds }]` — 최근 것부터 | `kind`: `acquired` 바로 점유 · `queued` 대기 등록 · `granted` 기다려서 점유 · `released` 스스로 해제 · `forced` 강제 해제됨 · `ended` 세션 종료로 해제 · `idle` 오래 안 써서 해제 · `deadlock` 교착이라 대기 거절 (M13) |
-| `lease.sessions` | `{ limit = 200 (최대 1000) }` | `[{ sessionKey, agentSessionId?, agent, cwd, human, lastAt, events }]` — 마지막 활동이 최근인 것부터 | 기록에 남은 세션마다 묶음 — 세션 화면의 지난 세션 (M13) |
+| `lease.history` | `{ limit = 100 (최대 5000), session? }` | `[{ at, kind, sessionKey, agentSessionId?, agent, cwd, human, deviceIds, purpose? }]` — 최근 것부터 | `kind`: `acquired` 바로 점유 · `queued` 대기 등록 · `granted` 기다려서 점유 · `released` 스스로 해제 · `forced` 강제 해제됨 · `ended` 세션 종료로 해제 · `idle` 오래 안 써서 해제 · `deadlock` 교착이라 대기 거절 (M13). `purpose` 는 점유·대기할 때 준 작업, 해제 기록은 풀린 점유의 작업 |
+| `lease.sessions` | `{ limit = 200 (최대 1000) }` | `[{ sessionKey, agentSessionId?, agent, cwd, human, lastAt, events, purpose? }]` — 마지막 활동이 최근인 것부터 | 기록에 남은 세션마다 묶음 — 세션 화면의 지난 세션 (M13). `purpose` 는 마지막으로 남긴 작업 |
 | `lease.forceRelease` | `{ device }` | `{ released }` | **사람(웹 화면)만** — 에이전트가 부르면 `INVALID`. 다른 세션의 점유를 푼다(앱 창 ⋯ «강제 해제») |
 | `lease.who` | `{ target? }` | `[{ deviceId, name, holder? }]` | `target` 은 ID·이름·AVD ID·UDID·시리얼 |
 | `hook.check` | `{ ids = [], boots = [], allAndroid = false, allIos = false }` | `{ allow, reason?, devices }` | 보호 훅이 부른다 — 명령에서 뽑은 기기 식별자(UDID·AVD ID·시리얼)·켜려는 기기·«모든 Android/iOS» 대상만 받아, 이 세션이 점유하지 않은 Simless 기기가 있으면 막는다(P3~P9). 명령 내용은 받지 않는다 |

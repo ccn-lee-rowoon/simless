@@ -795,6 +795,10 @@ summary:focus-visible {
   padding-left: 42px;
 }
 
+.session-purpose {
+  overflow-wrap: anywhere;
+}
+
 .session-queued {
   margin: 0;
   padding-left: 42px;
@@ -821,7 +825,7 @@ summary:focus-visible {
 
 .timeline-item {
   display: grid;
-  grid-template-columns: 150px 14px 150px 1fr;
+  grid-template-columns: 150px 14px 150px minmax(0, 1fr) minmax(0, 1.2fr);
   align-items: baseline;
   gap: 10px;
   padding: 9px 0;
@@ -850,6 +854,11 @@ summary:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
+}
+
+/* 무슨 작업으로 잡았는지 (M13) — 에이전트가 준 한 줄이라 길면 줄을 바꾼다 */
+.timeline-purpose {
+  overflow-wrap: anywhere;
 }
 
 .timeline-device {

@@ -26,6 +26,8 @@ interface SessionRow {
   /** 마지막 활동 — 기록의 마지막 시각 또는 마지막 사용 */
   lastAt: number;
   events: number;
+  /** 지금(또는 마지막으로) 하는 작업 (M13) */
+  purpose?: string;
   /** 지금 점유하거나 기다리는 중이면 */
   active?: SessionView;
 }
@@ -44,12 +46,19 @@ function rows(status: StatusResult, past: HistorySession[]): SessionRow[] {
       cwd: s.cwd,
       lastAt: Math.max(s.lastUsedAt, row?.lastAt ?? 0),
       events: row?.events ?? 0,
+      purpose: currentPurpose(s) ?? row?.purpose,
       active: s,
     });
   }
   return [...byKey.values()].sort(
     (a, b) => Number(Boolean(b.active)) - Number(Boolean(a.active)) || b.lastAt - a.lastAt,
   );
+}
+
+/** 지금 하는 작업 — 가장 최근에 잡은 점유의 작업, 없으면 기다리는 작업 */
+function currentPurpose(s: SessionView): string | undefined {
+  const latest = s.held.filter((h) => h.purpose).sort((a, b) => b.since - a.since)[0];
+  return latest?.purpose ?? s.queuedPurpose;
 }
 
 /** 세션 기록 창 열기 — 앱이면 Swift 에 알려 별도 창, 브라우저면 새 창 */
@@ -148,6 +157,8 @@ function SessionCard({
 }) {
   const name = (id: string) => byId.get(id)?.name ?? id;
   const s = row.active;
+  // 위에 하나만 보이고, 기기마다 작업이 다를 때만 줄마다 보인다
+  const perDevice = new Set(s?.held.map((h) => h.purpose)).size > 1;
   return (
     <article className="panel session-card">
       <button
@@ -162,6 +173,11 @@ function SessionCard({
             {agentLabel(row.agent, row.human)}
             {mine && <span className="chip chip-default">{t("web.device.mine")}</span>}
           </span>
+          {row.purpose && (
+            <span className="session-purpose" title={t("web.sessions.purpose")}>
+              {row.purpose}
+            </span>
+          )}
           <SessionIds row={row} />
           {!row.human && <span className="sub mono">{shortPath(row.cwd)}</span>}
         </span>
@@ -188,6 +204,11 @@ function SessionCard({
                 <span className="sub" title={fullTime(h.since)}>
                   {t("web.sessions.since", { ago: when(h.since) })}
                 </span>
+                {perDevice && h.purpose && (
+                  <span className="sub session-purpose" title={t("web.sessions.purpose")}>
+                    {h.purpose}
+                  </span>
+                )}
                 <span className="spacer" />
                 {!mine && (
                   <button
@@ -299,6 +320,9 @@ export function SessionWindow({
                     </span>
                   );
                 })}
+              </span>
+              <span className="timeline-purpose" title={t("web.sessions.purpose")}>
+                {e.purpose}
               </span>
             </li>
           ))}

@@ -171,6 +171,8 @@ export const ja: Record<keyof typeof ko, string> = {
   "cli.opt.available": "空いているデバイスだけ取る — 使用中のものは報告する",
   "cli.opt.wait": "使用中のデバイスが解放されるまで待つ(--available と一緒なら残りだけ)",
   "cli.opt.timeout": "待つ最長時間(例: 90s、10m — デフォルト 10m)",
+  "cli.opt.purpose":
+    '何の作業で使うかを一行で(例: "ログイン画面のレイアウト確認")— セッション画面と «使用中» の案内に表示される',
   "cli.badDuration": "時間の指定が正しくありません: {text}(例: 90s、10m)",
   "cli.queued": "待機中 — {position} 番目",
   "cli.stillQueued":
@@ -193,6 +195,7 @@ export const ja: Record<keyof typeof ko, string> = {
   "cli.holder.using": "使用中",
   "cli.holder.waiting": "先に待機中",
   "cli.holder.since": "{device}{who} · {cwd} · {ago}から{what}",
+  "cli.holder.purpose": "作業: {purpose}",
   "cli.list": "simless のリストにあるデバイス(作成 + 追加) — 状態・スリム・確保・デバイス ID",
   "cli.opt.platform": "android か ios",
   "cli.opt.created": "Simless が作成したデバイスだけ",
@@ -538,6 +541,7 @@ export const ja: Record<keyof typeof ko, string> = {
     "エージェントが simless use でデバイスを確保すると、ここにセッションが表示されます。",
   "web.sessions.lastUsed": "最終使用 {ago}",
   "web.sessions.since": "{ago}から",
+  "web.sessions.purpose": "作業",
   "web.sessions.queued": "待機中 — {position} 番目",
   "web.device.unlist": "リストから外す",
   "web.create.modeNew": "新規作成",

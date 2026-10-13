@@ -389,6 +389,7 @@ export class SimlessServer {
       human: session.human,
       since: holder.since,
       reason: holder.reason,
+      purpose: holder.purpose,
     };
   }
 
@@ -525,7 +526,6 @@ export class SimlessServer {
     return devices.map((device) => {
       const state = states.get(device.id);
       const lease = leases.get(device.id);
-      const holderSession = lease ? this.leases.session(lease.sessionKey) : undefined;
       return {
         ...device,
         slimMode: slimModeOf(device),
@@ -535,15 +535,7 @@ export class SimlessServer {
         layoutHeight: layoutHeight(device.spec),
         booted: state?.booted ?? false,
         targetId: state?.booted ? state.targetId : undefined,
-        holder:
-          lease && holderSession
-            ? this.holderView({
-                deviceId: device.id,
-                session: holderSession,
-                since: lease.acquiredAt,
-                reason: "held",
-              })
-            : undefined,
+        holder: this.holderView(this.leases.holding(device.id)),
         slimStats: state?.booted ? this.slimStatsCache.get(device.id) : undefined,
         ...this.slimOffView(device, planned),
         mine: lease?.sessionKey === session.key,
@@ -598,8 +590,9 @@ export class SimlessServer {
           lastUsedAt: s.lastUsedAt,
           held: snapshot.leases
             .filter((l) => l.sessionKey === s.key)
-            .map((l) => ({ deviceId: l.deviceId, since: l.acquiredAt })),
+            .map((l) => ({ deviceId: l.deviceId, since: l.acquiredAt, purpose: l.purpose })),
           queued: snapshot.queue.find((e) => e.sessionKey === s.key)?.deviceIds ?? [],
+          queuedPurpose: snapshot.queue.find((e) => e.sessionKey === s.key)?.purpose,
           queuePosition: this.leases.queuePosition(s.key),
         })),
       queue: snapshot.queue.map((e) => ({

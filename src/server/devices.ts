@@ -83,15 +83,9 @@ export function registerDeviceMethods(server: SimlessServer): void {
 
   /** 다른 세션이 쓰는 중이면 막는다 (M8·P1) */
   const guardOthers = (device: Device, session: SessionInfo) => {
-    const holder = server.leases.holderOf(device.id);
-    if (holder && holder.key !== session.key) {
-      const lease = server.leases.snapshot().leases.find((l) => l.deviceId === device.id);
-      const view = server.holderView({
-        deviceId: device.id,
-        session: holder,
-        since: lease?.acquiredAt ?? 0,
-        reason: "held",
-      });
+    const holder = server.leases.holding(device.id);
+    if (holder && holder.session.key !== session.key) {
+      const view = server.holderView(holder);
       throw new HandlerError("BUSY", t("err.busyDevice", { name: device.name }), {
         holders: view ? [{ ...view, deviceId: device.id }] : [],
       });
