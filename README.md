@@ -51,7 +51,7 @@ bash simless-<버전>-install.sh   # 설치: 서버(로그인 시 자동 실행)
 | 명령 | |
 | --- | --- |
 | `simless status` | 기기·그룹·누가 쓰는지 |
-| `simless use --default ios` · `--group "two accounts"` · `<기기>…` | 빌려서 켜기 (`--available` 비어 있는 것만, `--wait` 기다리기, `--create` 없으면 만들기) |
+| `simless use --default ios` · `--group "two accounts"` · `<기기>…` | 빌려서 켜기 (`--purpose "<작업>"` 무슨 작업인지 — 세션 화면에 보임, `--available` 비어 있는 것만, `--wait` 기다리기, `--create` 없으면 만들기) |
 | `simless release` · `simless down` | 돌려주기 · 끄기 |
 | `simless catalog` · `simless create "iPhone 17"` | 만들 수 있는 기종·슬림 항목 · 만들기 (`--no-slim` 일반 기기, `--slim-keep <ID,…>` 남길 항목 — Custom, `--app` 을 붙이면 App) |
 | `simless slim <기기> --keep <ID,…> [--app]` · `--full` · `--off` | 남길 항목 바꾸기(Custom, `--app` 이면 App) · UI(전체 슬림)로 · 슬림 해제 (Simless 가 만든 것만) |

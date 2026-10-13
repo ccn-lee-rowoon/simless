@@ -795,6 +795,10 @@ summary:focus-visible {
   padding-left: 42px;
 }
 
+.session-purpose {
+  overflow-wrap: anywhere;
+}
+
 .session-queued {
   margin: 0;
   padding-left: 42px;
@@ -850,6 +854,15 @@ summary:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
+}
+
+/* 무슨 작업으로 잡았는지 (M13) — 작업이 있는 기록이 있을 때만 칸을 둔다. 에이전트가 준 한 줄이라 길면 줄을 바꾼다 */
+.timeline-with-purpose .timeline-item {
+  grid-template-columns: 150px 14px 150px minmax(0, 1fr) minmax(0, 1.2fr);
+}
+
+.timeline-purpose {
+  overflow-wrap: anywhere;
 }
 
 .timeline-device {

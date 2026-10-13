@@ -22,10 +22,38 @@ const AcquireParams = z.object({
   /** all = 전부 아니면 아무것도, available = 비어 있는 것만 (R23) */
   mode: z.enum(["all", "available"]).default("all"),
   wait: z.boolean().default(false),
+  /** 무슨 작업으로 잡는지 — 세션 화면·점유자 안내에 보인다 (M13). 한 줄로 줄이고 길면 자른다 */
+  purpose: z
+    .string()
+    .optional()
+    .transform((text) => purposeText(text)),
   /** 기다리기의 이번 호출 최대 시간 — 지나면 «아직 대기 중» 으로 돌려준다 */
   timeoutMs: z.number().int().positive().max(3_600_000).default(600_000),
 });
 type AcquireParams = z.infer<typeof AcquireParams>;
+/** 점유 작업 글자 수 한도 — 넘으면 자르고 «…» 를 붙인다 */
+export const PURPOSE_MAX = 200;
+
+/**
+ * 터미널·화면을 흔들 수 있는 글자 — 제어 문자(C0·C1, ESC 로 시작하는 터미널 명령 포함)와
+ * 글의 방향을 바꾸는 문자(보이는 글과 실제 글이 달라 보이게 한다)
+ */
+const UNSAFE_CHARS = /[\p{Cc}\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu;
+
+/**
+ * 에이전트가 준 작업을 화면·터미널에 내도 되는 한 줄로 — 줄바꿈·제어 문자는 공백으로 바꾸고
+ * 방향 바꾸기 문자는 지운 뒤 공백을 한 칸으로, 비면 없음, 길면 자른다 (SECURITY.md «점유 작업»)
+ */
+export function purposeText(text: string | undefined): string | undefined {
+  const line = text
+    ?.replace(UNSAFE_CHARS, (c) => (/\p{Cc}/u.test(c) ? " " : ""))
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!line) return undefined;
+  const chars = [...line];
+  return chars.length > PURPOSE_MAX ? `${chars.slice(0, PURPOSE_MAX - 1).join("")}…` : line;
+}
+
 const ReleaseParams = z.object({ devices: z.array(z.string()).optional() });
 const WhoParams = z.object({ target: z.string().optional() });
 const ForceParams = z.object({ device: z.string() });
@@ -139,7 +167,7 @@ export function registerLeaseMethods(server: SimlessServer): void {
     const devices = await targets(params, session, connection);
     const ids = devices.map((d) => d.id);
     const items = () => leaseItems(session, devices);
-    const options = { wait: params.wait, mode: params.mode };
+    const options = { wait: params.wait, mode: params.mode, purpose: params.purpose };
 
     const result = leases.acquire(session, ids, options);
     if (result.status === "granted") return { ...result, devices: items() };
@@ -206,7 +234,6 @@ export function registerLeaseMethods(server: SimlessServer): void {
 
   server.addMethod("lease.who", async (p) => {
     const params = parse(WhoParams, p);
-    const snapshot = leases.snapshot();
     let devices = await server.devices();
     if (params.target) {
       const target = params.target;
@@ -221,23 +248,11 @@ export function registerLeaseMethods(server: SimlessServer): void {
       if (devices.length === 0)
         throw new HandlerError("NOT_FOUND", t("err.notThisMac", { target }));
     }
-    return devices.map((device) => {
-      const lease = snapshot.leases.find((l) => l.deviceId === device.id);
-      const session = lease ? leases.session(lease.sessionKey) : undefined;
-      return {
-        deviceId: device.id,
-        name: device.name,
-        holder:
-          lease && session
-            ? server.holderView({
-                deviceId: device.id,
-                session,
-                since: lease.acquiredAt,
-                reason: "held",
-              })
-            : undefined,
-      };
-    });
+    return devices.map((device) => ({
+      deviceId: device.id,
+      name: device.name,
+      holder: server.holderView(leases.holding(device.id)),
+    }));
   });
 
   server.addMethod("lease.history", async (p) => {

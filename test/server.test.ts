@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { SimlessServer } from "../src/server/app.ts";
+import { PURPOSE_MAX, purposeText } from "../src/server/lease-methods.ts";
 import { listen } from "../src/server/socket.ts";
-import type { AcquireResult, StatusResult } from "../src/shared/api.ts";
+import type { AcquireResult, HistoryEvent, StatusResult } from "../src/shared/api.ts";
 import { call, RemoteError, ServerDownError } from "../src/shared/client.ts";
 import { VERSION } from "../src/shared/version.ts";
 import { fakeDriver, seedDevice, session, tempEnv, testServers } from "./helpers.ts";
@@ -151,6 +152,58 @@ describe("큰 응답", () => {
     cleanups.push(() => listener.stop(), env.cleanup);
     const { result } = await call<{ text: string }>(env.paths.socket, "big", {}, session("A"));
     expect(result.text).toBe(text);
+  });
+});
+
+describe("점유 작업 (M13)", () => {
+  test("lease.acquire 의 purpose — 한 줄로 줄여 점유자·세션·기록에 남긴다", async () => {
+    const { socket } = await start();
+    await call(
+      socket,
+      "lease.acquire",
+      { devices: ["aaaa"], purpose: "  로그인 화면\n  레이아웃 확인 " },
+      session("A"),
+    );
+    const error = await call(socket, "lease.acquire", { devices: ["aaaa"] }, session("B")).catch(
+      (e: unknown) => e,
+    );
+    expect(error).toMatchObject({
+      code: "BUSY",
+      data: { holders: [{ deviceId: "aaaa", purpose: "로그인 화면 레이아웃 확인" }] },
+    });
+    const { result: status } = await call<StatusResult>(socket, "status", {}, session("A"));
+    expect(status.sessions[0]?.held).toEqual([
+      expect.objectContaining({ deviceId: "aaaa", purpose: "로그인 화면 레이아웃 확인" }),
+    ]);
+    expect(status.devices.find((d) => d.id === "aaaa")?.holder?.purpose).toBe(
+      "로그인 화면 레이아웃 확인",
+    );
+    await call(socket, "lease.release", {}, session("A"));
+    const { result } = await call<HistoryEvent[]>(
+      socket,
+      "lease.history",
+      { session: "A" },
+      session("A"),
+    );
+    expect(result.map((e) => [e.kind, e.purpose])).toEqual([
+      ["released", "로그인 화면 레이아웃 확인"],
+      ["acquired", "로그인 화면 레이아웃 확인"],
+    ]);
+  });
+
+  test("purposeText — 비면 없음, 길면 잘라 «…»", () => {
+    expect(purposeText(undefined)).toBeUndefined();
+    expect(purposeText(" \n ")).toBeUndefined();
+    const long = purposeText("가".repeat(PURPOSE_MAX + 50)) ?? "";
+    expect([...long]).toHaveLength(PURPOSE_MAX);
+    expect(long.endsWith("…")).toBe(true);
+  });
+
+  test("purposeText — 터미널 명령(ESC…)·제어 문자는 공백으로, 글 방향 바꾸기 문자는 지운다", () => {
+    expect(purposeText("\u001b]0;title\u0007\u001b[2J로그인 확인")).toBe("]0;title [2J로그인 확인");
+    expect(purposeText("a\u0085b\u009bc")).toBe("a b c");
+    expect(purposeText("결제\u202e트스테\u2066 확인\u200f")).toBe("결제트스테 확인");
+    expect(purposeText("\u001b\u0007")).toBeUndefined();
   });
 });
 

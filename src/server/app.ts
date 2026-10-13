@@ -389,6 +389,7 @@ export class SimlessServer {
       human: session.human,
       since: holder.since,
       reason: holder.reason,
+      purpose: holder.purpose,
     };
   }
 
@@ -525,7 +526,6 @@ export class SimlessServer {
     return devices.map((device) => {
       const state = states.get(device.id);
       const lease = leases.get(device.id);
-      const holderSession = lease ? this.leases.session(lease.sessionKey) : undefined;
       return {
         ...device,
         slimMode: slimModeOf(device),
@@ -535,15 +535,7 @@ export class SimlessServer {
         layoutHeight: layoutHeight(device.spec),
         booted: state?.booted ?? false,
         targetId: state?.booted ? state.targetId : undefined,
-        holder:
-          lease && holderSession
-            ? this.holderView({
-                deviceId: device.id,
-                session: holderSession,
-                since: lease.acquiredAt,
-                reason: "held",
-              })
-            : undefined,
+        holder: this.holderView(this.leases.holding(device.id)),
         slimStats: state?.booted ? this.slimStatsCache.get(device.id) : undefined,
         ...this.slimOffView(device, planned),
         mine: lease?.sessionKey === session.key,
@@ -589,19 +581,24 @@ export class SimlessServer {
             snapshot.leases.some((l) => l.sessionKey === s.key) ||
             snapshot.queue.some((e) => e.sessionKey === s.key),
         )
-        .map((s) => ({
-          sessionKey: s.key,
-          agentSessionId: s.agentSessionId,
-          agent: s.agent,
-          cwd: s.cwd,
-          human: s.human,
-          lastUsedAt: s.lastUsedAt,
-          held: snapshot.leases
-            .filter((l) => l.sessionKey === s.key)
-            .map((l) => ({ deviceId: l.deviceId, since: l.acquiredAt })),
-          queued: snapshot.queue.find((e) => e.sessionKey === s.key)?.deviceIds ?? [],
-          queuePosition: this.leases.queuePosition(s.key),
-        })),
+        .map((s) => {
+          const index = snapshot.queue.findIndex((e) => e.sessionKey === s.key);
+          const entry = snapshot.queue[index];
+          return {
+            sessionKey: s.key,
+            agentSessionId: s.agentSessionId,
+            agent: s.agent,
+            cwd: s.cwd,
+            human: s.human,
+            lastUsedAt: s.lastUsedAt,
+            held: snapshot.leases
+              .filter((l) => l.sessionKey === s.key)
+              .map((l) => ({ deviceId: l.deviceId, since: l.acquiredAt, purpose: l.purpose })),
+            queued: entry?.deviceIds ?? [],
+            queuedPurpose: entry?.purpose,
+            queuePosition: entry ? index + 1 : undefined,
+          };
+        }),
       queue: snapshot.queue.map((e) => ({
         sessionKey: e.sessionKey,
         agent: this.leases.session(e.sessionKey)?.agent ?? "unknown",

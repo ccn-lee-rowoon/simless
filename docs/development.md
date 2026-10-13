@@ -105,8 +105,8 @@ Simless 를 고칠 것이 없다. 훅은 도구 이름이 아니라 기기 ID �
 | --- | --- | --- |
 | `requirements.test.ts` | requirements.md ↔ 테스트 이름이 맞는지 (ID 중복·확인 칸·테스트 없는 요구사항·없는 ID·ID 순서) | 전체 |
 | `architecture.test.ts` | 폴더 경계(설계 §3) | — |
-| `server.test.ts` | 소켓 서버 — status·점유·BUSY·기다리기·세션 종료 해제·점유 기록 | R13·R14·R17·M13 |
-| `leases.test.ts` | LeaseManager 순수 로직 — 대기열·비어 있는 것만·교착·기록·작업 폴더(덜 정확한 값이 덮지 않기, `keepFolder`) | R13·R14·R17·R23·M13 |
+| `server.test.ts` | 소켓 서버 — status·점유·BUSY·기다리기·세션 종료 해제·점유 기록·점유 작업(`purpose`) | R13·R14·R17·M13 |
+| `leases.test.ts` | LeaseManager 순수 로직 — 대기열·비어 있는 것만·교착·기록·점유 작업·작업 폴더(덜 정확한 값이 덮지 않기, `keepFolder`) | R13·R14·R17·R23·M13 |
 | `devices.test.ts` | 만들기·이름(만들 때만, 밖에서 바뀐 이름 따라가기)·슬림·켜기·삭제·추가·빼기, 사람의 켜기·끄기, 슬림 수치·기준값·항목 고르기·내역, 기본 디바이스 만들어 빌려주기 | R1·R3·R4·R5·R20·R22·M1·M3·M4·M6·M8·M10·M15·M16·P1 |
 | `groups.test.ts` | 그룹·기본 디바이스·그룹 점유(all·available·대기) | R21·R22·R23·R24 |
 | `registry.test.ts` | 레지스트리 저장·옮기기(예전 형식) | R4·R20·R21·R22 |
@@ -125,7 +125,7 @@ Simless 를 고칠 것이 없다. 훅은 도구 이름이 아니라 기기 ID �
 | `skill.test.ts` | 스킬 문서에 꼭 있어야 할 문장, 스킬 폴더(참고 파일) 설치 | R16·S3~S13 |
 | `uninstall.test.ts` | 제거 — 스킬·보호·데이터, 서버 등록은 가짜로 | S12 |
 | `builds.test.ts` | 네이티브 빌드 캐시 — 지문·보관·정리·찾기·설치 | R26 |
-| `history.test.ts` | 점유 기록 SQLite·보관 기간 | M13 |
+| `history.test.ts` | 점유 기록 SQLite·보관 기간·작업 열(없던 파일에 더하기) | M13 |
 | `i18n.test.ts`·`config.test.ts` | 문구 사전(키·자리 표시자)·설정 | R25·M11 |
 | `time.test.ts` | 시각 표시 — 방금·N분 전·오늘·어제·날짜, 초까지, 전체 시각 | R25 |
 | `launchd.test.ts`·`app-bundle.test.ts` | 서버 등록 plist·`Simless.app` 만들기·메뉴바 로그인 항목 | R11 |

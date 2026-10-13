@@ -47,6 +47,7 @@ interface Row {
   cwd: string;
   human: number;
   device_ids: string;
+  purpose: string | null;
 }
 
 function toEvent(row: Row): HistoryEvent {
@@ -59,6 +60,7 @@ function toEvent(row: Row): HistoryEvent {
     cwd: row.cwd,
     human: row.human === 1,
     deviceIds: JSON.parse(row.device_ids) as string[],
+    purpose: row.purpose ?? undefined,
   };
 }
 
@@ -94,8 +96,13 @@ export class History {
       agent TEXT NOT NULL,
       cwd TEXT NOT NULL,
       human INTEGER NOT NULL,
-      device_ids TEXT NOT NULL
+      device_ids TEXT NOT NULL,
+      purpose TEXT
     )`);
+    // 작업(purpose)이 생기기 전에 만든 기록 파일에는 열을 더한다 — 예전 기록은 작업 없이 남는다
+    const columns = this.db.query<{ name: string }, []>("PRAGMA table_info(events)").all();
+    if (!columns.some((c) => c.name === "purpose"))
+      this.db.run("ALTER TABLE events ADD COLUMN purpose TEXT");
     this.db.run("CREATE INDEX IF NOT EXISTS events_at ON events (at)");
     this.db.run("CREATE INDEX IF NOT EXISTS events_session ON events (session_key, at)");
     if (options.legacyPath) this.migrate(options.legacyPath);
@@ -105,8 +112,8 @@ export class History {
   private readonly insert = (event: HistoryEvent) =>
     this.db
       .query(
-        `INSERT INTO events (at, kind, session_key, agent_session_id, agent, cwd, human, device_ids)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO events (at, kind, session_key, agent_session_id, agent, cwd, human, device_ids, purpose)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         event.at,
@@ -117,6 +124,7 @@ export class History {
         event.cwd,
         event.human ? 1 : 0,
         JSON.stringify(event.deviceIds),
+        event.purpose ?? null,
       );
 
   /** 예전 JSON 기록을 한 번에 옮긴다 — 읽지 못하면 건드리지 않고 남겨 둔다 */
@@ -167,13 +175,17 @@ export class History {
           cwd: string;
           human: number;
           agent_session_id: string | null;
+          purpose: string | null;
         },
         [number]
       >(
         `SELECT session_key, max(at) AS last_at, count(*) AS events, agent, cwd, human,
            (SELECT agent_session_id FROM events AS e2
              WHERE e2.session_key = e.session_key AND agent_session_id IS NOT NULL
-             ORDER BY at DESC LIMIT 1) AS agent_session_id
+             ORDER BY at DESC LIMIT 1) AS agent_session_id,
+           (SELECT purpose FROM events AS e3
+             WHERE e3.session_key = e.session_key AND purpose IS NOT NULL
+             ORDER BY at DESC, id DESC LIMIT 1) AS purpose
          FROM events AS e GROUP BY session_key ORDER BY last_at DESC LIMIT ?`,
       )
       .all(options.limit ?? 200);
@@ -185,6 +197,7 @@ export class History {
       human: r.human === 1,
       lastAt: r.last_at,
       events: r.events,
+      purpose: r.purpose ?? undefined,
     }));
   }
 

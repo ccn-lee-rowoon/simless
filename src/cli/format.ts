@@ -55,13 +55,16 @@ export function formatHolder(holder: HolderView & { deviceId?: string }): string
   const who = holder.human ? t("common.human") : holder.agent;
   const what = holder.reason === "queued" ? t("cli.holder.waiting") : t("cli.holder.using");
   const device = holder.deviceId ? `${holder.deviceId}: ` : "";
-  return t("cli.holder.since", {
+  const line = t("cli.holder.since", {
     device,
     who,
     cwd: shortPath(holder.cwd),
     ago: ago(holder.since),
     what,
   });
+  return holder.purpose
+    ? `${line} · ${t("cli.holder.purpose", { purpose: holder.purpose })}`
+    : line;
 }
 
 /** 슬림 표시 (M6) — SLIM 하나, 켜져 있으면 수치와 슬림 전후 비교, 실패만 따로 */

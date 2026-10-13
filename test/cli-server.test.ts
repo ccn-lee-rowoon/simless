@@ -48,6 +48,22 @@ describe("CLI ↔ 서버 (R13·R14)", () => {
     expect((await simless(["release"], { SIMLESS_SESSION_ID: "A" })).exitCode).toBe(0);
   });
 
+  test("acquire --purpose — 다른 세션의 BUSY 안내와 history 에 작업이 보인다 (M13)", async () => {
+    const env = { SIMLESS_SESSION_ID: "A" };
+    expect(
+      (await simless(["acquire", "aaaa", "--purpose", "로그인 화면 확인"], env)).exitCode,
+    ).toBe(0);
+    const busy = await simless(["acquire", "aaaa"], { SIMLESS_SESSION_ID: "B" });
+    expect(busy.exitCode).toBe(3);
+    expect(busy.stderr).toContain("로그인 화면 확인");
+    const history = await simless(["--json", "history", "--session", "x:A"], env);
+    expect(JSON.parse(history.stdout)[0]).toMatchObject({
+      kind: "acquired",
+      purpose: "로그인 화면 확인",
+    });
+    expect((await simless(["release"], env)).exitCode).toBe(0);
+  });
+
   test("슬림 항목 — create --slim-keep, slim --keep·--full·--app, 방식은 UI·App·Custom (M15)", async () => {
     const created = await simless([
       "--json",
