@@ -576,7 +576,7 @@ export const en: Record<keyof typeof ko, string> = {
   "doctor.hook.missing":
     "missing — agents can touch devices they don't hold through other tools or adb directly (P3)",
   "doctor.hook.outdated":
-    "points to a different Simless (moved, or switched between development and release)",
+    "outdated — points to a different Simless (moved, or switched between development and release) or the tools the hook watches changed",
   "doctor.rule": "simless rule",
   "cli.install.mcp": "Register simless mcp with Claude Code (user scope, R12)",
   "setup.noClaude": "Couldn't find the claude command — install Claude Code and try again",

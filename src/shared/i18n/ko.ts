@@ -579,7 +579,8 @@ export const ko = {
   "doctor.hook": "Claude Code 훅",
   "doctor.hook.missing":
     "없음 — 에이전트가 점유하지 않은 디바이스를 다른 도구·adb 로 직접 건드려도 막지 못한다 (P3)",
-  "doctor.hook.outdated": "다른 Simless 를 가리킴 (옮겼거나 개발·배포가 바뀜)",
+  "doctor.hook.outdated":
+    "예전 설정 — 다른 Simless 를 가리키거나(옮겼거나 개발·배포가 바뀜) 훅이 보는 도구 범위가 바뀜",
   "doctor.rule": "simless 규칙",
   "cli.install.mcp": "Claude Code 에 simless mcp 를 등록한다 (사용자 범위, R12)",
   "setup.noClaude": "claude 명령을 찾지 못했습니다 — Claude Code 를 설치한 뒤 다시 하세요",

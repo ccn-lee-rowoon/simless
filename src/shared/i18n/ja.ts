@@ -584,7 +584,7 @@ export const ja: Record<keyof typeof ko, string> = {
   "doctor.hook.missing":
     "なし — エージェントがほかのツールや adb で確保していないデバイスを直接操作できます (P3)",
   "doctor.hook.outdated":
-    "別の Simless を指しています (移動した、または開発版とリリース版を切り替えた)",
+    "古い設定です — 別の Simless を指しているか (移動した、または開発版とリリース版を切り替えた)、フックが見るツールの範囲が変わりました",
   "doctor.rule": "simless ルール",
   "cli.install.mcp": "simless mcp を Claude Code に登録する (ユーザースコープ、R12)",
   "setup.noClaude":
