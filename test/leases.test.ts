@@ -374,6 +374,20 @@ describe("LeaseManager — 작업 (M13)", () => {
     expect(lines()).toEqual(["acquired A d1 처음 작업", "ended A d1 다음 작업"]);
   });
 
+  test("교착 기록은 그 요청의 작업, 작업 없이 대기를 이어 가면 처음 대기할 때 준 작업", () => {
+    const { leases, lines } = withHistory();
+    leases.acquire(A, ["d1"], { wait: false });
+    leases.acquire(B, ["d2"], { wait: false });
+    leases.acquire(A, ["d2"], { wait: true, purpose: "A 가 기다리는 작업" });
+    // B 가 d1 을 기다리면 교착 — 다음에 A 가 작업 없이 대기를 이어 가도 A 의 대기 작업이 남는다
+    expect(leases.acquire(B, ["d1"], { wait: true, purpose: "B 작업" }).status).toBe("deadlock");
+    expect(lines().at(-1)).toBe("deadlock B d1 B 작업");
+    leases.release("A", ["d1"]);
+    leases.acquire(B, ["d3"], { wait: false });
+    leases.acquire(A, ["d3"], { wait: true });
+    expect(lines().at(-1)).toBe("queued A d3 A 가 기다리는 작업");
+  });
+
   test("작업은 서버를 다시 켜도 남는다 (leases.json)", () => {
     const { leases } = withHistory();
     leases.acquire(A, ["d1"], { wait: false, purpose: "레이아웃" });

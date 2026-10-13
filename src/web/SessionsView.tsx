@@ -26,7 +26,10 @@ interface SessionRow {
   /** 마지막 활동 — 기록의 마지막 시각 또는 마지막 사용 */
   lastAt: number;
   events: number;
-  /** 지금(또는 마지막으로) 하는 작업 (M13) */
+  /**
+   * 위에 하나로 보일 작업 (M13) — 지금 쓰는 세션은 점유·대기의 작업이 하나일 때만(여럿이면 줄마다),
+   * 지난 세션은 기록의 마지막 작업
+   */
   purpose?: string;
   /** 지금 점유하거나 기다리는 중이면 */
   active?: SessionView;
@@ -46,7 +49,8 @@ function rows(status: StatusResult, past: HistorySession[]): SessionRow[] {
       cwd: s.cwd,
       lastAt: Math.max(s.lastUsedAt, row?.lastAt ?? 0),
       events: row?.events ?? 0,
-      purpose: currentPurpose(s) ?? row?.purpose,
+      // 기록의 작업은 이미 끝났을 수 있다 — 지금 쓰는 세션은 지금 점유·대기의 작업만 본다
+      purpose: singlePurpose(s),
       active: s,
     });
   }
@@ -55,10 +59,16 @@ function rows(status: StatusResult, past: HistorySession[]): SessionRow[] {
   );
 }
 
-/** 지금 하는 작업 — 가장 최근에 잡은 점유의 작업, 없으면 기다리는 작업 */
-function currentPurpose(s: SessionView): string | undefined {
-  const latest = s.held.filter((h) => h.purpose).sort((a, b) => b.since - a.since)[0];
-  return latest?.purpose ?? s.queuedPurpose;
+/** 지금 점유·대기의 작업 (빈 것은 빼고) */
+function purposes(s: SessionView): Set<string> {
+  const all = [...s.held.map((h) => h.purpose), s.queuedPurpose];
+  return new Set(all.filter((p): p is string => Boolean(p)));
+}
+
+/** 작업이 하나뿐이면 그것 — 여럿이면 위에 하나를 고르지 않고 기기 줄마다 보인다 */
+function singlePurpose(s: SessionView): string | undefined {
+  const set = purposes(s);
+  return set.size === 1 ? [...set][0] : undefined;
 }
 
 /** 세션 기록 창 열기 — 앱이면 Swift 에 알려 별도 창, 브라우저면 새 창 */
@@ -157,8 +167,8 @@ function SessionCard({
 }) {
   const name = (id: string) => byId.get(id)?.name ?? id;
   const s = row.active;
-  // 위에 하나만 보이고, 기기마다 작업이 다를 때만 줄마다 보인다
-  const perDevice = new Set(s?.held.map((h) => h.purpose)).size > 1;
+  // 작업이 하나면 위에 한 번, 여럿이면 기기 줄·대기 줄마다
+  const perDevice = s !== undefined && purposes(s).size > 1;
   return (
     <article className="panel session-card">
       <button
@@ -232,6 +242,12 @@ function SessionCard({
         <p className="sub session-queued">
           {t("web.sessions.queued", { position: s.queuePosition ?? "?" })} —{" "}
           {s.queued.map(name).join(", ")}
+          {perDevice && s.queuedPurpose && (
+            <span className="session-purpose" title={t("web.sessions.purpose")}>
+              {" "}
+              · {s.queuedPurpose}
+            </span>
+          )}
         </p>
       )}
     </article>
@@ -271,6 +287,8 @@ export function SessionWindow({
   if (!events) return <SkeletonRows />;
   const active = status.sessions.find((s) => s.sessionKey === sessionKey);
   const first = events.at(-1);
+  // 작업이 있는 기록이 하나도 없으면(예전 기록) 작업 칸을 두지 않는다
+  const withPurpose = events.some((e) => e.purpose);
   const head = active ?? events[0];
   const agentSessionId =
     active?.agentSessionId ?? events.find((e) => e.agentSessionId)?.agentSessionId;
@@ -302,7 +320,7 @@ export function SessionWindow({
       {events.length === 0 ? (
         <p className="sub">{t("web.history.empty")}</p>
       ) : (
-        <ol className="timeline">
+        <ol className={withPurpose ? "timeline timeline-with-purpose" : "timeline"}>
           {events.map((e) => (
             <li key={`${e.at}-${e.kind}-${e.deviceIds.join()}`} className="timeline-item">
               <span className="mono sub timeline-time" title={fullTime(e.at)}>
@@ -321,9 +339,11 @@ export function SessionWindow({
                   );
                 })}
               </span>
-              <span className="timeline-purpose" title={t("web.sessions.purpose")}>
-                {e.purpose}
-              </span>
+              {withPurpose && (
+                <span className="timeline-purpose" title={e.purpose && t("web.sessions.purpose")}>
+                  {e.purpose}
+                </span>
+              )}
             </li>
           ))}
         </ol>

@@ -198,6 +198,13 @@ describe("점유 작업 (M13)", () => {
     expect([...long]).toHaveLength(PURPOSE_MAX);
     expect(long.endsWith("…")).toBe(true);
   });
+
+  test("purposeText — 터미널 명령(ESC…)·제어 문자는 공백으로, 글 방향 바꾸기 문자는 지운다", () => {
+    expect(purposeText("\u001b]0;title\u0007\u001b[2J로그인 확인")).toBe("]0;title [2J로그인 확인");
+    expect(purposeText("a\u0085b\u009bc")).toBe("a b c");
+    expect(purposeText("결제\u202e트스테\u2066 확인\u200f")).toBe("결제트스테 확인");
+    expect(purposeText("\u001b\u0007")).toBeUndefined();
+  });
 });
 
 describe("점유 기록 (M13)", () => {

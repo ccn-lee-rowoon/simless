@@ -581,20 +581,24 @@ export class SimlessServer {
             snapshot.leases.some((l) => l.sessionKey === s.key) ||
             snapshot.queue.some((e) => e.sessionKey === s.key),
         )
-        .map((s) => ({
-          sessionKey: s.key,
-          agentSessionId: s.agentSessionId,
-          agent: s.agent,
-          cwd: s.cwd,
-          human: s.human,
-          lastUsedAt: s.lastUsedAt,
-          held: snapshot.leases
-            .filter((l) => l.sessionKey === s.key)
-            .map((l) => ({ deviceId: l.deviceId, since: l.acquiredAt, purpose: l.purpose })),
-          queued: snapshot.queue.find((e) => e.sessionKey === s.key)?.deviceIds ?? [],
-          queuedPurpose: snapshot.queue.find((e) => e.sessionKey === s.key)?.purpose,
-          queuePosition: this.leases.queuePosition(s.key),
-        })),
+        .map((s) => {
+          const index = snapshot.queue.findIndex((e) => e.sessionKey === s.key);
+          const entry = snapshot.queue[index];
+          return {
+            sessionKey: s.key,
+            agentSessionId: s.agentSessionId,
+            agent: s.agent,
+            cwd: s.cwd,
+            human: s.human,
+            lastUsedAt: s.lastUsedAt,
+            held: snapshot.leases
+              .filter((l) => l.sessionKey === s.key)
+              .map((l) => ({ deviceId: l.deviceId, since: l.acquiredAt, purpose: l.purpose })),
+            queued: entry?.deviceIds ?? [],
+            queuedPurpose: entry?.purpose,
+            queuePosition: entry ? index + 1 : undefined,
+          };
+        }),
       queue: snapshot.queue.map((e) => ({
         sessionKey: e.sessionKey,
         agent: this.leases.session(e.sessionKey)?.agent ?? "unknown",

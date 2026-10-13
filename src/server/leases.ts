@@ -189,10 +189,14 @@ export class LeaseManager {
       return { status: "partial", deviceIds: free, holders: blockers, queued: false };
     }
 
+    // 같은 대기를 작업 없이 이어 가면(MCP 다시 호출·--wait) 처음 준 작업을 쓴다
+    const entry = this.queue.find((e) => e.sessionKey === session.key);
+    const waitPurpose = purpose ?? entry?.purpose;
+
     // 대기열에 넣기 전에 — 기다리면 서로를 기다리게 되는지 본다 (교착을 생기기 전에 막는다)
     const cycle = this.cycle(session.key, rest, free);
     if (cycle) {
-      this.record("deadlock", session.key, rest, purpose);
+      this.record("deadlock", session.key, rest, waitPurpose);
       if (free.length > 0) {
         this.grant(session.key, free, "acquired", purpose);
         this.changed();
@@ -202,10 +206,9 @@ export class LeaseManager {
 
     this.grant(session.key, free, "acquired", purpose);
     const entryMode = mode === "available" ? "each" : "all";
-    const entry = this.queue.find((e) => e.sessionKey === session.key);
     // 같은 대기를 다시 요청(--wait 이어 가기)하면 기록하지 않는다
     if (entry?.deviceIds.join() !== rest.join())
-      this.record("queued", session.key, rest, purpose ?? entry?.purpose);
+      this.record("queued", session.key, rest, waitPurpose);
     if (entry) {
       entry.deviceIds = rest;
       entry.mode = entryMode;
@@ -326,17 +329,8 @@ export class LeaseManager {
   blockers(sessionKey: string, deviceIds: string[]): Holder[] {
     const result: Holder[] = [];
     for (const id of deviceIds) {
-      const lease = this.leases.get(id);
-      const holder = lease && this.sessions.get(lease.sessionKey);
-      if (lease && holder && lease.sessionKey !== sessionKey) {
-        result.push({
-          deviceId: id,
-          session: holder,
-          since: lease.acquiredAt,
-          reason: "held",
-          purpose: lease.purpose,
-        });
-      }
+      const holder = this.holding(id);
+      if (holder && holder.session.key !== sessionKey) result.push(holder);
     }
     // 디바이스마다 먼저 온 순서 — 앞에서 같은 디바이스를 기다리는 세션이 있으면 새치기하지 않는다.
     const myIndex = this.queue.findIndex((e) => e.sessionKey === sessionKey);

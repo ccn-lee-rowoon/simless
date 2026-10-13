@@ -172,7 +172,7 @@ export const ja: Record<keyof typeof ko, string> = {
   "cli.opt.wait": "使用中のデバイスが解放されるまで待つ(--available と一緒なら残りだけ)",
   "cli.opt.timeout": "待つ最長時間(例: 90s、10m — デフォルト 10m)",
   "cli.opt.purpose":
-    '何の作業で使うかを一行で(例: "ログイン画面のレイアウト確認")— セッション画面と «使用中» の案内に表示される',
+    '何の作業で使うかを一行で(例: "ログイン画面のレイアウト確認")— セッション画面と他のセッションの «使用中» の案内に表示されるため、作業名だけ(秘密・トークン・個人情報は入れない)',
   "cli.badDuration": "時間の指定が正しくありません: {text}(例: 90s、10m)",
   "cli.queued": "待機中 — {position} 番目",
   "cli.stillQueued":

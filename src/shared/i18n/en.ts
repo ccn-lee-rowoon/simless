@@ -166,7 +166,7 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.opt.wait": "Wait until devices in use are released (with --available, only the rest)",
   "cli.opt.timeout": "Longest time to wait (e.g. 90s, 10m — default 10m)",
   "cli.opt.purpose":
-    'What you\'re using the devices for, in one line (e.g. "login screen layout check") — shown on the Sessions screen and to others who find them in use',
+    'What you\'re using the devices for, in one line (e.g. "login screen layout check") — shown on the Sessions screen and to other sessions that find them in use, so a task name only (no secrets, tokens or personal data)',
   "cli.badDuration": "Bad duration: {text} (e.g. 90s, 10m)",
   "cli.queued": "Waiting — #{position} in line",
   "cli.stillQueued":

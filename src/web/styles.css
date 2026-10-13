@@ -825,7 +825,7 @@ summary:focus-visible {
 
 .timeline-item {
   display: grid;
-  grid-template-columns: 150px 14px 150px minmax(0, 1fr) minmax(0, 1.2fr);
+  grid-template-columns: 150px 14px 150px 1fr;
   align-items: baseline;
   gap: 10px;
   padding: 9px 0;
@@ -856,7 +856,11 @@ summary:focus-visible {
   gap: 4px 12px;
 }
 
-/* 무슨 작업으로 잡았는지 (M13) — 에이전트가 준 한 줄이라 길면 줄을 바꾼다 */
+/* 무슨 작업으로 잡았는지 (M13) — 작업이 있는 기록이 있을 때만 칸을 둔다. 에이전트가 준 한 줄이라 길면 줄을 바꾼다 */
+.timeline-with-purpose .timeline-item {
+  grid-template-columns: 150px 14px 150px minmax(0, 1fr) minmax(0, 1.2fr);
+}
+
 .timeline-purpose {
   overflow-wrap: anywhere;
 }
