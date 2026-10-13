@@ -30,7 +30,7 @@ function matches(device: Device, state: RuntimeState | undefined, id: string): b
 }
 
 export function registerHookMethods(server: SimlessServer): void {
-  // 훅은 Bash·argent 호출마다 부른다 — 켜짐 상태(시리얼)를 읽는 데 0.5초쯤 걸려 10초 기억해 둔다.
+  // 훅은 기기 ID 가 보이는 셸·MCP 호출마다 부른다 — 켜짐 상태(시리얼)를 읽는 데 0.5초쯤 걸려 10초 기억해 둔다.
   // 시리얼은 켤 때만 바뀌고, simless 로 켜면(점유가 있어야 함) 기억을 버린다
   let cache: { at: number; states: Map<string, RuntimeState> } | undefined;
   server.onInvalidate(() => {

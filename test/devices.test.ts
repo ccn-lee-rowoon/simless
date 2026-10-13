@@ -37,7 +37,7 @@ describe("디바이스 명령 (R1·P1)", () => {
     });
   });
 
-  test("켜기는 점유가 있어야 한다 — 없으면 NOT_HELD, 점유하면 켜지고 argent ID 가 나온다", async () => {
+  test("켜기는 점유가 있어야 한다 — 없으면 NOT_HELD, 점유하면 켜지고 기기 ID 가 나온다", async () => {
     const { A } = await start();
     const device = (await A("device.create", android360)) as DeviceView;
     expect(await A("device.up", { devices: [device.id] })).toMatchObject({ code: "NOT_HELD" });

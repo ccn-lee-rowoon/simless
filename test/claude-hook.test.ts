@@ -67,6 +67,18 @@ describe("Claude Code 훅 설치 (P3)", () => {
     );
   });
 
+  test("보는 도구가 바뀌어 matcher 가 다르면 예전 것 — 다시 넣으면 지금 matcher 로 (P10)", () => {
+    const env = home();
+    installHook(["/bin/simless"], env);
+    const settings = read(env);
+    settings.hooks.PreToolUse[0].matcher = "Bash|mcp__argent__.*|mcp__old-tool__.*";
+    writeFileSync(settingsPath(env), JSON.stringify(settings));
+    expect(hookStatus(["/bin/simless"], env)).toBe("outdated");
+    installHook(["/bin/simless"], env);
+    expect(read(env).hooks.PreToolUse[0].matcher).toBe(HOOK_MATCHER);
+    expect(hookStatus(["/bin/simless"], env)).toBe("current");
+  });
+
   test("지우면 simless 훅만 빠지고, 남은 게 없으면 PreToolUse 도 없앤다", () => {
     const env = home();
     installHook(["/bin/simless"], env);
@@ -76,12 +88,14 @@ describe("Claude Code 훅 설치 (P3)", () => {
     expect(hookStatus(["/bin/simless"], env)).toBe("missing");
   });
 
-  test("규칙은 점유한 뒤에만 건드리고 켜기는 Simless 로 하라고 적는다 (P2)", async () => {
+  test("규칙은 점유한 뒤에만 건드리고 켜기는 Simless 로, 끝나면 해제를 권하라고 적는다 (P2·S8)", async () => {
     const env = home();
     const text = readFileSync(await installRule(env), "utf8");
-    // 점유한 뒤에만 — argent·adb·simctl, 읽기(스크린샷·describe)도
-    expect(text).toContain("Before touching one with argent, adb, or simctl");
-    expect(text).toContain("screenshots and `describe` included");
+    // 점유한 뒤에만 — 어느 도구든, 읽기(스크린샷·접근성 트리)도
+    expect(text).toContain("Before touching one with any tool");
+    expect(text).toContain("screenshots and accessibility trees included");
+    expect(text).toContain("Name the device on every call");
+    expect(text).toContain("recommend releasing");
     expect(text).toContain("simless use --default ios|android");
     // 켜기·끄기는 Simless 로
     expect(text).toContain("Boot and shut down with `simless use` / `simless down`");

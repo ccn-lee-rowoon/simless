@@ -1,5 +1,9 @@
-// 도구 호출에서 «어느 디바이스를 건드리는지» 를 뽑는다 (docs/design.md §13 «대상 판정», P4~P6).
+// 도구 호출에서 «어느 디바이스를 건드리는지» 를 뽑는다 (docs/design.md §13 «대상 판정», P4~P6·P10).
 // 순수 함수 — 서버·파일을 읽지 않는다. 어느 것이 관리 디바이스인지는 서버(또는 managed-index)가 가린다.
+// 화면 조작·테스트 도구(argent·Maestro …)의 이름은 모른다(P10) — 셸 명령의 낱말과 MCP 인자의 글자에서
+// 기기 ID 로 보이는 것을 찾는다. 기기를 직접 다루는 플랫폼 도구(adb·simctl·emulator)만 읽는 법을 안다.
+
+import { SELF_MCP_SERVER } from "../shared/hook-scope.ts";
 
 /** 훅이 서버에 묻는 대상 */
 export interface Targets {
@@ -13,8 +17,33 @@ export interface Targets {
   allIos: boolean;
 }
 
-/** 이 단어가 하나도 없으면 디바이스를 건드리지 않는 Bash 명령으로 보고 바로 통과한다 */
-const DEVICE_TOOLS = /\b(adb|simctl|emulator|simslim|avdslim)\b/;
+/** 기기를 직접 다루는 플랫폼 도구 — 이 낱말이 있는 명령은 낱말을 모두 서버에 묻는다(예전 그대로) */
+const DEVICE_TOOLS = /(?<![\w-])(adb|simctl|emulator|simslim|avdslim)(?![\w-])/;
+
+/** 관리 디바이스의 AVD ID·UDID·마지막 시리얼(managed-index) — 필요할 때만 읽는다 */
+export type Known = () => ReadonlySet<string>;
+
+/** 기기 ID 모양 — iOS UDID·Android 에뮬레이터 시리얼. 붙은 인자(`id=<UDID>,arch=…`·`ios:<UDID>`) 안에서도 찾는다 */
+const UDID_IN = /[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/gi;
+const SERIAL_IN = /emulator-\d+/g;
+/**
+ * 모양이 없는 이름(AVD ID) 후보 — `_`·숫자가 든 4자 이상 낱말만 관리 목록과 대조한다.
+ * `test`·`main` 같은 흔한 낱말로 이름 지은 AVD 가 관계없는 명령(`bun run test`·`git checkout main`)을 막지 않게
+ */
+const NAME_LIKE = /^(?=.{4,})(?=.*[_\d])[\w.-]+$/;
+/** MCP 인자에서 이보다 긴 글은 보지 않는다 — 기기 인자는 짧고, 긴 글은 문서·이슈 본문이다(P10) */
+const MAX_MCP_STRING = 512;
+
+/** 글 안의 기기 ID — UDID 는 대문자로 맞춘다(서버가 글자 그대로 비교하고 simctl 은 대문자로 준다) */
+function deviceIds(text: string, known: Known): string[] {
+  const shaped = [
+    ...[...text.matchAll(UDID_IN)].map((m) => m[0].toUpperCase()),
+    ...[...text.matchAll(SERIAL_IN)].map((m) => m[0]),
+  ];
+  const names = text.split(/[\s"'`;|&()<>=,:/]+/).filter((w) => NAME_LIKE.test(w));
+  const named = names.length > 0 ? names.filter((w) => known().has(w)) : [];
+  return [...new Set([...shaped, ...named])];
+}
 
 /** 기기를 지정하지 않으면 켜진 기기에 붙는 adb 명령 (목록 조회·서버 관리는 빼고) */
 const ADB_DEVICE_COMMANDS = new Set([
@@ -39,18 +68,6 @@ const ADB_DEVICE_COMMANDS = new Set([
   "get-serialno",
   "get-state",
 ]);
-
-/** argent 도구 인자 중 기기를 가리키는 것 — `device` 는 flow-execute (argent 0.28.0 의 도구 인자 목록과 대조) */
-const ARGENT_DEVICE_KEYS = [
-  "udid",
-  "device_id",
-  "deviceId",
-  "serial",
-  "avdName",
-  "device",
-] as const;
-/** 기기 여럿을 가리키는 인자 — stop-all-simulator-servers 의 `devices` */
-const ARGENT_DEVICE_LIST_KEYS = ["devices"] as const;
 
 function words(command: string): string[] {
   return command
@@ -134,12 +151,25 @@ export function stripDataHeredocs(command: string): string {
   return out.join("\n");
 }
 
-function bashTargets(full: string): Targets | undefined {
-  const command = stripDataHeredocs(full);
-  if (!DEVICE_TOOLS.test(command)) return undefined;
-  const targets: Targets = { ids: [], boots: [], allAndroid: false, allIos: false };
-  // 명령 문자열 안에 보이는 낱말은 모두 후보 — 셸 문법을 파싱하지 않는다(설계 결정 기록)
-  targets.ids = [...new Set(words(command))];
+/** Simless 자신의 명령 조각을 뺀다 — `simless use <UDID>` 는 점유하려는 것이다(MCP 의 simless 도구처럼) */
+function withoutSimless(command: string): string {
+  return command
+    .split(/;|&&|\|\||\||\n/)
+    .filter((seg) => (words(seg)[0] ?? "").split("/").at(-1) !== "simless")
+    .join("\n");
+}
+
+function bashTargets(full: string, known: Known): Targets | undefined {
+  const command = withoutSimless(stripDataHeredocs(full));
+  // 명령 문자열 안의 기기 ID 는 모두 후보 — 셸 문법을 파싱하지 않는다(설계 결정 기록).
+  // 어떤 도구든(maestro --device …·agent-device --udid …·npx 뒤 …) 기기 ID 를 넘기면 걸린다
+  if (!DEVICE_TOOLS.test(command)) {
+    const ids = deviceIds(command, known);
+    return ids.length > 0 ? { ids, boots: [], allAndroid: false, allIos: false } : undefined;
+  }
+  // 플랫폼 도구가 든 명령은 낱말을 모두 묻는다 — AVD 이름이 관리 목록 파일에 아직 없어도 맞게
+  const ids = [...new Set([...words(command), ...deviceIds(command, () => new Set())])];
+  const targets: Targets = { ids, boots: [], allAndroid: false, allIos: false };
 
   for (const seg of segments(command)) {
     const tool = seg.findIndex((w) => /(^|\/)(adb|emulator)$/.test(w) || w === "simctl");
@@ -166,45 +196,52 @@ function bashTargets(full: string): Targets | undefined {
   return targets;
 }
 
-function argentTargets(tool: string, input: Record<string, unknown>): Targets | undefined {
-  const isId = (v: unknown): v is string => typeof v === "string" && v.length > 0;
-  const ids = [
-    ...ARGENT_DEVICE_KEYS.map((key) => input[key]).filter(isId),
-    ...ARGENT_DEVICE_LIST_KEYS.flatMap((key) => {
-      const list = input[key];
-      return Array.isArray(list) ? list.filter(isId) : [];
-    }),
-  ];
-  if (ids.length === 0 && tool.endsWith("__flow-execute")) {
-    // 기기를 안 주면 flow 가 켜진 기기 하나를 스스로 고른다 — 어느 것인지 몰라 켜진 것 전부로 본다
-    // (기기 지정 없는 `adb shell` 과 같은 규칙, P4). chromium·vega 는 Simless 기기가 아니다
-    const platform = input.platform;
-    if (platform === "chromium" || platform === "vega") return undefined;
-    return {
-      ids: [],
-      boots: [],
-      allAndroid: platform !== "ios",
-      allIos: platform !== "android",
-    };
-  }
-  if (ids.length === 0) return undefined; // list-devices 처럼 기기를 지정하지 않는 도구 (P6)
-  const boots = tool.endsWith("__boot-device") ? ids : [];
-  return { ids, boots, allAndroid: false, allIos: false };
+/** MCP 인자 안의 짧은 글을 모두 — 깊이·개수·길이에 끝을 둔다(큰 문서를 넘기는 도구도 훅이 빨리 끝나게) */
+function strings(value: unknown, out: string[] = [], depth = 0): string[] {
+  if (out.length >= 2000 || depth > 8) return out;
+  if (typeof value === "string") {
+    if (value.length <= MAX_MCP_STRING) out.push(value);
+  } else if (Array.isArray(value)) for (const v of value) strings(v, out, depth + 1);
+  else if (typeof value === "object" && value !== null)
+    for (const v of Object.values(value)) strings(v, out, depth + 1);
+  return out;
 }
 
 /**
- * 도구 호출 → 대상. 디바이스를 건드리지 않으면 undefined(바로 통과).
- * Claude Code 의 도구 이름 기준 — Bash, mcp__argent__<도구>.
+ * MCP 도구 호출 — 어느 서버의 어느 도구든 인자 글자에서 기기 ID 를 찾는다(P10). 인자 이름(`udid`·`device_id`·
+ * `serial` …)은 도구마다 달라 보지 않는다. 기기를 안 준 호출(도구가 켜진 기기를 스스로 고름)은 알 수 없어 통과한다 —
+ * 규칙·스킬이 «기기를 늘 지정한다» 로 다룬다. 이름이 켜기처럼 보이는 도구(`boot`·`start-device` …)는 켜기다 —
+ * 켜기는 Simless 로 한다(S6)
  */
-export function extractTargets(tool: string, input: unknown): Targets | undefined {
+function mcpTargets(tool: string, input: unknown, known: Known): Targets | undefined {
+  const ids = [...new Set(strings(input).flatMap((text) => deviceIds(text, known)))];
+  if (ids.length === 0) return undefined;
+  const boots = BOOT_TOOL.test(tool) ? ids : [];
+  return { ids, boots, allAndroid: false, allIos: false };
+}
+
+/** 켜기로 보는 MCP 도구 이름 — 도구마다 다르지만 이름에 드러난다(`boot-device`·`boot`·`start_device` …) */
+const BOOT_TOOL = /(^|[-_])(boot|start[-_]?(device|simulator|emulator))([-_]|$)/i;
+
+/**
+ * 도구 호출 → 대상. 디바이스를 건드리지 않으면 undefined(바로 통과).
+ * Claude Code 의 도구 이름 기준 — Bash, mcp__<서버>__<도구> (다른 에이전트는 adapters.ts 가 바꿔 준다).
+ * `known` 은 관리 디바이스의 AVD ID·UDID·마지막 시리얼(managed-index) — 모양이 없는 AVD 이름을 알아보는 데 쓴다.
+ * 이름처럼 보이는 낱말이 있을 때만 부른다(파일 읽기를 아끼려고).
+ */
+export function extractTargets(
+  tool: string,
+  input: unknown,
+  known: Known = () => new Set(),
+): Targets | undefined {
   const record = (typeof input === "object" && input !== null ? input : {}) as Record<
     string,
     unknown
   >;
   if (tool === "Bash") {
     const command = record.command;
-    return typeof command === "string" ? bashTargets(command) : undefined;
+    return typeof command === "string" ? bashTargets(command, known) : undefined;
   }
-  if (tool.startsWith("mcp__argent__")) return argentTargets(tool, record);
-  return undefined;
+  if (!tool.startsWith("mcp__") || tool.startsWith(`mcp__${SELF_MCP_SERVER}__`)) return undefined;
+  return mcpTargets(tool.split("__").slice(2).join("__"), input, known);
 }

@@ -49,11 +49,6 @@ export const FIXES: Record<FixId, Fix> = {
     kind: "run",
     steps: [{ command: ["brew", "upgrade", "avdslim"] }],
   },
-  "argent.install": {
-    id: "argent.install",
-    kind: "run",
-    steps: [{ command: ["npx", "-y", "@swmansion/argent@latest", "init", "-y"] }],
-  },
   "xcode.open": {
     id: "xcode.open",
     kind: "open",

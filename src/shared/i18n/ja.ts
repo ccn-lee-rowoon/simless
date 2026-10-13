@@ -193,7 +193,7 @@ export const ja: Record<keyof typeof ko, string> = {
   "cli.holder.using": "使用中",
   "cli.holder.waiting": "先に待機中",
   "cli.holder.since": "{device}{who} · {cwd} · {ago}から{what}",
-  "cli.list": "simless のリストにあるデバイス(作成 + 追加) — 状態・スリム・確保・argent ID",
+  "cli.list": "simless のリストにあるデバイス(作成 + 追加) — 状態・スリム・確保・デバイス ID",
   "cli.opt.platform": "android か ios",
   "cli.opt.created": "Simless が作成したデバイスだけ",
   "cli.list.available": "simless のリストにないこの Mac のデバイス — simless add で追加できるもの",
@@ -372,9 +372,6 @@ export const ja: Record<keyof typeof ko, string> = {
   "doctor.simslim.missing": "なし — iOS デバイスをスリム化できません(R5)",
   "doctor.newer": " → {version} があります",
   "doctor.present": "インストール済み",
-  "doctor.argent.missing": "なし — 画面の操作とキャプチャは argent で行います(S6)",
-  "doctor.argent.many": "PATH に複数のバージョンがあります — 最初のものが使われます: {versions}",
-  "doctor.argent.fix": "1 つだけ残すか、PATH の順番を直してください",
   "doctor.skill": "simless スキル",
   "doctor.skill.missing": "未インストール",
   "doctor.skill.outdated": "この Simless のスキルと違います(古いバージョン)",
@@ -585,9 +582,9 @@ export const ja: Record<keyof typeof ko, string> = {
     "保護 — Claude Code のフック (~/.claude/settings.json) とルール (~/.claude/rules/simless.md) も入れる",
   "doctor.hook": "Claude Code フック",
   "doctor.hook.missing":
-    "なし — エージェントが argent や adb で確保していないデバイスを直接操作できます (P3)",
+    "なし — エージェントがほかのツールや adb で確保していないデバイスを直接操作できます (P3)",
   "doctor.hook.outdated":
-    "別の Simless を指しています (移動した、または開発版とリリース版を切り替えた)",
+    "古い設定です — 別の Simless を指しているか (移動した、または開発版とリリース版を切り替えた)、フックが見るツールの範囲が変わりました",
   "doctor.rule": "simless ルール",
   "cli.install.mcp": "simless mcp を Claude Code に登録する (ユーザースコープ、R12)",
   "setup.noClaude":
@@ -603,7 +600,6 @@ export const ja: Record<keyof typeof ko, string> = {
   "web.setup.check.server": "simless サーバー",
   "web.setup.check.ios": "iOS シミュレーター",
   "web.setup.check.android": "Android エミュレーター",
-  "web.setup.check.screen": "画面操作",
   "web.setup.check.recheck": "再確認",
   "web.setup.check.checking": "確認中…",
   "web.setup.check.summary": "問題 {fails} 件 · 警告 {warns} 件",
@@ -625,7 +621,7 @@ export const ja: Record<keyof typeof ko, string> = {
     "claude コマンドが見つかりません — Claude Code を入れてから「再確認」を押してください。",
   "web.setup.protect.title": "保護 (フック + ルール)",
   "web.setup.protect.desc":
-    "simless のリストにあるデバイスを確保せずに adb・simctl・argent で操作するセッションを止め、確保の方法を伝えます。ツール呼び出しごとに約 20 ms かかります。",
+    "simless のリストにあるデバイスを確保せずにどのツールでも (シェルコマンド・MCP ツール) 操作するセッションを止め、確保の方法を伝えます。シェルコマンドと MCP ツールの呼び出しごとに約 30 ms かかります。",
   "web.setup.protect.warn":
     "simless のリストにあるデバイスを Simless なしですでに使っている場合、そのセッションも止められます。先にそのデバイスをリストから外すか、その作業が終わってからオンにしてください。",
   "web.setup.state.current": "インストール済み",
@@ -706,8 +702,6 @@ export const ja: Record<keyof typeof ko, string> = {
   "web.setup.fix.cancel": "キャンセル",
   "web.setup.fix.terminal": "ターミナルで開く",
   "web.setup.fix.hide": "隠す",
-  "web.setup.fix.argentWarn":
-    "argent のインストーラーは Claude Code などのエージェント設定 (MCP・ルール) も変更します。",
   "web.setup.fix.inputHint": "パスワードや回答が必要なら「ターミナルで開く」で実行してください。",
   "setup.agentConfig":
     "エージェントの設定を変更できませんでした (ファイルを読めない、またはコマンドが失敗) — 変更していません: {detail}",
@@ -727,5 +721,5 @@ export const ja: Record<keyof typeof ko, string> = {
     "--hook と --mcp を入れるエージェント (カンマ区切り): claude, copilot, codex, cursor, gemini",
   "web.slogan": "Make simulator management seamless.",
   "cli.helpAgents":
-    '\nエージェント (AI) 向け:\n  - 常に --json を付けてください。結果は stdout に JSON、エラーは {"error": {code, message, data}}\n  - 終了コード: 0 成功 · 1 失敗 · 2 使い方の誤り · 3 他のセッションが使用中・待機中・デッドロック · 4 サーバーに接続できない\n  - 判断はエラーコードで (メッセージはユーザーの言語に従います): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - デバイスを操作する前に確保してください — 流れの全体は simless スキル (~/.claude/skills/simless, ~/.agents/skills/simless) にあります\n\n例:\n  simless --json status                          デバイス・グループ・デフォルト・誰が何を確保しているか\n  simless --json use --default ios               iOS のデフォルトデバイスを確保して起動 (なければ --create を追加)\n  simless --json use --group "two accounts" --wait  グループ全体、使用中なら待機\n  simless --json use --group "layout" --available  空いているものから先に確保\n  simless --json list                            argent に渡す targetId とサイズラベル\n  simless --json app install                     ネイティブの fingerprint が一致すればキャッシュのビルドをインストール (Expo アプリ)\n  simless release                                終わったらデバイスを返す\n  simless doctor                                 インストールと接続の問題',
+    '\nエージェント (AI) 向け:\n  - 常に --json を付けてください。結果は stdout に JSON、エラーは {"error": {code, message, data}}\n  - 終了コード: 0 成功 · 1 失敗 · 2 使い方の誤り · 3 他のセッションが使用中・待機中・デッドロック · 4 サーバーに接続できない\n  - 判断はエラーコードで (メッセージはユーザーの言語に従います): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - デバイスを操作する前に確保してください — 流れの全体は simless スキル (~/.claude/skills/simless, ~/.agents/skills/simless) にあります\n\n例:\n  simless --json status                          デバイス・グループ・デフォルト・誰が何を確保しているか\n  simless --json use --default ios               iOS のデフォルトデバイスを確保して起動 (なければ --create を追加)\n  simless --json use --group "two accounts" --wait  グループ全体、使用中なら待機\n  simless --json use --group "layout" --available  空いているものから先に確保\n  simless --json list                            ツールに渡すデバイス ID (targetId) とサイズラベル\n  simless --json app install                     ネイティブの fingerprint が一致すればキャッシュのビルドをインストール (Expo アプリ)\n  simless release                                終わったらデバイスを返す\n  simless doctor                                 インストールと接続の問題',
 };

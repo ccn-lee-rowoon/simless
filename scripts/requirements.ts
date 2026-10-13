@@ -4,7 +4,7 @@
 //   테스트  자동 테스트 — 테스트(describe·test) 이름에 ID 를 넣는다
 //   화면    앱 창을 띄워 눈으로 (docs/development.md §5)
 //   실사용  실제 에이전트 세션으로
-//   argent  Simless 밖에서 argent 가 한다 — 스킬이 안내만
+//   프로젝트 도구  Simless 밖에서 프로젝트가 고른 도구가 한다 — 스킬은 기기를 넘기기만 (P10)
 //   미구현  아직 만들지 않음
 //   —       확인할 것 없음 (없앰·보류·막을 수 없음)
 // 나중(L)·하지 않음(N)·미결정(Q) 표에는 확인 칸이 없다.
@@ -14,7 +14,7 @@ import { join } from "node:path";
 
 export const ROOT = join(import.meta.dir, "..");
 export const ID = /\b([RMSPLNQ]\d{1,2})\b/g;
-export const CHECKS = ["테스트", "화면", "실사용", "argent", "미구현", "—"] as const;
+export const CHECKS = ["테스트", "화면", "실사용", "프로젝트 도구", "미구현", "—"] as const;
 export type CheckKind = (typeof CHECKS)[number];
 
 export interface Requirement {

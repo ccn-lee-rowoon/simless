@@ -21,6 +21,5 @@ export function installHints() {
     androidSdk: t("hint.androidSdk"),
     systemImage: t("hint.systemImage"),
     xcode: t("hint.xcode"),
-    argent: "npx @swmansion/argent@latest init -y",
   } as const;
 }

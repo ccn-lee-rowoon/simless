@@ -195,7 +195,7 @@ export const ko = {
   "cli.holder.since": "{device}{who} · {cwd} · {ago}부터 {what}",
 
   // CLI — 디바이스
-  "cli.list": "simless 목록의 디바이스(만든 것 + 추가한 것) — 켜짐·슬림·점유·argent ID",
+  "cli.list": "simless 목록의 디바이스(만든 것 + 추가한 것) — 켜짐·슬림·점유·기기 ID",
   "cli.opt.platform": "android 또는 ios",
   "cli.opt.created": "simless 가 만든 디바이스만",
   "cli.list.available": "simless 목록에 없는 이 Mac 의 디바이스 — simless add 로 추가할 수 있는 것",
@@ -369,9 +369,6 @@ export const ko = {
   "doctor.simslim.missing": "없음 — iOS 슬림화(R5)를 못 한다",
   "doctor.newer": " → {version} 있음",
   "doctor.present": "있음",
-  "doctor.argent.missing": "없음 — 화면 조작·스크린샷을 argent 로 한다 (S6)",
-  "doctor.argent.many": "여러 버전이 PATH 에 있음 — 먼저 잡히는 것: {versions}",
-  "doctor.argent.fix": "하나만 남기고 지우거나 PATH 순서를 정리",
   "doctor.skill": "simless 스킬",
   "doctor.skill.missing": "설치 안 됨",
   "doctor.skill.outdated": "이 Simless 에 든 스킬과 다름 (예전 버전)",
@@ -581,8 +578,9 @@ export const ko = {
     "보호 — Claude Code 훅(~/.claude/settings.json)·규칙(~/.claude/rules/simless.md)도 설치한다",
   "doctor.hook": "Claude Code 훅",
   "doctor.hook.missing":
-    "없음 — 에이전트가 점유하지 않은 디바이스를 argent·adb 로 직접 건드려도 막지 못한다 (P3)",
-  "doctor.hook.outdated": "다른 Simless 를 가리킴 (옮겼거나 개발·배포가 바뀜)",
+    "없음 — 에이전트가 점유하지 않은 디바이스를 다른 도구·adb 로 직접 건드려도 막지 못한다 (P3)",
+  "doctor.hook.outdated":
+    "예전 설정 — 다른 Simless 를 가리키거나(옮겼거나 개발·배포가 바뀜) 훅이 보는 도구 범위가 바뀜",
   "doctor.rule": "simless 규칙",
   "cli.install.mcp": "Claude Code 에 simless mcp 를 등록한다 (사용자 범위, R12)",
   "setup.noClaude": "claude 명령을 찾지 못했습니다 — Claude Code 를 설치한 뒤 다시 하세요",
@@ -598,7 +596,6 @@ export const ko = {
   "web.setup.check.server": "simless 서버",
   "web.setup.check.ios": "iOS 시뮬레이터",
   "web.setup.check.android": "Android 에뮬레이터",
-  "web.setup.check.screen": "화면 조작",
   "web.setup.check.recheck": "다시 확인",
   "web.setup.check.checking": "확인 중…",
   "web.setup.check.summary": "문제 {fails}개 · 주의 {warns}개",
@@ -620,7 +617,7 @@ export const ko = {
     "claude 명령을 찾지 못했습니다 — Claude Code 를 설치한 뒤 «다시 확인» 을 누르세요.",
   "web.setup.protect.title": "보호 (훅 + 규칙)",
   "web.setup.protect.desc":
-    "simless 목록의 디바이스를 점유하지 않은 세션이 adb·simctl·argent 로 건드리면 막고, 점유하는 명령을 알려 줍니다. 도구 호출마다 약 20ms 가 더 걸립니다.",
+    "simless 목록의 디바이스를 점유하지 않은 세션이 어떤 도구로든(셸 명령·MCP 도구) 건드리면 막고, 점유하는 명령을 알려 줍니다. 셸 명령과 MCP 도구 호출마다 약 30ms 가 더 걸립니다.",
   "web.setup.protect.warn":
     "simless 없이 이미 쓰고 있는 디바이스가 Simless 목록에 있으면 그 세션도 막힙니다. 그 디바이스를 목록에서 빼거나 작업이 끝난 뒤 켜세요.",
   "web.setup.state.current": "설치됨",
@@ -697,8 +694,6 @@ export const ko = {
   "web.setup.fix.cancel": "취소",
   "web.setup.fix.terminal": "터미널에서 열기",
   "web.setup.fix.hide": "닫기",
-  "web.setup.fix.argentWarn":
-    "argent 설치 프로그램은 Claude Code 같은 에이전트 설정(MCP·규칙)도 함께 고칩니다.",
   "web.setup.fix.inputHint": "관리자 암호나 확인 입력이 필요하면 «터미널에서 열기» 로 실행하세요.",
   "setup.agentConfig":
     "에이전트 설정을 고치지 못했습니다(읽을 수 없는 파일이거나 명령 실패) — 건드리지 않았습니다: {detail}",
@@ -718,5 +713,5 @@ export const ko = {
     "--hook·--mcp 를 붙일 에이전트 (쉼표로): claude, copilot, codex, cursor, gemini",
   "web.slogan": "Make simulator management seamless.",
   "cli.helpAgents":
-    '\n에이전트(AI)용:\n  - 항상 --json 을 붙인다. 결과는 stdout 의 JSON, 오류는 {"error": {code, message, data}}\n  - 종료 코드: 0 성공 · 1 실패 · 2 사용법 오류 · 3 다른 세션이 쓰는 중·아직 대기 중·교착 · 4 서버에 연결 못 함\n  - 오류 코드로 판단한다 (메시지는 사용자 언어): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - 기기를 건드리기 전에 점유한다 — 순서 전체는 Simless 스킬(~/.claude/skills/simless, ~/.agents/skills/simless)\n\n예:\n  simless --json status                          디바이스·그룹·기본·누가 쓰는지\n  simless --json use --default ios               iOS 기본 디바이스를 점유하고 켠다 (없으면 --create)\n  simless --json use --group "two accounts" --wait  그룹 전부, 쓰는 중이면 기다린다\n  simless --json use --group "layout" --available  비어 있는 것부터\n  simless --json list                            argent 에 넘길 targetId·크기 라벨\n  simless --json app install                     네이티브 지문이 같은 빌드가 캐시에 있으면 빌드 없이 설치 (Expo 앱)\n  simless release                                다 쓰면 돌려준다\n  simless doctor                                 설치·연결 문제',
+    '\n에이전트(AI)용:\n  - 항상 --json 을 붙인다. 결과는 stdout 의 JSON, 오류는 {"error": {code, message, data}}\n  - 종료 코드: 0 성공 · 1 실패 · 2 사용법 오류 · 3 다른 세션이 쓰는 중·아직 대기 중·교착 · 4 서버에 연결 못 함\n  - 오류 코드로 판단한다 (메시지는 사용자 언어): BUSY · DEADLOCK · NO_DEFAULT · NOT_HELD · NOT_FOUND · INVALID · NOT_ALLOWED · TOOL_MISSING · FAILED\n  - 기기를 건드리기 전에 점유한다 — 순서 전체는 Simless 스킬(~/.claude/skills/simless, ~/.agents/skills/simless)\n\n예:\n  simless --json status                          디바이스·그룹·기본·누가 쓰는지\n  simless --json use --default ios               iOS 기본 디바이스를 점유하고 켠다 (없으면 --create)\n  simless --json use --group "two accounts" --wait  그룹 전부, 쓰는 중이면 기다린다\n  simless --json use --group "layout" --available  비어 있는 것부터\n  simless --json list                            도구에 넘길 기기 ID(targetId)·크기 라벨\n  simless --json app install                     네이티브 지문이 같은 빌드가 캐시에 있으면 빌드 없이 설치 (Expo 앱)\n  simless release                                다 쓰면 돌려준다\n  simless doctor                                 설치·연결 문제',
 } as const;

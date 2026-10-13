@@ -1,6 +1,6 @@
 ---
 name: simless
-description: Brokers this Mac's iOS simulators and Android emulators between agent sessions with the `simless` CLI — acquire a device group, the default device or specific devices, run the app on your own Metro, then drive screens with argent. Use when testing or checking a React Native (Expo) mobile app on a simulator or emulator — running the app, checking a screen, or its layout across device sizes — and whenever the user asks for a simulator, emulator or Simless in any project; acquire through Simless even for one device. Triggers — "시뮬레이터로 확인해 줘", "에뮬레이터에서 테스트", "기본 디바이스로 테스트", "그룹으로 확인해 줘", "여러 해상도로 확인", "작은 폰에서 깨지는지", "태블릿에서도 봐 줘", "심리스로 확인해 줘", "test on the simulator". Not for web projects — a website's responsive layout is checked in a browser unless the user names a simulator or emulator. Not for physical devices, or tasks that don't touch a device.
+description: Brokers this Mac's iOS simulators and Android emulators between agent sessions with the `simless` CLI — request, acquire and release a device group, the default device or specific devices, run the app on your own Metro, then hand the devices to the project's own tools for driving and testing. Use when a React Native (Expo) mobile app needs a simulator or emulator — running the app, checking a screen, testing it, or its layout across device sizes — and whenever the user asks for a simulator, emulator or Simless in any project; acquire through Simless even for one device. Triggers — "시뮬레이터로 확인해 줘", "에뮬레이터에서 테스트", "기본 디바이스로 테스트", "그룹으로 확인해 줘", "여러 해상도로 확인", "작은 폰에서 깨지는지", "태블릿에서도 봐 줘", "심리스로 확인해 줘", "test on the simulator". Not for web projects — a website's responsive layout is checked in a browser unless the user names a simulator or emulator. Not for physical devices, or tasks that don't touch a device.
 ---
 
 # Simless — device broker
@@ -13,12 +13,13 @@ simless lets several agent sessions and people share this Mac's simulators and e
 
 | Who | Does what |
 | --- | --- |
-| Simless (`simless`) | Lists devices and device groups; **acquires**/releases; boots/shuts down; creates and slims devices; gives each device's argent ID and size label; caches native builds (`simless app`) |
-| argent | Installs (`reinstall-app`) and launches (`launch-app`) apps, deep links (`open-url`), taps, screenshots |
+| Simless (`simless`) | Lists devices and device groups; **acquires**/releases; boots/shuts down; creates and slims devices; gives each device's ID (`targetId`) and size label; caches native builds (`simless app`) |
+| The project's tools | Everything on the screen — tapping, screenshots, UI tests, regression tests, debugging, profiling. Each project chooses and sets up its own (its `AGENTS.md` / `CLAUDE.md` and project skills say which). Simless doesn't depend on any of them |
 
 **Rules**
-- Touch a device with argent, adb or simctl **only after acquiring it**. Reads (screenshot, describe) count too.
-- Boot and shut down with **`simless use` / `simless down`**, not argent `boot-device`.
+- Touch a device with **any tool** — the project's UI and test tools, adb, simctl — **only after acquiring it**. Reads (screenshots, accessibility trees) count too.
+- **Name the device on every call** with its `targetId`. A tool given no device picks a booted one itself — possibly another session's — and the protection hook can't tell which one it would use.
+- Boot and shut down with **`simless use` / `simless down`**, not a tool's own boot, start-device or shutdown command.
 - Never touch other sessions' devices or Metro. **Run your own Metro on a free port** (step 3) — never reuse, stop or kill a Metro you didn't start, and never assume 8081 is yours.
 - Never force-release another session's device — only a person can, from the Simless app window.
 - Create or edit device groups **only when the user asks**. Don't change groups someone else made.
@@ -34,8 +35,8 @@ simless lets several agent sessions and people share this Mac's simulators and e
 - [ ] 2 Acquired with `simless use` on its own; targetId and label noted
 - [ ] 3 Own Metro on a free port at 127.0.0.1 (`--android` only when yours is the only emulator running); Android adb reverse for <port> and 8081
 - [ ] 4 Installed (build cache first), launched onto your Metro, attachment checked in the app
-- [ ] 5 Reported per label
-- [ ] 6 adb reverse removed, your Metro killed, devices released; asked about shutting down
+- [ ] 5 Handed off to the project's tools with targetId, label and Metro port; results reported per label
+- [ ] 6 adb reverse removed, your Metro killed; release recommended (and done when agreed); asked about shutting down
 ```
 
 ### 1. Check and pick what to use
@@ -96,7 +97,7 @@ simless --json use <ID|name>...             # specific devices
   - more than 0 — ask the user which device to use (`simless default <device>` makes it the default).
 - **Run `simless use` on its own** — not chained with device commands (`simless use … && adb …`): the hook checks the whole command before the lease exists and blocks all of it. Device commands go in the next call.
 - A lease can be released while you wait for the user (session end, or idle with someone waiting). If a device command is blocked with «… only after acquiring», check `simless --json status` (`mine`) and run `use` again — and redo the Android `adb reverse` from step 3.
-- From `devices[]` remember each device's **`targetId`** (argent `udid`/`device_id` — iOS UDID, Android `emulator-<port>`; not the short Simless ID like `a1b2`, which only `simless` commands take) and **`label`** (e.g. `Android 360dp`, `iOS 402pt`). `simless --json list` shows them again.
+- From `devices[]` remember each device's **`targetId`** (the device ID every tool takes — iOS UDID, Android `emulator-<port>`; not the short Simless ID like `a1b2`, which only `simless` commands take) and **`label`** (e.g. `Android 360dp`, `iOS 402pt`). `simless --json list` shows them again.
 
 ### 3. Start your own Metro (React Native · Expo apps)
 
@@ -104,7 +105,7 @@ Other sessions — often in other worktrees of the same repo — run their own M
 
 **The app always talks to `127.0.0.1:<your port>` — never the Mac's LAN IP.** Expo's default dev URL is `http://<Mac's LAN IP>:8081`, made for physical phones on the same network; on a simulator it reaches whatever Metro holds 8081 (often another session's), it breaks when the network changes, and the dev client lists other Macs' Metros found on the same network. `127.0.0.1` reaches only this Mac: an iOS simulator shares the Mac's network, and an Android emulator gets there through `adb reverse tcp:<port> tcp:<port>` (its own `127.0.0.1` is the emulator itself, so the mapping is required).
 
-**This overrides the argent React Native workflow's single-Metro advice** («reuse the Metro already on 8081», `adb reverse tcp:8081 tcp:8081`, «iOS needs no config»). Following it here attaches your app to another session's code, or to nothing.
+**This overrides any tool's single-Metro advice** («reuse the Metro already on 8081», `adb reverse tcp:8081 tcp:8081`, «iOS needs no config»). Following it here attaches your app to another session's code, or to nothing.
 
 1. **Pick a free port** (first free from 8081 up):
    ```sh
@@ -122,7 +123,10 @@ Other sessions — often in other worktrees of the same repo — run their own M
      NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --dev-client --port <port> > <metro.log> 2>&1 &   # Expo
      NODE_OPTIONS=--dns-result-order=ipv4first npx react-native start --port <port> > <metro.log> 2>&1 &        # bare React Native
      ```
-3. **Wait until it's ready**: argent `debugger-status` with `device_id: <targetId>` and `port: <port>` — `metro_not_running` means not yet (retry for up to ~30 s); `no_app_connected` or `connected` means Metro is up.
+3. **Wait until it's ready** — Metro answers its status URL. Wait on it with a limit instead of a fixed sleep:
+   ```sh
+   for i in $(seq 30); do curl -s http://127.0.0.1:<port>/status | grep -q 'packager-status:running' && break; sleep 1; done
+   ```
 4. **Point each acquired Android device at it** — both your port (dev client URLs use it) and 8081 (what the app falls back to), so a stale mapping can't send it elsewhere. `--android` sets only `tcp:<port>`, so add 8081 there too:
    ```sh
    adb -s <targetId> reverse tcp:<port> tcp:<port>
@@ -139,9 +143,9 @@ Other sessions — often in other worktrees of the same repo — run their own M
 
 Launching the app onto this Metro is step 4.2.
 
-### 4. Drive each device with argent
+### 4. Install and launch onto your Metro
 
-Pass `targetId` as argent's device argument, device by device, following the argent skills.
+Device by device, always naming the device with its `targetId`.
 
 1. **Install** (when needed).
    - **Expo apps — try the build cache first.** Native builds take many minutes; Simless keeps finished simulator/emulator builds by their native fingerprint, so a worktree or session whose native side is unchanged (only JS differs) reuses one. From the app project, with the **same environment variables you would build with** (some apps' config depends on them):
@@ -159,8 +163,8 @@ Pass `targetId` as argent's device argument, device by device, following the arg
      - **Don't use `--no-bundler`.** It can't be combined with `--port` («mutually exclusive»), and without a port the app opens on **LAN IP :8081 — another session's Metro**. If an install did open there, stop the app and reopen it on your port (4.2).
      - Run the build in the foreground or watch its output — a backgrounded build that fails on bad options only tells you minutes later.
      `TOOL_MISSING` means it isn't an Expo project with `@expo/fingerprint` — skip the cache. Computing the fingerprint takes about 30 seconds.
-   - Otherwise `reinstall-app`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <AVD name>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
-2. **Launch onto your Metro** — not with `launch-app`: a plain launch reconnects to whatever server the app remembers. The bundle ID and Android package come from the project: `npx expo config --json` → `ios.bundleIdentifier`, `android.package`.
+   - Otherwise install a build you have: `xcrun simctl install <targetId> <MyApp.app>` / `adb -s <targetId> install -r <app.apk>`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <AVD name>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
+2. **Launch onto your Metro** — not with a plain launch: it reconnects to whatever server the app remembers. The bundle ID and Android package come from the project: `npx expo config --json` → `ios.bundleIdentifier`, `android.package`.
    - **Find the dev client scheme the app actually registers** — don't build it from the slug: many apps change the slug per environment, but the scheme was fixed when the native project was generated (e.g. slug `MyApp_Dev_A` while the app registers `exp+myapp`). A wrong scheme leaves the app on the dev client's home screen.
      ```sh
      grep -rho 'exp+[A-Za-z0-9.+-]*' android/app/src/main/AndroidManifest.xml ios/*/Info.plist | sort -u
@@ -168,7 +172,7 @@ Pass `targetId` as argent's device argument, device by device, following the arg
      ```
    - Stop it first if it is running: `xcrun simctl terminate <targetId> <bundleId>` / `adb -s <targetId> shell am force-stop <package>`.
    - **Expo dev client**, the URL: `<scheme>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A<port>`.
-     - iOS: `open-url` with it.
+     - iOS: `xcrun simctl openurl <targetId> '<url>'`.
      - Android: start it for the package, and read the output — `Error: Activity not started, unable to resolve Intent` means the scheme is wrong:
        ```sh
        adb -s <targetId> shell "am start -W -a android.intent.action.VIEW -d '<url>' <package>"
@@ -177,26 +181,42 @@ Pass `targetId` as argent's device argument, device by device, following the arg
    - **Bare React Native, iOS**: write the server, then launch — no rebuild needed:
      ```sh
      xcrun simctl spawn <targetId> defaults write <bundleId> RCT_jsLocation 127.0.0.1:<port>
+     xcrun simctl launch <targetId> <bundleId>
      ```
-     then `launch-app`. **Android**: `launch-app` (the 8081 mapping from step 3 reaches your Metro).
-   - **Check it attached — in the app, not in the Metro log.** `debugger-status` (`device_id: <targetId>`, `port: <port>`) should say `connected`; then confirm where the app really is:
+     **Android**: `adb -s <targetId> shell monkey -p <package> -c android.intent.category.LAUNCHER 1` (the 8081 mapping from step 3 reaches your Metro).
+   - **Check it attached — in the app, not in the Metro log.**
      - Android: open the dev menu (`adb -s <targetId> shell input keyevent 82`) and scroll down to **Connected to: http://…:<port>**.
-     - iOS: `iOS Bundled` in your Metro log right after the launch. Wait on it instead of a fixed sleep, with a limit — if it times out, check `debugger-status`:
+     - iOS: `iOS Bundled` in your Metro log right after the launch. Wait on it instead of a fixed sleep, with a limit:
        ```sh
        for i in $(seq 120); do grep -q 'iOS Bundled' <metro.log> && break; sleep 1; done   # Android: 'Android Bundled'
        ```
      - Device console lines flowing into your Metro log don't prove it — after the app moves to another Metro the old socket keeps sending logs for a while.
      - Not your port → it's on another server; repeat this step.
-   - **An Android deep link can restart the app** — `am start … -d <url>` may recreate the activity even when the app is up, and the dev client then falls back to its saved default server (usually 8081 or a LAN address). Check the dev menu again after any deep link (step 4.3 too); if it fell back, the quickest fix is restarting your Metro with `--android` (step 3).
-   - Pass `port: <port>` to **every** argent `debugger-*` and `react-profiler-*` call — without it they use 8081, which is another session's Metro.
-3. **Same screen everywhere** — `open-url <deep link>` if there is one, otherwise replay an argent flow per device with `flow-execute` and `device: <targetId>` (without `device` the flow picks a booted device itself, so the protection hook treats it as touching every booted device and blocks it while other sessions have devices on). Don't reuse tap coordinates across sizes.
-4. **Screenshots** — `screenshot`, tagged with each device's `label`.
+   - **An Android deep link can restart the app** — `am start … -d <url>` may recreate the activity even when the app is up, and the dev client then falls back to its saved default server (usually 8081 or a LAN address). Check the dev menu again after any deep link; if it fell back, the quickest fix is restarting your Metro with `--android` (step 3).
 
-### 5. Report
+### 5. Hand off to the project's tools
 
-Per `label`, say what broke (clipping, overlap, overflow, wrapping …) with screenshots. Mark sizes with no problems as fine.
+Driving the screen and testing belong to the project — Simless only lends the devices. Use what the project names (its `AGENTS.md` / `CLAUDE.md`, project skills, test folders); if it names nothing for this task, tell the user and ask rather than picking a tool yourself.
 
-### 6. Clean up
+Give the tool, for each device:
+
+| What | Value |
+| --- | --- |
+| Device | `targetId` — in whatever form the tool takes it (`--device`, `--udid`, `--serial`, a `udid` / `device_id` argument …) |
+| Platform | `ios` / `android` |
+| Metro port | `<port>` — debugger, profiler and reload tools default to 8081, which is another session's Metro |
+| Label | for reporting (`iOS 402pt`, `Android 360dp`) |
+
+- **Name the device on every call**, including flows, test runs and session commands that would otherwise reuse «the current device» or pick a booted one. If a tool can't take a device, ask the user before running it — it may land on another session's device.
+- **Don't let a tool boot, create or shut down devices** (its boot, start-device, `--shutdown` options) — Simless does that (step 2, step 6).
+- **Tools that keep their own device sessions or claims** (per folder, per named session): open them on your `targetId` inside your lease, and close them before you release — a claim left behind can stop the next session that gets the device.
+- **Tools with a shared per-machine service** (one server for every session): stop or restart it only for your devices, and ask the user before restarting anything shared.
+- **Same screen on several sizes**: a deep link per device, or the project's flow/test per device with its `targetId`. Don't reuse tap coordinates across sizes.
+- **Report** per `label`: what broke (clipping, overlap, overflow, wrapping, failed tests …), with the evidence the tool gives. Mark sizes with no problems as fine.
+
+### 6. Clean up — recommend releasing
+
+When your device work is done, **recommend releasing** — other sessions may be waiting. Tell the user which devices you still hold and suggest `simless release`; release as soon as they agree or the task is clearly finished. Keep the lease only while you still need it (rebuilding, waiting for the user's answer) — an idle lease (30 min) is released automatically only when someone is waiting.
 
 ```sh
 adb -s <targetId> reverse --remove tcp:<port>   # each Android device you pointed at your Metro
@@ -206,9 +226,7 @@ simless down                                     # only if the user said yes (be
 simless release
 ```
 
-- argent `stop-all-simulator-servers`: only with `devices: [<this session's devices>]` — the tool-server is shared, and an unscoped call stops other sessions' devices.
-
-- Release after reporting. You may keep the lease while waiting for the user or rebuilding — an idle lease (30 min) is released automatically only when someone is waiting.
+- Close the project tool's own device sessions first (step 5).
 - **Ask the user** whether to shut the devices down. If yes, `simless down` before `release`.
 
 ## Finding what the app needs (App mode)
@@ -235,7 +253,7 @@ Used when picking a device for a feature test (step 1) and when creating or chan
 
 ## When things go wrong
 
-Read [references/troubleshooting.md](references/troubleshooting.md) when `simless --json` output won't parse, a screenshot is entirely black, argent gestures fail on an Android emulator, argent on iOS reports a sandbox error, or `debugger-connect` refuses a device when iOS and Android share one Metro.
+Read [references/troubleshooting.md](references/troubleshooting.md) when `simless --json` output won't parse, a screenshot is entirely black, the project's tool can't send gestures to an Android emulator, or a tool refuses a device because its own session or claim still holds it.
 
 ## Device groups (only when the user asks)
 

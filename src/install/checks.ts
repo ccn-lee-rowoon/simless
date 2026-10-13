@@ -52,10 +52,6 @@ async function brewOutdated(probe: Probe, names: string[]): Promise<Map<string, 
   return outdated;
 }
 
-function pathDirs(env: NodeJS.ProcessEnv): string[] {
-  return (env.PATH ?? "").split(":").filter(Boolean);
-}
-
 /**
  * 점검 목록. 서버 안에서 부를 때(첫 실행 설정 창, M14)는 자기 소켓에 묻지 않도록 serverVersion 을 준다.
  */
@@ -216,36 +212,6 @@ export async function runChecks(
   });
 
   // 에이전트 연동
-  const argents = [
-    ...new Set(
-      pathDirs(env)
-        .map((d) => join(d, "argent"))
-        .filter((p) => existsSync(p)),
-    ),
-  ];
-  const versions = await Promise.all(
-    argents.map(async (p) => `${p} (${(await version(probe, [p, "--version"])) ?? "?"})`),
-  );
-  const distinct = new Set(versions.map((v) => v.replace(/^.* \(/, "")));
-  add({
-    id: "argent",
-    group: t("doctor.group.agents"),
-    name: "argent",
-    status: argents.length === 0 ? "warn" : distinct.size > 1 ? "warn" : "ok",
-    detail:
-      argents.length === 0
-        ? t("doctor.argent.missing")
-        : distinct.size > 1
-          ? t("doctor.argent.many", { versions: versions.join(" · ") })
-          : (versions[0] ?? ""),
-    fix:
-      argents.length === 0
-        ? installHints().argent
-        : distinct.size > 1
-          ? t("doctor.argent.fix")
-          : undefined,
-    action: argents.length === 0 ? { fix: "argent.install", kind: "install" } : undefined,
-  });
   const skillViews = await Promise.all(
     loadSkillLocations(ctx.paths.skills).map((l) => locationStatus(l, env)),
   );

@@ -10,11 +10,11 @@
 - **iOS 와 Android 를 함께** — 한 그룹에 iPhone 과 Android 를 섞을 수 있다
 - **슬림 기기** — Siri·iCloud 같은 것을 꺼서 가볍게(예: 7.8GB → 1.6GB). 만들 때 방식을 고른다 — **UI**(전체, 화면 확인용) · **App**(앱이 쓰는 기능만 남김, 에이전트가 앱을 읽어서) · **Custom**(남길 것을 고름)
 - **차례·교착** — 먼저 온 순서대로, 서로 기다리다 멈추는 요청은 미리 거절한다
-- **보호(선택)** — 점유하지 않은 세션이 argent·adb·simctl 로 기기를 건드리면 실행 직전에 막는다
+- **보호(선택)** — 점유하지 않은 세션이 어떤 도구로든(셸 명령·MCP 도구) 기기를 건드리면 실행 직전에 막는다. 도구 이름이 아니라 기기 ID 를 보므로 새 도구를 써도 그대로 동작한다
 
 **지원하는 앱: React Native (Expo)** — 스킬의 흐름(세션마다 Metro, dev client 로 앱 실행, 네이티브 빌드 캐시)은 Expo dev client 를 쓰는 React Native 앱을 기준으로 만들었고, 사실상 이것만 지원한다. 기기 만들기·빌려주기·보호는 앱 종류와 상관없이 동작하지만, 네이티브(Swift·Kotlin)·Flutter·Expo 없는 React Native 앱의 실행·연결 단계는 안내하지 않는다.
 
-화면 안 조작(탭·스크린샷·앱 실행)은 [argent](https://argent.swmansion.com) 가 하고, Simless 는 기기를 만들고·관리하고·빌려준다.
+Simless 는 기기를 만들고·관리하고·빌려주기만 한다. 화면 안 조작·테스트(탭·스크린샷·UI 테스트·회귀 테스트)는 프로젝트가 고르고 설정한 도구(argent·Maestro·agent-device 등)가 하고, 스킬은 그 도구에 기기 ID 를 넘긴다. 기기 작업이 끝나면 해제를 권한다.
 
 ## 설치·업데이트
 
@@ -30,7 +30,7 @@ bash simless-<버전>-install.sh   # 설치: 서버(로그인 시 자동 실행)
 
 `Simless.app` 을 처음 열면 **«Simless 시작하기»** 창이 뜬다.
 
-1. **이 Mac 점검** — Xcode·simslim·Android SDK·avdslim·argent. 빠진 것은 설치 명령을 보여 준다
+1. **이 Mac 점검** — Xcode·simslim·Android SDK·avdslim. 빠진 것은 설치 명령을 보여 준다(화면 조작·테스트 도구는 프로젝트가 설치한다)
 2. **에이전트 연결** — 스킬(권장, 전역 또는 프로젝트) · 보호(권장) · MCP 도구(선택). Copilot CLI·Codex·Cursor·Gemini CLI 도 보호·MCP 를 켤 수 있다(실험적)
 3. **기본 디바이스** — 고르거나 만든다
 
@@ -72,9 +72,9 @@ bash simless-<버전>-install.sh   # 설치: 서버(로그인 시 자동 실행)
 
 ## 보호가 막는 것과 못 막는 것
 
-막는 것: 점유하지 않은 세션의 argent 도구 호출(스크린샷 같은 읽기 포함), 기기 ID 가 든 `adb`·`simctl`·`emulator` 명령, 기기를 지정하지 않은 `adb shell`·`simctl … booted`, Simless 밖에서 켜기.
+막는 것: 점유하지 않은 세션이 기기 ID(UDID·AVD ID·`emulator-<포트>`)를 넘긴 셸 명령과 MCP 도구 호출 — 어느 도구든(스크린샷 같은 읽기 포함), 기기를 지정하지 않은 `adb shell`·`simctl … booted`, `simctl boot`·`emulator -avd` 로 Simless 밖에서 켜기.
 
-못 막는 것: 사람이 Xcode·Simulator·Android Studio 로 직접 조작, 명령 안에서 간접으로 부르는 경우(`npx react-native run-android`·`xcodebuild`·Gradle 등), 변수로 넘긴 기기 ID, argent 가 아닌 기기 조작 MCP. 보안 경계가 아니라 **실수로 남의 기기를 건드리지 않게 하는 안전장치**다.
+못 막는 것: 사람이 Xcode·Simulator·Android Studio 로 직접 조작, 명령 안에서 간접으로 부르는 경우(`npx react-native run-android`·`xcodebuild`·Gradle 등), 변수로 넘긴 기기 ID, 기기를 안 준 도구 호출(도구가 켜진 기기를 스스로 고르는 경우 — 스킬·규칙이 «기기를 늘 지정» 하게 한다). 보안 경계가 아니라 **실수로 남의 기기를 건드리지 않게 하는 안전장치**다.
 
 ## 데이터
 

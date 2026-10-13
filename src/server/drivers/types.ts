@@ -4,7 +4,7 @@ import type { Device, DeviceSpec, Platform, SlimState } from "../../shared/model
 /** 켜짐 여부 — 저장하지 않고 매번 드라이버에게 묻는다 */
 export interface RuntimeState {
   booted: boolean;
-  /** argent·adb 에 넘기는 ID — iOS UDID, Android `emulator-<port>` */
+  /** 도구(화면 조작·테스트 도구, adb, simctl)에 넘기는 기기 ID — iOS UDID, Android `emulator-<port>` */
   targetId?: string;
 }
 

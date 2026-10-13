@@ -40,7 +40,7 @@ export interface DeviceView extends Omit<Device, "slimMode"> {
   layoutWidth: number;
   layoutHeight: number;
   booted: boolean;
-  /** argent·adb 에 넘길 ID — 켜져 있을 때만 */
+  /** 도구(화면 조작·테스트 도구, adb, simctl)에 넘길 기기 ID — 켜져 있을 때만 */
   targetId?: string;
   holder?: HolderView;
   slimStats?: SlimStats;
@@ -283,7 +283,6 @@ export type CheckId =
   | "avdslim"
   | "xcode"
   | "simslim"
-  | "argent"
   | "skill"
   | "hook"
   | "rule"
@@ -309,7 +308,6 @@ export type FixId =
   | "simslim.upgrade"
   | "avdslim.install"
   | "avdslim.upgrade"
-  | "argent.install"
   | "xcode.open"
   | "androidStudio.open";
 
