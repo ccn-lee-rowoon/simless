@@ -55,7 +55,8 @@ simless/
 ├── src/
 │   ├── main.ts              진입점 — 서브커맨드별로 필요한 모듈만 동적 import (훅이 빨리 끝나게)
 │   ├── shared/              모두가 쓰는 것 — 모델(model)·메시지 모양(api·protocol)·경로(paths)·설정(config)·
-│   │                        소켓 클라이언트(client)·세션 찾기(session)·외부 명령(exec)·i18n(ko 정본, en)
+│   │                        소켓 클라이언트(client)·세션 찾기(session)·외부 명령(exec)·i18n(ko 정본, en)·
+│   │                        훅이 보는 범위(hook-scope — 에이전트 훅 matcher, P10)
 │   ├── install/             설치·점검 — CLI 와 서버(첫 실행 설정 창)가 같이 쓴다
 │   │   ├── launchd.ts       서버 LaunchAgent 등록·kickstart
 │   │   ├── app-bundle.ts    Simless.app 만들기(Swift 컴파일·서명·로그인 항목)
@@ -358,23 +359,30 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 - 없앤 것: `enable`·`disable`(사용 안 함, R6), `list --all`(목록이 처음부터 전부).
 - 일괄 설치·실행·딥링크(`install-app`·`launch`·`open`)는 «나중에» (L1~L3, §10). 캐시된 빌드 설치만 `simless app install` (R26).
 
-## 13. 훅 (P3~P9)
+## 13. 훅 (P3~P10)
+
+**도구 중립 (P10)** — Simless 는 기기를 관리만 하고, 화면 조작·테스트는 프로젝트가 고른 도구(argent·Maestro·agent-device …)가 한다. 훅은 그 도구의 이름도 인자 이름도 모른다. 셸 명령과 **모든 MCP 도구 호출**을 받아 낱말·인자 글자에서 관리 디바이스의 ID 를 찾는다 — 어느 도구에 넘기든 기기 ID 는 같은 글자라서다. 새 도구를 써도 Simless 를 고칠 필요가 없다.
+
+- matcher 는 셸 + 모든 MCP(`src/shared/hook-scope.ts` 의 `HOOK_MATCHERS` — 설치와 훅이 같이 쓰므로 `shared`). Simless 자신의 MCP(`mcp__simless__*`)는 점유 요청에 기기 ID 가 들어가므로 보지 않는다
+- 훅 설치 상태는 명령과 **matcher 까지** 비교한다 — 보는 범위가 바뀌면 «예전 것» 으로 보이고, Claude Code 는 `simless doctor --fix`, 다른 에이전트는 설정 창의 «업데이트» 로 고친다
+- 비용: MCP 호출마다 훅 프로세스가 떠 30~40ms(2026-10-13 실측 — 기기 ID 가 없으면 소켓을 열지 않는다)
+- 잃는 것: 기기를 안 준 호출(도구가 켜진 기기를 스스로 고름)과 구동 도구로 켜기는 알 수 없다 — 규칙·스킬이 «기기를 늘 지정, 켜기는 Simless» 로 다룬다
 
 **에이전트 어댑터**: 실행 직전 훅은 에이전트마다 지원 여부·설정 위치·입력 형식이 다르다. `simless hook <에이전트> <이벤트>` 로 나누고, 어댑터는 입력을 공통 형식 `{tool, input, agentSessionId?}` 로 바꾼 뒤 같은 판정을 쓴다.
 
 | 에이전트 | 상태 |
 | --- | --- |
-| Claude Code | **먼저 만든다** — `~/.claude/settings.json` PreToolUse, matcher `Bash|mcp__argent__.*`, 명령 `simless hook claude pre-tool-use` |
-| Copilot CLI | `~/.copilot/hooks/simless.json`(simless 파일 하나, Claude 식 `PreToolUse`, matcher `Bash\|argent-.*`) → `simless hook copilot pre-tool-use`. MCP 이름 `argent-<도구>` 를 `mcp__argent__<도구>` 로 바꿔 판단, 막는 출력은 Claude 와 같다 |
-| Codex | `~/.codex/hooks.json` 의 `PreToolUse` 에 Simless 항목 하나(matcher `^Bash$\|^mcp__argent__.*`) → `simless hook codex pre-tool-use`. 입력·출력이 Claude 와 같다. 새 훅은 사용자가 Codex 의 `/hooks` 에서 한 번 승인해야 돈다 |
-| Cursor | `~/.cursor/hooks.json` 의 `beforeShellExecution`·`beforeMCPExecution` 에 하나씩 → `simless hook cursor before-shell`·`before-mcp`. MCP 는 `mcp_server_name` 이 argent 인 것만, `tool_input` 은 JSON 문자열. 막을 때 `{permission: deny, user_message, agent_message}`, 통과도 늘 `{permission: allow}`(빈 출력은 막힘). Cursor 가 가져오는 Claude 훅(입력에 `cursor_version`)은 통과시킨다 — Cursor 용 훅이 판단 |
-| Gemini CLI | `~/.gemini/settings.json` 의 `BeforeTool` 에 Simless 항목(name `simless`, matcher `^run_shell_command$\|^mcp_argent_`, timeout 밀리초) → `simless hook gemini before-tool`. MCP 는 `mcp_context.server_name`, 막을 때 `{decision: deny, reason}`. 신뢰한 폴더에서만 돈다 |
+| Claude Code | **먼저 만든다** — `~/.claude/settings.json` PreToolUse, matcher `Bash\|mcp__.*`, 명령 `simless hook claude pre-tool-use` |
+| Copilot CLI | `~/.copilot/hooks/simless.json`(simless 파일 하나, Claude 식 `PreToolUse`, matcher `Bash\|.+-.+` — MCP 도구 이름에만 «-» 가 있다) → `simless hook copilot pre-tool-use`. MCP 이름 `<서버>-<도구>` 를 첫 «-» 에서 나눠 `mcp__<서버>__<도구>` 로 바꿔 판단, 막는 출력은 Claude 와 같다 |
+| Codex | `~/.codex/hooks.json` 의 `PreToolUse` 에 Simless 항목 하나(matcher `^Bash$\|^mcp__.*`) → `simless hook codex pre-tool-use`. 입력·출력이 Claude 와 같다. 새 훅은 사용자가 Codex 의 `/hooks` 에서 한 번 승인해야 돈다 |
+| Cursor | `~/.cursor/hooks.json` 의 `beforeShellExecution`·`beforeMCPExecution` 에 하나씩 → `simless hook cursor before-shell`·`before-mcp`. MCP 는 모든 서버(`mcp_server_name`), `tool_input` 은 JSON 문자열. 막을 때 `{permission: deny, user_message, agent_message}`, 통과도 늘 `{permission: allow}`(빈 출력은 막힘). Cursor 가 가져오는 Claude 훅(입력에 `cursor_version`)은 통과시킨다 — Cursor 용 훅이 판단 |
+| Gemini CLI | `~/.gemini/settings.json` 의 `BeforeTool` 에 Simless 항목(name `simless`, matcher `^run_shell_command$\|^mcp_`, timeout 밀리초) → `simless hook gemini before-tool`. MCP 는 `mcp_context.server_name`, 막을 때 `{decision: deny, reason}`. 신뢰한 폴더에서만 돈다 |
 
 **다른 에이전트 설치** (`src/install/agents.ts`) — 보호 = 훅 + 규칙. 규칙은 전역 지시 파일에 `<!-- simless:start … -->` 블록 하나(Codex `~/.codex/AGENTS.md`, Copilot `~/.copilot/copilot-instructions.md`, Gemini `~/.gemini/GEMINI.md`), Cursor 는 `~/.cursor/rules/simless.mdc`. MCP 는 Copilot `~/.copilot/mcp-config.json`·Cursor `~/.cursor/mcp.json`·Gemini `~/.gemini/settings.json` 을 직접 고치고(Gemini 명령은 로그인 창을 열 수 있음), Codex 는 `codex mcp add`(TOML 이라). Simless 항목만 넣고 빼며 고치기 전에 `.simless-backup`, 못 읽는 파일(주석 든 JSON 등)은 건드리지 않고 오류를 낸다. 설정 창 «에이전트 연결» 의 «다른 에이전트», `simless install --hook --mcp --agents codex,copilot,…` 로 넣고, `simless uninstall` 은 모두 뺀다. 실제 에이전트로는 아직 확인하지 않았다.
 
 **흐름**
 1. 어댑터가 stdin 입력을 공통 형식으로 바꾼다. 세션은 §7 방식(훅 프로세스의 부모 체인)으로 찾고, 입력에 세션 ID 가 있으면 보조로 쓴다. 입력의 `cwd`(절대 경로)는 세션의 작업 폴더로 쓴다(§7 «작업 폴더»).
-2. **빠른 통과**: Bash 명령에 `adb`·`simctl`·`emulator`·`simslim`·`avdslim` 이 없고, argent 도구에 기기 인자가 없으면 바로 통과한다(소켓 안 엶). `main.ts` 는 이 경로에서 서버·웹 코드를 불러오지 않는다.
+2. **빠른 통과**: 낱말·인자 글자에 기기 ID 로 보이는 것 — 관리 디바이스의 AVD ID·UDID·마지막 시리얼(`managed-index.json`), UDID 모양, `emulator-<포트>` — 이 없고 플랫폼 도구(`adb`·`simctl`·`emulator`·`simslim`·`avdslim`)도 없으면 바로 통과한다(소켓 안 엶). `main.ts` 는 이 경로에서 서버·웹 코드를 불러오지 않는다.
 3. 대상(`src/hook/targets.ts` — 순수 함수)을 뽑아 서버에 `hook.check` → 허용/차단 + 사유. 대상은 **Simless 목록의 디바이스**만(P1) — AVD ID·UDID·지금 시리얼로 잇는다(simless ID 는 흔한 낱말과 겹칠 수 있어 빼고). 켜짐 상태(시리얼)를 읽는 데 0.5초쯤 걸려 서버가 10초 기억하고, 상태를 바꾸는 요청이 오면 버린다. 허용이면 서버가 같은 요청으로 `lastUsedAt` 을 갱신한다. 실측: 빠른 통과 약 20ms, 판정 약 30ms(기억이 없을 때 0.6초).
 4. **서버가 꺼져 있으면** `managed-index.json` 으로 이 Mac 의 디바이스인지만 본다. 맞으면(또는 시리얼을 판정 못 하면) 차단하고 «`simless status` 로 서버를 켜세요» 를 알려 준다 (P9).
 5. 차단은 `permissionDecision: "deny"` JSON 으로 돌려주고, 사유에 **누가 쓰는 중인지와 점유 방법**(`simless use …`)을 넣는다 (P5). 서버가 이상한 답(모르는 메서드 등)을 하면 막지 않는다 — 훅 때문에 에이전트가 멈추지 않게.
@@ -383,18 +391,17 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 
 | 호출 | 대상 |
 | --- | --- |
-| argent 도구의 `udid`·`device_id`·`avdName`·`device`(`flow-execute`) 인자, `devices` 배열(`stop-all-simulator-servers`) | 그 값. 이름은 argent 패키지의 도구 인자 목록(`dist/tool-args.generated.d.ts`, 0.28.0 부터)과 대조한다 |
-| argent `flow-execute` 에 기기를 안 줌 | flow 가 켜진 기기 하나를 스스로 고른다 — 켜진 것 전부(`platform` 이 `ios`·`android` 면 그쪽만, `chromium`·`vega` 면 없음) |
-| argent `list-devices` 등 기기 인자 없는 도구 | 없음 → 통과 (P6) |
-| argent `boot-device` · Bash `emulator -avd …` 로 디바이스 켜기 | 점유와 상관없이 **차단** → `simless up` 안내 (S6 «켜기는 Simless 로») |
-| Bash 명령 문자열 안에 디바이스 식별자(UDID·AVD ID·현재 시리얼)가 보임 | 그 디바이스 — 명령을 파싱하지 않고 **문자열 포함**으로 본다. `&&`·`$(…)`·변수 등으로 우회되기 어렵다. 예외: heredoc 을 여는 줄에 셸·인터프리터·명령 실행 도구(`sh`·`bash`·`python`·`node`·`bun`·`osascript`·`eval`·`xargs`·`adb` …)가 없으면 그 본문은 글이라 지우고 본다(`stripDataHeredocs`) — 파일에 쓰는 스크립트·커밋 메시지에 기기 이름과 `adb` 가 같이 들어 있어 막히던 오탐. 실행기는 **heredoc 이 붙은 명령부터 줄 끝까지**에서만 찾는다(`commandStart` — 따옴표 밖의 `;`·`&&`·`||` 로 나눔, 파이프·`2>&1` 은 나누지 않음, 따옴표가 안 닫혔으면 줄 전체). 앞에서 끝난 명령은 본문을 받지 못해서다 — `bun run check; git commit -F - <<EOF` 의 커밋 메시지를 `bun` 때문에 검사하던 오탐(2026-10-12). 뒤의 명령은 본다(`cat <<EOF > a.sh; bash a.sh`) |
+| MCP 도구(어느 서버든 — Simless 자신은 빼고)의 인자 글자 안에 디바이스 식별자가 보임 | 그 디바이스 — 인자 이름(`udid`·`device_id`·`serial` …)은 보지 않고 모든 글자를 낱말로 나눠 본다(깊이 8·글자 2000개까지). 기기를 가리키지 않는 도구(목록 등)는 통과 (P6) |
+| 구동 도구에 기기를 안 줌(`maestro test`·세션 기기를 쓰는 agent-device 명령·기기 없는 argent flow) · 구동 도구로 켜기(argent `boot-device`) | 알 수 없다 → 통과. 켜기는 기기 ID 를 주므로 점유만 확인한다. 규칙·스킬이 «기기를 늘 지정, 켜기는 Simless» 로 다룬다 (P10) |
+| Bash `simctl boot`·`emulator -avd …` 로 디바이스 켜기 | 점유와 상관없이 **차단** → `simless up` 안내 (S6 «켜기는 Simless 로») |
+| Bash 명령 문자열 안에 디바이스 식별자(UDID·AVD ID·현재 시리얼)가 보임 | 그 디바이스 — 어떤 명령이든(`maestro --device …`·`npx agent-device … --serial …`) 파싱하지 않고 **문자열 포함**으로 본다. `&&`·`$(…)`·변수 등으로 우회되기 어렵다. 예외: heredoc 을 여는 줄에 셸·인터프리터·명령 실행 도구(`sh`·`bash`·`python`·`node`·`bun`·`osascript`·`eval`·`xargs`·`adb` …)가 없으면 그 본문은 글이라 지우고 본다(`stripDataHeredocs`) — 파일에 쓰는 스크립트·커밋 메시지에 기기 이름과 `adb` 가 같이 들어 있어 막히던 오탐. 실행기는 **heredoc 이 붙은 명령부터 줄 끝까지**에서만 찾는다(`commandStart` — 따옴표 밖의 `;`·`&&`·`||` 로 나눔, 파이프·`2>&1` 은 나누지 않음, 따옴표가 안 닫혔으면 줄 전체). 앞에서 끝난 명령은 본문을 받지 못해서다 — `bun run check; git commit -F - <<EOF` 의 커밋 메시지를 `bun` 때문에 검사하던 오탐(2026-10-12). 뒤의 명령은 본다(`cat <<EOF > a.sh; bash a.sh`) |
 | `adb` 를 기기 지정 없이 기기 명령에 씀(`adb shell` 등, `ANDROID_SERIAL` 미지정) | 켜진 Android 전부 |
 | `simctl … booted` | 켜진 iOS 전부 |
 | `adb devices`·`emulator -list-avds`·`simctl list` 등 목록 조회 | 없음 → 통과 (P6) |
 
 **규칙 (P2)** — `integrations/rules/simless.md` 를 `simless install` 이 `~/.claude/rules/simless.md` 로 따로 설치한다(argent 의 `argent.md` 에 붙이면 argent 업데이트가 덮어쓴다). 다른 에이전트의 전역 규칙 위치는 조사 후.
 
-**설치** — 첫 실행 설정 창(M14)의 «보호» 또는 `simless install --hook` 이 `~/.claude/settings.json` 의 `hooks.PreToolUse` 에 matcher `Bash|mcp__argent__.*`, 명령 `<simless 절대 경로> hook claude pre-tool-use` 한 줄을 넣는다. 다른 설정·훅은 그대로 두고, 예전 Simless 훅(명령이 ` hook claude pre-tool-use` 로 끝남)은 바꾸며, 쓰기 전에 `settings.json.simless-backup` 을 남긴다. 기본으로는 넣지 않는다 — 다른 세션이 Simless 없이 쓰는 기기가 목록에 있으면 그 세션까지 막으므로 사람이 고른다. `simless uninstall` 이 지운다. `simless doctor` 가 훅·규칙을 점검하고, `--fix` 는 이미 넣은 것이 예전 것일 때만 고친다.
+**설치** — 첫 실행 설정 창(M14)의 «보호» 또는 `simless install --hook` 이 `~/.claude/settings.json` 의 `hooks.PreToolUse` 에 matcher `Bash|mcp__.*`, 명령 `<simless 절대 경로> hook claude pre-tool-use` 한 줄을 넣는다. 다른 설정·훅은 그대로 두고, 예전 Simless 훅(명령이 ` hook claude pre-tool-use` 로 끝남)은 바꾸며, 쓰기 전에 `settings.json.simless-backup` 을 남긴다. 기본으로는 넣지 않는다 — 다른 세션이 Simless 없이 쓰는 기기가 목록에 있으면 그 세션까지 막으므로 사람이 고른다. `simless uninstall` 이 지운다. `simless doctor` 가 훅·규칙을 점검하고, `--fix` 는 이미 넣은 것이 예전 것(명령·matcher 가 다름)일 때만 고친다.
 
 > Simless 목록(`simless list`)의 시뮬레이터·에뮬레이터는 `simless use` 로 점유한 뒤에만 조작한다(스크린샷·describe 포함). 켜기·끄기는 argent `boot-device` 가 아니라 `simless use`·`simless down` 으로 한다. 전문은 `integrations/rules/simless.md`(영어).
 

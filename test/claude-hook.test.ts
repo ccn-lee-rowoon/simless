@@ -67,6 +67,18 @@ describe("Claude Code 훅 설치 (P3)", () => {
     );
   });
 
+  test("보는 도구가 바뀌어 matcher 가 다르면 예전 것 — 다시 넣으면 지금 matcher 로 (P10)", () => {
+    const env = home();
+    installHook(["/bin/simless"], env);
+    const settings = read(env);
+    settings.hooks.PreToolUse[0].matcher = "Bash|mcp__argent__.*|mcp__old-tool__.*";
+    writeFileSync(settingsPath(env), JSON.stringify(settings));
+    expect(hookStatus(["/bin/simless"], env)).toBe("outdated");
+    installHook(["/bin/simless"], env);
+    expect(read(env).hooks.PreToolUse[0].matcher).toBe(HOOK_MATCHER);
+    expect(hookStatus(["/bin/simless"], env)).toBe("current");
+  });
+
   test("지우면 simless 훅만 빠지고, 남은 게 없으면 PreToolUse 도 없앤다", () => {
     const env = home();
     installHook(["/bin/simless"], env);

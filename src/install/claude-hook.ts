@@ -2,13 +2,15 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSyn
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import rulePath from "../../integrations/rules/simless.md" with { type: "file" };
+import { HOOK_MATCHERS } from "../shared/hook-scope.ts";
 
 // Claude Code 연동 — 실행 직전 훅(P3)과 전역 규칙(P2). simless install 이 설치한다 (docs/design.md §13).
 // 훅은 ~/.claude/settings.json 의 hooks.PreToolUse 에 한 줄을 넣는다. 다른 설정은 건드리지 않는다.
 
 /** 훅 명령의 표시 — 이 글자가 든 항목을 simless 훅으로 본다 */
 const HOOK_MARK = " hook claude pre-tool-use";
-export const HOOK_MATCHER = "Bash|mcp__argent__.*";
+/** 셸과 모든 MCP 도구 (P10) */
+export const HOOK_MATCHER = HOOK_MATCHERS.claude;
 
 function home(env: NodeJS.ProcessEnv): string {
   return env.HOME ?? homedir();
@@ -57,16 +59,18 @@ function isSimless(hook: HookEntry): boolean {
   return typeof hook.command === "string" && hook.command.endsWith(HOOK_MARK);
 }
 
-/** missing = 없음, outdated = 명령이 다름(옮겼거나 개발·배포가 바뀜), current = 같음 */
+/** missing = 없음, outdated = 명령·matcher 가 다름(옮겼거나 개발·배포가 바뀜, 보는 범위가 바뀜), current = 같음 */
 export function hookStatus(
   command: string[],
   env: NodeJS.ProcessEnv = process.env,
 ): "missing" | "outdated" | "current" {
   const settings = readSettings(settingsPath(env));
-  const hooks = (settings.hooks?.PreToolUse ?? []).flatMap((m) => m.hooks ?? []);
-  const found = hooks.find(isSimless);
-  if (!found) return "missing";
-  return found.command === hookCommand(command) ? "current" : "outdated";
+  const entry = (settings.hooks?.PreToolUse ?? []).find((m) => (m.hooks ?? []).some(isSimless));
+  const found = entry?.hooks?.find(isSimless);
+  if (!entry || !found) return "missing";
+  return found.command === hookCommand(command) && entry.matcher === HOOK_MATCHER
+    ? "current"
+    : "outdated";
 }
 
 /** 훅을 넣는다 — 예전 simless 훅은 바꾸고, 쓰기 전에 settings.json 을 .simless-backup 으로 남긴다 */

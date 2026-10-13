@@ -81,9 +81,13 @@ simless 를 고치는 사람(사람·에이전트)이 «무엇을 바꾸려면 �
 
 `simless install`·설정 창이 새 파일·설정 항목을 넣게 되면 **지우는 쪽도 같이** 고친다 — `src/install/uninstall.ts`(`removeIntegrations`·`dataDirs`). 안 그러면 `simless uninstall`·«Simless 제거» 뒤에 그것만 남는다. 테스트는 `test/uninstall.test.ts`. 무엇을 어디에 쓰는지는 `SECURITY.md` §3 규칙(정해 둔 위치만, Simless 항목만)을 따른다.
 
+### 새 화면 조작·테스트 도구 (P10)
+
+Simless 를 고칠 것이 없다. 훅은 도구 이름이 아니라 기기 ID 를 본다(`docs/design.md` §13 «도구 중립») — 프로젝트가 그 도구를 설치·설정하고, 스킬이 Simless 에서 받은 기기 ID 를 그 도구에 넘기면 된다. 기기 ID 로 보는 모양(UDID·`emulator-<포트>`·관리 목록의 AVD ID)을 바꾸려면 `src/hook/targets.ts` 의 `looksLikeDevice`. 스킬·규칙에는 특정 도구 이름을 넣지 않는다.
+
 ### 다른 에이전트 연결 (Q16)
 
-조사는 `docs/agent-integrations.md`. 붙일 곳: 훅 어댑터(`src/hook/index.ts` 의 `adapters`, 대상 추출 `hook/targets.ts`), 셸에 주는 세션 ID(`src/shared/session.ts` 의 `AGENT_SESSION_ENV`), 설치(`src/install/`), 설정 창 «에이전트 연결»(`web/SetupView.tsx`·`server/setup.ts`).
+조사는 `docs/agent-integrations.md`. 붙일 곳: 훅 어댑터(`src/hook/adapters.ts` — MCP 도구 이름을 `mcp__<서버>__<도구>` 로, 훅 matcher 는 `shared/hook-scope.ts` 의 `HOOK_MATCHERS`), 셸에 주는 세션 ID(`src/shared/session.ts` 의 `AGENT_SESSION_ENV`), 설치(`src/install/`), 설정 창 «에이전트 연결»(`web/SetupView.tsx`·`server/setup.ts`).
 
 ## 4. 테스트 쓰기
 

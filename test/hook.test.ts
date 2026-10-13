@@ -6,13 +6,94 @@ import { extractTargets } from "../src/hook/targets.ts";
 import { SimlessServer } from "../src/server/app.ts";
 import { listen } from "../src/server/socket.ts";
 import { call } from "../src/shared/client.ts";
+import { HOOK_MATCHERS } from "../src/shared/hook-scope.ts";
 import { VERSION } from "../src/shared/version.ts";
 import { type FakeDriver, fakeDriver, seedDevice, session, tempEnv } from "./helpers.ts";
+
+const UDID = "5B6D77EF-2AE9-47D0-9A62-70A1ABBC5FA2";
+
+describe("도구 중립 훅 — 도구 이름이 아니라 기기 ID 를 본다 (P10)", () => {
+  const bash = (command: string, known: string[] = []) =>
+    extractTargets("Bash", { command }, new Set(known));
+  const mcp = (tool: string, input: unknown, known: string[] = []) =>
+    extractTargets(tool, input, new Set(known));
+  const only = (ids: string[]) => ({ ids, boots: [], allAndroid: false, allIos: false });
+
+  test("어느 셸 명령이든 UDID·에뮬레이터 시리얼·관리 AVD ID 가 보이면 후보, 없으면 통과", () => {
+    expect(bash(`maestro --device ${UDID} test flow.yaml`)).toEqual(only([UDID]));
+    expect(bash("npx agent-device snapshot -i --serial emulator-5556")).toEqual(
+      only(["emulator-5556"]),
+    );
+    expect(bash("some-tool run --avd simless_ab12", ["simless_ab12"])).toEqual(
+      only(["simless_ab12"]),
+    );
+    // 도구 이름만 있고 기기 ID 가 없으면 — 글로 언급하든 실행하든 서버에 묻지 않는다
+    expect(bash("grep -rn agent-device README.md")).toBeUndefined();
+    expect(bash("maestro test .maestro/login.yaml")).toBeUndefined();
+    expect(bash("some-tool run --avd simless_ab12")).toBeUndefined();
+  });
+
+  test("어느 MCP 서버의 도구든 인자 글자에서 찾는다 — 인자 이름은 보지 않는다", () => {
+    expect(mcp("mcp__argent__gesture-tap", { udid: UDID, x: 0.5, y: 0.5 })).toEqual(only([UDID]));
+    expect(mcp("mcp__maestro__run", { device_id: "emulator-5554", yaml: "- launchApp" })).toEqual(
+      only(["emulator-5554"]),
+    );
+    expect(mcp("mcp__any-tool__open", { target: { serial: "emulator-5554" } })?.ids).toEqual([
+      "emulator-5554",
+    ]);
+    expect(
+      mcp("mcp__argent__stop-all-simulator-servers", { devices: ["simless_ab12", "", 3] }, [
+        "simless_ab12",
+      ])?.ids,
+    ).toEqual(["simless_ab12"]);
+    // `--device X` 처럼 글 안에 든 것도
+    expect(mcp("mcp__x__exec", { args: `--udid ${UDID} --verbose` })?.ids).toEqual([UDID]);
+  });
+
+  test("기기를 가리키지 않는 호출·Simless 자신의 MCP·MCP 가 아닌 도구는 통과", () => {
+    expect(mcp("mcp__argent__list-devices", {})).toBeUndefined();
+    expect(mcp("mcp__argent__flow-execute", { name: "login" })).toBeUndefined();
+    expect(mcp("mcp__simless__simless_use", { devices: [UDID] })).toBeUndefined();
+    expect(mcp("Write", { file_path: "/x", content: UDID })).toBeUndefined();
+  });
+
+  test("에이전트 훅은 셸과 모든 MCP 도구에 건다", () => {
+    expect(HOOK_MATCHERS.claude).toBe("Bash|mcp__.*");
+    expect(HOOK_MATCHERS.codex).toBe("^Bash$|^mcp__.*");
+    expect(HOOK_MATCHERS.gemini).toBe("^run_shell_command$|^mcp_");
+    // Copilot 은 MCP 도구 이름에만 «-» 가 있다
+    expect(new RegExp(`^(${HOOK_MATCHERS.copilot})$`).test("argent-gesture-tap")).toBe(true);
+    expect(new RegExp(`^(${HOOK_MATCHERS.copilot})$`).test("view")).toBe(false);
+  });
+
+  test("다른 에이전트의 MCP 호출을 공통 이름으로 — 어느 서버든", () => {
+    expect(
+      normalize("copilot", "pre-tool-use", { tool_name: "maestro-run", tool_input: {} })?.tool,
+    ).toBe("mcp__maestro__run");
+    expect(normalize("copilot", "pre-tool-use", { tool_name: "view", tool_input: {} })?.tool).toBe(
+      "view",
+    );
+    expect(
+      normalize("cursor", "before-mcp", {
+        mcp_server_name: "agent-device",
+        tool_name: "open",
+        tool_input: JSON.stringify({ udid: UDID }),
+      }),
+    ).toMatchObject({ tool: "mcp__agent-device__open", input: { udid: UDID } });
+    expect(
+      normalize("gemini", "before-tool", {
+        tool_name: "mcp_argent_screenshot",
+        mcp_context: { server_name: "argent", tool_name: "screenshot" },
+        tool_input: { udid: UDID },
+      })?.tool,
+    ).toBe("mcp__argent__screenshot");
+  });
+});
 
 describe("훅 대상 뽑기 (P4·P6)", () => {
   const bash = (command: string) => extractTargets("Bash", { command });
 
-  test("디바이스 도구가 없는 명령·기기 인자 없는 argent 도구는 바로 통과", () => {
+  test("디바이스와 상관없는 명령·기기를 가리키지 않는 도구는 바로 통과", () => {
     expect(bash("ls -la && git status")).toBeUndefined();
     expect(bash("simless use bakw")).toBeUndefined();
     expect(extractTargets("mcp__argent__list-devices", {})).toBeUndefined();
@@ -38,47 +119,6 @@ describe("훅 대상 뽑기 (P4·P6)", () => {
     ]);
     expect(bash("emulator @Pixel_6a")?.boots).toEqual(["Pixel_6a"]);
     expect(bash("xcrun simctl list devices")).toMatchObject({ allIos: false, boots: [] });
-  });
-
-  test("argent 도구는 udid·device_id·avdName, boot-device 는 켜기", () => {
-    expect(extractTargets("mcp__argent__gesture-tap", { udid: "U1", x: 0.5, y: 0.5 })).toEqual({
-      ids: ["U1"],
-      boots: [],
-      allAndroid: false,
-      allIos: false,
-    });
-    expect(
-      extractTargets("mcp__argent__debugger-component-tree", { device_id: "emulator-5554" })?.ids,
-    ).toEqual(["emulator-5554"]);
-    expect(extractTargets("mcp__argent__boot-device", { avdName: "simless_ab12" })?.boots).toEqual([
-      "simless_ab12",
-    ]);
-  });
-
-  test("flow-execute 의 device, stop-all-simulator-servers 의 devices 도 대상 (P4)", () => {
-    expect(
-      extractTargets("mcp__argent__flow-execute", { name: "login", device: "emulator-9990" }),
-    ).toEqual({ ids: ["emulator-9990"], boots: [], allAndroid: false, allIos: false });
-    expect(
-      extractTargets("mcp__argent__stop-all-simulator-servers", { devices: ["U1", "", 3, "U2"] })
-        ?.ids,
-    ).toEqual(["U1", "U2"]);
-    expect(extractTargets("mcp__argent__stop-all-simulator-servers", {})).toBeUndefined();
-  });
-
-  test("기기를 안 준 flow-execute 는 스스로 고르므로 켜진 기기 전부 — platform 으로 좁힌다 (P4)", () => {
-    expect(extractTargets("mcp__argent__flow-execute", { name: "login" })).toEqual({
-      ids: [],
-      boots: [],
-      allAndroid: true,
-      allIos: true,
-    });
-    expect(
-      extractTargets("mcp__argent__flow-execute", { name: "login", platform: "ios" }),
-    ).toMatchObject({ allAndroid: false, allIos: true });
-    expect(
-      extractTargets("mcp__argent__flow-execute", { name: "login", platform: "chromium" }),
-    ).toBeUndefined();
   });
 
   test("파일·커밋 메시지로 가는 heredoc 본문은 글이라 보지 않는다 — 실행되는 heredoc 은 본다 (P4)", () => {

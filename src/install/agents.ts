@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { InstallState, OtherAgent } from "../shared/api.ts";
 import { run, which } from "../shared/exec.ts";
+import { HOOK_MATCHERS } from "../shared/hook-scope.ts";
 import { bundledRule, hookCommandFor } from "./claude-hook.ts";
 
 // Claude Code 말고 다른 에이전트 연결 (Q16, docs/agent-integrations.md) — 보호(훅 + 규칙)와 MCP.
@@ -58,7 +59,14 @@ const nestedHas = (mark: string) => (entry: Json) =>
 const flatIs = (mark: string) => (entry: Json) =>
   typeof entry.command === "string" && entry.command.endsWith(mark);
 
-function nestedState(config: Json, event: string, command: string, mark: string): InstallState {
+/** matcher 까지 본다 — 훅이 보는 범위가 바뀌면(P10) 예전 것이 된다 */
+function nestedState(
+  config: Json,
+  event: string,
+  command: string,
+  mark: string,
+  matcher: string,
+): InstallState {
   const entry = ((config.hooks as Json | undefined)?.[event] as Json[] | undefined)?.find(
     nestedHas(mark),
   );
@@ -66,7 +74,7 @@ function nestedState(config: Json, event: string, command: string, mark: string)
   const hook = ((entry.hooks as Json[]) ?? []).find(
     (h) => typeof h.command === "string" && h.command.endsWith(mark),
   );
-  return hook?.command === command ? "current" : "outdated";
+  return hook?.command === command && entry.matcher === matcher ? "current" : "outdated";
 }
 
 // --- 규칙 — 전역 지시 파일에 simless 블록 하나 ---
@@ -177,6 +185,7 @@ const copilot: AgentIntegration = {
       "PreToolUse",
       hookCommandFor(command, "copilot", "pre-tool-use"),
       COPILOT_MARK,
+      HOOK_MATCHERS.copilot,
     );
   },
   async installHook(command, env) {
@@ -184,7 +193,7 @@ const copilot: AgentIntegration = {
       hooks: {
         PreToolUse: [
           {
-            matcher: "Bash|argent-.*",
+            matcher: HOOK_MATCHERS.copilot,
             hooks: [
               {
                 type: "command",
@@ -219,6 +228,7 @@ const codex: AgentIntegration = {
       "PreToolUse",
       hookCommandFor(command, "codex", "pre-tool-use"),
       CODEX_MARK,
+      HOOK_MATCHERS.codex,
     );
   },
   // Codex 는 새 훅을 사용자가 /hooks 에서 한 번 확인해야 돌린다 — 설정 창이 안내한다
@@ -227,7 +237,7 @@ const codex: AgentIntegration = {
     writeJson(
       path,
       setHookEntries(readJson(path), "PreToolUse", nestedHas(CODEX_MARK), {
-        matcher: "^Bash$|^mcp__argent__.*",
+        matcher: HOOK_MATCHERS.codex,
         hooks: [
           {
             type: "command",
@@ -299,7 +309,7 @@ const cursor: AgentIntegration = {
     if (states.every((s) => s === "missing")) return "missing";
     return states.every((s) => s === "current") ? "current" : "outdated";
   },
-  // 셸 명령과 MCP 호출을 따로 건다 — MCP 는 서버 이름(argent)을 입력에서 본다
+  // 셸 명령과 MCP 호출을 따로 건다 — MCP 는 서버 이름을 입력에서 본다(adapters.ts)
   async installHook(command, env) {
     const path = cursorHooks(env);
     let config = readJson(path);
@@ -354,6 +364,7 @@ const gemini: AgentIntegration = {
       "BeforeTool",
       hookCommandFor(command, "gemini", "before-tool"),
       GEMINI_MARK,
+      HOOK_MATCHERS.gemini,
     );
   },
   // 훅은 작업 폴더를 신뢰해야(/trust) 돈다 — 설정 창이 안내한다
@@ -362,7 +373,7 @@ const gemini: AgentIntegration = {
     writeJson(
       path,
       setHookEntries(readJson(path), "BeforeTool", nestedHas(GEMINI_MARK), {
-        matcher: "^run_shell_command$|^mcp_argent_",
+        matcher: HOOK_MATCHERS.gemini,
         hooks: [
           {
             type: "command",

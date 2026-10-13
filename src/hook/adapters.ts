@@ -1,8 +1,9 @@
 // 에이전트마다 다른 훅 입력·출력을 하나의 모양으로 (P3, docs/agent-integrations.md).
-// 대상 추출(targets.ts)은 Claude Code 의 도구 이름(Bash·mcp__argent__<도구>)을 기준으로 하므로
+// 대상 추출(targets.ts)은 Claude Code 의 도구 이름(Bash·mcp__<서버>__<도구>)을 기준으로 하므로
 // 다른 에이전트의 입력은 그 이름으로 바꿔 넘기고, 막을 때는 그 에이전트가 읽는 모양으로 출력한다.
 
 import { isAbsolute } from "node:path";
+import { mcpToolName } from "../shared/hook-scope.ts";
 import { agentSessionKey } from "../shared/session.ts";
 
 export type HookAgent = "claude" | "copilot" | "codex" | "cursor" | "gemini";
@@ -22,7 +23,7 @@ export function isHookAgent(name: string | undefined): name is HookAgent {
 
 /** 훅이 판단에 쓰는 것 */
 export interface HookInput {
-  /** Claude Code 식 도구 이름 — Bash, mcp__argent__<도구> */
+  /** Claude Code 식 도구 이름 — Bash, mcp__<서버>__<도구> */
   tool: string;
   input: unknown;
   /** 에이전트 세션 ID — 있으면 세션을 이 ID 로 찾는다 */
@@ -79,11 +80,13 @@ function byAgent(agent: HookAgent, event: string, raw: Raw): HookInput | undefin
       const id = str(raw.session_id) ?? str(raw.sessionId);
       const name = str(raw.tool_name) ?? str(raw.toolName) ?? "";
       const input = raw.tool_input ?? raw.toolArgs;
-      // 셸은 bash·Bash, MCP 는 «<서버>-<도구>» — argent- 로 시작하는 것만 argent 다
+      // 셸은 bash·Bash, MCP 는 «<서버>-<도구>» — 기본 도구(view·edit …)에는 «-» 가 없어 그대로 둔다(통과).
+      // 서버 이름에 «-» 가 있으면 나눈 자리가 틀리지만, 훅은 서버 이름을 simless 자신인지 볼 때만 쓴다
+      const dash = name.indexOf("-");
       const tool = /^bash$/i.test(name)
         ? "Bash"
-        : name.startsWith("argent-")
-          ? `mcp__argent__${name.slice("argent-".length)}`
+        : dash > 0
+          ? mcpToolName(name.slice(0, dash), name.slice(dash + 1))
           : name;
       return {
         tool,
@@ -97,9 +100,10 @@ function byAgent(agent: HookAgent, event: string, raw: Raw): HookInput | undefin
       const sessionKey = id ? agentSessionKey("cursor-agent", id) : undefined;
       if (event === "before-shell")
         return { tool: "Bash", input: { command: raw.command }, sessionId: id, sessionKey };
-      if (raw.mcp_server_name !== "argent") return undefined;
+      const server = str(raw.mcp_server_name);
+      if (!server) return undefined;
       return {
-        tool: `mcp__argent__${str(raw.tool_name) ?? ""}`,
+        tool: mcpToolName(server, str(raw.tool_name) ?? ""),
         input: parseMaybe(raw.tool_input),
         sessionId: id,
         sessionKey,
@@ -111,9 +115,10 @@ function byAgent(agent: HookAgent, event: string, raw: Raw): HookInput | undefin
       const context = (raw.mcp_context ?? {}) as Raw;
       if (name === "run_shell_command")
         return { tool: "Bash", input: raw.tool_input, sessionId: str(raw.session_id) };
-      if (context.server_name !== "argent") return undefined;
+      const server = str(context.server_name);
+      if (!server) return undefined;
       return {
-        tool: `mcp__argent__${str(context.tool_name) ?? ""}`,
+        tool: mcpToolName(server, str(context.tool_name) ?? ""),
         input: raw.tool_input,
         sessionId: str(raw.session_id),
       };
