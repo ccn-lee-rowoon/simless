@@ -41,8 +41,8 @@
 - 이번에 찾았지만 안 고친 것: 슬림 전 기준값 측정에서 부팅이 시간 초과로 실패하면 에뮬레이터가 켜진 채 남는다(`devices.ts` `measureBaseline` — `boot` 가 던지면 끄지 않음), 만들기 시작 토스트의 이름에 서버가 붙인 번호(« 2»)가 빠진다, 서버 시작 로그 두 줄이 한국어로 박혀 있다(`server/index.ts`), CLI 도움말의 일본어 줄바꿈이 고르지 않다(commander 가 공백에서만 자름)
 - 남은 것: 새 버전 자동 확인(R27 — 주소가 정해지면), 제거가 설치 파일 설치본(링크·버전 폴더)을 지우게 고치기(S12, `docs/design.md` §19), 실제 서버를 낀 업데이트·되돌리기 확인(다음 버전 설치 파일로), 다른 에이전트 실측, 실제 앱으로 주 흐름(R15)을 세션 둘로 끝까지, 차별점 후보(그룹 안 역할·결과 나란히 보기 R10·그룹에 앱·화면 정보), 병렬 개발용 «빈 기기 아무거나» 요청
 - **하던 중**: 점유할 때 스킬이 오래됐으면 **사용자에게 물어보게** 하기(자동 업데이트는 안 됨 — 사용자 결정 2026-10-06). 오래된 스킬에는 이 안내가 없으므로 `simless use` 결과 메시지에 «무엇을 묻고, 원하면 `simless skill install` 뒤 스킬을 다시 읽기» 를 다 담는다. 코드는 아직 안 바꿈
-- 제안만 하고 사용자 결정 대기: `simless metro`(2단계 — 스킬로 안 풀리면: 반납 때 `adb reverse` 자동 정리·`simless metro check`, 그다음 Metro 를 Simless 가 띄우기), 훅이 `simless use … && adb …` 한 줄을 막는 것(지금은 스킬이 따로 부르라고 안내 — 훅이 같은 명령의 `simless use` 를 알아보게 고칠지), `SECURITY.md` §5 남은 약한 점(argent 버전 고정 — 어느 버전으로 할지), iOS 기본 디바이스(`zx7w`, 다른 세션이 Simless 없이 쓰는 iPhone 17 Pro)를 바꿀지
-- 남은 확인: Android 실기기 커스텀 슬림(`avdslim enable <패키지|설정>` 순서 — 테스트 코드로만), ⋯ «슬림 설정…» 창을 실제 기기로, 실제 기기로 그룹 점유·생성(기종 + OS)을 끝까지, 라이트 모드 화면, simslim 0.11.0 에서 슬림 적용·확인(정보 읽기는 확인함), 설정 창 바로 설치 중 avdslim·argent(simslim 업데이트는 됨), 웹 화면 자동 테스트 없음(`bun run trace --missing`)
+- 제안만 하고 사용자 결정 대기: `simless metro`(2단계 — 스킬로 안 풀리면: 반납 때 `adb reverse` 자동 정리·`simless metro check`, 그다음 Metro 를 Simless 가 띄우기), 훅이 `simless use … && adb …` 한 줄을 막는 것(지금은 스킬이 따로 부르라고 안내 — 훅이 같은 명령의 `simless use` 를 알아보게 고칠지), iOS 기본 디바이스(`zx7w`, 다른 세션이 Simless 없이 쓰는 iPhone 17 Pro)를 바꿀지
+- 남은 확인: Android 실기기 커스텀 슬림(`avdslim enable <패키지|설정>` 순서 — 테스트 코드로만), ⋯ «슬림 설정…» 창을 실제 기기로, 실제 기기로 그룹 점유·생성(기종 + OS)을 끝까지, 라이트 모드 화면, simslim 0.11.0 에서 슬림 적용·확인(정보 읽기는 확인함), 설정 창 바로 설치 중 avdslim(simslim 업데이트는 됨), 웹 화면 자동 테스트 없음(`bun run trace --missing`)
 - 구조 확정: TypeScript(Bun) 상주 서버 + CLI + 웹 UI + 메뉴바 앱(Swift, 설치 때 컴파일), 단일 실행 파일 배포(개발은 `bun link`), `Simless.app` 은 설치 때 그 Mac 에서 생성 — 이유는 `requirements.md` «결정 기록»
 - 범용 도구 → 특정 앱 저장소에 넣지 않고 별도 프로젝트로 만든다
 
