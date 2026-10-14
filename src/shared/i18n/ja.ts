@@ -471,6 +471,8 @@ export const ja: Record<keyof typeof ko, string> = {
   "web.slim.apply": "適用",
   "web.slim.applyHint": "適用するとすぐにスリム化します",
   "web.slim.reapplyHint": "適用すると新しい選択でもう一度スリム化します(iOS は 1〜2 分)",
+  "web.slim.retryHint":
+    "スリム化に失敗したか解除されています — 適用するともう一度スリム化します(iOS は 1〜2 分)",
   "web.slim.keptCount": "{mode} — {count} 個残す",
   "web.device.forceRelease": "強制解放",
   "web.device.delete": "削除…",

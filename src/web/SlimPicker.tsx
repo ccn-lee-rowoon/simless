@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CatalogResult, DeviceView, PlatformCatalog, SlimCategory } from "../shared/api.ts";
 import { type MessageKey, t } from "../shared/i18n.ts";
-import type { SlimChoice } from "../shared/slim-mode.ts";
+import { needsReslim, type SlimChoice, slimUnchanged } from "../shared/slim-mode.ts";
 import { when } from "../shared/time.ts";
 import { call } from "./api.ts";
 import { Dialog, Loading } from "./ui.tsx";
@@ -188,11 +188,8 @@ export function SlimDialog({
   }, [device]);
 
   const current = device?.slimMode ?? "none";
-  const unchanged =
-    device !== null &&
-    mode === current &&
-    ((mode !== "custom" && mode !== "app") ||
-      [...keep].sort().join() === [...(device.slimKeep ?? [])].sort().join());
+  const unchanged = device !== null && slimUnchanged(device, mode, keep);
+  const retry = device !== null && needsReslim(device);
 
   return (
     <Dialog open={device !== null} onClose={onClose} title={t("web.slim.title")} wide>
@@ -217,9 +214,11 @@ export function SlimDialog({
             <span className="sub">
               {mode === "none"
                 ? t("web.slim.offHint")
-                : device.slim === "none"
-                  ? t("web.slim.applyHint")
-                  : t("web.slim.reapplyHint")}
+                : retry && unchanged
+                  ? t("web.slim.retryHint")
+                  : device.slim === "none"
+                    ? t("web.slim.applyHint")
+                    : t("web.slim.reapplyHint")}
             </span>
             <span className="spacer" />
             <button type="button" className="button" onClick={onClose}>
