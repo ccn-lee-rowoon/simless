@@ -461,6 +461,7 @@ export const en: Record<keyof typeof ko, string> = {
   "web.slim.apply": "Apply",
   "web.slim.applyHint": "Applying slims it right away",
   "web.slim.reapplyHint": "Applying slims it again with the new choices (iOS takes 1–2 min)",
+  "web.slim.retryHint": "The slim failed or wore off — applying slims it again (iOS takes 1–2 min)",
   "web.slim.keptCount": "{mode} — {count} kept",
   "web.device.forceRelease": "Force release",
   "web.device.delete": "Delete…",

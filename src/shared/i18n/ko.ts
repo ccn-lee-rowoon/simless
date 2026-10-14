@@ -467,6 +467,7 @@ export const ko = {
   "web.slim.apply": "적용",
   "web.slim.applyHint": "적용하면 바로 슬림합니다",
   "web.slim.reapplyHint": "적용하면 바뀐 내용대로 다시 슬림합니다 (iOS 는 1~2분)",
+  "web.slim.retryHint": "슬림이 실패했거나 풀렸습니다 — 적용하면 다시 슬림합니다 (iOS 는 1~2분)",
   "web.slim.keptCount": "{mode} — {count}개 남김",
   "web.device.forceRelease": "점유 강제 해제",
   "web.device.delete": "삭제…",
