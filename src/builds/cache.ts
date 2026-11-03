@@ -1,10 +1,13 @@
 import { createHash } from "node:crypto";
 import {
+  appendFileSync,
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   realpathSync,
   rmSync,
   statSync,
@@ -206,6 +209,80 @@ export function forgetMiss(
   projectDir: string,
 ): void {
   rmSync(pendingPath(root, project, platform, projectDir), { force: true });
+}
+
+/**
+ * node_modules 가 다른 곳(메인 체크아웃 등)을 가리키는 링크면 그 대상 — 지문 도구가 경로를 링크 너머로
+ * 잡아(`../../…/node_modules/…`) 내용이 같아도 지문이 통째로 달라진다. 이 작업 트리 안에서는 같은 지문이라
+ * 쓸 수 있지만 다른 작업 트리와는 나눠 쓰지 못한다
+ */
+export function nodeModulesLink(projectDir: string): string | undefined {
+  const path = join(projectDir, "node_modules");
+  try {
+    return lstatSync(path).isSymbolicLink() ? readlinkSync(path) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** 캐시를 찾았나·못 찾았나·보관했나 — 캐시가 잘 쓰이는지 숫자로 보려고 (`simless app stats`) */
+export interface CacheEvent {
+  at: string;
+  project: string;
+  platform: Platform;
+  event: "hit" | "miss" | "save";
+  fingerprint: string;
+  /** save — 빌드 전 지문으로도 보관했나 */
+  aliased?: boolean;
+  /** 작업 트리 폴더 이름 */
+  worktree: string;
+}
+
+const LOG_KEEP = 2000;
+
+function logPath(root: string): string {
+  return join(root, "events.jsonl");
+}
+
+export function logEvent(
+  root: string,
+  event: Omit<CacheEvent, "at">,
+  options: { now?: Date; keep?: number } = {},
+): void {
+  const keep = options.keep ?? LOG_KEEP;
+  try {
+    mkdirSync(root, { recursive: true, mode: 0o700 });
+    const path = logPath(root);
+    appendFileSync(
+      path,
+      `${JSON.stringify({ at: (options.now ?? new Date()).toISOString(), ...event })}\n`,
+      {
+        mode: 0o600,
+      },
+    );
+    const lines = readFileSync(path, "utf8").split("\n").filter(Boolean);
+    if (lines.length > keep)
+      writeFileSync(path, `${lines.slice(-keep).join("\n")}\n`, { mode: 0o600 });
+  } catch {
+    // 기록은 덤 — 실패해도 설치·보관은 그대로
+  }
+}
+
+export function readEvents(root: string): CacheEvent[] {
+  try {
+    return readFileSync(logPath(root), "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .flatMap((line) => {
+        try {
+          return [JSON.parse(line) as CacheEvent];
+        } catch {
+          return [];
+        }
+      });
+  } catch {
+    return [];
+  }
 }
 
 function dirOf(root: string, project: string, platform: Platform, fingerprint: string): string {
