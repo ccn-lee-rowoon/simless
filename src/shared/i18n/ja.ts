@@ -257,7 +257,8 @@ export const ja: Record<keyof typeof ko, string> = {
   "cli.app.prune": "アプリ・プラットフォームごとに新しいビルドだけ残す",
   "cli.app.keep": "残す数",
   "cli.app.project": "アプリプロジェクトのフォルダー(既定: 現在のフォルダーから上に探す)",
-  "cli.app.path": "保存するビルド(既定: DerivedData または android/app/build の最新)",
+  "cli.app.path":
+    "保存するビルド(既定: この作業ツリーの DerivedData または android/app/build の最新)",
   "cli.app.verb": "インストール",
   "cli.app.noProject":
     "{dir} から Expo の fingerprint ツール(node_modules/.bin/fingerprint)が見つかりません — アプリプロジェクトの中で実行するか --project を渡してください",
@@ -269,9 +270,14 @@ export const ja: Record<keyof typeof ko, string> = {
   "cli.app.installed":
     "{name}: キャッシュのビルドをインストールしました(fingerprint {fingerprint})",
   "cli.app.needPlatform": "--platform を渡してください(または --path で .app/.apk)",
-  "cli.app.noBuild": "{platform} のビルドが見つかりません: {path}",
+  "cli.app.noBuild":
+    "{platform} のビルドが見つかりません: {path} — この作業ツリーでビルドしたものだけを探します。他の場所のビルドは --path で指定してください",
   "cli.app.saved":
     "{platform} のビルドを保存しました — fingerprint {fingerprint}、{size}({source})",
+  "cli.app.aliased":
+    "ビルド前の指紋 {fingerprint} でも見つかるようにしました — ビルドが node_modules にファイルを足しただけなので、ネイティブが同じ他の作業ツリーもこのビルドを使います",
+  "cli.app.notAliased":
+    "ビルド前の指紋 {fingerprint} とネイティブの入力が違う(ビルド中に変わった)ため、その指紋では保存していません",
   "cli.app.empty": "キャッシュ済みのビルドはありません({root})",
   "cli.app.pruned": "{count} 個削除しました",
   "cli.failedFor": "失敗: {name} — {error}",

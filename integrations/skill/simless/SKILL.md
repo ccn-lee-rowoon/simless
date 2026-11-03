@@ -155,11 +155,11 @@ Device by device, always naming the device with its `targetId`.
      ```sh
      simless --json app install            # held, booted devices; add --platform ios|android to pick one
      ```
-     Per platform, `hit: true` means it is installed — go on to launch. `hit: false` means nothing is cached for this fingerprint: build onto the device (below), then store the build so the next session skips it:
+     Per platform, `hit: true` means it is installed — go on to launch. `hit: false` means nothing is cached for this fingerprint: build onto the device (below), then store the build **from the same worktree** so the next session skips it. Run `app install` before building even when you expect a miss — `app save` also files the build under that pre-build fingerprint, which is what a fresh worktree computes (building adds files under `node_modules`):
      ```sh
      REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo run:ios --device <targetId> --port <port>
      REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo run:android --device <AVD name> --port <port>
-     simless --json app save --platform ios    # finds the newest build (DerivedData / android/app/build)
+     simless --json app save --platform ios    # finds this worktree's newest build (DerivedData / android/app/build)
      ```
    - **Building with your Metro already running (Expo):** pass `--port <port>` — Expo sees your Metro (started from the same folder) on that port and reuses it instead of starting another. Also set `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1`: otherwise the app opens at your **LAN IP**, which changes with the network. When the build finishes the app opens on `127.0.0.1:<port>` — go to 4.2's «Check it attached».
      - **Android: `--device` takes the AVD name, not the serial** — `native` in `simless --json list` (e.g. `simless_ab12`). Given `emulator-5554` it fails with «Could not find device with name». Expo also sets `adb reverse` for your port on every connected emulator and removes it when it exits — harmless to other sessions, whose Metros use other ports.
