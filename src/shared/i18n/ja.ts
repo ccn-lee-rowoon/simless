@@ -66,6 +66,8 @@ export const ja: Record<keyof typeof ko, string> = {
   "err.emulatorExited": "起動中にエミュレーターが終了しました(コード {code})\n{log}",
   "err.bootTimeout": "{name} の起動がタイムアウトしました — ログ: {log}",
   "err.shutdownFailed": "{name} を停止できませんでした({serial})",
+  "err.installSignature":
+    "署名の異なる同じアプリが入っているため上書きできません({package})— アプリのデータが消えてもよければ adb -s {serial} uninstall {package} のあと再インストールしてください",
   "err.unslimNeedsBoot":
     "Android デバイスのスリム解除は起動中にしかできません — 先に simless up を実行してください",
   "err.measureOff": "停止中のデバイスは測定できません",

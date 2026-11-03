@@ -197,6 +197,45 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
     expect(adb.running.has("emulator-5554")).toBe(true); // 남의 것은 그대로
   });
 
+  test("install — 깔린 다른 빌드를 덮어쓴다: 낮은 버전도, 서명이 다르면 지우지 않고 할 일을 알린다 (R26)", async () => {
+    const { env } = sdkWithImages();
+    const calls: string[][] = [];
+    let reply = { code: 0, stdout: "Performing Streamed Install\nSuccess\n", stderr: "" };
+    const d = driver(env, {
+      runner: async (command) => {
+        calls.push(command.slice(1));
+        return reply;
+      },
+    });
+    const device = { id: "ab12", native: "simless_ab12", name: "작은 폰" } as Device;
+    const state = { booted: true, targetId: "emulator-5556" };
+    await d.install(device, state, "/tmp/app-debug.apk");
+    expect(calls[0]).toEqual([
+      "-s",
+      "emulator-5556",
+      "install",
+      "-r",
+      "-t",
+      "-d",
+      "/tmp/app-debug.apk",
+    ]);
+
+    reply = {
+      code: 1,
+      stdout: "Performing Streamed Install\n",
+      stderr:
+        "adb: failed to install /tmp/app-debug.apk: Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package com.example.myapp signatures do not match newer version; ignoring!]",
+    };
+    const signature = await d.install(device, state, "/tmp/app-debug.apk").catch((e) => e);
+    expect(signature.message).toContain("adb -s emulator-5556 uninstall com.example.myapp");
+    expect(calls.filter((c) => c.includes("uninstall"))).toEqual([]); // 지우지 않는다
+
+    // 예전 adb — 실패해도 0
+    reply = { code: 0, stdout: "Failure [INSTALL_FAILED_INSUFFICIENT_STORAGE]\n", stderr: "" };
+    const old = await d.install(device, state, "/tmp/app-debug.apk").catch((e) => e);
+    expect(old.message).toContain("INSTALL_FAILED_INSUFFICIENT_STORAGE");
+  });
+
   test("boot — 에뮬레이터가 부팅 중에 끝나면 로그와 함께 실패", async () => {
     const { env } = sdkWithImages();
     const adb = fakeAdb();

@@ -64,6 +64,8 @@ export const ko = {
   "err.emulatorExited": "에뮬레이터가 부팅 중에 끝났습니다 (code {code})\n{log}",
   "err.bootTimeout": "부팅 시간이 지났습니다: {name} — 로그 {log}",
   "err.shutdownFailed": "끄지 못했습니다: {name} ({serial})",
+  "err.installSignature":
+    "서명이 다른 같은 앱이 깔려 있어 덮어쓰지 못했습니다 ({package}) — 앱 데이터가 지워져도 되면 adb -s {serial} uninstall {package} 뒤 다시 설치하세요",
   "err.unslimNeedsBoot": "Android 슬림 해제는 켜진 상태에서만 됩니다 — simless up 뒤에 다시",
   "err.measureOff": "꺼져 있어 잴 수 없습니다",
   "err.iosCustom": "iOS 는 크기를 직접 넣을 수 없습니다 — 기기 종류를 고르세요",

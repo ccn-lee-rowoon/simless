@@ -62,6 +62,8 @@ export const en: Record<keyof typeof ko, string> = {
   "err.emulatorExited": "The emulator exited while booting (code {code})\n{log}",
   "err.bootTimeout": "Timed out booting {name} — log: {log}",
   "err.shutdownFailed": "Couldn't shut down {name} ({serial})",
+  "err.installSignature":
+    "An app with the same package but a different signature is installed ({package}), so it can't be replaced — if its app data may be lost, run adb -s {serial} uninstall {package} and install again",
   "err.unslimNeedsBoot":
     "Android devices can only be unslimmed while booted — run simless up first",
   "err.measureOff": "Can't measure a device that is shut down",
