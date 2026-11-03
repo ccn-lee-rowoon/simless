@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import type { Command } from "commander";
 import {
   BuildCacheError,
@@ -11,9 +11,12 @@ import {
   findLatestBuild,
   forgetMiss,
   listBuilds,
+  logEvent,
+  nodeModulesLink,
   onlyBuildOutputs,
   projectKey,
   pruneBuilds,
+  readEvents,
   rememberMiss,
   saveBuild,
   takeMiss,
@@ -64,6 +67,13 @@ async function fingerprint(
   }
 }
 
+/** node_modules 가 링크면 알린다 — 다른 작업 트리와 캐시를 나눠 쓰지 못한다 */
+function warnLink(ctx: Context, project: string): string | undefined {
+  const link = nodeModulesLink(project);
+  if (link && !ctx.json) console.error(`! ${t("cli.app.linked", { target: link })}`);
+  return link;
+}
+
 const short = (fp: string) => fp.slice(0, 12);
 const size = (bytes: number) => `${(bytes / 1024 ** 2).toFixed(0)}MB`;
 const at = (iso: string) => when(Date.parse(iso));
@@ -92,6 +102,7 @@ export function registerApp(program: Command, run: Run) {
         const wanted = platformOf(o.platform);
         const project = findProject(o.project ?? process.cwd());
         const key = projectKey(project);
+        const link = warnLink(ctx, project);
         const mine = (await request<DeviceView[]>(ctx, "device.list", {})).filter(
           (d) =>
             d.mine &&
@@ -110,6 +121,13 @@ export function registerApp(program: Command, run: Run) {
           const cached = findCached(cacheRoot(), key, platform, fp.hash);
           // 빌드 전 지문 — 빌드한 뒤 app save 가 이 지문으로도 보관하게
           if (!cached) rememberMiss(cacheRoot(), key, platform, project, fp);
+          logEvent(cacheRoot(), {
+            project: key,
+            platform,
+            event: cached ? "hit" : "miss",
+            fingerprint: fp.hash,
+            worktree: basename(project),
+          });
           const entry: InstallEntry = {
             platform,
             fingerprint: fp.hash,
@@ -132,7 +150,7 @@ export function registerApp(program: Command, run: Run) {
           entries.push(entry);
         }
 
-        const result = { project, key, entries };
+        const result = { project, key, entries, ...(link ? { nodeModulesLink: link } : {}) };
         output(ctx, result, () =>
           entries
             .flatMap((e) => {
@@ -178,6 +196,7 @@ export function registerApp(program: Command, run: Run) {
         const platform = platformOf(o.platform) ?? fromPath;
         if (!platform) throw new CliError(t("cli.app.needPlatform"), ExitCode.usage, "INVALID");
         const project = findProject(o.project ?? process.cwd());
+        const link = warnLink(ctx, project);
         const source = o.path ? resolve(o.path) : findLatestBuild(project, platform);
         if (!source || !existsSync(source))
           throw new CliError(
@@ -196,9 +215,23 @@ export function registerApp(program: Command, run: Run) {
           aliases: aliased ? [before.hash] : [],
         });
         forgetMiss(root, key, platform, project);
+        logEvent(root, {
+          project: key,
+          platform,
+          event: "save",
+          fingerprint: fp.hash,
+          aliased,
+          worktree: basename(project),
+        });
         const removed = pruneBuilds(root, KEEP);
         const beforeBuild = changed ? { fingerprint: before.hash, aliased } : undefined;
-        output(ctx, { saved: meta, removed, beforeBuild }, () =>
+        const saved = {
+          saved: meta,
+          removed,
+          beforeBuild,
+          ...(link ? { nodeModulesLink: link } : {}),
+        };
+        output(ctx, saved, () =>
           [
             t("cli.app.saved", {
               platform,
@@ -235,6 +268,68 @@ export function registerApp(program: Command, run: Run) {
                 .map(
                   (b) =>
                     `${b.project}  ${b.platform.padEnd(7)}  ${short(b.fingerprint)}  ${size(b.bytes).padStart(6)}  ${at(b.savedAt)}`,
+                )
+                .join("\n"),
+        );
+      }),
+    );
+
+  app
+    .command("stats")
+    .description(t("cli.app.stats"))
+    .option("--days <n>", t("cli.app.days"), "30")
+    .action(
+      run(async (ctx, o: { days: string }) => {
+        const days = Math.max(1, Number(o.days) || 30);
+        const since = Date.now() - days * 86_400_000;
+        const rows = new Map<
+          string,
+          {
+            project: string;
+            platform: Platform;
+            hit: number;
+            miss: number;
+            saved: number;
+            aliased: number;
+          }
+        >();
+        for (const e of readEvents(cacheRoot())) {
+          if (Date.parse(e.at) < since) continue;
+          const id = `${e.project}/${e.platform}`;
+          const row = rows.get(id) ?? {
+            project: e.project,
+            platform: e.platform,
+            hit: 0,
+            miss: 0,
+            saved: 0,
+            aliased: 0,
+          };
+          if (e.event === "hit") row.hit++;
+          else if (e.event === "miss") row.miss++;
+          else {
+            row.saved++;
+            if (e.aliased) row.aliased++;
+          }
+          rows.set(id, row);
+        }
+        const stats = [...rows.values()];
+        output(ctx, { days, stats }, () =>
+          stats.length === 0
+            ? t("cli.app.noStats", { days })
+            : stats
+                .map((r) =>
+                  t("cli.app.statsRow", {
+                    project: r.project,
+                    platform: r.platform.padEnd(7),
+                    hit: r.hit,
+                    miss: r.miss,
+                    rate:
+                      r.hit + r.miss === 0
+                        ? "-"
+                        : `${Math.round((100 * r.hit) / (r.hit + r.miss))}%`,
+                    saved: r.saved,
+                    aliased: r.aliased,
+                  }),
                 )
                 .join("\n"),
         );

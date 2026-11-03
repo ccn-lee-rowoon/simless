@@ -6,11 +6,12 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  symlinkSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   computeFingerprint,
   FINGERPRINT_IGNORES,
@@ -19,9 +20,12 @@ import {
   findLatestBuild,
   forgetMiss,
   listBuilds,
+  logEvent,
+  nodeModulesLink,
   onlyBuildOutputs,
   projectKey,
   pruneBuilds,
+  readEvents,
   rememberMiss,
   saveBuild,
   takeMiss,
@@ -306,7 +310,61 @@ describe("네이티브 빌드 캐시 (R26)", () => {
     expect(changed.beforeBuild).toEqual({ fingerprint: "pre2", aliased: false });
     expect(changed.saved.aliases).toBeUndefined();
     expect(findCached(root, "myapp", "android", "pre2")).toBeUndefined();
-    for (const d of [root, project]) rmSync(d, { recursive: true, force: true });
+
+    // 보관한 것은 기록에 남고 app stats 가 센다
+    const stats = Bun.spawn([process.execPath, entry, "--json", "app", "stats"], {
+      env: { ...process.env, SIMLESS_BUILD_CACHE: root },
+      stdout: "pipe",
+    });
+    expect(JSON.parse(await new Response(stats.stdout).text()).stats).toEqual([
+      { project: "myapp", platform: "android", hit: 0, miss: 0, saved: 2, aliased: 1 },
+    ]);
+
+    // node_modules 가 다른 작업 트리를 가리키는 링크면 알린다
+    const linked = temp();
+    writeFileSync(join(linked, "package.json"), JSON.stringify({ name: "myapp" }));
+    writeFileSync(join(linked, "fp.json"), JSON.stringify({ hash: "l", sources: [] }));
+    symlinkSync(join(project, "node_modules"), join(linked, "node_modules"));
+    const linkedApk = join(linked, "android/app/build/outputs/apk/debug");
+    mkdirSync(linkedApk, { recursive: true });
+    writeFileSync(join(linkedApk, "app-debug.apk"), "apk");
+    const proc = Bun.spawn([process.execPath, entry, "app", "save", "--platform", "android"], {
+      cwd: linked,
+      env: { ...process.env, SIMLESS_BUILD_CACHE: root },
+      stderr: "pipe",
+    });
+    expect(await proc.exited).toBe(0);
+    expect(await new Response(proc.stderr).text()).toContain(join(project, "node_modules"));
+    for (const d of [root, project, linked]) rmSync(d, { recursive: true, force: true });
+  });
+
+  test("node_modules 링크 알아보기 (R26)", () => {
+    const a = temp();
+    const b = temp();
+    expect(nodeModulesLink(a)).toBeUndefined(); // 없음
+    mkdirSync(join(a, "node_modules"));
+    expect(nodeModulesLink(a)).toBeUndefined(); // 폴더
+    symlinkSync(join(a, "node_modules"), join(b, "node_modules"));
+    expect(nodeModulesLink(b)).toBe(join(a, "node_modules"));
+    for (const d of [a, b]) rmSync(d, { recursive: true, force: true });
+  });
+
+  test("찾음·못 찾음 기록은 본인만 읽고, 최근 것만 남긴다 (R26)", () => {
+    const root = join(temp(), "builds");
+    const event = (n: number) =>
+      ({
+        project: "myapp",
+        platform: "ios",
+        event: "miss",
+        fingerprint: `fp${n}`,
+        worktree: "wt",
+      }) as const;
+    for (let i = 0; i < 5; i++) logEvent(root, event(i), { keep: 3 });
+    expect(readEvents(root).map((e) => e.fingerprint)).toEqual(["fp2", "fp3", "fp4"]);
+    expect(statSync(join(root, "events.jsonl")).mode & 0o777).toBe(0o600);
+    // 기록은 목록에 섞이지 않는다
+    expect(listBuilds(root)).toEqual([]);
+    rmSync(dirname(root), { recursive: true, force: true });
   });
 
   test("설치는 이 세션이 점유한 켜진 기기에만 — 플랫폼은 파일 종류로 (R26)", async () => {

@@ -274,6 +274,13 @@ export const ko = {
     "빌드 전 지문 {fingerprint} 으로도 찾게 했습니다 — 빌드가 node_modules 에 파일만 더해서, 같은 네이티브의 다른 작업 트리도 이 빌드를 씁니다",
   "cli.app.notAliased":
     "빌드 전 지문 {fingerprint} 과 네이티브 입력이 달라(빌드 중 바뀜) 그 지문으로는 보관하지 않았습니다",
+  "cli.app.stats": "캐시를 찾았나·못 찾았나 — 앱·플랫폼마다",
+  "cli.app.days": "최근 며칠",
+  "cli.app.noStats": "최근 {days}일 기록이 없습니다",
+  "cli.app.statsRow":
+    "{project}  {platform}  찾음 {hit} · 못 찾음 {miss} ({rate}) · 보관 {saved} (빌드 전 지문으로도 {aliased})",
+  "cli.app.linked":
+    "node_modules 가 링크입니다(→ {target}) — 지문이 링크 너머 경로로 잡혀 다른 작업 트리와 빌드 캐시를 나눠 쓰지 못합니다. 이 작업 트리에 따로 설치하면 나눠 씁니다",
   "cli.app.empty": "캐시된 빌드가 없습니다 ({root})",
   "cli.app.pruned": "{count}개를 지웠습니다",
   "cli.failedFor": "실패: {name} — {error}",

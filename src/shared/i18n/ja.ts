@@ -280,6 +280,13 @@ export const ja: Record<keyof typeof ko, string> = {
     "ビルド前の指紋 {fingerprint} でも見つかるようにしました — ビルドが node_modules にファイルを足しただけなので、ネイティブが同じ他の作業ツリーもこのビルドを使います",
   "cli.app.notAliased":
     "ビルド前の指紋 {fingerprint} とネイティブの入力が違う(ビルド中に変わった)ため、その指紋では保存していません",
+  "cli.app.stats": "キャッシュが見つかったか — アプリ・プラットフォームごと",
+  "cli.app.days": "直近の日数",
+  "cli.app.noStats": "直近 {days} 日の記録はありません",
+  "cli.app.statsRow":
+    "{project}  {platform}  ヒット {hit} · ミス {miss} ({rate}) · 保存 {saved}(ビルド前の指紋でも {aliased})",
+  "cli.app.linked":
+    "node_modules がリンクです(→ {target})— 指紋がリンク先のパスで記録されるため、他の作業ツリーとビルドキャッシュを共有できません。この作業ツリーに依存関係をインストールすれば共有できます",
   "cli.app.empty": "キャッシュ済みのビルドはありません({root})",
   "cli.app.pruned": "{count} 個削除しました",
   "cli.failedFor": "失敗: {name} — {error}",

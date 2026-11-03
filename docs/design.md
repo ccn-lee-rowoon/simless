@@ -139,6 +139,8 @@ simless/
 | `~/Library/Logs/Simless/` | 서버 로그 | 서버 |
 | `~/.local/share/simless/versions/<버전>/simless` · `~/.local/bin/simless`(링크) | 설치된 버전들과 지금 쓰는 버전 (§19) | `simless update` |
 | `~/Library/Caches/Simless/builds/<앱>/<플랫폼>/<지문>/` | 캐시된 네이티브 빌드(.app·.apk) + `meta.json`. 앱·플랫폼마다 최근 5개 (R26). `SIMLESS_BUILD_CACHE` 로 바꿀 수 있다 | CLI |
+| `~/Library/Caches/Simless/builds/<앱>/<플랫폼>/.pending/<작업 트리 경로 해시>.json` | `app install` 이 못 찾았을 때의 지문(파일 경로·해시만, 0600) — `app save` 가 빌드 전 지문으로도 보관할지 본다 (R26) | CLI |
+| `~/Library/Caches/Simless/builds/events.jsonl` | 찾음·못 찾음·보관 기록(0600, 최근 2000줄) — `simless app stats` (R26) | CLI |
 | `~/.config/simless/config.json` | 사용자 설정 — 언어(`system`·`ko`·`en`, 기본 `system`), 자동 해제 시간(기본 30분), HTTP 포트, Android SDK 위치·RAM·에뮬레이터 옵션, simslim 프로필 경로. 앱 창의 설정 화면이 고친다 | 사람·서버 |
 | `~/.config/simless/apps/<name>.json` | 앱별 설정 (Q8) | 사람 |
 | `~/.android/avd/<AVD ID>.avd` · `.ini` | Android 디바이스 본체 — Simless 가 만든 것은 `simless_<id>` | Android Studio·서버 |
@@ -295,6 +297,8 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 2. 캐시(`~/Library/Caches/Simless/builds/<package.json name>/<플랫폼>/<지문>/`)에 있으면 서버의 `device.install` 이 기기마다 설치한다(iOS `simctl install`, Android `adb -s <시리얼> install -r -t -d`). 서버는 점유·켜짐·플랫폼을 확인한다. 기기에 무엇이 깔려 있든(다른 작업 트리의 빌드) 덮어쓴다 — 무엇이 깔려 있는지 기억해 건너뛰지 않는다(Simless 를 거치지 않은 설치를 알 수 없어, 기록이 낡으면 틀린 빌드가 남는다). Android `-d` 는 다른 작업 트리가 `versionCode` 를 올린 빌드를 깔아 둔 때도 덮어쓰게. 서명이 다르면(`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) 지워야만 깔리는데 앱 데이터가 날아가므로 지우지 않고 할 일(앱 지우기 명령)을 알린다.
 3. 없으면 `hit: false` 와 빌드 명령(`npx expo run:<p> --device <targetId>`)을 돌려주고, 그 지문(파일마다 해시)을 `<플랫폼>/.pending/<작업 트리 경로 해시>.json`(0600)에 기억한다. 에이전트가 빌드한 뒤 `simless app save` 가 방금 빌드한 것을 찾아 빌드 후 지문으로 보관한다 — iOS 는 `ios/*.xcworkspace` 이름의 DerivedData 가운데 `info.plist` 의 `WorkspacePath` 가 **이 작업 트리**인 것의 `…/Build/Products/Debug-iphonesimulator/*.app`(또는 `ios/build` 아래, DerivedData 는 작업 트리마다 따로 생기지만 이름이 같다), Android 는 `android/app/build/outputs/apk/debug/*.apk`. 보관할 때 앱·플랫폼마다 최근 5개만 남긴다.
 4. **빌드 전 지문으로도** — 빌드는 `node_modules` 안에 파일을 만든다(iOS 는 `pod install` 이 미리 빌드된 라이브러리를 패키지 폴더에 복사). 그래서 빌드 후 지문으로만 보관하면 늘 빌드 전 상태인 새 작업 트리가 못 찾는다. 3에서 기억한 지문과 빌드 후 지문의 차이가 **`node_modules` 안에 새로 생긴 파일뿐**이면 `meta.json` 의 `aliases` 에 빌드 전 지문을 넣어 그 지문으로도 찾는다. 있던 파일이 바뀌거나 사라졌거나 바깥(앱 설정·패치·플러그인·환경 변수)이 바뀌었으면 넣지 않는다 — 빌드하는 사이 네이티브를 바꿨으면 틀린 빌드를 주게 되므로, 그때는 다시 빌드하게 둔다. 찾을 때는 그 지문의 폴더가 먼저, 없으면 `aliases` 에 든 가장 최근 빌드.
+5. **캐시를 못 쓰는 작업 트리 알림** — `node_modules` 가 링크(메인 체크아웃 등)면 지문 도구가 경로를 링크 너머(`../../…/node_modules/…`)로 잡아, 내용이 같아도 지문이 통째로 달라진다. `app install`·`app save` 가 알리고(JSON 은 `nodeModulesLink`) 그대로 진행한다 — 그 작업 트리 안에서는 같은 지문이라 쓸 수 있다.
+6. **기록** — `app install` 의 찾음·못 찾음과 `app save` 의 보관(빌드 전 지문으로도 했는지)을 `builds/events.jsonl` 에 남긴다(앱·플랫폼·지문·작업 트리 폴더 이름). `simless app stats [--days 30]` 이 앱·플랫폼마다 찾은 비율을 보여 준다. 기록은 덤이라 쓰지 못해도 설치·보관은 그대로 한다.
 - 지문은 Expo 앱에 이미 든 도구로 계산하므로 앱 저장소는 고치지 않는다(결정 기록). Expo 가 아닌 앱은 `TOOL_MISSING` — 캐시 없이 빌드한다.
 
 **나중에(L1~L3) 만들 때 참고** — 2단계에서 한 번 만들다 되돌린 내용이다.
@@ -350,7 +354,7 @@ simless 는 하지 않는다. 에이전트가 `simless list --json`(또는 `siml
 | `simless history [--session <키>] [--limit 50]` | 점유 기록 | M13 |
 | `simless up` · `simless down` | 점유한 디바이스 켜기·끄기 | R7 |
 | **`simless use [<dev>… \| --group … \| --default …] [--purpose <작업>] [--available] [--wait]`** | **acquire + up 한 번에** — 주 흐름의 첫 단계 | R15 |
-| `simless app install [<dev>…] [--platform] [--project]` · `app save [--platform] [--path] [--project]` · `app list` · `app prune [--keep 5]` | 네이티브 빌드 캐시 — 지문이 같으면 점유한 켜진 기기에 설치, 빌드한 것 보관 (§10) | R26 |
+| `simless app install [<dev>…] [--platform] [--project]` · `app save [--platform] [--path] [--project]` · `app list` · `app stats [--days 30]` · `app prune [--keep 5]` | 네이티브 빌드 캐시 — 지문이 같으면 점유한 켜진 기기에 설치, 빌드한 것 보관 (§10) | R26 |
 | `simless config [<키> [<값>]]` | 설정 보기·바꾸기 (언어 등) — 앱 창 설정 화면과 같은 값 | M11·R25 |
 | `simless skill status` · `skill install [--global] [--project <폴더>…]` · `skill uninstall` | 스킬 설치 위치·상태 (폴더째 — SKILL.md + `references/*.md`) | S9 |
 | `simless update [--check] [--rollback]` | 새 버전 확인·업데이트·이전 버전으로 되돌리기 — **U단계, 아직 없음** | R19 |

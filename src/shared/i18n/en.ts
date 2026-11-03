@@ -271,6 +271,13 @@ export const en: Record<keyof typeof ko, string> = {
     "Also findable by the pre-build fingerprint {fingerprint} — the build only added files under node_modules, so other worktrees with the same native side use it too",
   "cli.app.notAliased":
     "Not stored under the pre-build fingerprint {fingerprint} — native inputs changed during the build",
+  "cli.app.stats": "How often the cache was found — per app and platform",
+  "cli.app.days": "Last N days",
+  "cli.app.noStats": "Nothing recorded in the last {days} days",
+  "cli.app.statsRow":
+    "{project}  {platform}  hit {hit} · miss {miss} ({rate}) · stored {saved} ({aliased} also under the pre-build fingerprint)",
+  "cli.app.linked":
+    "node_modules is a link (→ {target}) — the fingerprint records paths through the link, so this worktree can't share cached builds with other worktrees. Install dependencies in this worktree to share them",
   "cli.app.empty": "No cached builds ({root})",
   "cli.app.pruned": "Removed {count}",
   "cli.failedFor": "Failed: {name} — {error}",
