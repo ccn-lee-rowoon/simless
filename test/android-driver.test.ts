@@ -188,6 +188,9 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
     expect(state).toEqual({ booted: true, targetId: "emulator-5556" });
     expect(spawned[0]).toContain("-avd");
     expect(spawned[0]).toContain("simless_ab12");
+    // -port 로 켜면 gRPC·실행 정보 파일이 없어 화면 조작 도구가 못 붙는다 — gRPC 를 직접 켠다 (P10)
+    const grpcAt = spawned[0]?.indexOf("-grpc") ?? -1;
+    expect(spawned[0]?.slice(grpcAt, grpcAt + 3)).toEqual(["-grpc", "8556", "-grpc-use-token"]);
 
     const states = await d.states([device]);
     expect(states.get("ab12")).toEqual({ booted: true, targetId: "emulator-5556" });
@@ -234,6 +237,39 @@ describe("AndroidDriver — 만들기·켜기·슬림 (R1·R4·R5·R7)", () => {
     reply = { code: 0, stdout: "Failure [INSTALL_FAILED_INSUFFICIENT_STORAGE]\n", stderr: "" };
     const old = await d.install(device, state, "/tmp/app-debug.apk").catch((e) => e);
     expect(old.message).toContain("INSTALL_FAILED_INSUFFICIENT_STORAGE");
+  });
+
+  test("boot — gRPC 포트는 콘솔 포트 + 3000 부터 빈 것, 설정에 -grpc 가 있으면 그것을 쓴다 (P10)", async () => {
+    const { env } = sdkWithImages();
+    const boot = async (busy: Set<number>, config = Config.parse({})) => {
+      const adb = fakeAdb();
+      const spawned: string[][] = [];
+      const d = driver(
+        env,
+        {
+          runner: adb.runner,
+          isPortFree: async (port) => !busy.has(port),
+          spawnEmulator: (command) => {
+            spawned.push(command);
+            const port = command[command.indexOf("-port") + 1];
+            adb.running.set(`emulator-${port}`, { avd: "simless_ab12", booted: true });
+            return { exited: new Promise(() => {}) };
+          },
+        },
+        config,
+      );
+      await d.boot({ id: "ab12", native: "simless_ab12", name: "작은 폰" } as Device, () => {});
+      return spawned[0] ?? [];
+    };
+    const grpcOf = (command: string[]) => command[command.indexOf("-grpc") + 1];
+    expect(grpcOf(await boot(new Set()))).toBe("8554");
+    expect(grpcOf(await boot(new Set([8554, 8555])))).toBe("8556");
+    // 설정의 에뮬레이터 인자에 -grpc 가 있으면 더하지 않는다
+    const own = Config.parse({ android: { emulatorArgs: ["-grpc", "9100", "-no-snapshot-save"] } });
+    const command = await boot(new Set(), own);
+    expect(command.filter((a) => a === "-grpc")).toHaveLength(1);
+    expect(grpcOf(command)).toBe("9100");
+    expect(command).not.toContain("-grpc-use-token");
   });
 
   test("boot — 에뮬레이터가 부팅 중에 끝나면 로그와 함께 실패", async () => {
