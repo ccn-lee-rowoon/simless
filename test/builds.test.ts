@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
   computeFingerprint,
+  dependencyHash,
   FINGERPRINT_IGNORES,
   type Fingerprint,
   findCached,
@@ -208,6 +209,48 @@ describe("네이티브 빌드 캐시 (R26)", () => {
     // 있던 파일이 사라짐
     const removed: Fingerprint = { hash: "post", files: { "app.json": "a" } };
     expect(onlyBuildOutputs(before, removed)).toBe(false);
+
+    // 의존성(잠금 파일·package.json)이 그대로면 node_modules 안의 고침·삭제도 빌드 산출물 —
+    // Android Gradle 이 라이브러리 매니페스트를 고치거나 소스를 복사해 넣는다
+    expect(onlyBuildOutputs(before, after({ "node_modules/skia/ios/x.mm": "x2" }), true)).toBe(
+      true,
+    );
+    expect(
+      onlyBuildOutputs(
+        before,
+        { hash: "post", files: { "app.json": "a", "contents:expoConfig": "c" } },
+        true,
+      ),
+    ).toBe(true);
+    // 그래도 바깥이 바뀌면 아니다
+    expect(onlyBuildOutputs(before, after({ "contents:expoConfig": "c2" }), true)).toBe(false);
+    expect(onlyBuildOutputs(before, after({ "plugins/withX.js": "p" }), true)).toBe(false);
+    expect(onlyBuildOutputs(before, after({ "../main/node_modules/a/x.m": "m" }), true)).toBe(
+      false,
+    );
+  });
+
+  test("의존성 해시 — 잠금 파일은 위로 찾고, 잠금 파일·package.json 이 바뀌면 달라진다 (R26)", () => {
+    const repo = temp();
+    const app = join(repo, "apps", "mobile");
+    mkdirSync(app, { recursive: true });
+    writeFileSync(join(app, "package.json"), JSON.stringify({ dependencies: { a: "1" } }));
+    expect(dependencyHash(app)).toBeUndefined(); // 잠금 파일이 없으면 모른다
+    writeFileSync(join(repo, "bun.lock"), "lock1"); // 모노레포 루트
+    const first = dependencyHash(app);
+    expect(first).toMatch(/^[0-9a-f]{64}$/);
+    expect(dependencyHash(app)).toBe(first);
+    writeFileSync(join(repo, "bun.lock"), "lock2");
+    const second = dependencyHash(app);
+    expect(second).not.toBe(first);
+    writeFileSync(join(app, "package.json"), JSON.stringify({ dependencies: { a: "2" } }));
+    expect(dependencyHash(app)).not.toBe(second);
+    // 프로젝트 폴더의 잠금 파일이 먼저
+    writeFileSync(join(app, "yarn.lock"), "own");
+    const own = dependencyHash(app);
+    writeFileSync(join(repo, "bun.lock"), "lock3");
+    expect(dependencyHash(app)).toBe(own);
+    rmSync(repo, { recursive: true, force: true });
   });
 
   test("빌드 전 지문으로 보관한 빌드도 찾고, 정리하면 함께 사라진다 (R26)", () => {
@@ -311,13 +354,31 @@ describe("네이티브 빌드 캐시 (R26)", () => {
     expect(changed.saved.aliases).toBeUndefined();
     expect(findCached(root, "myapp", "android", "pre2")).toBeUndefined();
 
+    // 잠금 파일이 있고 그대로면 node_modules 안의 고침(Gradle 이 매니페스트를 고침)도 빌드 산출물
+    writeFileSync(join(project, "bun.lock"), "lock");
+    state("pre3", file("app.json", "a"), file("node_modules/m/android/AndroidManifest.xml", "m1"));
+    await missed();
+    state("post3", file("app.json", "a"), file("node_modules/m/android/AndroidManifest.xml", "m2"));
+    const modified = await save();
+    expect(modified.beforeBuild).toEqual({ fingerprint: "pre3", aliased: true });
+    expect(findCached(root, "myapp", "android", "pre3")?.fingerprint).toBe("post3");
+
+    // 빌드하는 사이 의존성이 바뀌었으면(bun install) node_modules 안의 고침은 받지 않는다
+    state("pre4", file("app.json", "a"), file("node_modules/m/android/AndroidManifest.xml", "m1"));
+    await missed();
+    writeFileSync(join(project, "bun.lock"), "lock-updated");
+    state("post4", file("app.json", "a"), file("node_modules/m/android/AndroidManifest.xml", "m2"));
+    const updated = await save();
+    expect(updated.beforeBuild).toEqual({ fingerprint: "pre4", aliased: false });
+    expect(findCached(root, "myapp", "android", "pre4")).toBeUndefined();
+
     // 보관한 것은 기록에 남고 app stats 가 센다
     const stats = Bun.spawn([process.execPath, entry, "--json", "app", "stats"], {
       env: { ...process.env, SIMLESS_BUILD_CACHE: root },
       stdout: "pipe",
     });
     expect(JSON.parse(await new Response(stats.stdout).text()).stats).toEqual([
-      { project: "myapp", platform: "android", hit: 0, miss: 0, saved: 2, aliased: 1 },
+      { project: "myapp", platform: "android", hit: 0, miss: 0, saved: 4, aliased: 2 },
     ]);
 
     // node_modules 가 다른 작업 트리를 가리키는 링크면 알린다

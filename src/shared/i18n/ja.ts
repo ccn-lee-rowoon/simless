@@ -277,7 +277,7 @@ export const ja: Record<keyof typeof ko, string> = {
   "cli.app.saved":
     "{platform} のビルドを保存しました — fingerprint {fingerprint}、{size}({source})",
   "cli.app.aliased":
-    "ビルド前の指紋 {fingerprint} でも見つかるようにしました — ビルドが node_modules にファイルを足しただけなので、ネイティブが同じ他の作業ツリーもこのビルドを使います",
+    "ビルド前の指紋 {fingerprint} でも見つかるようにしました — ビルドが node_modules の中だけを変えたので、ネイティブが同じ他の作業ツリーもこのビルドを使います",
   "cli.app.notAliased":
     "ビルド前の指紋 {fingerprint} とネイティブの入力が違う(ビルド中に変わった)ため、その指紋では保存していません",
   "cli.app.stats": "キャッシュが見つかったか — アプリ・プラットフォームごと",

@@ -156,7 +156,7 @@ Device by device, always naming the device with its `targetId`.
      ```sh
      simless --json app install            # held, booted devices; add --platform ios|android to pick one
      ```
-     Per platform, `hit: true` means it is installed — go on to launch. `hit: false` means nothing is cached for this fingerprint: build onto the device (below), then store the build **from the same worktree** so the next session skips it. Run `app install` before building even when you expect a miss — `app save` also files the build under that pre-build fingerprint, which is what a fresh worktree computes (building adds files under `node_modules`):
+     Per platform, `hit: true` means it is installed — go on to launch. `hit: false` means nothing is cached for this fingerprint: build onto the device (below), then store the build **from the same worktree** so the next session skips it. Run `app install` before building even when you expect a miss — `app save` also files the build under that pre-build fingerprint, which is what a fresh worktree computes (building changes files under `node_modules`):
      ```sh
      REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo run:ios --device <targetId> --port <port>
      REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo run:android --device <AVD name> --port <port>

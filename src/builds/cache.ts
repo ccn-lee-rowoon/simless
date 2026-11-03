@@ -27,9 +27,12 @@ import type { Platform } from "../shared/model.ts";
 // 빌드는 node_modules 안에 파일을 만든다 — iOS 는 pod install 이 패키지 폴더에 미리 빌드된 라이브러리를
 // 복사하고, Android 는 Gradle 이 패키지의 하위 모듈 폴더에 산출물을 쓴다. 그래서 빌드 전(app install)과
 // 빌드 후(app save)의 지문이 달라, 빌드 후 지문으로만 보관하면 늘 빌드 전 상태인 새 작업 트리가 못 찾는다.
-// Gradle 산출물은 지문에서 빼고, 나머지는 빌드 전 지문을 기억했다가 «node_modules 안에 새로 생긴 파일만»
-// 다르면 빌드 전 지문으로도 찾게 한다. 이미 있던 파일이 바뀌었거나 바깥이 바뀌었으면 하지 않는다 —
-// 틀린 빌드를 주느니 다시 빌드하게 둔다.
+// Android 는 Gradle 이 있던 파일도 고친다(라이브러리 매니페스트의 package= 를 지우거나 소스를 복사해 넣음).
+// Gradle 산출물은 지문에서 빼고, 나머지는 빌드 전 지문을 기억했다가 «node_modules 안만» 다르면 빌드 전
+// 지문으로도 찾게 한다. 다만 지문에는 잠금 파일·package.json 의존성이 들어가지 않아(scripts 만) 의존성
+// 버전이 바뀐 것을 node_modules 내용으로만 알아챈다 — 그래서 잠금 파일·package.json 이 그대로일 때만
+// node_modules 안의 고침·삭제까지 빌드 산출물로 보고, 바뀌었거나 잠금 파일이 없으면 새로 생긴 파일만 본다.
+// 바깥(앱 설정·패치·플러그인·네이티브 모듈)이 바뀌었으면 하지 않는다 — 틀린 빌드를 주느니 다시 빌드하게 둔다.
 
 export interface BuildMeta {
   /** 앱 이름 — package.json 의 name. 작업 트리가 달라도 같은 앱이면 같은 이름 */
@@ -151,17 +154,58 @@ export async function computeFingerprint(
   throw new BuildCacheError("FAILED", "지문 도구의 출력을 읽지 못했습니다");
 }
 
-/**
- * 빌드 전 지문 대신 쓸 수 있나 — 빌드 후 지문과의 차이가 node_modules 안에 새로 생긴 파일뿐일 때만.
- * 있던 파일이 바뀌거나 사라졌거나, 바깥(앱 설정·패치·네이티브 폴더)이 바뀌었으면 아니다
- */
-export function onlyBuildOutputs(before: Fingerprint, after: Fingerprint): boolean {
-  for (const [path, hash] of Object.entries(before.files)) {
-    if (after.files[path] !== hash) return false;
+/** 의존성을 정하는 잠금 파일 — 프로젝트에서 위로 처음 있는 폴더의 것(모노레포면 루트) */
+const LOCKFILES = [
+  "bun.lock",
+  "bun.lockb",
+  "package-lock.json",
+  "npm-shrinkwrap.json",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+];
+
+/** 잠금 파일 + package.json 의 해시 — 잠금 파일이 없으면 undefined (의존성이 그대로인지 알 수 없다) */
+export function dependencyHash(projectDir: string): string | undefined {
+  let dir = real(projectDir);
+  for (;;) {
+    const found = LOCKFILES.filter((name) => existsSync(join(dir, name)));
+    if (found.length > 0) {
+      const hash = createHash("sha256");
+      for (const path of [join(projectDir, "package.json"), ...found.map((n) => join(dir, n))]) {
+        if (!existsSync(path)) continue;
+        hash.update(`${basename(path)}\0`);
+        hash.update(readFileSync(path));
+      }
+      return hash.digest("hex");
+    }
+    const parent = dirname(dir);
+    if (parent === dir) return undefined;
+    dir = parent;
   }
-  return Object.keys(after.files).every(
-    (path) => path in before.files || path.startsWith("node_modules/"),
-  );
+}
+
+/**
+ * 빌드 전 지문 대신 쓸 수 있나 — 빌드 후 지문과의 차이가 node_modules 안뿐일 때만.
+ * 의존성(잠금 파일·package.json)이 그대로면 node_modules 안의 고침·추가·삭제는 빌드 산출물로 본다.
+ * 모르거나 바뀌었으면 새로 생긴 파일만. 바깥(앱 설정·패치·네이티브 모듈)이 바뀌었으면 아니다
+ */
+export function onlyBuildOutputs(
+  before: Fingerprint,
+  after: Fingerprint,
+  depsUnchanged = false,
+): boolean {
+  const inside = (path: string) => path.startsWith("node_modules/");
+  for (const [path, hash] of Object.entries(before.files)) {
+    if (after.files[path] === hash) continue;
+    if (!inside(path) || !depsUnchanged) return false;
+  }
+  return Object.keys(after.files).every((path) => path in before.files || inside(path));
+}
+
+/** 못 찾았을 때 기억하는 것 — 빌드 전 지문 + 그때의 의존성 해시 */
+export interface Miss extends Fingerprint {
+  /** dependencyHash — 없으면 잠금 파일이 없던 것 */
+  deps?: string;
 }
 
 /** 이 작업 트리·플랫폼에서 캐시를 못 찾았을 때의 지문 — app save 가 빌드 전 지문으로도 보관하게 */
@@ -184,7 +228,8 @@ export function rememberMiss(
 ): void {
   const path = pendingPath(root, project, platform, projectDir);
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  writeFileSync(path, JSON.stringify(fingerprint), { mode: 0o600 });
+  const miss: Miss = { ...fingerprint, deps: dependencyHash(projectDir) };
+  writeFileSync(path, JSON.stringify(miss), { mode: 0o600 });
 }
 
 export function takeMiss(
@@ -192,10 +237,10 @@ export function takeMiss(
   project: string,
   platform: Platform,
   projectDir: string,
-): Fingerprint | undefined {
+): Miss | undefined {
   const path = pendingPath(root, project, platform, projectDir);
   try {
-    const value = JSON.parse(readFileSync(path, "utf8")) as Fingerprint;
+    const value = JSON.parse(readFileSync(path, "utf8")) as Miss;
     return value.hash && value.files ? value : undefined;
   } catch {
     return undefined;

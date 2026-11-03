@@ -268,7 +268,7 @@ export const en: Record<keyof typeof ko, string> = {
     "No {platform} build found: {path} — only builds from this worktree are picked. For a build made elsewhere, pass --path",
   "cli.app.saved": "Stored the {platform} build — fingerprint {fingerprint}, {size} ({source})",
   "cli.app.aliased":
-    "Also findable by the pre-build fingerprint {fingerprint} — the build only added files under node_modules, so other worktrees with the same native side use it too",
+    "Also findable by the pre-build fingerprint {fingerprint} — the build only changed files under node_modules, so other worktrees with the same native side use it too",
   "cli.app.notAliased":
     "Not stored under the pre-build fingerprint {fingerprint} — native inputs changed during the build",
   "cli.app.stats": "How often the cache was found — per app and platform",
