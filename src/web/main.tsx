@@ -82,6 +82,8 @@ function App() {
   const [pending, setPending] = useState<PendingCreate[]>([]);
   /** 머리의 «새 그룹» 을 누를 때마다 늘어난다 — 그룹 화면이 만들기 창을 연다 */
   const [newGroup, setNewGroup] = useState(0);
+  /** 스킬 업데이트 중 — 넣어 둔 곳마다 쓰느라 Mac 이 바쁘면 수십 초 걸린다 */
+  const [updatingSkill, setUpdatingSkill] = useState(false);
   const [, setLang] = useState(language());
   useMenuDismiss();
 
@@ -367,12 +369,15 @@ function App() {
             <button
               type="button"
               className="button button-primary button-small"
-              onClick={() =>
-                act(t("web.skillUpdate.action"), () =>
+              disabled={updatingSkill}
+              onClick={() => {
+                setUpdatingSkill(true);
+                void act(t("web.skillUpdate.action"), () =>
                   call("setup.apply", { item: "skill", enabled: true }),
-                )
-              }
+                ).finally(() => setUpdatingSkill(false));
+              }}
             >
+              {updatingSkill && <span className="spinner spinner-small" aria-hidden="true" />}
               {t("web.setup.update")}
             </button>
           </div>
