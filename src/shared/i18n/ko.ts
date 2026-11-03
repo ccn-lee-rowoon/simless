@@ -255,7 +255,8 @@ export const ko = {
   "cli.app.prune": "앱·플랫폼마다 최근 것만 남기고 지운다",
   "cli.app.keep": "남길 개수",
   "cli.app.project": "앱 프로젝트 폴더 (기본: 지금 폴더에서 위로 찾는다)",
-  "cli.app.path": "보관할 빌드 (기본: DerivedData·android/app/build 에서 가장 최근 것)",
+  "cli.app.path":
+    "보관할 빌드 (기본: 이 작업 트리의 DerivedData·android/app/build 에서 가장 최근 것)",
   "cli.app.verb": "설치",
   "cli.app.noProject":
     "{dir} 에서 Expo 지문 도구(node_modules/.bin/fingerprint)를 찾지 못했습니다 — 앱 프로젝트 안에서 실행하거나 --project 로 지정하세요",
@@ -264,8 +265,13 @@ export const ko = {
   "cli.app.miss": "{platform}: 캐시 없음 (지문 {fingerprint}) — 빌드한 뒤 보관하세요:",
   "cli.app.installed": "{name}: 캐시된 빌드를 설치했습니다 (지문 {fingerprint})",
   "cli.app.needPlatform": "--platform 을 주세요 (또는 --path 로 .app·.apk 를)",
-  "cli.app.noBuild": "{platform} 빌드를 찾지 못했습니다: {path}",
+  "cli.app.noBuild":
+    "{platform} 빌드를 찾지 못했습니다: {path} — 이 작업 트리에서 빌드한 것만 찾습니다. 다른 곳의 빌드면 --path 로 주세요",
   "cli.app.saved": "{platform} 빌드를 보관했습니다 — 지문 {fingerprint}, {size} ({source})",
+  "cli.app.aliased":
+    "빌드 전 지문 {fingerprint} 으로도 찾게 했습니다 — 빌드가 node_modules 에 파일만 더해서, 같은 네이티브의 다른 작업 트리도 이 빌드를 씁니다",
+  "cli.app.notAliased":
+    "빌드 전 지문 {fingerprint} 과 네이티브 입력이 달라(빌드 중 바뀜) 그 지문으로는 보관하지 않았습니다",
   "cli.app.empty": "캐시된 빌드가 없습니다 ({root})",
   "cli.app.pruned": "{count}개를 지웠습니다",
   "cli.failedFor": "실패: {name} — {error}",

@@ -6,12 +6,17 @@ import {
   type BuildMeta,
   cacheRoot,
   computeFingerprint,
+  type Fingerprint,
   findCached,
   findLatestBuild,
+  forgetMiss,
   listBuilds,
+  onlyBuildOutputs,
   projectKey,
   pruneBuilds,
+  rememberMiss,
   saveBuild,
+  takeMiss,
 } from "../../builds/cache.ts";
 import type { DeviceOpResult, DeviceView } from "../../shared/api.ts";
 import { run as defaultRun } from "../../shared/exec.ts";
@@ -44,7 +49,11 @@ function platformOf(value: string | undefined): Platform | undefined {
   throw new CliError(t("cli.badPlatform", { platform: value }), ExitCode.usage, "INVALID");
 }
 
-async function fingerprint(ctx: Context, project: string, platform: Platform): Promise<string> {
+async function fingerprint(
+  ctx: Context,
+  project: string,
+  platform: Platform,
+): Promise<Fingerprint> {
   if (!ctx.json) console.error(`… ${t("cli.app.fingerprinting", { platform })}`);
   try {
     return await computeFingerprint(project, platform, defaultRun);
@@ -98,10 +107,12 @@ export function registerApp(program: Command, run: Run) {
         for (const platform of [...new Set(mine.map((d) => d.platform))]) {
           const devices = mine.filter((d) => d.platform === platform);
           const fp = await fingerprint(ctx, project, platform);
-          const cached = findCached(cacheRoot(), key, platform, fp);
+          const cached = findCached(cacheRoot(), key, platform, fp.hash);
+          // 빌드 전 지문 — 빌드한 뒤 app save 가 이 지문으로도 보관하게
+          if (!cached) rememberMiss(cacheRoot(), key, platform, project, fp);
           const entry: InstallEntry = {
             platform,
-            fingerprint: fp,
+            fingerprint: fp.hash,
             hit: cached !== undefined,
             build: cached?.path,
             devices: devices.map((d) => ({ id: d.id, name: d.name, targetId: d.targetId })),
@@ -176,15 +187,33 @@ export function registerApp(program: Command, run: Run) {
           );
         const fp = await fingerprint(ctx, project, platform);
         const root = cacheRoot();
-        const meta = saveBuild(root, projectKey(project), platform, fp, source);
+        const key = projectKey(project);
+        // app install 이 못 찾았을 때의 지문 — 빌드가 node_modules 에 파일만 더했으면 그 지문으로도
+        const before = takeMiss(root, key, platform, project);
+        const changed = before !== undefined && before.hash !== fp.hash;
+        const aliased = changed && onlyBuildOutputs(before, fp);
+        const meta = saveBuild(root, key, platform, fp.hash, source, {
+          aliases: aliased ? [before.hash] : [],
+        });
+        forgetMiss(root, key, platform, project);
         const removed = pruneBuilds(root, KEEP);
-        output(ctx, { saved: meta, removed }, () =>
-          t("cli.app.saved", {
-            platform,
-            fingerprint: short(fp),
-            size: size(meta.bytes),
-            source,
-          }),
+        const beforeBuild = changed ? { fingerprint: before.hash, aliased } : undefined;
+        output(ctx, { saved: meta, removed, beforeBuild }, () =>
+          [
+            t("cli.app.saved", {
+              platform,
+              fingerprint: short(fp.hash),
+              size: size(meta.bytes),
+              source,
+            }),
+            ...(beforeBuild
+              ? [
+                  t(aliased ? "cli.app.aliased" : "cli.app.notAliased", {
+                    fingerprint: short(beforeBuild.fingerprint),
+                  }),
+                ]
+              : []),
+          ].join("\n"),
         );
       }),
     );

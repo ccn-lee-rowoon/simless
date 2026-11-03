@@ -252,7 +252,8 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.app.prune": "Keep only the newest builds per app and platform",
   "cli.app.keep": "How many to keep",
   "cli.app.project": "App project folder (default: searched upward from the current folder)",
-  "cli.app.path": "Build to store (default: the newest in DerivedData or android/app/build)",
+  "cli.app.path":
+    "Build to store (default: the newest in this worktree's DerivedData or android/app/build)",
   "cli.app.verb": "Install",
   "cli.app.noProject":
     "No Expo fingerprint tool (node_modules/.bin/fingerprint) found from {dir} — run inside the app project or pass --project",
@@ -261,8 +262,13 @@ export const en: Record<keyof typeof ko, string> = {
   "cli.app.miss": "{platform}: not cached (fingerprint {fingerprint}) — build, then store it:",
   "cli.app.installed": "{name}: installed the cached build (fingerprint {fingerprint})",
   "cli.app.needPlatform": "Pass --platform (or a .app/.apk with --path)",
-  "cli.app.noBuild": "No {platform} build found: {path}",
+  "cli.app.noBuild":
+    "No {platform} build found: {path} — only builds from this worktree are picked. For a build made elsewhere, pass --path",
   "cli.app.saved": "Stored the {platform} build — fingerprint {fingerprint}, {size} ({source})",
+  "cli.app.aliased":
+    "Also findable by the pre-build fingerprint {fingerprint} — the build only added files under node_modules, so other worktrees with the same native side use it too",
+  "cli.app.notAliased":
+    "Not stored under the pre-build fingerprint {fingerprint} — native inputs changed during the build",
   "cli.app.empty": "No cached builds ({root})",
   "cli.app.pruned": "Removed {count}",
   "cli.failedFor": "Failed: {name} — {error}",
