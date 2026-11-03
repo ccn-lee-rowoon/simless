@@ -6,6 +6,7 @@ import type {
   FixId,
   HolderView,
   JobView,
+  PingResult,
   SlimStats,
   StatusResult,
 } from "../shared/api.ts";
@@ -75,6 +76,7 @@ export interface InventoryProblem {
 /** 화면 갱신 알림이 필요 없는 메서드 */
 const READ_ONLY = new Set([
   "status",
+  "ping",
   "device.list",
   "device.available",
   "catalog",
@@ -127,6 +129,7 @@ export class SimlessServer {
     );
     this.methods = {
       status: (_p, session) => this.status(session),
+      ping: async () => this.ping(),
     };
     this.applyLanguage();
     registerDeviceMethods(this);
@@ -560,6 +563,17 @@ export class SimlessServer {
     if (text === this.lastIndex) return;
     this.lastIndex = text;
     writeJson(this.deps.paths.managedIndex, { updatedAt: new Date().toISOString(), devices });
+  }
+
+  /** 서버가 살아 있는지 — 디바이스를 읽지 않아 기기가 느려도 바로 답한다 (M18) */
+  private ping(): PingResult {
+    return {
+      serverVersion: VERSION,
+      language: this.lang,
+      setupNeeded: setupNeeded(this.deps.paths),
+      skillUpdate: this.skillUpdate,
+      skillHash: this.skillHash,
+    };
   }
 
   private async status(session: SessionInfo): Promise<StatusResult> {

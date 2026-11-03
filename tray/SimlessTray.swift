@@ -122,8 +122,9 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
   private var skillUpdate = false
   /// 들어 있는 스킬의 지문 — 이 값마다 «스킬 업데이트» 알림을 한 번만 (M18)
   private var skillHash: String?
-  /// 서버에 처음 연결하지 못한 때 — 1분이 넘으면 «서버 꺼짐» 알림 한 번 (M18)
+  /// 서버에 처음 연결하지 못한 때와 연달아 못 한 횟수 — 둘 다 넘으면 «서버 꺼짐» 알림 한 번 (M18)
   private var downSince: Date?
+  private var downCount = 0
   private var downNotified = false
   private var pollTimer: Timer?
   /// 세션 기록 창 — 세션 키마다 하나 (M13)
@@ -157,19 +158,29 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     pollTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
       self?.refresh { self?.checkNotices() }
     }
+    // 잠자기 전 실패와 깬 뒤 실패가 «1분 넘게» 로 이어지지 않게 — 깨면 다시 센다
+    NSWorkspace.shared.notificationCenter.addObserver(
+      forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+    ) { [weak self] _ in
+      self?.downSince = nil
+      self?.downCount = 0
+    }
   }
 
   private func checkNotices() {
     if serverVersion == nil {
       let since = downSince ?? Date()
       downSince = since
-      if !downNotified && Date().timeIntervalSince(since) >= 60 {
+      downCount += 1
+      // 15초 간격으로 연달아 4번 넘게, 1분 넘게 — 한두 번 늦은 답으로는 알리지 않는다
+      if !downNotified && downCount > 4 && Date().timeIntervalSince(since) >= 60 {
         downNotified = true
         post(id: "server-down", title: Strings.get("noticeServerDown"), body: Strings.get("noticeServerDownBody"))
       }
       return
     }
     downSince = nil
+    downCount = 0
     downNotified = false
     UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["server-down"])
     let key = "simless.notifiedSkillHash"
@@ -228,7 +239,8 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     return text.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
-  /// 서버의 status 를 읽는다 — 서버가 꺼져 있으면 lastError
+  /// 서버의 ping 을 읽는다 — 서버가 꺼져 있으면 lastError.
+  /// status 는 디바이스를 다 읽어 몇 초 걸린다. 메뉴바는 디바이스를 쓰지 않아 가벼운 ping 만 (M18)
   func refresh(completion: (() -> Void)? = nil) {
     guard let token = token(), let url = URL(string: "http://127.0.0.1:\(port)/api/call") else {
       lastError = Strings.get("noToken")
@@ -239,7 +251,7 @@ final class AppController: NSObject, NSMenuDelegate, NSWindowDelegate, WKNavigat
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "content-type")
     request.setValue(token, forHTTPHeaderField: "x-simless-token")
-    request.httpBody = try? JSONSerialization.data(withJSONObject: ["method": "status", "params": [:]])
+    request.httpBody = try? JSONSerialization.data(withJSONObject: ["method": "ping", "params": [:]])
     URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
       DispatchQueue.main.async {
         guard let self else { return }
