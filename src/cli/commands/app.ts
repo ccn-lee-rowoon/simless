@@ -6,6 +6,7 @@ import {
   type BuildMeta,
   cacheRoot,
   computeFingerprint,
+  dependencyHash,
   type Fingerprint,
   findCached,
   findLatestBuild,
@@ -210,7 +211,9 @@ export function registerApp(program: Command, run: Run) {
         // app install 이 못 찾았을 때의 지문 — 빌드가 node_modules 에 파일만 더했으면 그 지문으로도
         const before = takeMiss(root, key, platform, project);
         const changed = before !== undefined && before.hash !== fp.hash;
-        const aliased = changed && onlyBuildOutputs(before, fp);
+        // 의존성이 그대로면 node_modules 안의 고침(Android Gradle)도 빌드 산출물로 본다
+        const depsUnchanged = before?.deps !== undefined && before.deps === dependencyHash(project);
+        const aliased = changed && onlyBuildOutputs(before, fp, depsUnchanged);
         const meta = saveBuild(root, key, platform, fp.hash, source, {
           aliases: aliased ? [before.hash] : [],
         });

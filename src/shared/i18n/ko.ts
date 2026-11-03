@@ -271,7 +271,7 @@ export const ko = {
     "{platform} 빌드를 찾지 못했습니다: {path} — 이 작업 트리에서 빌드한 것만 찾습니다. 다른 곳의 빌드면 --path 로 주세요",
   "cli.app.saved": "{platform} 빌드를 보관했습니다 — 지문 {fingerprint}, {size} ({source})",
   "cli.app.aliased":
-    "빌드 전 지문 {fingerprint} 으로도 찾게 했습니다 — 빌드가 node_modules 에 파일만 더해서, 같은 네이티브의 다른 작업 트리도 이 빌드를 씁니다",
+    "빌드 전 지문 {fingerprint} 으로도 찾게 했습니다 — 빌드가 node_modules 안만 바꿔서, 같은 네이티브의 다른 작업 트리도 이 빌드를 씁니다",
   "cli.app.notAliased":
     "빌드 전 지문 {fingerprint} 과 네이티브 입력이 달라(빌드 중 바뀜) 그 지문으로는 보관하지 않았습니다",
   "cli.app.stats": "캐시를 찾았나·못 찾았나 — 앱·플랫폼마다",
