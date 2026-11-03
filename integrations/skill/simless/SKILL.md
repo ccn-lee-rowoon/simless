@@ -150,7 +150,8 @@ Launching the app onto this Metro is step 4.2.
 
 Device by device, always naming the device with its `targetId`.
 
-1. **Install** (when needed).
+1. **Install.**
+   - **Expo apps — run `app install` even if the app is already on the device.** Devices are shared: what's installed may be another worktree's build with different native code, which fails at launch («Cannot find native module», crashes). `app install` replaces it with the build for *your* native fingerprint; a cached install takes seconds.
    - **Expo apps — try the build cache first.** Native builds take many minutes; Simless keeps finished simulator/emulator builds by their native fingerprint, so a worktree or session whose native side is unchanged (only JS differs) reuses one. From the app project, with the **same environment variables you would build with** (some apps' config depends on them):
      ```sh
      simless --json app install            # held, booted devices; add --platform ios|android to pick one
@@ -165,7 +166,8 @@ Device by device, always naming the device with its `targetId`.
      - **Android: `--device` takes the AVD name, not the serial** — `native` in `simless --json list` (e.g. `simless_ab12`). Given `emulator-5554` it fails with «Could not find device with name». Expo also sets `adb reverse` for your port on every connected emulator and removes it when it exits — harmless to other sessions, whose Metros use other ports.
      - **Don't use `--no-bundler`.** It can't be combined with `--port` («mutually exclusive»), and without a port the app opens on **LAN IP :8081 — another session's Metro**. If an install did open there, stop the app and reopen it on your port (4.2).
      - Run the build in the foreground or watch its output — a backgrounded build that fails on bad options only tells you minutes later.
-     `TOOL_MISSING` means it isn't an Expo project with `@expo/fingerprint` — skip the cache. Computing the fingerprint takes about 30 seconds.
+     `TOOL_MISSING` means it isn't an Expo project with `@expo/fingerprint` — skip the cache. Computing the fingerprint takes about 15–30 seconds.
+     - Reinstalling keeps the app's data. If the app misbehaves on data another branch left behind (storage format, migrations), uninstall it and install again — ask the user first if that data (a login) matters. On Android a different signing key fails the install with a message naming the uninstall command to run; Simless never uninstalls on its own.
    - Otherwise install a build you have: `xcrun simctl install <targetId> <MyApp.app>` / `adb -s <targetId> install -r <app.apk>`. If you build and install from the project instead, **always name the device**: `npx expo run:ios --device <targetId>` / `npx expo run:android --device <AVD name>`, `npx react-native run-android --deviceId <targetId>`, or `ANDROID_SERIAL=<targetId>` for Gradle `installDebug`. Without it, Android tools install onto **every** connected emulator — including other sessions' devices.
 2. **Launch onto your Metro** — not with a plain launch: it reconnects to whatever server the app remembers. The bundle ID and Android package come from the project: `npx expo config --json` → `ios.bundleIdentifier`, `android.package`.
    - **Find the dev client scheme the app actually registers** — don't build it from the slug: many apps change the slug per environment, but the scheme was fixed when the native project was generated (e.g. slug `MyApp_Dev_A` while the app registers `exp+myapp`). A wrong scheme leaves the app on the dev client's home screen.

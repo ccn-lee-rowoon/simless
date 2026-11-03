@@ -631,12 +631,27 @@ export class AndroidDriver implements Driver {
     throw new Error(t("err.shutdownFailed", { name: device.name, serial }));
   }
 
+  /**
+   * 공용 기기라 다른 작업 트리의 빌드가 깔려 있을 수 있다 — 그 빌드로 덮어쓴다 (R26).
+   * -r 다시 설치(데이터 유지), -t 테스트 빌드 허용, -d 더 높은 versionCode 가 깔려 있어도(디버그 빌드만).
+   * 서명이 다르면 지워야만 깔리는데 앱 데이터가 날아가므로 지우지 않고 할 일을 알린다
+   */
   async install(_device: Device, state: RuntimeState, path: string): Promise<void> {
-    if (!state.targetId) throw new Error("not booted");
-    // -r 다시 설치(데이터 유지), -t 테스트 빌드 허용
-    await runOk(this.runner, [this.adb, "-s", state.targetId, "install", "-r", "-t", path], {
+    const serial = state.targetId;
+    if (!serial) throw new Error("not booted");
+    const result = await this.runner([this.adb, "-s", serial, "install", "-r", "-t", "-d", path], {
       timeoutMs: 5 * 60_000,
     });
+    const output = `${result.stdout}\n${result.stderr}`;
+    if (output.includes("INSTALL_FAILED_UPDATE_INCOMPATIBLE")) {
+      const pkg = /(?:Existing package|Package) (\S+) signatures/.exec(output)?.[1] ?? "<package>";
+      throw new Error(t("err.installSignature", { serial, package: pkg }));
+    }
+    // 예전 adb 는 실패해도 0 으로 끝나고 «Failure [...]» 만 낸다
+    if (result.code !== 0 || /^Failure \[/m.test(result.stdout)) {
+      const detail = output.trim().split("\n").slice(-5).join("\n");
+      throw new Error(`adb -s ${serial} install 실패 (code ${result.code})\n${detail}`);
+    }
   }
 
   private avdslim(): string {
