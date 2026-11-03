@@ -8,9 +8,9 @@ afterEach(() => {
   for (const fn of cleanups.splice(0)) fn();
 });
 
-function start() {
+function start(driver = fakeDriver()) {
   const env = tempEnv();
-  const server = new SimlessServer({ ...env, drivers: [fakeDriver()] });
+  const server = new SimlessServer({ ...env, drivers: [driver] });
   const token = ensureToken(env.paths.webToken);
   const http = startHttp(server, { port: 0, token });
   cleanups.push(() => http.stop(true), env.cleanup);
@@ -41,6 +41,28 @@ describe("웹 UI HTTP (R11)", () => {
     };
     expect(ok.ok).toBe(true);
     expect(ok.result.session.key).toBe("web");
+  });
+
+  test("ping 은 디바이스를 읽지 않아 기기가 멈춰도 바로 답한다 (M18)", async () => {
+    const driver = fakeDriver();
+    const never = new Promise<never>(() => {});
+    driver.list = () => never;
+    driver.states = () => never;
+    const { post } = start(driver);
+    const res = (await (await post({ method: "ping" })).json()) as {
+      ok: boolean;
+      result: Record<string, unknown>;
+    };
+    expect(res.ok).toBe(true);
+    expect(res.result).toMatchObject({
+      serverVersion: expect.any(String),
+      language: expect.any(String),
+      setupNeeded: true,
+      skillUpdate: false,
+    });
+    expect(Object.keys(res.result).sort()).toEqual(
+      ["language", "serverVersion", "setupNeeded", "skillHash", "skillUpdate"].sort(),
+    );
   });
 
   test("웹 UI 가 쓸 수 없는 메서드는 403", async () => {

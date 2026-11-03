@@ -111,6 +111,15 @@ export interface StatusResult {
   queue: { sessionKey: string; agent: string; deviceIds: string[]; enqueuedAt: number }[];
 }
 
+/**
+ * `status` 의 가벼운 부분 — 디바이스를 읽지 않아 바로 답한다.
+ * 메뉴바 앱이 15초마다 서버가 살아 있는지 볼 때 쓴다 (M18)
+ */
+export type PingResult = Pick<
+  StatusResult,
+  "serverVersion" | "language" | "setupNeeded" | "skillUpdate" | "skillHash"
+>;
+
 /** 요청한 디바이스마다 지금 상태 — 에이전트가 이걸 보고 판단한다 (R23) */
 export interface LeaseItem {
   deviceId: string;
