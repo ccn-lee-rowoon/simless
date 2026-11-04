@@ -262,11 +262,12 @@ simless/
 | 슬림화 (R5) | `avdslim tune-avd` + 켠 뒤 `avdslim on <시리얼>` | `simslim on <udid> --preserve-boot-state` |
 | 슬림화하면 꺼지는 기능 (M4 — 생성 화면 «꺼지는 것 보기»·Custom 목록) | avdslim 프로필이 끄는 패키지 목록(`avdslim profiles`)을 사람이 읽을 이름으로 묶어 보여 준다 | simslim 프로필이 끄는 서비스 목록을 묶어 보여 준다(Siri·Spotlight·iCloud·Wallet …) |
 | 슬림 확인 (M6) | 프로필 패키지 중 꺼진 비율 ≥ 50% | `simslim verify` — 켜진 기기만 가능 |
-| 켜기 | `emulator -avd <AVD ID> -port <빈 포트> -no-snapshot-save` 를 서버와 분리(detached)해 실행. `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
+| 켜기 | `emulator -avd <AVD ID> -port <빈 포트> -grpc <빈 포트> -grpc-use-token -no-snapshot-save` 를 서버와 분리(detached)해 실행(gRPC 는 화면 조작 도구용 — 아래). `sys.boot_completed == 1` 까지 대기 | `simctl boot` **한 대씩 순서대로** (동시 부팅 중단 오류 회피) + `simctl bootstatus` |
 | 끄기 | 슬림을 바꾼(`simless slim`·만들기·풀림 재적용 — 켤 때마다 다시 거는 것은 빼고) 뒤면 `adb -s <시리얼> shell sync` 하고 바꾼 지 20초가 될 때까지 기다림 → `emu kill` (device-slim 시험: 바로 끄면 `off` 가 남지 않은 적이 있음. 바꾸지 않았으면 바로 끈다) | `simctl shutdown` |
 | 삭제 (M8, Simless 가 만든 것만) | 끄고 `.avd`·`.ini` 삭제 | 끄고 `simctl delete` |
 
 - **Android 시리얼을 서버가 정한다**: `-port` 로 켜면 시리얼이 `emulator-<port>` 로 정해진다. 밖에서 켠 경우는 `adb -s <시리얼> emu avd name` 으로 역조회한다.
+- **gRPC 를 직접 켠다** (P10): 에뮬레이터(36.x)는 `-port` 를 주면 기본 gRPC 서버와 실행 정보 파일(`~/Library/Caches/TemporaryItems/avd/running/pid_<pid>.ini`)을 만들지 않는다. 화면 조작 도구(argent 등)는 그 파일의 gRPC 포트·토큰으로 화면을 받고 입력을 보내므로, Simless 로 켠 에뮬레이터에서는 화면 찍기·탭이 안 됐다(adb 로 하는 화면 구조 읽기·앱 실행은 됨). 그래서 `-grpc <포트> -grpc-use-token` 을 더한다 — 포트는 콘솔 포트 + 3000(에뮬레이터 기본 규칙)부터 빈 것. 토큰은 에뮬레이터가 그 파일(사용자만 읽음)에 쓰고 Simless 는 읽지 않는다. 설정의 에뮬레이터 인자에 `-grpc` 가 있으면 그것을 쓴다.
 - 에뮬레이터·시뮬레이터는 서버의 자식으로 묶지 않는다 — 서버가 재시작해도 디바이스는 계속 돈다.
 - **슬림 확인과 자동 재적용** (M6): 슬림한 기기를 켤 때마다(서버 시작 시엔 켜진 것) 확인하고, 풀렸으면 바로 다시 적용한다. 실패하면 `slim: failed` + 이유를 남겨 `SLIM ⚠` 로 보인다. 원래 있던 기기(`createdBySimless: false`)는 슬림화하지 않는다 (N5).
 - **Simless 밖에서 한 슬림** (M6): 켜진 기기는 모두(만든 것·추가한 것) 15초마다 슬림 수치를 뒤에서 읽고 `slimSeen` 에 적는다. `slim: none` 인데 슬림돼 보이면(iOS 는 끈 데몬이 하나라도, Android 는 프로필 패키지가 절반 이상 꺼짐 — 위 «슬림 확인» 과 같은 기준) `SLIM` 으로 보인다. 꺼진 기기는 `slimSeen` 으로 판단해 흐리게, «마지막 확인» 시각과 함께. 이 슬림은 다시 적용하지 않는다. 판단은 `observedSlim()`(`src/shared/api.ts`) 하나를 화면·CLI·MCP 가 같이 쓴다.

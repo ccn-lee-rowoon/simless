@@ -70,6 +70,9 @@ const STUDIO_FILES = [
 
 const FIRST_PORT = 5554;
 const LAST_PORT = 5682;
+/** gRPC 포트는 콘솔 포트 + 3000 부터 — 에뮬레이터가 -port 없이 켤 때 고르는 규칙과 같게 (5554 → 8554) */
+const GRPC_OFFSET = 3000;
+const LAST_GRPC_PORT = 8999;
 
 function spawnDetached(command: string[], logPath: string): EmulatorProcess {
   const log = openSync(logPath, "a");
@@ -558,6 +561,14 @@ export class AndroidDriver implements Driver {
     throw new HandlerError("FAILED", t("err.noFreePort"));
   }
 
+  /** gRPC 포트 — 콘솔 포트 + 3000 이 비었으면 그것, 아니면 그 뒤로 처음 빈 것 */
+  private async freeGrpcPort(port: number): Promise<number> {
+    for (let grpc = port + GRPC_OFFSET; grpc <= LAST_GRPC_PORT; grpc++) {
+      if (await this.isPortFree(grpc)) return grpc;
+    }
+    throw new HandlerError("FAILED", t("err.noFreePort"));
+  }
+
   /** 슬림하면서 소리를 남기기로 했으면 `-no-audio` 를 뺀다 (M15) */
   private emulatorArgs(device: Device): string[] {
     const args = this.config.android.emulatorArgs;
@@ -576,8 +587,15 @@ export class AndroidDriver implements Driver {
     mkdirSync(this.options.logDir, { recursive: true, mode: 0o700 });
     const logPath = join(this.options.logDir, `emulator-${device.native}.log`);
     progress(t("progress.booting", { name: `${device.name} (${serial})` }));
+    // -port 로 켜면 에뮬레이터가 기본 gRPC 서버와 실행 정보 파일(avd/running/pid_*.ini)을 만들지 않는다.
+    // 화면 조작 도구(argent 등)는 그 파일의 gRPC 포트·토큰으로 화면을 받고 입력을 보내므로 직접 켠다.
+    // 토큰은 에뮬레이터가 그 파일(사용자만 읽음)에 쓴다 — Simless 는 읽지도 남기지도 않는다
+    const extra = this.emulatorArgs(device);
+    const grpc = extra.includes("-grpc")
+      ? []
+      : ["-grpc", String(await this.freeGrpcPort(port)), "-grpc-use-token"];
     const proc = this.spawnEmulator(
-      [this.emulator, "-avd", device.native, "-port", String(port), ...this.emulatorArgs(device)],
+      [this.emulator, "-avd", device.native, "-port", String(port), ...grpc, ...extra],
       logPath,
     );
 
